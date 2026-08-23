@@ -1,0 +1,40 @@
+Package: Dynet
+Title: Tidy Temporal Network Analysis
+Version: 0.2.0
+Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre"),
+    email = "saqr@saqr.me")
+Description: Construction, measurement and visualisation of temporal
+    networks. Networks are built from four kinds of relational log with a
+    single constructor: interval logs with explicit start and end times,
+    contact logs of instantaneous events, threaded logs such as forum or
+    chat data where an edge stays active until its thread falls silent,
+    and co-presence logs where actors sharing a group become connected.
+    Vertices are addressed by name throughout; integer vertex indices are
+    never exposed. Every verb returns a tidy one-row-per-observation data
+    frame carrying vertex names, so results print, plot and subset without
+    reaching into the object. Metrics cover time-varying centrality,
+    graph-level structure, edge formation and dissolution, burstiness,
+    time-respecting paths, reachability and mixing. Implemented in base R;
+    values are checked for numerical equivalence against the 'statnet'
+    ecosystem.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.4)
+Imports:
+    cograph,
+    ggplot2,
+    grDevices,
+    graphics
+Suggests:
+    igraph,
+    network,
+    networkDynamic,
+    sna,
+    testthat (>= 3.0.0),
+    tsna
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
+URL: https://github.com/mohsaqr/Dynet
+BugReports: https://github.com/mohsaqr/Dynet/issues
+LazyData: true

@@ -1,0 +1,20 @@
+# Rendered test output and scratch plots
+tmp/
+
+# Superseded v0.1.0 source, kept locally as a numerical reference.
+# It remains in git history at commit de9868a.
+legacy/
+
+# Standing equivalence scripts: local evidence, never committed
+local_testing_and_equivalence/
+
+# Session artifacts
+HANDOFF.md
+LEARNINGS.md
+CHANGES.md
+
+# Build products
+*.tar.gz
+*.Rcheck/
+.Rproj.user/
+.DS_Store

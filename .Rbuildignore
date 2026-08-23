@@ -1,0 +1,15 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.claude$
+^\.DS_Store$
+^legacy$
+^tmp$
+^docs$
+^SPEC\.md$
+^HANDOFF\.md$
+^LEARNINGS\.md$
+^CHANGES\.md$
+^local_testing_and_equivalence$
+^\.github$
+^data-raw$
+^LICENSE\.md$
