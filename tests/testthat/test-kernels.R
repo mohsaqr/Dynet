@@ -24,13 +24,20 @@ test_that("path-based kernels match igraph on directed and undirected graphs", {
       expect_equal(unname(.betweenness(a, directed)),
                    unname(igraph::betweenness(g, directed = directed)))
 
-      close_ig <- suppressWarnings(
-        igraph::closeness(g, mode = "out", normalized = TRUE))
-      close_ig[is.nan(close_ig)] <- 0
-      expect_equal(unname(.closeness(a, directed)), unname(close_ig))
-
+      # Closeness and coreness both default to mode = "all", matching cograph
+      # and igraph::degree(); all three modes are checked against igraph.
+      for (md in c("all", "out", "in")) {
+        close_ig <- suppressWarnings(
+          igraph::closeness(g, mode = md, normalized = TRUE))
+        close_ig[is.nan(close_ig)] <- 0
+        expect_equal(unname(.closeness(a, directed, md)), unname(close_ig))
+        expect_equal(unname(.coreness(a, directed, md)),
+                     unname(igraph::coreness(g, mode = md)))
+      }
+      expect_equal(unname(.closeness(a, directed)),
+                   unname(.closeness(a, directed, "all")))
       expect_equal(unname(.coreness(a, directed)),
-                   unname(igraph::coreness(g, mode = "all")))
+                   unname(.coreness(a, directed, "all")))
       expect_equal(unname(.pagerank(a)),
                    unname(igraph::page_rank(g)$vector), tolerance = 1e-6)
       expect_equal(.components(a, "weak")$count,
@@ -70,6 +77,18 @@ test_that("eigenvector centrality matches igraph on undirected graphs", {
   expect_equal(unname(.eigen_centrality(a, FALSE)),
                unname(igraph::eigen_centrality(g, directed = FALSE)$vector),
                tolerance = 1e-5)
+})
+
+test_that("eigenvector centrality is stable on a bipartite star", {
+  skip_if_not_installed("igraph")
+  a <- matrix(0, 5L, 5L,
+              dimnames = list(paste0("v", 1:5), paste0("v", 1:5)))
+  a[1, 2:5] <- 1
+  a[2:5, 1] <- 1
+  g <- igraph::graph_from_adjacency_matrix(a, mode = "undirected")
+  expect_equal(unname(.eigen_centrality(a, FALSE)),
+               unname(igraph::eigen_centrality(g, directed = FALSE)$vector),
+               tolerance = 1e-8)
 })
 
 test_that("census counts add up to the number of dyads and triples", {

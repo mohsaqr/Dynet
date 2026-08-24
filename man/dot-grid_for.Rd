@@ -4,15 +4,18 @@
 \alias{.grid_for}
 \title{The time grid an encoding should be measured on}
 \usage{
-.grid_for(enc, dn)
+.grid_for(enc, dn, spec = NULL)
 }
 \arguments{
 \item{enc}{Encoded edge list.}
 
-\item{dn}{The parent network, for the bin width.}
+\item{dn}{The parent network, for the default grid.}
+
+\item{spec}{A resolved grid from \code{\link[=.window_spec]{.window_spec()}}; the network's own
+construction interval is used when absent.}
 }
 \value{
-A data frame of bins from \code{\link[=.bins]{.bins()}}.
+A data frame of windows from \code{\link[=.bins]{.bins()}}.
 }
 \description{
 The time grid an encoding should be measured on

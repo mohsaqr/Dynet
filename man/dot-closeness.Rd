@@ -4,12 +4,15 @@
 \alias{.closeness}
 \title{Normalised closeness centrality}
 \usage{
-.closeness(a, directed = TRUE)
+.closeness(a, directed = TRUE, mode = c("all", "out", "in"))
 }
 \arguments{
 \item{a}{Adjacency matrix.}
 
 \item{directed}{Whether to respect direction.}
+
+\item{mode}{\code{"out"} counts distance from the vertex, \code{"in"} distance to it,
+\code{"all"} ignores direction.}
 }
 \value{
 A named numeric vector.

@@ -7,6 +7,32 @@ test_that("snapshot degree on a triangle matches the value worked out by hand", 
   expect_equal(at3$value[order(at3$node)], c(2, 2, 2))
 })
 
+test_that("degree counts self-loops with igraph's stub convention", {
+  sp <- data.frame(from = c("A", "A"), to = c("A", "B"),
+                   start = 0, end = 1, stringsAsFactors = FALSE)
+  dn <- quiet_dynet(sp, loops = TRUE, interval = 1)
+  expected <- list(all = c(A = 3, B = 1),
+                   out = c(A = 2, B = 0),
+                   `in` = c(A = 1, B = 1))
+  for (md in names(expected)) {
+    got <- as.data.frame(dyn_centrality(dn, measure = "degree", mode = md))
+    got <- stats::setNames(got$value, got$node)
+    expect_equal(got[names(expected[[md]])], expected[[md]])
+  }
+})
+
+test_that("temporal centrality on a chain matches hand calculation", {
+  dn <- quiet_dynet(chain_edges())
+  got <- as.data.frame(dyn_centrality(
+    dn, measure = c("reach", "closeness", "betweenness"), scope = "temporal"))
+  take <- function(measure)
+    got$value[match(paste(c("A", "B", "C", "D", "E"), measure),
+                    paste(got$node, got$measure))]
+  expect_equal(take("reach"), c(1, 3 / 4, 2 / 4, 1 / 4, 0))
+  expect_equal(take("closeness"), c(1 / 2, 1 / 2, 2 / 5, 1 / 3, 0))
+  expect_equal(take("betweenness"), c(0, 3, 4, 3, 0))
+})
+
 test_that("graph measures on the same triangle match hand calculation", {
   dn <- quiet_dynet(triangle_edges())
   m <- as.data.frame(dyn_metrics(
@@ -20,15 +46,15 @@ test_that("graph measures on the same triangle match hand calculation", {
   expect_equal(at3$value[at3$measure == "edges"], 3)
 })
 
-test_that("window sampling keeps an event that instant sampling misses", {
+test_that("a window keeps an event that point sampling misses", {
   # The C-D spell opens and closes strictly inside the second bin, touching
   # neither of its edges, so a point sample at the bin's left edge misses it.
   brief <- data.frame(from = c("A", "C", "A"), to = c("B", "D", "B"),
                       start = c(0, 1.3, 3), end = c(0.5, 1.6, 3.5),
                       stringsAsFactors = FALSE)
   dn <- quiet_dynet(brief, interval = 1)
-  win <- as.data.frame(dyn_metrics(dn, measure = "edges", sample = "window"))
-  ins <- as.data.frame(dyn_metrics(dn, measure = "edges", sample = "instant"))
+  win <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  ins <- as.data.frame(dyn_metrics(dn, measure = "edges", window = 0))
   expect_equal(win$value[win$time == 1], 1)
   expect_equal(ins$value[ins$time == 1], 0)
 })

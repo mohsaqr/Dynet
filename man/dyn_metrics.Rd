@@ -8,7 +8,11 @@ dyn_metrics(
   dn,
   measure = "density",
   sessions = c("bounded", "collapse", "separate"),
-  sample = c("window", "instant")
+  sample = NULL,
+  start = NULL,
+  end = NULL,
+  step = NULL,
+  window = NULL
 )
 }
 \arguments{
@@ -16,15 +20,29 @@ dyn_metrics(
 
 \item{measure}{One or more of \code{"density"}, \code{"edges"}, \code{"active_nodes"},
 \code{"isolates"}, \code{"transitivity"}, \code{"reciprocity"}, \code{"components"},
-\code{"largest_component"}, \code{"mean_distance"}, \code{"diameter"}, \code{"mutual"},
+\code{"components_strong"}, \code{"largest_component"}, \code{"mean_distance"},
+\code{"diameter"}, \code{"mutual"},
 \code{"asymmetric"}, \code{"null"}, \code{"assortativity"},
 \code{"centralization_degree"}, \code{"centralization_betweenness"},
-\code{"centralization_closeness"}, \code{"triads"}. \code{"triads"} expands to the
-sixteen triad classes.}
+\code{"centralization_closeness"}, \code{"triads"}, \code{"connectedness"},
+\code{"efficiency"}, \code{"hierarchy"}, \code{"lubness"}. \code{"triads"} expands to the
+sixteen triad classes; the last four are Krackhardt's indices of
+hierarchy.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
-\item{sample}{\code{"window"} or \code{"instant"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
+\code{"window"} uses the current positive/default window.}
+
+\item{start, end}{First and last time at which to measure. Default to the
+observed range. A network built from dates may be addressed with dates.}
+
+\item{step}{How often to measure. Defaults to the interval the network was
+built with.}
+
+\item{window}{How much time each measurement covers. Defaults to \code{step},
+which tiles the period into disjoint bins. A larger value slides an
+overlapping window; \code{0} samples the network at each point in time.}
 }
 \value{
 A \code{dynet_metric} at graph level: one row per time point and
@@ -43,6 +61,18 @@ second, genuinely temporal density -- observed edge duration against the
 maximum possible duration -- is reported by \code{\link[=summary]{summary()}} on the network
 itself, because it describes the whole window rather than a bin.
 
+\code{step} and \code{window} are separate on purpose: \code{step} is how often you look,
+\code{window} is how much of the timeline each look takes in. A seven-day window
+stepped one day at a time smooths a noisy series without giving up daily
+resolution. They match \code{time.interval} and \code{aggregate.dur} in
+\code{tsna::tSnaStats()}.
+
+Krackhardt's four indices -- \code{"connectedness"}, \code{"efficiency"},
+\code{"hierarchy"} and \code{"lubness"} -- describe how far a directed network
+departs from a pure out-tree. \code{"hierarchy"} and \code{"lubness"} are undefined
+on some graphs (no connected pair, no component of three) and report \code{NaN}
+rather than a number that would mislead.
+
 Triad census cost grows with the cube of the vertex count. On a network of
 a few hundred vertices it is the slowest measure here by a wide margin.
 }
@@ -50,6 +80,7 @@ a few hundred vertices it is the slowest measure here by a wide margin.
 dn <- dynet(school_contacts)
 dyn_metrics(dn, measure = "density")
 dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
+dyn_metrics(dn, measure = "density", step = 1, window = 3)
 plot(dyn_metrics(dn, measure = c("mutual", "asymmetric")))
 
 }

@@ -4,12 +4,14 @@
 \alias{.coreness}
 \title{k-core number of every vertex}
 \usage{
-.coreness(a, directed = TRUE)
+.coreness(a, directed = TRUE, mode = c("all", "out", "in"))
 }
 \arguments{
 \item{a}{Adjacency matrix.}
 
-\item{directed}{Whether to respect direction. Cores use total degree.}
+\item{directed}{Whether to respect direction.}
+
+\item{mode}{Which degree the peeling uses: \code{"all"}, \code{"out"} or \code{"in"}.}
 }
 \value{
 A named numeric vector.

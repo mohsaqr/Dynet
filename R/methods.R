@@ -44,7 +44,7 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
       n[, setdiff(names(n), c("id", "label", "x", "y")), drop = FALSE]
     },
     bins  = .bins(x$meta$time_range[["start"]], x$meta$time_range[["end"]],
-                  x$meta$interval),
+                  .window_spec(x)),
     network = {
       nm <- x$nodes$name
       data.frame(from = nm[x$edges$from], to = nm[x$edges$to],

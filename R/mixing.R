@@ -16,7 +16,15 @@
 #' @param dn A temporal network from [dynet()] built with vertex attributes.
 #' @param attribute Name of a column in the vertex table.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
-#' @param sample `"window"` or `"instant"`, as in [dyn_centrality()].
+#' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
+#'   `"window"` uses the current positive/default window.
+#' @param start,end First and last time at which to measure. Default to the
+#'   observed range. A network built from dates may be addressed with dates.
+#' @param step How often to measure. Defaults to the interval the network was
+#'   built with.
+#' @param window How much time each measurement covers. Defaults to `step`,
+#'   which tiles the period into disjoint bins. A larger value slides an
+#'   overlapping window; `0` samples the network at each point in time.
 #'
 #' @return A `dynet_metric` at graph level with one row per time point and
 #'   ordered group pair. Alongside `measure` (rendered as `"A -> B"`) and
@@ -31,10 +39,13 @@
 #' @export
 dyn_mixing <- function(dn, attribute,
                        sessions = c("bounded", "collapse", "separate"),
-                       sample = c("window", "instant")) {
+                       sample = NULL,
+                       start = NULL, end = NULL,
+                       step = NULL, window = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
-  sample <- match.arg(sample)
+  window <- .legacy_sample(window, sample)
+  spec <- .window_spec(dn, start, end, step, window)
   .check("`attribute` must be a single column name." =
               is.character(attribute) && length(attribute) == 1L)
 
@@ -56,7 +67,7 @@ dyn_mixing <- function(dn, attribute,
 
   # Counting is done on the same binary adjacency the other verbs use, so a
   # pair connected by two spells in one bin is one edge here as well.
-  df <- .over_bins(dn, sessions, node_level = FALSE, sample = sample,
+  df <- .over_bins(dn, sessions, node_level = FALSE, spec = spec,
     fun = function(enc, act, bin) {
       a <- .binary(.adjacency(enc, act, dn$directed), dn$directed)
       counts <- vapply(seq_len(nrow(pairs)), function(k) {
@@ -74,7 +85,8 @@ dyn_mixing <- function(dn, attribute,
   df$to_group   <- split_key[, 2L]
 
   .metric(df, level = "graph", what = sprintf("Mixing by %s", attribute),
-          dn = dn, note = "edge counts between vertex groups per time bin")
+          dn = dn, spec = spec,
+          note = "edge counts between vertex groups per time bin")
 }
 
 # ===========================================================================
@@ -92,7 +104,15 @@ dyn_mixing <- function(dn, attribute,
 #' @param at Optional numeric time. When given, only the bin containing that
 #'   time is returned.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
-#' @param sample `"window"` or `"instant"`, as in [dyn_centrality()].
+#' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
+#'   `"window"` uses the current positive/default window.
+#' @param start,end First and last time at which to measure. Default to the
+#'   observed range. A network built from dates may be addressed with dates.
+#' @param step How often to measure. Defaults to the interval the network was
+#'   built with.
+#' @param window How much time each measurement covers. Defaults to `step`,
+#'   which tiles the period into disjoint bins. A larger value slides an
+#'   overlapping window; `0` samples the network at each point in time.
 #'
 #' @return A `data.frame` with one row per active edge per bin: `session`
 #'   (when present), `time`, `from`, `to`, `weight` and `n_spells`. A pair
@@ -107,22 +127,28 @@ dyn_mixing <- function(dn, attribute,
 #' @export
 dyn_snapshots <- function(dn, at = NULL,
                           sessions = c("bounded", "collapse", "separate"),
-                          sample = c("window", "instant")) {
+                          sample = NULL,
+                          start = NULL, end = NULL,
+                          step = NULL, window = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
-  sample <- match.arg(sample)
+  window <- .legacy_sample(window, sample)
+  spec <- .window_spec(dn, start, end, step, window)
+  at <- .as_time(at, dn, "at")
 
   parts <- .split_sessions(dn, sessions)
   frames <- Map(function(enc, label) {
-    grid <- .grid_for(enc, dn)
+    grid <- .grid_for(enc, dn, spec)
     if (!is.null(at)) {
+      # With overlapping windows more than one covers `at`; all of them are
+      # returned, since each is a genuine measurement of that moment.
       k <- which(grid$lo <= at & grid$hi > at)
-      if (length(k) == 0L) k <- nrow(grid)
+      if (length(k) == 0L) k <- which.min(abs(grid$lo - at))
       grid <- grid[k, , drop = FALSE]
     }
     do.call(rbind, lapply(seq_len(nrow(grid)), function(k) {
-      act <- .active(enc, grid$lo[k], grid$hi[k],
-                     last = grid$bin[k] == max(grid$bin), sample = sample)
+      act <- .active(enc, grid$lo[k], grid$hi[k], last = grid$closed[k],
+                     window = spec$window)
       if (!any(act)) return(NULL)
       key <- paste(enc$from[act], enc$to[act], sep = "\r")
       by_pair <- split(seq_len(sum(act)), key)

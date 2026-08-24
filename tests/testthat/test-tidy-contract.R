@@ -98,7 +98,7 @@ test_that("unknown measures and wrong directedness raise classed conditions", {
                class = "dynet_unknown_attribute")
 
   und <- quiet_dynet(random_edges(), directed = FALSE)
-  expect_error(dyn_centrality(und, measure = "indegree"),
+  expect_error(dyn_centrality(und, measure = "hub"),
                class = "dynet_needs_directed")
   expect_error(dyn_metrics(und, measure = "reciprocity"),
                class = "dynet_needs_directed")

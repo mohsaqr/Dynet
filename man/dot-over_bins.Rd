@@ -2,9 +2,9 @@
 % Please edit documentation in R/engine.R
 \name{.over_bins}
 \alias{.over_bins}
-\title{Apply a function across every bin of every session}
+\title{Apply a function across every window of every session}
 \usage{
-.over_bins(dn, sessions, fun, sample = "window", node_level = FALSE)
+.over_bins(dn, sessions, fun, spec = NULL, node_level = FALSE)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}
@@ -13,7 +13,7 @@
 
 \item{fun}{Function of \verb{(enc, active, bin)}.}
 
-\item{sample}{Sampling convention passed to \code{\link[=.active]{.active()}}.}
+\item{spec}{A resolved measurement grid from \code{\link[=.window_spec]{.window_spec()}}.}
 
 \item{node_level}{Whether \code{fun} returns one value per vertex.}
 }
@@ -23,7 +23,7 @@ A long data frame with \code{session}, \code{time}, optionally \code{node}, plus
 }
 \description{
 The workhorse behind every time-series verb. \code{fun} receives the encoding,
-the active-edge mask and the bin row, and returns either a single value or
-a named vector of values; the result is stacked into one long frame.
+the active-edge mask and the window row, and returns either a single value
+or a named vector of values; the result is stacked into one long frame.
 }
 \keyword{internal}

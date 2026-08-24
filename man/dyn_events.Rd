@@ -7,7 +7,11 @@
 dyn_events(
   dn,
   measure = c("formation", "dissolution"),
-  sessions = c("bounded", "collapse", "separate")
+  sessions = c("bounded", "collapse", "separate"),
+  start = NULL,
+  end = NULL,
+  step = NULL,
+  window = NULL
 )
 }
 \arguments{
@@ -19,6 +23,16 @@ during the bin) and \code{"new_pairs"} (vertex pairs meeting for the first
 time).}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+
+\item{start, end}{First and last time at which to measure. Default to the
+observed range. A network built from dates may be addressed with dates.}
+
+\item{step}{How often to measure. Defaults to the interval the network was
+built with.}
+
+\item{window}{How much time each measurement covers. Defaults to \code{step},
+which tiles the period into disjoint bins. A larger value slides an
+overlapping window; \code{0} samples the network at each point in time.}
 }
 \value{
 A \code{dynet_metric} at graph level, one row per time point and
@@ -30,6 +44,12 @@ edge is present at once; here the turnover itself is the finding. A course
 typically shows formation front-loaded and dissolution piling up at the
 end, and a group that never dissolves an edge is behaving differently from
 one that constantly re-forms them.
+}
+\details{
+Formation and dissolution are counted inside each window, so overlapping
+windows (\code{window > step}) count the same event more than once by design --
+that is what a rolling total is. Setting \code{window} equal to \code{step}, the
+default, gives disjoint counts that sum to the total turnover.
 }
 \examples{
 dn <- dynet(school_contacts)

@@ -4,7 +4,7 @@
 \alias{.snapshot_measure}
 \title{Compute one snapshot centrality measure}
 \usage{
-.snapshot_measure(m, a, directed, damping)
+.snapshot_measure(m, a, directed, damping, mode = "all", exponent = 1)
 }
 \arguments{
 \item{m}{Measure name.}
@@ -14,6 +14,10 @@
 \item{directed}{Whether the network is directed.}
 
 \item{damping}{PageRank damping factor.}
+
+\item{mode}{Which edges count: \code{"all"}, \code{"out"} or \code{"in"}.}
+
+\item{exponent}{Attenuation factor for Bonacich power.}
 }
 \value{
 A numeric vector, one value per vertex.

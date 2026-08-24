@@ -2,22 +2,32 @@
 % Please edit documentation in R/engine.R
 \name{.bins}
 \alias{.bins}
-\title{Build the time-bin grid for a set of edges}
+\title{Build the measurement grid}
 \usage{
-.bins(t_min, t_max, interval)
+.bins(t_min, t_max, spec)
 }
 \arguments{
-\item{t_min, t_max}{Numeric time range.}
+\item{t_min, t_max}{Observed time range, used for whichever of \code{start} and
+\code{end} the caller left to the default.}
 
-\item{interval}{Bin width.}
+\item{spec}{A resolved grid from \code{\link[=.window_spec]{.window_spec()}}.}
 }
 \value{
-A data frame with \code{bin}, \code{lo}, \code{hi} and \code{time} (the bin midpoint
-used as the reported time stamp).
+A data frame with \code{bin}, \code{lo}, \code{hi}, \code{time} (the point at which the
+measurement is reported, which is the window's left edge) and \code{closed}
+(whether the window includes its right endpoint).
 }
 \description{
-Bins are half-open \verb{[lo, hi)} and evenly spaced. The last bin is closed on
-the right so that an event landing exactly on the final time point is
-counted rather than silently dropped.
+Measurements are taken at \verb{start, start + step, ...} up to \code{end}, and each
+one covers \verb{[lo, hi)} with \code{hi = lo + window}. Windows overlap whenever
+\code{window > step}, are disjoint when the two are equal, and degenerate to
+sampling the network at a point when \code{window} is zero.
+}
+\details{
+On the default grid the final window is closed on the right, so an event
+landing exactly on the last observed time is counted rather than silently
+dropped. A grid whose \code{end} the caller supplied is taken literally instead,
+as \code{tsna::tSnaStats()} does -- which is what makes a truncated range an
+exact subset of the full series rather than an almost-subset.
 }
 \keyword{internal}

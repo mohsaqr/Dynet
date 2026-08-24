@@ -8,7 +8,11 @@ dyn_mixing(
   dn,
   attribute,
   sessions = c("bounded", "collapse", "separate"),
-  sample = c("window", "instant")
+  sample = NULL,
+  start = NULL,
+  end = NULL,
+  step = NULL,
+  window = NULL
 )
 }
 \arguments{
@@ -18,7 +22,18 @@ dyn_mixing(
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
-\item{sample}{\code{"window"} or \code{"instant"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
+\code{"window"} uses the current positive/default window.}
+
+\item{start, end}{First and last time at which to measure. Default to the
+observed range. A network built from dates may be addressed with dates.}
+
+\item{step}{How often to measure. Defaults to the interval the network was
+built with.}
+
+\item{window}{How much time each measurement covers. Defaults to \code{step},
+which tiles the period into disjoint bins. A larger value slides an
+overlapping window; \code{0} samples the network at each point in time.}
 }
 \value{
 A \code{dynet_metric} at graph level with one row per time point and

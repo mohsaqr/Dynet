@@ -4,10 +4,12 @@
 
 .graph_measures <- c(
   "density", "edges", "active_nodes", "isolates", "transitivity",
-  "reciprocity", "components", "largest_component", "mean_distance",
+  "reciprocity", "components", "components_strong",
+  "largest_component", "mean_distance",
   "diameter", "mutual", "asymmetric", "null", "assortativity",
   "centralization_degree", "centralization_betweenness",
-  "centralization_closeness", "triads"
+  "centralization_closeness", "triads",
+  "connectedness", "efficiency", "hierarchy", "lubness"
 )
 
 #' Time-varying graph-level structure
@@ -21,13 +23,24 @@
 #' @param dn A temporal network from [dynet()].
 #' @param measure One or more of `"density"`, `"edges"`, `"active_nodes"`,
 #'   `"isolates"`, `"transitivity"`, `"reciprocity"`, `"components"`,
-#'   `"largest_component"`, `"mean_distance"`, `"diameter"`, `"mutual"`,
+#'   `"components_strong"`, `"largest_component"`, `"mean_distance"`,
+#'   `"diameter"`, `"mutual"`,
 #'   `"asymmetric"`, `"null"`, `"assortativity"`,
 #'   `"centralization_degree"`, `"centralization_betweenness"`,
-#'   `"centralization_closeness"`, `"triads"`. `"triads"` expands to the
-#'   sixteen triad classes.
+#'   `"centralization_closeness"`, `"triads"`, `"connectedness"`,
+#'   `"efficiency"`, `"hierarchy"`, `"lubness"`. `"triads"` expands to the
+#'   sixteen triad classes; the last four are Krackhardt's indices of
+#'   hierarchy.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
-#' @param sample `"window"` or `"instant"`, as in [dyn_centrality()].
+#' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
+#'   `"window"` uses the current positive/default window.
+#' @param start,end First and last time at which to measure. Default to the
+#'   observed range. A network built from dates may be addressed with dates.
+#' @param step How often to measure. Defaults to the interval the network was
+#'   built with.
+#' @param window How much time each measurement covers. Defaults to `step`,
+#'   which tiles the period into disjoint bins. A larger value slides an
+#'   overlapping window; `0` samples the network at each point in time.
 #'
 #' @return A `dynet_metric` at graph level: one row per time point and
 #'   measure, with columns `session` (when present), `time`, `measure` and
@@ -39,6 +52,18 @@
 #' maximum possible duration -- is reported by [summary()] on the network
 #' itself, because it describes the whole window rather than a bin.
 #'
+#' `step` and `window` are separate on purpose: `step` is how often you look,
+#' `window` is how much of the timeline each look takes in. A seven-day window
+#' stepped one day at a time smooths a noisy series without giving up daily
+#' resolution. They match `time.interval` and `aggregate.dur` in
+#' `tsna::tSnaStats()`.
+#'
+#' Krackhardt's four indices -- `"connectedness"`, `"efficiency"`,
+#' `"hierarchy"` and `"lubness"` -- describe how far a directed network
+#' departs from a pure out-tree. `"hierarchy"` and `"lubness"` are undefined
+#' on some graphs (no connected pair, no component of three) and report `NaN`
+#' rather than a number that would mislead.
+#'
 #' Triad census cost grows with the cube of the vertex count. On a network of
 #' a few hundred vertices it is the slowest measure here by a wide margin.
 #'
@@ -46,15 +71,19 @@
 #' dn <- dynet(school_contacts)
 #' dyn_metrics(dn, measure = "density")
 #' dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
+#' dyn_metrics(dn, measure = "density", step = 1, window = 3)
 #' plot(dyn_metrics(dn, measure = c("mutual", "asymmetric")))
 #'
 #' @export
 dyn_metrics <- function(dn, measure = "density",
                         sessions = c("bounded", "collapse", "separate"),
-                        sample = c("window", "instant")) {
+                        sample = NULL,
+                        start = NULL, end = NULL,
+                        step = NULL, window = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
-  sample <- match.arg(sample)
+  window <- .legacy_sample(window, sample)
+  spec <- .window_spec(dn, start, end, step, window)
   .check("`measure` must be a character vector." = is.character(measure),
             "`measure` must name at least one measure." = length(measure) > 0L)
 
@@ -76,7 +105,7 @@ dyn_metrics <- function(dn, measure = "density",
     }
   }
 
-  df <- .over_bins(dn, sessions, node_level = FALSE, sample = sample,
+  df <- .over_bins(dn, sessions, node_level = FALSE, spec = spec,
     fun = function(enc, act, bin) {
       a <- .adjacency(enc, act, dn$directed)
       unlist(lapply(measure, function(m) .graph_measure(m, a, dn$directed)),
@@ -85,7 +114,7 @@ dyn_metrics <- function(dn, measure = "density",
 
   .metric(df, level = "graph",
           what = if (length(measure) == 1L) .graph_label(measure) else "Graph structure",
-          dn = dn)
+          dn = dn, spec = spec)
 }
 
 #' Compute one graph-level measure
@@ -107,7 +136,8 @@ dyn_metrics <- function(dn, measure = "density",
     isolates     = sum(rowSums(b) + colSums(b) == 0),
     transitivity = .transitivity(a, directed),
     reciprocity  = .reciprocity(a),
-    components   = .components(a, "weak")$count,
+    components        = .components(a, "weak")$count,
+    components_strong = .components(a, "strong")$count,
     largest_component = {
       memb <- .components(a, "weak")$membership
       max(tabulate(memb)) / max(1, n)
@@ -131,9 +161,15 @@ dyn_metrics <- function(dn, measure = "density",
       .centralisation(.betweenness(a, directed),
                       .max_centralisation("betweenness", n, directed)),
     centralization_closeness =
-      .centralisation(.closeness(a, directed),
+      # Direction is read outward here, as igraph and sna do; the matching
+      # denominator is the one for out-closeness.
+      .centralisation(.closeness(a, directed, "out"),
                       .max_centralisation("closeness", n, directed)),
-    triads = .triad_census(a)
+    triads = .triad_census(a),
+    connectedness = .connectedness(a),
+    efficiency    = .efficiency(a, directed),
+    hierarchy     = .krackhardt_hierarchy(a),
+    lubness       = .lubness(a)
   )
 
   if (identical(m, "triads")) {
@@ -166,15 +202,18 @@ dyn_metrics <- function(dn, measure = "density",
 #' @param what `"degree"`, `"betweenness"` or `"closeness"`.
 #' @param n Vertex count.
 #' @param directed Whether the network is directed.
-#' @return A single numeric value.
+#' @return A single numeric value; `NA` below three vertices, where the most
+#'   centralised graph is not defined.
 #' @keywords internal
 .max_centralisation <- function(what, n, directed) {
   if (n < 3L) return(NA_real_)
+  # Degree and betweenness use the standard Freeman maxima. Closeness uses
+  # Dynet's disconnected-graph score (reachable vertices / reachable distance),
+  # whose maxima are a single directed arc and an isolated undirected dyad.
   switch(what,
-    degree      = if (directed) (n - 1) * (2 * n - 3) else (n - 1) * (n - 2),
+    degree      = if (directed) (n - 1) * (2 * n - 4) else (n - 1) * (n - 2),
     betweenness = if (directed) (n - 1)^2 * (n - 2) else (n - 1)^2 * (n - 2) / 2,
-    closeness   = if (directed) (n - 1) * (n - 2) / (2 * n - 3) else
-                    (n - 1) * (n - 2) / (2 * n - 3)
+    closeness   = if (directed) n - 1 else n - 2
   )
 }
 
@@ -187,6 +226,7 @@ dyn_metrics <- function(dn, measure = "density",
               active_nodes = "Active vertices", isolates = "Isolates",
               transitivity = "Transitivity", reciprocity = "Reciprocity",
               components = "Components",
+              components_strong = "Strong components",
               largest_component = "Largest component share",
               mean_distance = "Mean geodesic distance", diameter = "Diameter",
               mutual = "Mutual dyads", asymmetric = "Asymmetric dyads",
@@ -194,6 +234,10 @@ dyn_metrics <- function(dn, measure = "density",
               centralization_degree = "Degree centralisation",
               centralization_betweenness = "Betweenness centralisation",
               centralization_closeness = "Closeness centralisation",
-              triads = "Triad census")
+              triads = "Triad census",
+              connectedness = "Krackhardt connectedness",
+              efficiency = "Krackhardt efficiency",
+              hierarchy = "Krackhardt hierarchy",
+              lubness = "Krackhardt LUBness")
   unname(lookup[m] %||% m)
 }

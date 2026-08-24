@@ -94,13 +94,96 @@ against time-respecting paths across the whole window. The second has no static
 counterpart: it cannot travel backwards in time, so it is never inflated the way
 a flattened network is.
 
-### Two ways to sample a bin
+### When the network is measured
 
-`sample = "window"`, the default, counts an edge whose spell overlaps the bin at
-all. `sample = "instant"` samples the network at the bin's left edge, which is
-the convention `tsna` uses. Window sampling is the default because instant
-sampling silently drops any edge that begins and ends between two sample points
-— a real loss on bursty data.
+Four arguments decide it, on every verb that returns a time series
+(`dyn_centrality`, `dyn_metrics`, `dyn_events`, `dyn_mixing`, `dyn_snapshots`):
+
+| argument | meaning | `tsna::tSnaStats()` |
+|---|---|---|
+| `start`, `end` | first and last measurement | `start`, `end` |
+| `step` | how often to measure | `time.interval` |
+| `window` | how much time each measurement covers | `aggregate.dur` |
+
+`step` and `window` are separate on purpose, and that is the whole point. A
+measurement every day covering the last seven days is a **rolling window**:
+
+```r
+dyn_metrics(dn, measure = "density", step = 1, window = 7)
+```
+
+Setting them equal partitions the period into disjoint bins, which is the
+default. Setting `window = 0` samples the network at each point in time — the
+convention `tsna` uses with `aggregate.dur = 0`. A positive window is the
+default because point sampling silently drops any edge that begins and ends
+between two sample points, a real loss on bursty data.
+
+`start` and `end` default to the observed range, and a network built from dates
+may be addressed with dates:
+
+```r
+dyn_metrics(dn, measure = "density",
+            start = as.Date("2024-09-01"), end = as.Date("2024-12-01"),
+            step = 7, window = 28)
+```
+
+One convention to know: on the **default** grid the final window is closed on
+its right edge, so an event landing exactly on the last observed instant is
+counted rather than dropped. A grid whose `end` you supplied is taken
+literally, as `tsna` does — which is what makes a truncated range an exact
+subset of the full series.
+
+### What can be measured
+
+`dyn_metrics()` covers the graph level and `dyn_centrality()` the vertex level.
+Together they cover the core graph and vertex statistics exposed by
+`tsna::tSnaStats()`. The generic `prestige` family is not yet included, and
+`load` follows Goh's relay-only definition rather than `sna::loadcent()`, which
+also credits path endpoints.
+
+| graph level | |
+|---|---|
+| structure | `density`, `edges`, `active_nodes`, `isolates`, `components`, `components_strong`, `largest_component` |
+| cohesion | `transitivity`, `reciprocity`, `assortativity`, `mean_distance`, `diameter` |
+| censuses | `mutual`, `asymmetric`, `null`, `triads` |
+| centralisation | `centralization_degree`, `centralization_betweenness`, `centralization_closeness` |
+| Krackhardt | `connectedness`, `efficiency`, `hierarchy`, `lubness` |
+
+| vertex level | |
+|---|---|
+| degree family | `degree`, `strength`, `coreness` |
+| distance family | `closeness`, `betweenness`, `harary`, `load` |
+| spectral family | `eigenvector`, `pagerank`, `hub`, `authority`, `power` |
+| flow and brokerage | `flow_betweenness`, `information`, `constraint` |
+
+Two notes on cost and on well-posedness, because both bite in practice.
+`flow_betweenness` solves a maximum flow for every ordered pair with and
+without every vertex, so it is cubic in the vertex count times a flow solve --
+fine on a classroom, slow on a cohort. Eigenvector centrality is unique when
+the Perron eigenvalue has a one-dimensional eigenspace; strong connectivity is
+a sufficient condition. Disconnected snapshots with equally dominant
+components can admit more than one correct answer.
+
+### Which edges count: `mode`
+
+On a directed network, `mode` selects the direction for `degree`, `strength`,
+`closeness` and `coreness`:
+
+```r
+dyn_centrality(dn, measure = "strength", mode = "in")   # in-strength
+dyn_centrality(dn, measure = "degree", mode = "out")    # out-degree
+```
+
+The former `measure = "indegree"` and `measure = "outdegree"` spellings remain
+available as deprecated aliases, so older scripts continue to run while moving
+to the common `degree` plus `mode` interface.
+
+`mode` applies to `degree`, `strength`, `closeness`, `coreness`, `harary` and
+`eigenvector`. `"all"` is the default and counts both directions, so a
+reciprocated pair counts twice — igraph's and cograph's convention. Measures
+with a single directional definition (betweenness, PageRank, hub, authority,
+constraint, load, information, flow betweenness) ignore it, as does an
+undirected network.
 
 ## Drawing
 

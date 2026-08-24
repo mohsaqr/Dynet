@@ -13,14 +13,17 @@
 
 \item{directed}{Whether to keep edge direction.}
 
-\item{weighted}{Whether cells hold summed weights or a zero/one indicator.}
+\item{weighted}{Whether cells hold summed weights or spell counts.}
 }
 \value{
 A square numeric matrix with vertex names on both margins.
 }
 \description{
-Multi-edges are collapsed by summing weights. Diagonals are left untouched:
-if the network was built with \code{loops = TRUE}, self-loops appear on the
-diagonal exactly as recorded.
+Multi-edges are collapsed by summing. With \code{weighted = TRUE} a cell holds
+the summed edge weights; otherwise it holds the \emph{number of active spells}
+joining the pair, which every measure that wants presence rather than
+volume reduces with \code{\link[=.binary]{.binary()}}. Diagonals are left untouched: if the
+network was built with \code{loops = TRUE}, self-loops appear on the diagonal
+exactly as recorded.
 }
 \keyword{internal}

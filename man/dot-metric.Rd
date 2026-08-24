@@ -4,7 +4,7 @@
 \alias{.metric}
 \title{Wrap a long data frame as a temporal measure}
 \usage{
-.metric(df, level, what, dn, note = NULL)
+.metric(df, level, what, dn, note = NULL, spec = NULL, mode = NULL)
 }
 \arguments{
 \item{df}{Long data frame with \code{measure} and \code{value} and, depending on
@@ -17,6 +17,11 @@
 \item{dn}{The network the measure came from.}
 
 \item{note}{Optional single line shown under the header.}
+
+\item{spec}{The resolved measurement grid from \code{\link[=.window_spec]{.window_spec()}}, when the
+measure was taken on one.}
+
+\item{mode}{The direction convention used, when it applied.}
 }
 \value{
 An object of class \code{c("dynet_metric", "data.frame")}.

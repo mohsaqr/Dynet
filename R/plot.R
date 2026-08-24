@@ -308,7 +308,7 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
   grid <- .grid_for(enc, x)
   k <- which(grid$lo <= at & grid$hi > at)
   if (length(k) == 0L) k <- if (at >= max(grid$hi)) nrow(grid) else 1L
-  act <- .active(enc, grid$lo[k], grid$hi[k], last = k == nrow(grid))
+  act <- .active(enc, grid$lo[k], grid$hi[k], last = grid$closed[k])
   keep <- x$spells[act, , drop = FALSE]
   if (nrow(keep) == 0L) {
     stop(errorCondition(

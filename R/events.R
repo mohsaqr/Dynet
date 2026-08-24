@@ -17,9 +17,22 @@
 #'   during the bin) and `"new_pairs"` (vertex pairs meeting for the first
 #'   time).
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param start,end First and last time at which to measure. Default to the
+#'   observed range. A network built from dates may be addressed with dates.
+#' @param step How often to measure. Defaults to the interval the network was
+#'   built with.
+#' @param window How much time each measurement covers. Defaults to `step`,
+#'   which tiles the period into disjoint bins. A larger value slides an
+#'   overlapping window; `0` samples the network at each point in time.
 #'
 #' @return A `dynet_metric` at graph level, one row per time point and
 #'   measure.
+#'
+#' @details
+#' Formation and dissolution are counted inside each window, so overlapping
+#' windows (`window > step`) count the same event more than once by design --
+#' that is what a rolling total is. Setting `window` equal to `step`, the
+#' default, gives disjoint counts that sum to the total turnover.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -29,9 +42,12 @@
 #' @export
 dyn_events <- function(dn,
                        measure = c("formation", "dissolution"),
-                       sessions = c("bounded", "collapse", "separate")) {
+                       sessions = c("bounded", "collapse", "separate"),
+                       start = NULL, end = NULL,
+                       step = NULL, window = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
+  spec <- .window_spec(dn, start, end, step, window)
   allowed <- c("formation", "dissolution", "active", "new_pairs")
   bad <- setdiff(measure, allowed)
   if (length(bad) > 0L) {
@@ -42,23 +58,30 @@ dyn_events <- function(dn,
       class = "dynet_unknown_measure", call = NULL))
   }
 
-  df <- .over_bins(dn, sessions, node_level = FALSE,
+  df <- .over_bins(dn, sessions, node_level = FALSE, spec = spec,
     fun = function(enc, act, bin) {
       lo <- bin$lo; hi <- bin$hi
       pair <- paste(enc$from, enc$to, sep = "\r")
       first_seen <- !duplicated(pair[order(enc$start)])[order(order(enc$start))]
+      # The final window of a defaulted grid is closed on the right, exactly as
+      # it is for edge activity; without this a spell beginning on the last
+      # observed instant would be counted by dyn_metrics() and lost here.
+      within <- function(t) {
+        if (spec$window == 0) return(t == lo)
+        if (isTRUE(bin$closed)) t >= lo & t <= hi else t >= lo & t < hi
+      }
       vals <- vapply(measure, function(m) switch(m,
-        formation   = sum(enc$start >= lo & enc$start < hi),
-        dissolution = sum(enc$end >= lo & enc$end < hi),
+        formation   = sum(within(enc$start)),
+        dissolution = sum(within(enc$end)),
         active      = sum(act),
-        new_pairs   = sum(first_seen & enc$start >= lo & enc$start < hi)
+        new_pairs   = sum(first_seen & within(enc$start))
       ), numeric(1L))
       vals
     })
 
   .metric(df, level = "graph",
           what = if (length(measure) == 1L) .event_label(measure) else "Edge dynamics",
-          dn = dn)
+          dn = dn, spec = spec)
 }
 
 #' Human-readable label for an event measure

@@ -9,18 +9,24 @@ dyn_centrality(
   measure = "degree",
   scope = c("snapshot", "temporal"),
   sessions = c("bounded", "collapse", "separate"),
-  sample = c("window", "instant"),
-  damping = 0.85
+  sample = NULL,
+  damping = 0.85,
+  mode = c("all", "out", "in"),
+  start = NULL,
+  end = NULL,
+  step = NULL,
+  window = NULL,
+  exponent = 1
 )
 }
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{measure}{One or more of \code{"degree"}, \code{"indegree"}, \code{"outdegree"},
-\code{"strength"}, \code{"closeness"}, \code{"betweenness"}, \code{"eigenvector"},
-\code{"pagerank"}, \code{"hub"}, \code{"authority"}, \code{"coreness"}, \code{"constraint"} for
-snapshot scope; \code{"closeness"}, \code{"betweenness"} or \code{"reach"} for temporal
-scope.}
+\item{measure}{One or more of \code{"degree"}, \code{"strength"}, \code{"closeness"},
+\code{"betweenness"}, \code{"eigenvector"}, \code{"pagerank"}, \code{"hub"}, \code{"authority"},
+\code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
+\code{"load"} or \code{"flow_betweenness"} for snapshot scope; \code{"closeness"},
+\code{"betweenness"} or \code{"reach"} for temporal scope.}
 
 \item{scope}{\code{"snapshot"} for a value per time bin, \code{"temporal"} for one
 value per vertex computed on time-respecting paths.}
@@ -29,11 +35,33 @@ value per vertex computed on time-respecting paths.}
 session, \code{"collapse"} ignores sessions, \code{"separate"} reports each session
 on its own rows.}
 
-\item{sample}{\code{"window"} counts an edge whose spell overlaps the bin at
-all; \code{"instant"} samples the network at the bin's left edge, matching
-\code{tsna}. \code{"window"} is the default because it cannot miss a short event.}
+\item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
+\code{"window"} uses the current positive/default window.}
 
 \item{damping}{Damping factor for PageRank.}
+
+\item{mode}{Which edges count on a directed network: \code{"all"} both
+directions, \code{"out"} outgoing only, \code{"in"} incoming only. Applies to
+\code{"degree"}, \code{"strength"}, \code{"closeness"}, \code{"coreness"}, \code{"harary"} and
+\code{"eigenvector"}; the remaining measures have a single directional
+definition and ignore it. Ignored
+entirely on an undirected network. In-degree is therefore
+\code{mode = "in"}. The old \code{"indegree"} and \code{"outdegree"} measure names
+remain as deprecated aliases.}
+
+\item{start, end}{First and last time at which to measure. Default to the
+observed range. A network built from dates may be addressed with dates.}
+
+\item{step}{How often to measure. Defaults to the interval the network was
+built with.}
+
+\item{window}{How much time each measurement covers. Defaults to \code{step},
+which tiles the period into disjoint bins. A larger value slides an
+overlapping window; \code{0} samples the network at each point in time.}
+
+\item{exponent}{Attenuation factor for Bonacich \code{"power"}. Positive rewards
+being connected to well-connected others; negative rewards the opposite,
+which is the bargaining reading.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time
@@ -55,6 +83,19 @@ quantity that has no counterpart in a static network: it cannot run
 backwards in time, so it is never inflated the way a flattened network is.
 }
 \details{
+\code{step} and \code{window} are separate on purpose. \code{step} is how often you look;
+\code{window} is how much of the timeline each look takes in. Setting them equal
+partitions the period; setting \code{window} larger than \code{step} is a rolling
+window, which keeps the resolution of the smaller step while smoothing over
+the noise of a sparse bin. The arguments match \code{tsna::tSnaStats()}, where
+they are called \code{time.interval} and \code{aggregate.dur}.
+
+\code{"eigenvector"} is uniquely determined when the Perron eigenvalue has a
+one-dimensional eigenspace; strong connectivity is a sufficient condition.
+Disconnected snapshots with equally dominant components can have more than
+one correct eigenvector, so read the result as a within-snapshot ranking
+rather than an automatically comparable number across the whole series.
+
 Temporal betweenness counts how many earliest-arrival paths pass through a
 vertex, taken over one path per source-target pair. It is not averaged over
 all equally-early paths, so it is a count on the earliest-arrival tree
@@ -66,6 +107,9 @@ dn <- dynet(school_contacts)
 dyn_centrality(dn, measure = "degree")
 dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
+
+# A seven-day window, stepped one day at a time.
+dyn_centrality(dn, measure = "degree", step = 1, window = 7)
 
 summary(dyn_centrality(dn, measure = "degree"))
 

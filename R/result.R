@@ -10,9 +10,13 @@
 #' @param what Short human name of the quantity, used in printing.
 #' @param dn The network the measure came from.
 #' @param note Optional single line shown under the header.
+#' @param spec The resolved measurement grid from [.window_spec()], when the
+#'   measure was taken on one.
+#' @param mode The direction convention used, when it applied.
 #' @return An object of class `c("dynet_metric", "data.frame")`.
 #' @keywords internal
-.metric <- function(df, level, what, dn, note = NULL) {
+.metric <- function(df, level, what, dn, note = NULL, spec = NULL,
+                    mode = NULL) {
   # A session column that is entirely absent of sessions is noise; drop it.
   if ("session" %in% names(df) && all(is.na(df$session) | df$session == "all")) {
     df$session <- NULL
@@ -28,6 +32,9 @@
     note      = note,
     time_unit = dn$meta$time_unit,
     interval  = dn$meta$interval,
+    step      = spec$step,
+    window    = spec$window,
+    mode      = mode,
     n_nodes   = nrow(dn$nodes),
     directed  = dn$directed,
     net_format = dn$meta$format
@@ -95,9 +102,22 @@ print.dynet_metric <- function(x, n = 12L, ...) {
     bits <- c(bits, sprintf("%d vertices", length(unique(x$node))))
   }
   if ("time" %in% names(x)) {
-    bits <- c(bits, sprintf("%d time points, %s per bin",
-                            length(unique(x$time)),
-                            format(attr(x, "interval"))))
+    step   <- attr(x, "step")   %||% attr(x, "interval")
+    window <- attr(x, "window") %||% step
+    # Naming the window only when it differs from the step keeps the common
+    # case short and makes a rolling window impossible to miss.
+    shape <- if (window == 0) {
+      sprintf("step %s, sampled at each point", format(step))
+    } else if (isTRUE(all.equal(window, step))) {
+      sprintf("%s per bin", format(step))
+    } else {
+      sprintf("step %s, window %s (rolling)", format(step), format(window))
+    }
+    bits <- c(bits, sprintf("%d time points, %s",
+                            length(unique(x$time)), shape))
+  }
+  if (!is.null(attr(x, "mode"))) {
+    bits <- c(bits, sprintf("mode %s", attr(x, "mode")))
   }
   if ("session" %in% names(x)) {
     bits <- c(bits, sprintf("%d sessions", length(unique(x$session))))

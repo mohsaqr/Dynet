@@ -15,6 +15,27 @@
   b
 }
 
+#' Sum a matrix along the margin a mode asks for
+#'
+#' The single place direction is interpreted. `"out"` sums each row, `"in"`
+#' sums each column, and `"all"` sums both -- so a reciprocated pair counts
+#' twice, which is `igraph`'s and `cograph`'s convention. On an undirected
+#' network the three coincide and the row sums are returned.
+#'
+#' @param m A square numeric matrix.
+#' @param directed Whether the network is directed.
+#' @param mode One of `"all"`, `"out"`, `"in"`.
+#' @return A numeric vector, one value per vertex.
+#' @keywords internal
+.margin <- function(m, directed, mode = c("all", "out", "in")) {
+  mode <- match.arg(mode)
+  if (!directed) return(rowSums(m))
+  switch(mode,
+    all  = rowSums(m) + colSums(m),
+    out  = rowSums(m),
+    `in` = colSums(m))
+}
+
 #' All-pairs geodesic distances
 #'
 #' Breadth-first distances found by repeated boolean matrix products, which
@@ -58,10 +79,16 @@
 #'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
+#' @param mode `"out"` counts distance from the vertex, `"in"` distance to it,
+#'   `"all"` ignores direction.
 #' @return A named numeric vector.
 #' @keywords internal
-.closeness <- function(a, directed = TRUE) {
-  d <- .geodesic(a, directed)
+.closeness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
+  mode <- match.arg(mode)
+  # "in" on `a` is "out" on its transpose, and "all" is the undirected graph,
+  # so one geodesic routine serves all three modes.
+  if (directed && identical(mode, "in")) a <- t(a)
+  d <- .geodesic(a, directed && !identical(mode, "all"))
   finite <- is.finite(d)
   diag(finite) <- FALSE
   tot <- rowSums(ifelse(finite, d, 0))
@@ -128,38 +155,35 @@
   contrib
 }
 
-#' Principal eigenvector centrality by power iteration
+#' Principal eigenvector centrality
 #'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction. Directed networks use the
 #'   left eigenvector, so that a vertex is central when central vertices point
 #'   at it.
-#' @param tol,max_iter Convergence tolerance and iteration cap.
+#' @param tol,max_iter Retained for compatibility with the former power-
+#'   iteration implementation; the stable eigensolver does not use them.
 #' @return A named numeric vector scaled to a maximum of one.
 #' @keywords internal
-.eigen_centrality <- function(a, directed = TRUE, tol = 1e-12,
-                              max_iter = 1000L) {
-  m <- if (directed) t(a) else pmax(a, t(a))
+.eigen_centrality <- function(a, directed = TRUE, mode = c("all", "out", "in"),
+                              tol = 1e-12, max_iter = 1000L) {
+  mode <- match.arg(mode)
+  # `a` is taken as given -- .hits() passes a co-citation matrix through here,
+  # so this must not binarise. Callers that want presence rather than volume
+  # reduce with .binary() first.
+  # "in" scores a vertex by who points at it (igraph's convention), "out" by
+  # who it points at (sna::evcent's), "all" ignores direction.
+  m <- if (!directed || identical(mode, "all")) pmax(a, t(a)) else
+    switch(mode, `in` = t(a), out = a)
   n <- nrow(m)
   if (n == 0L) return(numeric(0))
   if (all(m == 0)) return(stats::setNames(rep(0, n), rownames(a)))
-  x <- rep(1 / n, n)
-  it <- 0L
-  # Power iteration: each step depends on the previous vector.
-  repeat {
-    y <- as.vector(m %*% x)
-    nrm <- sqrt(sum(y^2))
-    if (nrm == 0) return(stats::setNames(rep(0, n), rownames(a)))
-    y <- y / nrm
-    it <- it + 1L
-    if (max(abs(y - x)) < tol || it >= max_iter) { x <- y; break }
-    x <- y
-  }
-  if (it >= max_iter) {
-    warning(warningCondition(
-      sprintf("Eigenvector centrality did not converge in %d iterations.", max_iter),
-      class = "dynet_no_converge"), call. = FALSE)
-  }
+  # A plain power iteration oscillates on bipartite and periodic graphs because
+  # -rho can have the same modulus as the Perron root. A direct eigensolve
+  # selects the non-negative matrix's largest real eigenvalue instead.
+  eig <- eigen(m)
+  idx <- which.max(Re(eig$values))
+  x <- Re(eig$vectors[, idx])
   x <- abs(x)
   if (max(x) > 0) x <- x / max(x)
   stats::setNames(x, rownames(a))
@@ -204,14 +228,18 @@
 
 #' k-core number of every vertex
 #' @param a Adjacency matrix.
-#' @param directed Whether to respect direction. Cores use total degree.
+#' @param directed Whether to respect direction.
+#' @param mode Which degree the peeling uses: `"all"`, `"out"` or `"in"`.
 #' @return A named numeric vector.
 #' @keywords internal
-.coreness <- function(a, directed = TRUE) {
+.coreness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
+  mode <- match.arg(mode)
   b <- .binary(a, directed = TRUE)
-  # Total degree counts each direction separately, so a reciprocated pair
-  # contributes two. This is igraph's mode = "all" convention.
-  m <- if (directed) b + t(b) else .binary(a, directed = FALSE)
+  # "all" counts each direction separately, so a reciprocated pair contributes
+  # two -- igraph's convention. The other modes peel on one margin, which the
+  # transpose supplies for "in".
+  m <- if (!directed) .binary(a, directed = FALSE) else
+    switch(mode, all = b + t(b), out = b, `in` = t(b))
   n <- nrow(m)
   core <- rep(0, n)
   alive <- rep(TRUE, n)

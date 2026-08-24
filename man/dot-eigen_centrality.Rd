@@ -2,9 +2,15 @@
 % Please edit documentation in R/kernels.R
 \name{.eigen_centrality}
 \alias{.eigen_centrality}
-\title{Principal eigenvector centrality by power iteration}
+\title{Principal eigenvector centrality}
 \usage{
-.eigen_centrality(a, directed = TRUE, tol = 1e-12, max_iter = 1000L)
+.eigen_centrality(
+  a,
+  directed = TRUE,
+  mode = c("all", "out", "in"),
+  tol = 1e-12,
+  max_iter = 1000L
+)
 }
 \arguments{
 \item{a}{Adjacency matrix.}
@@ -13,12 +19,13 @@
 left eigenvector, so that a vertex is central when central vertices point
 at it.}
 
-\item{tol, max_iter}{Convergence tolerance and iteration cap.}
+\item{tol, max_iter}{Retained for compatibility with the former power-
+iteration implementation; the stable eigensolver does not use them.}
 }
 \value{
 A named numeric vector scaled to a maximum of one.
 }
 \description{
-Principal eigenvector centrality by power iteration
+Principal eigenvector centrality
 }
 \keyword{internal}

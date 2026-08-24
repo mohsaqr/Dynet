@@ -14,7 +14,8 @@
 \item{directed}{Whether the network is directed.}
 }
 \value{
-A single numeric value.
+A single numeric value; \code{NA} below three vertices, where the most
+centralised graph is not defined.
 }
 \description{
 The denominator of Freeman centralisation, taken over the most centralised

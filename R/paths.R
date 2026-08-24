@@ -42,7 +42,7 @@
     if (sweep >= cap) {
       warning(warningCondition(
         sprintf("Temporal reachability stopped after %d sweeps without settling.", cap),
-        class = "dynet_no_converge"), call. = FALSE)
+        class = "dynet_no_converge", call = NULL))
       break
     }
   }
