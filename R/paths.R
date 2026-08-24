@@ -839,11 +839,12 @@ dyn_paths <- function(dn, from, at = NULL,
 #' Reachability of every vertex
 #'
 #' @description
-#' The share of the network each vertex can reach along time-respecting paths,
-#' and the share that can reach it. Reachability is the temporal replacement
-#' for component membership: in a static network two vertices in the same
-#' component reach each other by definition, whereas in a temporal network
-#' reach depends on whether the timing lines up.
+#' The number or share of other vertices each vertex can reach along
+#' time-respecting paths, and the number or share that can reach it.
+#' Reachability is the temporal replacement for component membership: in a
+#' static network two vertices in the same component reach each other by
+#' definition, whereas in a temporal network reach depends on whether the
+#' timing lines up.
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param direction `"forward"`, `"backward"` or `"both"`.
@@ -856,9 +857,13 @@ dyn_paths <- function(dn, from, at = NULL,
 #'   spells remain terminus-exclusive.
 #' @param traversal_time Nonnegative duration charged for every hop, in the
 #'   network's time unit. A calendar network also accepts a scalar `difftime`.
+#' @param measure One or both of `"reach"`, the proportion of other vertices,
+#'   and `"reach_count"`, their number. The source vertex is excluded from
+#'   both.
 #'
-#' @return A `dynet_metric` at node level with measures `forward_reach` and
-#'   `backward_reach`, each the proportion of other vertices involved.
+#' @return A `dynet_metric` at node level. Proportion measures are named
+#'   `forward_reach` and `backward_reach`; counts are named
+#'   `forward_reach_count` and `backward_reach_count`.
 #'
 #' @details
 #' Reachability uses [dyn_paths()] traversal semantics: nondecreasing times,
@@ -869,6 +874,12 @@ dyn_paths <- function(dn, from, at = NULL,
 #' latest-departure suprema determine whether a vertex can reach the target.
 #' The canonical `start` and `end` bounds apply one closed traversal-time window
 #' to both forward and backward queries.
+#'
+#' The source is excluded: a count is the number of distinct other vertices in
+#' the reachable set, not the number of journeys. A proportion divides that
+#' count by the full network size minus one. It is defined as zero for a
+#' singleton network. In separate-session output the same full-network
+#' denominator is retained in every session block.
 #'
 #' In separate-session output, a session entirely outside a one-sided bound
 #' contributes zero-reach rows rather than aborting the complete result. Its
@@ -885,11 +896,27 @@ dyn_paths <- function(dn, from, at = NULL,
 dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
                              at = NULL,
                              sessions = c("bounded", "collapse", "separate"),
-                             start = NULL, end = NULL, traversal_time = 0) {
+                             start = NULL, end = NULL, traversal_time = 0,
+                             measure = "reach") {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
   traversal_time <- .as_traversal_time(traversal_time, dn)
+  .check(
+    "`measure` must be a character vector." = is.character(measure),
+    "`measure` must name at least one measure." = length(measure) > 0L,
+    "`measure` cannot contain missing values." = !anyNA(measure)
+  )
+  allowed <- c("reach", "reach_count")
+  bad <- setdiff(measure, allowed)
+  if (length(bad) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown reach measure %s. Available: %s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(allowed, collapse = ", ")),
+      class = "dynet_unknown_measure", call = NULL
+    ))
+  }
   wanted <- if (identical(direction, "both")) c("forward", "backward") else direction
 
   parts <- .split_sessions(dn, sessions)
@@ -902,8 +929,8 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
         clamp_missing = identical(sessions, "separate")
       )
       t0 <- if (identical(d, "backward")) window$end else window$start
-      share <- vapply(seq_len(enc$n), function(s) {
-        b <- if (identical(d, "backward")) {
+      trees <- lapply(seq_len(enc$n), function(s) {
+        if (identical(d, "backward")) {
           .bfs_backward_bounded(
             dn, e2, s, t0, identical(sessions, "bounded"),
             lower = window$start, traversal_time = traversal_time
@@ -914,17 +941,26 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
             upper = window$end, traversal_time = traversal_time
           )
         }
-        (sum(is.finite(b$arrival)) - 1) / max(1, enc$n - 1)
-      }, numeric(1L))
-      share
+      })
+      .temporal_reach_values(trees, enc$n, measure)
     })
     data.frame(session = label, node = enc$names,
-               measure = rep(paste0(wanted, "_reach"), each = enc$n),
-               value = unlist(vals, use.names = FALSE),
+               measure = unlist(lapply(wanted, function(d) {
+                 rep(paste0(d, "_", measure), each = enc$n)
+               }), use.names = FALSE),
+               value = as.numeric(unlist(vals, use.names = FALSE)),
                stringsAsFactors = FALSE)
   }, parts, names(parts))
 
+  requested <- unique(measure)
+  note <- if (identical(requested, "reach")) {
+    "share of other vertices joined by a time-respecting path"
+  } else if (identical(requested, "reach_count")) {
+    "number of other vertices joined by a time-respecting path"
+  } else {
+    "count and share of other vertices joined by a time-respecting path"
+  }
   .metric(do.call(rbind, frames), level = "node", what = "Reachability",
-          dn = dn, note = "share of other vertices joined by a time-respecting path",
+          dn = dn, note = note,
           traversal_time = traversal_time)
 }

@@ -27,7 +27,7 @@ dyn_centrality(
 \code{"betweenness"}, \code{"eigenvector"}, \code{"pagerank"}, \code{"hub"}, \code{"authority"},
 \code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
 \code{"load"} or \code{"flow_betweenness"} for snapshot scope; \code{"closeness"},
-\code{"betweenness"} or \code{"reach"} for temporal scope.}
+\code{"betweenness"}, \code{"reach"} or \code{"reach_count"} for temporal scope.}
 
 \item{scope}{\code{"snapshot"} for a value per time bin, \code{"temporal"} for one
 value per vertex computed on time-respecting paths.}
@@ -113,10 +113,13 @@ times, unlimited waiting, half-open interval spells, and a separate exact
 timestamp rule for point events. Positive \code{traversal_time} requires an
 interval traversal to finish within continuous pair activity; a point event
 triggers at its timestamp and reaches its endpoint after that duration.
-\code{start} and \code{end} may bound temporal \code{"reach"}; bounded temporal closeness
-and betweenness remain deferred until their path-optimality definitions are
-completed. In separate-session output, a session outside a one-sided bound
-contributes zero-reach rows.
+\code{start} and \code{end} may bound temporal \code{"reach"} and \code{"reach_count"}; bounded
+temporal closeness and betweenness remain deferred until their
+path-optimality definitions are completed. Temporal \code{"reach"} is the
+proportion of other vertices reachable in the forward direction, while
+\code{"reach_count"} is their number. The source is excluded from both and a
+singleton proportion is defined as zero. In separate-session output, a
+session outside a one-sided bound contributes zero-reach rows.
 }
 \examples{
 dn <- dynet(school_contacts)

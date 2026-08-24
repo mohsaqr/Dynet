@@ -16,7 +16,8 @@
 \arguments{
 \item{dn}{A \code{dynet} object.}
 
-\item{measure}{One or more of "closeness", "betweenness", "reach".}
+\item{measure}{One or more of "closeness", "betweenness", "reach",
+"reach_count".}
 
 \item{sessions}{Session mode.}
 

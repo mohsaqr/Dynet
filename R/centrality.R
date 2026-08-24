@@ -13,7 +13,7 @@
 .mode_aware_measures <- c("degree", "indegree", "outdegree", "strength",
                           "closeness", "coreness", "harary", "eigenvector")
 
-.temporal_measures <- c("closeness", "betweenness", "reach")
+.temporal_measures <- c("closeness", "betweenness", "reach", "reach_count")
 
 #' Time-varying vertex centrality
 #'
@@ -35,7 +35,7 @@
 #'   `"betweenness"`, `"eigenvector"`, `"pagerank"`, `"hub"`, `"authority"`,
 #'   `"coreness"`, `"constraint"`, `"power"`, `"harary"`, `"information"`,
 #'   `"load"` or `"flow_betweenness"` for snapshot scope; `"closeness"`,
-#'   `"betweenness"` or `"reach"` for temporal scope.
+#'   `"betweenness"`, `"reach"` or `"reach_count"` for temporal scope.
 #' @param scope `"snapshot"` for a value per time bin, `"temporal"` for one
 #'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
@@ -97,10 +97,13 @@
 #' timestamp rule for point events. Positive `traversal_time` requires an
 #' interval traversal to finish within continuous pair activity; a point event
 #' triggers at its timestamp and reaches its endpoint after that duration.
-#' `start` and `end` may bound temporal `"reach"`; bounded temporal closeness
-#' and betweenness remain deferred until their path-optimality definitions are
-#' completed. In separate-session output, a session outside a one-sided bound
-#' contributes zero-reach rows.
+#' `start` and `end` may bound temporal `"reach"` and `"reach_count"`; bounded
+#' temporal closeness and betweenness remain deferred until their
+#' path-optimality definitions are completed. Temporal `"reach"` is the
+#' proportion of other vertices reachable in the forward direction, while
+#' `"reach_count"` is their number. The source is excluded from both and a
+#' singleton proportion is defined as zero. In separate-session output, a
+#' session outside a one-sided bound contributes zero-reach rows.
 #'
 #' @references
 #' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
@@ -141,6 +144,7 @@ dyn_centrality <- function(dn,
   .check(
     "`measure` must be a character vector." = is.character(measure),
     "`measure` must name at least one measure." = length(measure) > 0L,
+    "`measure` cannot contain missing values." = !anyNA(measure),
     "`damping` must be a single number strictly between zero and one." =
       is.numeric(damping) && length(damping) == 1L && damping > 0 && damping < 1,
     "`exponent` must be a single finite number." =
@@ -193,9 +197,9 @@ dyn_centrality <- function(dn,
         class = "dynet_bad_input", call = NULL))
     }
     bounded <- !is.null(start) || !is.null(end)
-    if (bounded && any(measure != "reach")) {
+    if (bounded && any(!measure %in% c("reach", "reach_count"))) {
       stop(errorCondition(
-        "Path bounds are currently defined for temporal `reach` only; closeness and betweenness remain unbounded until their optimal-path contracts are completed.",
+        "Path bounds are currently defined for temporal `reach` and `reach_count` only; closeness and betweenness remain unbounded until their optimal-path contracts are completed.",
         class = "dynet_bad_input", call = NULL
       ))
     }
@@ -283,13 +287,14 @@ dyn_centrality <- function(dn,
               power = "Bonacich power", harary = "Harary graph centrality",
               information = "Information centrality", load = "Load centrality",
               flow_betweenness = "Flow betweenness",
-              reach = "Reachability")
+              reach = "Reachability", reach_count = "Reach count")
   unname(lookup[m] %||% m)
 }
 
 #' Vertex centrality over time-respecting paths
 #' @param dn A `dynet` object.
-#' @param measure One or more of "closeness", "betweenness", "reach".
+#' @param measure One or more of "closeness", "betweenness", "reach",
+#'   "reach_count".
 #' @param sessions Session mode.
 #' @param start,end Optional traversal bounds for temporal reach.
 #' @param traversal_time Nonnegative duration charged for every hop.
@@ -338,7 +343,8 @@ dyn_centrality <- function(dn,
 .temporal_measure <- function(m, trees, enc) {
   n <- enc$n
   switch(m,
-    reach = vapply(trees, function(tr) sum(is.finite(tr$arrival)) - 1, numeric(1L)) / (n - 1),
+    reach = .temporal_reach_values(trees, n, m)[[1L]],
+    reach_count = .temporal_reach_values(trees, n, m)[[1L]],
     closeness = vapply(trees, function(tr) {
       lat <- tr$arrival - tr$origin
       ok <- is.finite(lat) & lat > 0
@@ -358,6 +364,24 @@ dyn_centrality <- function(dn,
       Reduce(`+`, hits, accumulate = FALSE)
     }
   )
+}
+
+#' Reduce temporal search trees to source-excluding reach measures
+#'
+#' @param trees List of temporal search results, one per source.
+#' @param n Size of the fixed vertex universe.
+#' @param measure One or more of `"reach"` and `"reach_count"`.
+#' @return A named list of numeric vectors in requested-measure order.
+#' @keywords internal
+.temporal_reach_values <- function(trees, n, measure) {
+  count <- vapply(
+    trees,
+    function(tree) as.numeric(sum(is.finite(tree$arrival)) - 1L),
+    numeric(1L)
+  )
+  stats::setNames(lapply(measure, function(m) {
+    if (identical(m, "reach_count")) count else count / max(1, n - 1L)
+  }), measure)
 }
 
 #' Reconstruct one session-integral temporal tree path

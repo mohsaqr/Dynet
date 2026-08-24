@@ -11,7 +11,8 @@ dyn_reachability(
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
-  traversal_time = 0
+  traversal_time = 0,
+  measure = "reach"
 )
 }
 \arguments{
@@ -31,17 +32,23 @@ spells remain terminus-exclusive.}
 
 \item{traversal_time}{Nonnegative duration charged for every hop, in the
 network's time unit. A calendar network also accepts a scalar \code{difftime}.}
+
+\item{measure}{One or both of \code{"reach"}, the proportion of other vertices,
+and \code{"reach_count"}, their number. The source vertex is excluded from
+both.}
 }
 \value{
-A \code{dynet_metric} at node level with measures \code{forward_reach} and
-\code{backward_reach}, each the proportion of other vertices involved.
+A \code{dynet_metric} at node level. Proportion measures are named
+\code{forward_reach} and \code{backward_reach}; counts are named
+\code{forward_reach_count} and \code{backward_reach_count}.
 }
 \description{
-The share of the network each vertex can reach along time-respecting paths,
-and the share that can reach it. Reachability is the temporal replacement
-for component membership: in a static network two vertices in the same
-component reach each other by definition, whereas in a temporal network
-reach depends on whether the timing lines up.
+The number or share of other vertices each vertex can reach along
+time-respecting paths, and the number or share that can reach it.
+Reachability is the temporal replacement for component membership: in a
+static network two vertices in the same component reach each other by
+definition, whereas in a temporal network reach depends on whether the
+timing lines up.
 }
 \details{
 Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing times,
@@ -52,6 +59,12 @@ For backward reachability, the resolved \code{end} is a common deadline and
 latest-departure suprema determine whether a vertex can reach the target.
 The canonical \code{start} and \code{end} bounds apply one closed traversal-time window
 to both forward and backward queries.
+
+The source is excluded: a count is the number of distinct other vertices in
+the reachable set, not the number of journeys. A proportion divides that
+count by the full network size minus one. It is defined as zero for a
+singleton network. In separate-session output the same full-network
+denominator is retained in every session block.
 
 In separate-session output, a session entirely outside a one-sided bound
 contributes zero-reach rows rather than aborting the complete result. Its

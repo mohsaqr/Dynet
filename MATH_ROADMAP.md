@@ -538,19 +538,63 @@ oracle and limited `tsna` calibration pass; and all deliberate mutants fail.
 
 **Purpose:** rebuild reach on P01–P05.
 
-**Contract:** exclude the source; report zero for a singleton proportion;
-record count and proportion as distinct measures if both are exposed; use the
-same direction, bounds, traversal duration, and session semantics in
-`dyn_reachability()` and temporal centrality.
+**Status:** complete in 0.3.8.
+
+**Approved mathematical contract:** for the fixed vertex universe \(V\), let
+\(R^+(v)\) contain every other vertex reachable from \(v\) by a P01–P05
+journey, and let \(R^-(v)\) contain every other vertex that can reach \(v\).
+The forward and backward counts are the corresponding set cardinalities, so a
+target is counted once even when several journeys or bounded sessions attain
+it. The empty source journey is always excluded. Proportion is count divided
+by \(|V|-1\) when \(|V|>1\), and is defined as exactly zero for a singleton.
+Isolates, empty windows, and session blocks with no eligible hop therefore
+produce zero rather than `NA`, `NaN`, or `Inf`.
+
+Reach inherits the complete direction, anchor, closed query-bound, traversal
+duration, pair-activity-union, point-event, attainment, and session semantics
+approved in P01–P05. A finite unattained backward supremum counts whenever it
+proves that at least one feasible journey exists; a boundary-only unattained
+value does not. In bounded mode a target reached through more than one complete
+session still counts once. Collapse may cross session labels. Separate mode
+reports one block per real session but retains the full fixed vertex universe
+and the same \(|V|-1\) denominator; separate blocks are not additive estimates
+of bounded reach.
+
+**Approved public surface:** existing `forward_reach`, `backward_reach`, and
+temporal centrality `reach` remain source-excluding proportions. Add a final
+`measure = "reach"` argument to `dyn_reachability()`, accepting any requested
+order of `"reach"` and `"reach_count"`; counts use the distinct long-form
+measure names `forward_reach_count` and `backward_reach_count`. Temporal
+centrality accepts `reach_count` alongside `reach`. Its `reach` remains forward
+proportion and its `reach_count` forward count. Both reduce the same search
+trees through one internal helper, and the default call retains its present
+rows, names, order, class, metadata, and values. Bounds are accepted when all
+requested temporal centrality measures are `reach` or `reach_count` only.
+
+Within each session, `dyn_reachability()` retains direction-major order, then
+requested-measure order, then vertex order. Count values remain numeric in the
+standard `value` column. No wide count/proportion columns, quantity column, or
+renamed `reach_proportion` alias is added.
 
 **Fixtures:** singleton, isolate, chain, fork, later start, backward mirror,
-bounded range, and separate sessions.
+bounded range, traversal-duration monotonicity, unattained backward reach,
+duplicate bounded-session attainment, collapse crossing, and separate
+sessions with the fixed global denominator.
 
-**Oracle:** literal reachable sets, later-start monotonicity, reversal duality,
-and `tsna::tReach()` where definitions match.
+**Oracle:** literal reachable sets; count/proportion identity; later-start,
+earlier-end, and larger-duration monotonicity; same-window forward/backward
+relation transposition; equality between forward `dyn_reachability()` and
+temporal centrality; and full-census `tsna::tReach()` only where the underlying
+P01–P05 journey definitions match. Installed `tsna` counts the seed, so the
+calibration is Dynet count = `tReach() - 1` and Dynet proportion =
+`(tReach() - 1) / (n - 1)`, with the singleton handled by Dynet's zero
+convention. `networkDynamic` supplies activity spells but no reach measure;
+`ndtv` supplies no mathematical reach API.
 
-**Exit:** the two public reach interfaces agree and no singleton division is
-undefined.
+**Exit:** both public reach interfaces agree, the default is backward
+compatible, every count is a source-excluded set cardinality, every proportion
+uses the approved denominator, no singleton division is undefined, the literal
+and metamorphic oracle gates pass, and the limited `tsna` calibration passes.
 
 ### P07 — Optimal temporal-journey criterion
 
