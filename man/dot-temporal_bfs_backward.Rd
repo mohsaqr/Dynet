@@ -4,7 +4,7 @@
 \alias{.temporal_bfs_backward}
 \title{Latest-departure suprema into one target}
 \usage{
-.temporal_bfs_backward(enc, target, deadline, max_sweeps = NULL)
+.temporal_bfs_backward(enc, target, deadline, max_sweeps = NULL, lower = -Inf)
 }
 \arguments{
 \item{enc}{Encoded edge list from \code{\link[=.encode]{.encode()}}.}
@@ -14,6 +14,8 @@
 \item{deadline}{Latest permitted arrival time at the target.}
 
 \item{max_sweeps}{Iteration cap.}
+
+\item{lower}{Earliest admissible traversal time.}
 }
 \value{
 A list with \code{arrival}, \code{attained}, \code{previous}, \code{source} and

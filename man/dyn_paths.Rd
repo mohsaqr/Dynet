@@ -9,7 +9,9 @@ dyn_paths(
   from,
   at = NULL,
   direction = c("forward", "backward"),
-  sessions = c("bounded", "collapse", "separate")
+  sessions = c("bounded", "collapse", "separate"),
+  start = NULL,
+  end = NULL
 )
 }
 \arguments{
@@ -20,12 +22,16 @@ dyn_paths(
 \item{at}{Forward source-availability time or backward arrival deadline.
 Defaults to the start of the observation window for forward paths and its
 end for backward paths. Date and date-time values use the network's time
-scale.}
+scale. It cannot be combined with \code{start} or \code{end}.}
 
 \item{direction}{\code{"forward"} traces where the vertex can reach;
 \code{"backward"} traces who could have reached it.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+
+\item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
+spells remain terminus-exclusive. When these are supplied, use them
+instead of \code{at}.}
 }
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
@@ -51,22 +57,31 @@ not depend on edge-row order or duplicate spell rows.
 }
 \details{
 A valid forward journey has distinct vertices and traversal times
-\verb{at <= t1 <= ... <= tk}. At each hop, either an interval is active at the
-traversal time or a point event occurs exactly then. The empty journey
-reaches the source at \code{at}. Cycles are unnecessary for reach and earliest
-arrival because deleting a repeated-vertex section and waiting at that
-vertex preserves every later hop. This contract defines feasibility and
-arrival; optimal-journey ties and multiplicity are separate quantities.
+\verb{start <= t1 <= ... <= tk <= end}. At each hop, either an interval is active
+at the traversal time or a point event occurs exactly then. The empty journey
+reaches the source at the resolved \code{start}. With \code{at}, that value supplies
+\code{start} for forward paths or \code{end} for backward paths. Cycles are unnecessary
+for reach and earliest arrival because deleting a repeated-vertex section
+and waiting at that vertex preserves every later hop. This contract defines
+feasibility and arrival; optimal-journey ties and multiplicity are separate
+quantities.
+
+\code{start} and \code{end} form a closed window for traversal times: a hop may occur
+at either bound. This does not close interval spells on the right. An event
+or interval onset at \code{end} is eligible, while an interval whose own terminus
+equals \code{end} is not active at that instant. \code{start = end} computes the
+equal-time closure at one timestamp.
 
 For backward paths, \code{arrival_time} is the latest-departure supremum for a
-journey ending at the named target by \code{at}, and \code{latency} is \code{at} minus that
-value. A supremum at an interval's excluded terminus need not itself be an
-attainable departure. The \code{previous} column points one hop onward toward
-the target.
+journey ending at the named target by the resolved \code{end}, and \code{latency} is
+\code{end} minus that value. A supremum at an interval's excluded terminus need
+not itself be an attainable departure. The \code{previous} column points one hop
+onward toward the target.
 }
 \examples{
 dn <- dynet(school_contacts)
 dyn_paths(dn, from = "Ana")
+dyn_paths(dn, from = "Ana", start = 0, end = 10)
 summary(dyn_paths(dn, from = "Ana"))
 
 }

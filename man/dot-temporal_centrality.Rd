@@ -4,7 +4,7 @@
 \alias{.temporal_centrality}
 \title{Vertex centrality over time-respecting paths}
 \usage{
-.temporal_centrality(dn, measure, sessions)
+.temporal_centrality(dn, measure, sessions, start = NULL, end = NULL)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}
@@ -12,6 +12,8 @@
 \item{measure}{One or more of "closeness", "betweenness", "reach".}
 
 \item{sessions}{Session mode.}
+
+\item{start, end}{Optional traversal bounds for temporal reach.}
 }
 \value{
 A \code{dynet_metric} at node level with no time column.

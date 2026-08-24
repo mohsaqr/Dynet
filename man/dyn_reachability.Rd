@@ -8,7 +8,9 @@ dyn_reachability(
   dn,
   direction = c("both", "forward", "backward"),
   at = NULL,
-  sessions = c("bounded", "collapse", "separate")
+  sessions = c("bounded", "collapse", "separate"),
+  start = NULL,
+  end = NULL
 )
 }
 \arguments{
@@ -18,9 +20,13 @@ dyn_reachability(
 
 \item{at}{Forward source-availability time or backward arrival deadline.
 Defaults to the beginning or end of each observed period, respectively.
-Date and date-time values use the network's time scale.}
+Date and date-time values use the network's time scale. It cannot be
+combined with \code{start} or \code{end}.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+
+\item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
+spells remain terminus-exclusive.}
 }
 \value{
 A \code{dynet_metric} at node level with measures \code{forward_reach} and
@@ -36,12 +42,20 @@ reach depends on whether the timing lines up.
 \details{
 Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing times,
 unlimited waiting, half-open interval spells, and a separate exact timestamp
-rule for point events. For backward reachability, \code{at} is a common deadline
-and latest-departure suprema determine whether a vertex can reach the target.
+rule for point events. For backward reachability, the resolved \code{end} is a
+common deadline and latest-departure suprema determine whether a vertex can
+reach the target. The canonical \code{start} and \code{end} bounds apply one closed
+traversal-time window to both forward and backward queries.
+
+In separate-session output, a session entirely outside a one-sided bound
+contributes zero-reach rows rather than aborting the complete result. Its
+missing implicit bound is clamped to the supplied bound, producing the
+empty journey at that boundary and no eligible hop.
 }
 \examples{
 dn <- dynet(school_contacts)
 dyn_reachability(dn)
+dyn_reachability(dn, start = 0, end = 10)
 plot(dyn_reachability(dn))
 
 }

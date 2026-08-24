@@ -345,19 +345,45 @@ pinned; standing mutants and the complete package gates pass.
 **Purpose:** add a latest admissible search time without mixing an API feature
 into P01's boundary repair.
 
-**Candidate public surface:** `dyn_paths(dn, from = "Ana", at = 2,
-until = 10)`, with the same bounds available to reach and temporal centrality
-when mathematically meaningful.
+**Status:** complete in 0.3.5.
 
-**Contract:** distinguish an edge beginning exactly at the upper bound from an
-edge whose activity crosses it. Define forward and backward dual bounds and
-date-time conversion.
+**Approved public surface:** `dyn_paths()` and `dyn_reachability()` gain named
+`start` and `end` bounds. Existing `at` remains a compatibility alias for
+`start` in forward queries and `end` in backward queries; mixing `at` with a
+canonical bound is an error. For `dyn_centrality(scope = "temporal")`, its
+existing `start` and `end` arguments bound temporal `reach`; bounded temporal
+closeness and betweenness remain deferred to their own mathematical features.
 
-**Fixtures:** event before, at, and after each bound; long-open edge crossing a
-bound; invalid reversed bounds; sessions partially outside the range.
+**Contract:** the search horizon is the closed traversal-time window
+`[start,end]`. Every hop time lies inside it. Edge activity remains P01's
+separate rule: interval `[s,e)` is usable at `t` exactly when `s <= t < e`, and
+a point event at `t` is usable exactly then. Consequently a point event or
+interval onset at the search `end` is included, while an interval terminating
+there cannot be boarded at that instant. `start == end` computes same-time
+closure; only `start > end` is invalid.
 
-**Exit:** truncated results are exact subsets under the written rule and classed
-errors cover invalid combinations.
+Forward paths make the source available at `start` and retain earliest arrival
+at or before `end`. Backward paths use `end` as the target deadline and retain
+journeys whose first traversal is at or after `start`. A backward numeric
+supremum equal to `start` survives only when its P02 attainment state is true.
+Missing opposite bounds preserve current behavior; all explicit bounds use the
+network's Date/POSIX conversion.
+
+**Fixtures:** events before, at, and after each bound; interval onset and
+terminus at `end`; a long-open edge crossing the window; equal-time chains in a
+degenerate window; backward attained and unattained lower-bound ties;
+chronological chains; Date conversion; invalid and conflicting bounds;
+translation/scaling; and sessions partially inside the range.
+
+**Oracle:** extend the independent P01 enumerator with `next_time <= end` and
+the P02 enumerator with `candidate > start || (candidate == start &&
+attained)`. Use `tsna::tPath()` only on interior cases because its upper-horizon
+boundary differs.
+
+**Exit:** public paths, reachability, and temporal reach agree on the same
+eligible journeys; exhaustive values and attainment states match; widening and
+time-transform invariants hold; boundary/session mutants fail; classed errors
+cover invalid combinations; and snapshot-grid behavior is unchanged.
 
 ### P04 — Session-integral paths
 

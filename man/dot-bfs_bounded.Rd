@@ -4,7 +4,7 @@
 \alias{.bfs_bounded}
 \title{Run reachability with sessions acting as walls}
 \usage{
-.bfs_bounded(dn, enc, source, t0, bounded)
+.bfs_bounded(dn, enc, source, t0, bounded, upper = Inf)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}
@@ -16,6 +16,8 @@
 \item{t0}{Start time.}
 
 \item{bounded}{Whether a path must stay within one session.}
+
+\item{upper}{Latest admissible traversal time.}
 }
 \value{
 A BFS result list.

@@ -4,7 +4,7 @@
 \alias{.temporal_bfs}
 \title{Earliest-arrival times from one source}
 \usage{
-.temporal_bfs(enc, source, t0, max_sweeps = NULL)
+.temporal_bfs(enc, source, t0, max_sweeps = NULL, upper = Inf)
 }
 \arguments{
 \item{enc}{Encoded edge list from \code{\link[=.encode]{.encode()}}.}
@@ -14,6 +14,8 @@
 \item{t0}{Time at which the source becomes active.}
 
 \item{max_sweeps}{Iteration cap.}
+
+\item{upper}{Latest admissible traversal time.}
 }
 \value{
 A list with \code{arrival}, \code{previous}, \code{source} and \code{origin}.

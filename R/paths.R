@@ -13,6 +13,7 @@
 #' @param source Integer index of the source vertex.
 #' @param t0 Time at which the source becomes active.
 #' @param max_sweeps Iteration cap.
+#' @param upper Latest admissible traversal time.
 #' @return A list with `arrival`, `previous`, `source` and `origin`.
 #'
 #' @details
@@ -29,7 +30,7 @@
 #' dn <- dynet(school_contacts)
 #' Dynet:::.temporal_bfs(Dynet:::.encode(dn), source = 1L, t0 = 0)
 #' @keywords internal
-.temporal_bfs <- function(enc, source, t0, max_sweeps = NULL) {
+.temporal_bfs <- function(enc, source, t0, max_sweeps = NULL, upper = Inf) {
   n <- enc$n
   arrival  <- rep(Inf, n)
   previous <- rep(NA_integer_, n)
@@ -42,11 +43,13 @@
   repeat {
     sweep <- sweep + 1L
     a_from <- arrival[f]
+    candidate <- pmax(a_from, s)
     interval_usable <- if (isTRUE(enc$reversed)) a_from <= e else a_from < e
     usable <- is.finite(a_from) &
-      ((enc$instant & a_from <= s) | (!enc$instant & interval_usable))
+      ((enc$instant & a_from <= s) | (!enc$instant & interval_usable)) &
+      candidate <= upper
     if (!any(usable)) break
-    cand <- pmax(a_from, s)
+    cand <- candidate
     cand[!usable] <- Inf
     improve <- which(cand < arrival[g])
     if (length(improve) == 0L) break
@@ -71,6 +74,7 @@
 #' @param target Integer index of the target vertex.
 #' @param deadline Latest permitted arrival time at the target.
 #' @param max_sweeps Iteration cap.
+#' @param lower Earliest admissible traversal time.
 #' @return A list with `arrival`, `attained`, `previous`, `source` and
 #'   `origin`. Here `arrival` contains latest-departure suprema and `previous`
 #'   points from each predecessor toward the target.
@@ -88,7 +92,7 @@
 #' )
 #' @keywords internal
 .temporal_bfs_backward <- function(enc, target, deadline,
-                                   max_sweeps = NULL) {
+                                   max_sweeps = NULL, lower = -Inf) {
   n <- enc$n
   latest <- rep(-Inf, n)
   attained <- rep(FALSE, n)
@@ -114,6 +118,9 @@
     candidate_attained <- rep(FALSE, length(f))
     candidate_attained[usable] <- enc$instant[usable] |
       (bound[usable] < e[usable] & bound_attained[usable])
+    usable <- usable & (candidate > lower |
+      (candidate == lower & candidate_attained))
+    if (!any(usable)) break
 
     groups <- split(which(usable), f[usable])
     vertices <- as.integer(names(groups))
@@ -192,6 +199,7 @@
 #' @param source Source vertex index.
 #' @param t0 Start time.
 #' @param bounded Whether a path must stay within one session.
+#' @param upper Latest admissible traversal time.
 #' @return A BFS result list.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -199,9 +207,9 @@
 #'   dn, Dynet:::.encode(dn), source = 1L, t0 = 0, bounded = FALSE
 #' )
 #' @keywords internal
-.bfs_bounded <- function(dn, enc, source, t0, bounded) {
+.bfs_bounded <- function(dn, enc, source, t0, bounded, upper = Inf) {
   if (!bounded || is.null(dn$meta$sessions)) {
-    return(.temporal_bfs(enc, source, t0))
+    return(.temporal_bfs(enc, source, t0, upper = upper))
   }
   # A bounded path may not cross a session wall, so each session is searched
   # on its own and the earliest arrival across sessions wins.
@@ -212,7 +220,7 @@
     sub$weight <- enc$weight[rows]
     sub$session <- enc$session[rows]
     sub$instant <- enc$instant[rows]
-    .temporal_bfs(sub, source, t0)
+    .temporal_bfs(sub, source, t0, upper = upper)
   })
   arr <- do.call(pmin, lapply(per, `[[`, "arrival"))
   prev <- vapply(seq_along(arr), function(v) {
@@ -230,6 +238,7 @@
 #' @param target Target vertex index.
 #' @param deadline Latest permitted arrival time at the target.
 #' @param bounded Whether a path must stay within one session.
+#' @param lower Earliest admissible traversal time.
 #' @return A backward BFS result list.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -238,9 +247,10 @@
 #'   bounded = FALSE
 #' )
 #' @keywords internal
-.bfs_backward_bounded <- function(dn, enc, target, deadline, bounded) {
+.bfs_backward_bounded <- function(dn, enc, target, deadline, bounded,
+                                  lower = -Inf) {
   if (!bounded || is.null(dn$meta$sessions)) {
-    return(.temporal_bfs_backward(enc, target, deadline))
+    return(.temporal_bfs_backward(enc, target, deadline, lower = lower))
   }
   # A bounded journey is contained in one session. Search each session and
   # retain the greatest latest-departure supremum across those searches.
@@ -251,7 +261,7 @@
     sub$weight <- enc$weight[rows]
     sub$session <- enc$session[rows]
     sub$instant <- enc$instant[rows]
-    .temporal_bfs_backward(sub, target, deadline)
+    .temporal_bfs_backward(sub, target, deadline, lower = lower)
   })
   latest <- do.call(pmax, lapply(per, `[[`, "arrival"))
   attained <- vapply(seq_along(latest), function(v) {
@@ -273,6 +283,59 @@
   }, integer(1L))
   list(arrival = latest, attained = attained, previous = previous,
        source = target, origin = deadline)
+}
+
+#' Resolve a path traversal window
+#'
+#' @param dn A `dynet` object.
+#' @param direction `"forward"` or `"backward"`.
+#' @param at Directional compatibility alias for an anchor.
+#' @param start,end Canonical traversal bounds.
+#' @param default_start,default_end Default observed bounds for this encoding.
+#' @param clamp_missing Whether an implicit bound may clamp to an explicit one
+#'   for a non-overlapping separate session.
+#' @return A list containing numeric `start` and `end`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.path_window(dn, "forward", start = 0, end = 10)
+#' @keywords internal
+.path_window <- function(dn, direction, at = NULL, start = NULL, end = NULL,
+                         default_start = dn$meta$time_range[["start"]],
+                         default_end = dn$meta$time_range[["end"]],
+                         clamp_missing = FALSE) {
+  direction <- match.arg(direction, c("forward", "backward"))
+  stopifnot(is.logical(clamp_missing), length(clamp_missing) == 1L,
+            !is.na(clamp_missing))
+  if (!is.null(at) && (!is.null(start) || !is.null(end))) {
+    stop(errorCondition(
+      "`at` is an alias for one path bound; use `start` and `end` for a bounded window.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  at <- .as_time(at, dn, "at")
+  start <- .as_time(start, dn, "start")
+  end <- .as_time(end, dn, "end")
+  if (identical(direction, "forward")) {
+    lower <- start %||% at %||% default_start
+    upper <- end %||% Inf
+    if (clamp_missing && is.null(start) && is.null(at) && lower > upper) {
+      lower <- upper
+    }
+  } else {
+    lower <- start %||% -Inf
+    upper <- end %||% at %||% default_end
+    if (clamp_missing && is.null(end) && is.null(at) && lower > upper) {
+      upper <- lower
+    }
+  }
+  if (lower > upper) {
+    stop(errorCondition(
+      sprintf("Path `start` (%s) must not exceed `end` (%s).",
+              format(lower), format(upper)),
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  list(start = lower, end = upper)
 }
 
 
@@ -302,10 +365,13 @@
 #' @param at Forward source-availability time or backward arrival deadline.
 #'   Defaults to the start of the observation window for forward paths and its
 #'   end for backward paths. Date and date-time values use the network's time
-#'   scale.
+#'   scale. It cannot be combined with `start` or `end`.
 #' @param direction `"forward"` traces where the vertex can reach;
 #'   `"backward"` traces who could have reached it.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param start,end Inclusive lower and upper traversal-time bounds. Interval
+#'   spells remain terminus-exclusive. When these are supplied, use them
+#'   instead of `at`.
 #'
 #' @return An object of class `"dynet_paths"`: a tidy data frame with one row
 #'   per vertex and columns `node`, `reachable`, `arrival_time`, `attained`
@@ -315,18 +381,26 @@
 #'
 #' @details
 #' A valid forward journey has distinct vertices and traversal times
-#' `at <= t1 <= ... <= tk`. At each hop, either an interval is active at the
-#' traversal time or a point event occurs exactly then. The empty journey
-#' reaches the source at `at`. Cycles are unnecessary for reach and earliest
-#' arrival because deleting a repeated-vertex section and waiting at that
-#' vertex preserves every later hop. This contract defines feasibility and
-#' arrival; optimal-journey ties and multiplicity are separate quantities.
+#' `start <= t1 <= ... <= tk <= end`. At each hop, either an interval is active
+#' at the traversal time or a point event occurs exactly then. The empty journey
+#' reaches the source at the resolved `start`. With `at`, that value supplies
+#' `start` for forward paths or `end` for backward paths. Cycles are unnecessary
+#' for reach and earliest arrival because deleting a repeated-vertex section
+#' and waiting at that vertex preserves every later hop. This contract defines
+#' feasibility and arrival; optimal-journey ties and multiplicity are separate
+#' quantities.
+#'
+#' `start` and `end` form a closed window for traversal times: a hop may occur
+#' at either bound. This does not close interval spells on the right. An event
+#' or interval onset at `end` is eligible, while an interval whose own terminus
+#' equals `end` is not active at that instant. `start = end` computes the
+#' equal-time closure at one timestamp.
 #'
 #' For backward paths, `arrival_time` is the latest-departure supremum for a
-#' journey ending at the named target by `at`, and `latency` is `at` minus that
-#' value. A supremum at an interval's excluded terminus need not itself be an
-#' attainable departure. The `previous` column points one hop onward toward
-#' the target.
+#' journey ending at the named target by the resolved `end`, and `latency` is
+#' `end` minus that value. A supremum at an interval's excluded terminus need
+#' not itself be an attainable departure. The `previous` column points one hop
+#' onward toward the target.
 #'
 #' @references
 #' Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
@@ -343,16 +417,18 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' dyn_paths(dn, from = "Ana")
+#' dyn_paths(dn, from = "Ana", start = 0, end = 10)
 #' summary(dyn_paths(dn, from = "Ana"))
 #'
 #' @export
 dyn_paths <- function(dn, from, at = NULL,
                       direction = c("forward", "backward"),
-                      sessions = c("bounded", "collapse", "separate")) {
+                      sessions = c("bounded", "collapse", "separate"),
+                      start = NULL, end = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
-  at <- .as_time(at, dn, "at")
+  window <- .path_window(dn, direction, at, start, end)
   .check("`from` must be a single vertex name." =
               length(from) == 1L && !is.na(from))
 
@@ -366,18 +442,18 @@ dyn_paths <- function(dn, from, at = NULL,
   }
   if (!dn$directed) enc <- .undirect_or_reverse(enc, FALSE, "forward")
 
-  t0 <- at %||% if (identical(direction, "backward")) {
-    dn$meta$time_range[["end"]]
-  } else {
-    dn$meta$time_range[["start"]]
-  }
+  t0 <- if (identical(direction, "backward")) window$end else window$start
 
   bfs <- if (identical(direction, "backward")) {
     .bfs_backward_bounded(
-      dn, enc, src, t0, identical(sessions, "bounded")
+      dn, enc, src, t0, identical(sessions, "bounded"),
+      lower = window$start
     )
   } else {
-    .bfs_bounded(dn, enc, src, t0, identical(sessions, "bounded"))
+    .bfs_bounded(
+      dn, enc, src, t0, identical(sessions, "bounded"),
+      upper = window$end
+    )
   }
   reach <- is.finite(bfs$arrival)
   hops <- vapply(seq_len(enc$n), function(v) {
@@ -458,8 +534,11 @@ dyn_paths <- function(dn, from, at = NULL,
 #' @param direction `"forward"`, `"backward"` or `"both"`.
 #' @param at Forward source-availability time or backward arrival deadline.
 #'   Defaults to the beginning or end of each observed period, respectively.
-#'   Date and date-time values use the network's time scale.
+#'   Date and date-time values use the network's time scale. It cannot be
+#'   combined with `start` or `end`.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param start,end Inclusive lower and upper traversal-time bounds. Interval
+#'   spells remain terminus-exclusive.
 #'
 #' @return A `dynet_metric` at node level with measures `forward_reach` and
 #'   `backward_reach`, each the proportion of other vertices involved.
@@ -467,40 +546,53 @@ dyn_paths <- function(dn, from, at = NULL,
 #' @details
 #' Reachability uses [dyn_paths()] traversal semantics: nondecreasing times,
 #' unlimited waiting, half-open interval spells, and a separate exact timestamp
-#' rule for point events. For backward reachability, `at` is a common deadline
-#' and latest-departure suprema determine whether a vertex can reach the target.
+#' rule for point events. For backward reachability, the resolved `end` is a
+#' common deadline and latest-departure suprema determine whether a vertex can
+#' reach the target. The canonical `start` and `end` bounds apply one closed
+#' traversal-time window to both forward and backward queries.
+#'
+#' In separate-session output, a session entirely outside a one-sided bound
+#' contributes zero-reach rows rather than aborting the complete result. Its
+#' missing implicit bound is clamped to the supplied bound, producing the
+#' empty journey at that boundary and no eligible hop.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' dyn_reachability(dn)
+#' dyn_reachability(dn, start = 0, end = 10)
 #' plot(dyn_reachability(dn))
 #'
 #' @export
 dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
                              at = NULL,
-                             sessions = c("bounded", "collapse", "separate")) {
+                             sessions = c("bounded", "collapse", "separate"),
+                             start = NULL, end = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
-  at <- .as_time(at, dn, "at")
   wanted <- if (identical(direction, "both")) c("forward", "backward") else direction
 
   parts <- .split_sessions(dn, sessions)
   frames <- Map(function(enc, label) {
     vals <- lapply(wanted, function(d) {
       e2 <- .undirect_or_reverse(enc, dn$directed, "forward")
-      t0 <- at %||% if (identical(d, "backward")) {
-        max(enc$end)
-      } else {
-        min(enc$start)
-      }
+      window <- .path_window(
+        dn, d, at, start, end,
+        default_start = min(enc$start), default_end = max(enc$end),
+        clamp_missing = identical(sessions, "separate")
+      )
+      t0 <- if (identical(d, "backward")) window$end else window$start
       share <- vapply(seq_len(enc$n), function(s) {
         b <- if (identical(d, "backward")) {
           .bfs_backward_bounded(
-            dn, e2, s, t0, identical(sessions, "bounded")
+            dn, e2, s, t0, identical(sessions, "bounded"),
+            lower = window$start
           )
         } else {
-          .bfs_bounded(dn, e2, s, t0, identical(sessions, "bounded"))
+          .bfs_bounded(
+            dn, e2, s, t0, identical(sessions, "bounded"),
+            upper = window$end
+          )
         }
         (sum(is.finite(b$arrival)) - 1) / max(1, enc$n - 1)
       }, numeric(1L))

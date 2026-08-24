@@ -50,7 +50,8 @@ entirely on an undirected network. In-degree is therefore
 remain as deprecated aliases.}
 
 \item{start, end}{First and last time at which to measure. Default to the
-observed range. A network built from dates may be addressed with dates.}
+observed range. For temporal reach these are inclusive path-traversal
+bounds. A network built from dates may be addressed with dates.}
 
 \item{step}{How often to measure. Defaults to the interval the network was
 built with.}
@@ -77,10 +78,11 @@ vertex, time point and measure.
 
 Two scopes answer two different questions. \code{"snapshot"} measures the
 network as it stands in each time bin, so the result is a trajectory of
-ordinary centrality. \code{"temporal"} measures the vertex against
-time-respecting paths across the whole observation window, which is the
-quantity that has no counterpart in a static network: it cannot run
-backwards in time, so it is never inflated the way a flattened network is.
+ordinary centrality. \code{"temporal"} measures the vertex against time-respecting
+paths across the whole observation window, or the supplied \code{start}-to-\code{end}
+traversal window for temporal reach. This quantity has no counterpart in a
+static network: it cannot run backwards in time, so it is never inflated the
+way a flattened network is.
 }
 \details{
 \code{step} and \code{window} are separate on purpose. \code{step} is how often you look;
@@ -103,7 +105,10 @@ rather than the Brandes quantity.
 
 Temporal measures use \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing
 times, unlimited waiting, half-open interval spells, and a separate exact
-timestamp rule for point events.
+timestamp rule for point events. \code{start} and \code{end} may bound temporal
+\code{"reach"}; bounded temporal closeness and betweenness remain deferred until
+their path-optimality definitions are completed. In separate-session output,
+a session outside a one-sided bound contributes zero-reach rows.
 }
 \examples{
 dn <- dynet(school_contacts)
@@ -111,6 +116,8 @@ dn <- dynet(school_contacts)
 dyn_centrality(dn, measure = "degree")
 dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
+dyn_centrality(dn, measure = "reach", scope = "temporal",
+               start = 0, end = 10)
 
 # A seven-day window, stepped one day at a time.
 dyn_centrality(dn, measure = "degree", step = 1, window = 7)

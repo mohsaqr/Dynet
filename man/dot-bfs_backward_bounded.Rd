@@ -4,7 +4,7 @@
 \alias{.bfs_backward_bounded}
 \title{Run backward reachability with sessions acting as walls}
 \usage{
-.bfs_backward_bounded(dn, enc, target, deadline, bounded)
+.bfs_backward_bounded(dn, enc, target, deadline, bounded, lower = -Inf)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}
@@ -16,6 +16,8 @@
 \item{deadline}{Latest permitted arrival time at the target.}
 
 \item{bounded}{Whether a path must stay within one session.}
+
+\item{lower}{Earliest admissible traversal time.}
 }
 \value{
 A backward BFS result list.

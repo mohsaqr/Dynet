@@ -24,10 +24,11 @@
 #'
 #' Two scopes answer two different questions. `"snapshot"` measures the
 #' network as it stands in each time bin, so the result is a trajectory of
-#' ordinary centrality. `"temporal"` measures the vertex against
-#' time-respecting paths across the whole observation window, which is the
-#' quantity that has no counterpart in a static network: it cannot run
-#' backwards in time, so it is never inflated the way a flattened network is.
+#' ordinary centrality. `"temporal"` measures the vertex against time-respecting
+#' paths across the whole observation window, or the supplied `start`-to-`end`
+#' traversal window for temporal reach. This quantity has no counterpart in a
+#' static network: it cannot run backwards in time, so it is never inflated the
+#' way a flattened network is.
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param measure One or more of `"degree"`, `"strength"`, `"closeness"`,
@@ -51,7 +52,8 @@
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
 #' @param start,end First and last time at which to measure. Default to the
-#'   observed range. A network built from dates may be addressed with dates.
+#'   observed range. For temporal reach these are inclusive path-traversal
+#'   bounds. A network built from dates may be addressed with dates.
 #' @param step How often to measure. Defaults to the interval the network was
 #'   built with.
 #' @param window How much time each measurement covers. Defaults to `step`,
@@ -89,7 +91,10 @@
 #'
 #' Temporal measures use [dyn_paths()] traversal semantics: nondecreasing
 #' times, unlimited waiting, half-open interval spells, and a separate exact
-#' timestamp rule for point events.
+#' timestamp rule for point events. `start` and `end` may bound temporal
+#' `"reach"`; bounded temporal closeness and betweenness remain deferred until
+#' their path-optimality definitions are completed. In separate-session output,
+#' a session outside a one-sided bound contributes zero-reach rows.
 #'
 #' @references
 #' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
@@ -102,6 +107,8 @@
 #' dyn_centrality(dn, measure = "degree")
 #' dyn_centrality(dn, measure = c("degree", "betweenness"))
 #' dyn_centrality(dn, measure = "closeness", scope = "temporal")
+#' dyn_centrality(dn, measure = "reach", scope = "temporal",
+#'                start = 0, end = 10)
 #'
 #' # A seven-day window, stepped one day at a time.
 #' dyn_centrality(dn, measure = "degree", step = 1, window = 7)
@@ -124,7 +131,6 @@ dyn_centrality <- function(dn,
   scope <- match.arg(scope)
   mode  <- match.arg(mode)
   window <- .legacy_sample(window, sample)
-  spec  <- .window_spec(dn, start, end, step, window)
   .check(
     "`measure` must be a character vector." = is.character(measure),
     "`measure` must name at least one measure." = length(measure) > 0L,
@@ -169,8 +175,8 @@ dyn_centrality <- function(dn,
         "`mode` has no meaning for `scope = \"temporal\"`; temporal paths use the network's recorded direction.",
         class = "dynet_bad_input", call = NULL))
     }
-    grid_args <- c("start", "end", "step", "window")
-    given <- grid_args[!vapply(list(start, end, step, window), is.null,
+    grid_args <- c("step", "window")
+    given <- grid_args[!vapply(list(step, window), is.null,
                                logical(1L))]
     if (length(given) > 0L) {
       stop(errorCondition(sprintf(
@@ -179,9 +185,17 @@ dyn_centrality <- function(dn,
         if (length(given) == 1L) "has" else "have"),
         class = "dynet_bad_input", call = NULL))
     }
-    return(.temporal_centrality(dn, measure, sessions))
+    bounded <- !is.null(start) || !is.null(end)
+    if (bounded && any(measure != "reach")) {
+      stop(errorCondition(
+        "Path bounds are currently defined for temporal `reach` only; closeness and betweenness remain unbounded until their optimal-path contracts are completed.",
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    return(.temporal_centrality(dn, measure, sessions, start, end))
   }
 
+  spec <- .window_spec(dn, start, end, step, window)
   df <- .over_bins(dn, sessions, node_level = TRUE, spec = spec,
     fun = function(enc, act, bin) {
       a <- .adjacency(enc, act, dn$directed,
@@ -261,16 +275,23 @@ dyn_centrality <- function(dn,
 #' @param dn A `dynet` object.
 #' @param measure One or more of "closeness", "betweenness", "reach".
 #' @param sessions Session mode.
+#' @param start,end Optional traversal bounds for temporal reach.
 #' @return A `dynet_metric` at node level with no time column.
 #' @keywords internal
-.temporal_centrality <- function(dn, measure, sessions) {
+.temporal_centrality <- function(dn, measure, sessions,
+                                 start = NULL, end = NULL) {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   frames <- Map(function(enc, label) {
     walk <- .undirect_or_reverse(enc, dn$directed, "forward")
-    t0 <- min(enc$start)
+    horizon <- .path_window(
+      dn, "forward", start = start, end = end,
+      default_start = min(enc$start), default_end = max(enc$end),
+      clamp_missing = identical(sessions, "separate")
+    )
+    t0 <- horizon$start
     trees <- lapply(seq_len(enc$n), function(s)
-      .bfs_bounded(dn, walk, s, t0, bounded))
+      .bfs_bounded(dn, walk, s, t0, bounded, upper = horizon$end))
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc)), measure)
     data.frame(session = label, node = enc$names,
