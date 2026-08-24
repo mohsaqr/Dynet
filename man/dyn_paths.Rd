@@ -17,8 +17,10 @@ dyn_paths(
 
 \item{from}{Name of the vertex to start from.}
 
-\item{at}{Time at which the source becomes active. Defaults to the start of
-the observation window.}
+\item{at}{Forward source-availability time or backward arrival deadline.
+Defaults to the start of the observation window for forward paths and its
+end for backward paths. Date and date-time values use the network's time
+scale.}
 
 \item{direction}{\code{"forward"} traces where the vertex can reach;
 \code{"backward"} traces who could have reached it.}
@@ -27,9 +29,10 @@ the observation window.}
 }
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
-per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{latency}
-(time taken from the source), \code{n_hops} and \code{previous} (the vertex
-arrived from, by name).
+per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{attained}
+(whether that optimum itself is realized), \code{latency} (time taken from the
+source), \code{n_hops} and \code{previous} (the adjacent vertex on the reported
+journey, by name).
 }
 \description{
 Follows every time-respecting path out of (or into) one vertex and reports
@@ -55,8 +58,11 @@ arrival because deleting a repeated-vertex section and waiting at that
 vertex preserves every later hop. This contract defines feasibility and
 arrival; optimal-journey ties and multiplicity are separate quantities.
 
-Backward paths retain their existing latest-departure boundary convention;
-it is not the forward interval predicate applied without transformation.
+For backward paths, \code{arrival_time} is the latest-departure supremum for a
+journey ending at the named target by \code{at}, and \code{latency} is \code{at} minus that
+value. A supremum at an interval's excluded terminus need not itself be an
+attainable departure. The \code{previous} column points one hop onward toward
+the target.
 }
 \examples{
 dn <- dynet(school_contacts)

@@ -42,12 +42,12 @@
     Output
       # Time-respecting paths from 'A', from t = 1
       # reaches 4 of 4 other vertices | time in step
-       node reachable arrival_time latency n_hops previous
-          A      TRUE            1       0      0     <NA>
-          B      TRUE            1       0      1        A
-          C      TRUE            2       1      2        B
-          D      TRUE            3       2      3        C
-          E      TRUE            4       3      4        D
+       node reachable arrival_time attained latency n_hops previous
+          A      TRUE            1     TRUE       0      0     <NA>
+          B      TRUE            1     TRUE       0      1        A
+          C      TRUE            2     TRUE       1      2        B
+          D      TRUE            3     TRUE       2      3        C
+          E      TRUE            4     TRUE       3      4        D
 
 ---
 

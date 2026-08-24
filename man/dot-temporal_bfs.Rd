@@ -33,9 +33,6 @@ and \code{start}. An instantaneous event is a separate case: it can be used when
 arrival is at or before its timestamp, and arrival at the next vertex is
 that timestamp. Consequently, several events at the same time can compose
 into a journey, independent of input row order.
-
-A reversed-time encoding retains the supremum convention used by backward
-latest-departure paths; it does not inherit the forward end predicate.
 }
 \examples{
 dn <- dynet(school_contacts)

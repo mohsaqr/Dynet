@@ -312,22 +312,33 @@ other Dynet use of `[start, end)`.
 
 **Purpose:** make an explicit backward `at` use the requested calendar time.
 
-**Contract:** a backward query anchored at `t` equals a forward query on the
-edge-reversed, time-negated network anchored at `-t`.
+**Status:** complete in 0.3.4.
 
-**Public surface:** no new argument. Correct `at` in `dyn_paths()` and
-`dyn_reachability()`.
+**Contract:** a backward query anchored at deadline `t` reports each vertex's
+latest-departure supremum for a journey ending at the target by `t`. Exact time
+reflection sends `[s,e)` to `(-e,-s]`, not another half-open interval, so the
+backward kernel works in original time and carries whether each supremum is
+attained. This state prevents an exact event from composing through an
+interval's excluded terminus.
 
-**Fixtures:** one arc, chronological chain, unreachable reverse chain, custom
-anchor strictly inside activity, and anchors away from boundaries. Date-time
-conversion is tested with both bounds in P03.
+**Public surface:** no new argument. `at` is the backward deadline in
+`dyn_paths()` and `dyn_reachability()`. `dyn_paths()` exposes logical
+`attained` beside the reported optimum.
 
-**Oracle:** forward/backward reversal duality and
-`tsna::tPath(direction = "bkwd", type = "latest.depart")` where definitions
-match.
+**Fixtures:** one arc before, at, inside, and after its bounds; a chronological
+chain; an unreachable reverse chain; interval/event endpoint composition;
+Date conversion; undirected orientation; session walls; translation and
+positive scaling; and attained/unattained session ties.
 
-**Exit:** every backward result equals its explicit reversed-time forward
-dual.
+**Oracle:** exhaustive original-time enumeration carries both the supremum and
+its attainment state. `tsna::tPath(direction = "bkwd",
+type = "latest.depart")` calibrates interior cases where definitions match.
+Ordinary half-open reflected networks are retained only as a deliberate mutant
+because they reverse endpoint inclusion.
+
+**Exit:** all backward values and attainment states equal the exhaustive
+oracle; public calendar anchors, latency, reach, and endpoint behavior are
+pinned; standing mutants and the complete package gates pass.
 
 ### P03 — Path search bounds
 

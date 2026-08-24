@@ -16,7 +16,9 @@ dyn_reachability(
 
 \item{direction}{\code{"forward"}, \code{"backward"} or \code{"both"}.}
 
-\item{at}{Time at which sources become active.}
+\item{at}{Forward source-availability time or backward arrival deadline.
+Defaults to the beginning or end of each observed period, respectively.
+Date and date-time values use the network's time scale.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 }
@@ -34,7 +36,8 @@ reach depends on whether the timing lines up.
 \details{
 Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing times,
 unlimited waiting, half-open interval spells, and a separate exact timestamp
-rule for point events.
+rule for point events. For backward reachability, \code{at} is a common deadline
+and latest-departure suprema determine whether a vertex can reach the target.
 }
 \examples{
 dn <- dynet(school_contacts)
