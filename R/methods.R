@@ -93,15 +93,37 @@ print.dynet <- function(x, ...) {
 #' A tidy description of the whole network, one row per property. Two
 #' densities are reported and they answer different questions. Snapshot
 #' density is the mean over time bins of realised against possible edges.
-#' Temporal density is observed edge duration against the maximum duration
-#' possible, and it is the honest figure for how much of the observation
-#' window the network was actually connected for.
+#' Temporal density is the proportion of all possible relational exposure
+#' occupied during the observation window. Overlapping and duplicate spells
+#' for the same ordered pair, or dyad in an undirected network, are unioned
+#' before their duration is counted.
 #'
 #' @param object A temporal network from [dynet()].
 #' @param ... Ignored.
 #'
 #' @return A `data.frame` with columns `property` and `value`, one row per
 #'   property.
+#'
+#' @details
+#' Let \eqn{A_q} be the union of the active intervals for relational
+#' opportunity \eqn{q}, and let \eqn{T} be the stored observation span. Then
+#' temporal density is
+#' \deqn{\rho = \frac{\sum_q |A_q|}{M T},}
+#' where \eqn{M = n(n-1)} for directed networks and
+#' \eqn{M = n(n-1)/2} for undirected networks. Self-loops, weights, session
+#' labels, and zero-duration contacts do not add exposure. A network with no
+#' possible non-loop pair or a zero observation span has undefined temporal
+#' density and reports `NA`.
+#'
+#' This is an occupancy definition. Unlike summing spell durations, it remains
+#' in `[0, 1]` when the same relation has overlapping or duplicated spells.
+#'
+#' @references
+#' Bender-deMoll, S., & Morris, M. (2025). *tsna: Tools for Temporal Social
+#' Network Analysis*. R package version 0.3.6.
+#'
+#' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+#' 519(3), 97-125.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -113,8 +135,6 @@ summary.dynet <- function(object, ...) {
   e <- object$spells
   n <- nrow(object$nodes)
   span <- m$time_range[["end"]] - m$time_range[["start"]]
-  possible_pairs <- if (object$directed) n * (n - 1) else n * (n - 1) / 2
-  observed <- sum(e$end - e$start)
   snap <- dyn_metrics(object, measure = "density", sessions = "collapse")
 
   data.frame(
@@ -133,8 +153,7 @@ summary.dynet <- function(object, ...) {
       format(span), format(m$interval),
       format(m$n_bins),
       format(round(mean(snap$value), 4)),
-      format(round(if (possible_pairs > 0 && span > 0)
-        observed / (possible_pairs * span) else NA_real_, 4)),
+      format(round(.temporal_density(object), 4)),
       if (is.null(m$sessions)) "none" else format(length(m$sessions)),
       {
         a <- setdiff(names(object$nodes), c("id", "label", "name", "x", "y"))
@@ -143,6 +162,86 @@ summary.dynet <- function(object, ...) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+#' Union the duration of one relation's intervals
+#'
+#' @param start,end Numeric vectors containing parallel interval endpoints.
+#' @return The total length covered by at least one positive-duration interval.
+#' @examples
+#' Dynet:::.union_duration(c(0, 2, 6), c(4, 7, 10))
+#' @keywords internal
+.union_duration <- function(start, end) {
+  .check(
+    "`start` and `end` must be numeric vectors." =
+      is.numeric(start) && is.numeric(end),
+    "`start` and `end` must have the same length." =
+      length(start) == length(end),
+    "Interval endpoints must be finite." =
+      all(is.finite(start)) && all(is.finite(end)),
+    "Every interval must end at or after it starts." = all(end >= start)
+  )
+
+  positive <- end > start
+  if (!any(positive)) return(0)
+  start <- start[positive]
+  end <- end[positive]
+  interval_order <- order(start, end)
+  start <- start[interval_order]
+  end <- end[interval_order]
+
+  running_end <- cummax(end)
+  begins_union <- c(TRUE, start[-1L] > running_end[-length(running_end)])
+  union_start <- start[begins_union]
+  start_index <- which(begins_union)
+  end_index <- c(start_index[-1L] - 1L, length(running_end))
+
+  sum(running_end[end_index] - union_start)
+}
+
+#' Temporal occupancy over every possible relation
+#'
+#' @param dn A temporal network from [dynet()].
+#' @return A numeric scalar in `[0, 1]`, or `NA` when the denominator is zero.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.temporal_density(dn)
+#' @keywords internal
+.temporal_density <- function(dn) {
+  .check_dynet(dn, sessions = "collapse")
+  bounds <- dn$meta$time_range
+  span <- bounds[["end"]] - bounds[["start"]]
+  n <- nrow(dn$nodes)
+  possible_pairs <- if (dn$directed) n * (n - 1L) else choose(n, 2L)
+  if (possible_pairs == 0L || span <= 0) return(NA_real_)
+
+  spells <- dn$spells
+  spells <- spells[spells$from != spells$to, , drop = FALSE]
+  if (nrow(spells) == 0L) return(0)
+
+  start <- pmax(spells$start, bounds[["start"]])
+  end <- pmin(spells$end, bounds[["end"]])
+  positive <- end > start
+  if (!any(positive)) return(0)
+  spells <- spells[positive, , drop = FALSE]
+  start <- start[positive]
+  end <- end[positive]
+
+  from_id <- match(spells$from, dn$nodes$name)
+  to_id <- match(spells$to, dn$nodes$name)
+  if (!dn$directed) {
+    left <- pmin(from_id, to_id)
+    right <- pmax(from_id, to_id)
+    from_id <- left
+    to_id <- right
+  }
+  pair <- (to_id - 1L) * n + from_id
+  intervals <- split(seq_along(pair), pair)
+  occupied <- sum(vapply(intervals, function(rows) {
+    .union_duration(start[rows], end[rows])
+  }, numeric(1L)))
+
+  occupied / (possible_pairs * span)
 }
 
 #' Print time-respecting paths

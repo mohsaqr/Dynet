@@ -19,12 +19,34 @@ property.
 A tidy description of the whole network, one row per property. Two
 densities are reported and they answer different questions. Snapshot
 density is the mean over time bins of realised against possible edges.
-Temporal density is observed edge duration against the maximum duration
-possible, and it is the honest figure for how much of the observation
-window the network was actually connected for.
+Temporal density is the proportion of all possible relational exposure
+occupied during the observation window. Overlapping and duplicate spells
+for the same ordered pair, or dyad in an undirected network, are unioned
+before their duration is counted.
+}
+\details{
+Let \eqn{A_q} be the union of the active intervals for relational
+opportunity \eqn{q}, and let \eqn{T} be the stored observation span. Then
+temporal density is
+\deqn{\rho = \frac{\sum_q |A_q|}{M T},}
+where \eqn{M = n(n-1)} for directed networks and
+\eqn{M = n(n-1)/2} for undirected networks. Self-loops, weights, session
+labels, and zero-duration contacts do not add exposure. A network with no
+possible non-loop pair or a zero observation span has undefined temporal
+density and reports \code{NA}.
+
+This is an occupancy definition. Unlike summing spell durations, it remains
+in \verb{[0, 1]} when the same relation has overlapping or duplicated spells.
 }
 \examples{
 dn <- dynet(school_contacts)
 summary(dn)
 
+}
+\references{
+Bender-deMoll, S., & Morris, M. (2025). \emph{tsna: Tools for Temporal Social
+Network Analysis}. R package version 0.3.6.
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
+519(3), 97-125.
 }

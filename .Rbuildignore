@@ -6,6 +6,7 @@
 ^tmp$
 ^docs$
 ^SPEC\.md$
+^MATH_ROADMAP\.md$
 ^HANDOFF\.md$
 ^LEARNINGS\.md$
 ^CHANGES\.md$
