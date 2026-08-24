@@ -14,6 +14,7 @@
 \value{
 A one-row-per-property \code{data.frame} with the reachable count, the
 reachable share, and the median and maximum latency and hop count.
+Separate mode adds \code{session} and reports each session independently.
 }
 \description{
 Summarise time-respecting paths

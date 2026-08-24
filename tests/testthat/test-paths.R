@@ -8,7 +8,9 @@ test_that("earliest arrival on a chain matches the value worked out by hand", {
                c(1, 1, 2, 3, 4))
   expect_equal(p$n_hops[match(c("A", "B", "C", "D", "E"), p$node)],
                c(0L, 1L, 2L, 3L, 4L))
-  expect_identical(p$previous[p$node == "E"], "D")
+  steps <- as.data.frame(p, what = "steps")
+  endpoint <- steps[steps$endpoint == "E", , drop = FALSE]
+  expect_identical(endpoint$node, c("A", "B", "C", "D", "E"))
   expect_true(all(p$reachable))
 })
 

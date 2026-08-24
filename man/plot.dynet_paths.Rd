@@ -24,6 +24,10 @@ The tree of earliest-arrival paths out of one vertex, drawn by
 is the real arrival time and vertical position is depth in hops, so a
 vertex that took a long time to reach sits far to the right whether it took
 one hop or four.
+
+Only collapsed paths form one predecessor tree. Bounded and separate
+session results raise a \code{dynet_unsupported_plot} condition; inspect their
+endpoint-specific routes with \code{as.data.frame(x, what = "steps")}.
 }
 \examples{
 dn <- dynet(school_contacts)

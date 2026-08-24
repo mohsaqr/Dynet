@@ -4,7 +4,13 @@
 \alias{as.data.frame.dynet_paths}
 \title{Tidy data frame of time-respecting paths}
 \usage{
-\method{as.data.frame}{dynet_paths}(x, row.names = NULL, optional = FALSE, ...)
+\method{as.data.frame}{dynet_paths}(
+  x,
+  row.names = NULL,
+  optional = FALSE,
+  what = c("paths", "steps"),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{dynet_paths}.}
@@ -13,10 +19,14 @@
 
 \item{optional}{Ignored; present for compatibility with the generic.}
 
+\item{what}{\code{"paths"} for the endpoint summary or \code{"steps"} for the tidy
+reconstructed routes.}
+
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per vertex.
+A plain \code{data.frame}, one row per endpoint for \code{"paths"} or one row
+per route step for \code{"steps"}.
 }
 \description{
 Tidy data frame of time-respecting paths

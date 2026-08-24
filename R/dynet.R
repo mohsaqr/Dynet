@@ -328,7 +328,15 @@ dynet <- function(data,
 #' @keywords internal
 .resolve_session <- function(data, session) {
   s <- .resolve_column(data, session, "session", arg = "session")
-  if (is.null(s)) rep(NA_character_, nrow(data)) else as.character(data[[s]])
+  if (is.null(s)) return(rep(NA_character_, nrow(data)))
+  values <- as.character(data[[s]])
+  if (anyNA(values)) {
+    stop(errorCondition(
+      "Session labels must not contain missing values.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  values
 }
 
 #' Build an interval-format edge table

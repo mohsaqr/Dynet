@@ -390,25 +390,52 @@ cover invalid combinations; and snapshot-grid behavior is unchanged.
 **Purpose:** ensure every reported path belongs to one session and make
 `sessions = "separate"` genuinely separate.
 
+**Status:** complete in 0.3.6.
+
 **Contract:** a bounded journey cannot use edges from two session labels.
 Arrival, hop count, path session, and predecessor reconstruction for a target
-come from the same session-specific search. A single merged predecessor column
-must not imply a false cross-session chain.
+come from the same complete session-specific search. A single merged
+predecessor column cannot represent endpoint-specific session choices and is
+removed from the primary table.
 
 **Public surface:** preserve `bounded`, `collapse`, and `separate`.
-Separate mode adds session rows. In bounded mode the primary table may retain
-one best arrival per target, but a single global `previous` column cannot
-represent all target-specific selected-session paths. Provide a tidy
-`as.data.frame(x, what = "steps")` table keyed by target, path session, and
-step, or remove predecessor reconstruction from the bounded primary result.
-Do not imply that one predecessor tree exists when it does not.
+Separate mode returns one complete `session`-by-vertex block per session with a
+session-local default origin. In bounded mode the primary table retains one
+best value per endpoint and adds `path_session` plus `n_best_sessions`.
+`path_session` is present only for a unique best session; tied optima remain
+explicit rather than choosing by session name or hop count.
 
-**Fixtures:** competing arrivals in two sessions, false cross-session chain,
-source reachable in both sessions, and a session with no eligible edge.
+`as.data.frame(x, what = "steps")` returns a tidy chronological route table
+keyed by endpoint, path session, and step. Bounded steps retain every tied
+best-session route; each route is reconstructed wholly from that session's
+search. If tied routes disagree in hops, primary `n_hops` is `NA`. The empty
+source/target journey is session-vacuous in bounded mode. Within-session path
+multiplicity and optimal-journey criteria remain P07/P08 work.
+
+The same wall applies to downstream consumers: bounded temporal betweenness
+reconstructs an endpoint from one complete winning-session tree and never from
+a merged predecessor vector. Its current arbitrary one-tree handling of ties
+is preserved until P10 defines optimal-journey dependency. A supplied session
+column must be complete; partially missing labels are rejected at construction
+rather than silently dropping unlabelled spells during a split.
+
+**Fixtures:** forward and backward false merged chains; pure cross-session false
+reach; unique and tied competing sessions with equal and unequal hop counts;
+backward attained/unattained ties; source-only sessions; common bounds;
+directed/undirected orientation; session-label and row-order permutations;
+downstream bounded betweenness; and partially missing labels.
+
+**Oracle:** split the public spell table by literal session labels without
+production splitters, enumerate each session with the approved P01/P02 oracle,
+and construct the bounded envelope from complete per-session results. Forward
+uses minimum arrival; backward uses maximum `(latest, attained)`
+lexicographically.
 
 **Exit:** every reconstructed target path is session-integral; separate output
 equals independent per-session calls; the primary table and steps accessor
-cannot disagree about arrival, hop count, or session.
+cannot disagree about arrival, attainment, hop count, ambiguity, or session;
+and deliberate merged-predecessor, first-session, lost-attainment, omitted
+source-session, and bounds-after-selection mutants fail.
 
 ### P05 — Traversal duration
 

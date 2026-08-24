@@ -374,6 +374,10 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #' vertex that took a long time to reach sits far to the right whether it took
 #' one hop or four.
 #'
+#' Only collapsed paths form one predecessor tree. Bounded and separate
+#' session results raise a `dynet_unsupported_plot` condition; inspect their
+#' endpoint-specific routes with `as.data.frame(x, what = "steps")`.
+#'
 #' @param x A `dynet_paths` from [dyn_paths()].
 #' @param palette Palette specification, as in [plot.dynet()]. Vertices are
 #'   coloured by how many hops they are from the source.
@@ -388,9 +392,22 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #'
 #' @export
 plot.dynet_paths <- function(x, palette = "okabe", ...) {
+  mode <- attr(x, "path_mode") %||% "collapse"
+  if (!identical(mode, "collapse")) {
+    stop(errorCondition(
+      "Bounded or separate session paths do not form one predecessor tree. Plot a collapsed path result until session-aware rendering is implemented.",
+      class = "dynet_unsupported_plot", call = NULL
+    ))
+  }
   .need_cograph()
   .dyn_palette(palette, 1L)
+  all_nodes <- x$node
+  tree_previous <- attr(x, "tree_previous")
+  previous_name <- ifelse(
+    is.na(tree_previous), NA_character_, all_nodes[tree_previous]
+  )
   df <- as.data.frame(x)
+  previous_name <- previous_name[df$reachable]
   df <- df[df$reachable, , drop = FALSE]
   if (nrow(df) <= 1L) {
     stop(errorCondition(
@@ -401,7 +418,7 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
 
   nm <- df$node
   n <- length(nm)
-  parent <- match(df$previous, nm)
+  parent <- match(previous_name, nm)
   child  <- seq_len(n)
   has_parent <- !is.na(parent)
 

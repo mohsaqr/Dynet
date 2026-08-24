@@ -252,15 +252,34 @@ summary.dynet <- function(object, ...) {
 #' @return `x`, invisibly.
 #' @export
 print.dynet_paths <- function(x, n = 12L, ...) {
-  cat(sprintf("# Time-respecting paths %s %s, from t = %s\n",
-              if (identical(attr(x, "direction"), "forward")) "from" else "into",
-              sQuote(attr(x, "source")), format(attr(x, "origin"))))
-  cat(sprintf("# reaches %d of %d other vertices | time in %s\n",
-              sum(x$reachable) - 1L, nrow(x) - 1L, attr(x, "time_unit")))
+  mode <- attr(x, "path_mode") %||% "collapse"
+  if (identical(mode, "separate")) {
+    eligible <- x$node != attr(x, "source")
+    cat(sprintf("# Time-respecting paths %s %s, separately by session\n",
+                if (identical(attr(x, "direction"), "forward")) "from" else "into",
+                sQuote(attr(x, "source"))))
+    cat(sprintf("# reaches %d of %d session-vertex opportunities | time in %s\n",
+                sum(x$reachable & eligible), sum(eligible),
+                attr(x, "time_unit")))
+  } else {
+    cat(sprintf("# Time-respecting paths %s %s, from t = %s\n",
+                if (identical(attr(x, "direction"), "forward")) "from" else "into",
+                sQuote(attr(x, "source")), format(attr(x, "origin"))))
+    cat(sprintf("# reaches %d of %d other vertices | time in %s\n",
+                sum(x$reachable) - 1L, nrow(x) - 1L,
+                attr(x, "time_unit")))
+    if (identical(mode, "bounded")) {
+      cat("# routes are endpoint-specific session-integral optima, not one predecessor tree\n")
+    }
+  }
   print(utils::head(as.data.frame(x), n), row.names = FALSE)
   if (nrow(x) > n) {
-    cat(sprintf("# %d more rows. summary() aggregates them; plot() draws the tree.\n",
-                nrow(x) - n))
+    suffix <- if (identical(mode, "collapse")) {
+      "summary() aggregates them; plot() draws the tree."
+    } else {
+      "summary() aggregates them; the steps table gives complete routes."
+    }
+    cat(sprintf("# %d more rows. %s\n", nrow(x) - n, suffix))
   }
   invisible(x)
 }
@@ -269,10 +288,20 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #' @param x A `dynet_paths`.
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
+#' @param what `"paths"` for the endpoint summary or `"steps"` for the tidy
+#'   reconstructed routes.
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per vertex.
+#' @return A plain `data.frame`, one row per endpoint for `"paths"` or one row
+#'   per route step for `"steps"`.
 #' @export
-as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE, ...) {
+as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
+                                      what = c("paths", "steps"), ...) {
+  what <- match.arg(what)
+  if (identical(what, "steps")) {
+    out <- attr(x, "steps")
+    rownames(out) <- NULL
+    return(out)
+  }
   attributes(x) <- list(names = names(x), row.names = seq_len(nrow(x)),
                         class = "data.frame")
   x
@@ -284,20 +313,35 @@ as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE, ...
 #' @param ... Ignored.
 #' @return A one-row-per-property `data.frame` with the reachable count, the
 #'   reachable share, and the median and maximum latency and hop count.
+#'   Separate mode adds `session` and reports each session independently.
 #' @export
 summary.dynet_paths <- function(object, ...) {
-  r <- object$reachable & object$node != attr(object, "source")
-  lat <- object$latency[r]
-  hop <- object$n_hops[r]
-  data.frame(
-    property = c("source", "direction", "reachable", "reachable share",
-                 "median latency", "max latency", "median hops", "max hops"),
-    value = c(attr(object, "source"), attr(object, "direction"),
-              format(sum(r)), format(round(sum(r) / (nrow(object) - 1), 3)),
-              format(if (any(r)) stats::median(lat) else NA_real_),
-              format(if (any(r)) max(lat) else NA_real_),
-              format(if (any(r)) stats::median(hop) else NA_real_),
-              format(if (any(r)) max(hop) else NA_real_)),
-    stringsAsFactors = FALSE
-  )
+  summarize_block <- function(block) {
+    r <- block$reachable & block$node != attr(object, "source")
+    lat <- block$latency[r]
+    hop <- block$n_hops[r]
+    data.frame(
+      property = c("source", "direction", "reachable", "reachable share",
+                   "median latency", "max latency", "median hops", "max hops"),
+      value = c(attr(object, "source"), attr(object, "direction"),
+                format(sum(r)),
+                format(round(sum(r) / (nrow(block) - 1), 3)),
+                format(if (any(r)) stats::median(lat) else NA_real_),
+                format(if (any(r)) max(lat) else NA_real_),
+                format(if (any(r)) stats::median(hop) else NA_real_),
+                format(if (any(r)) max(hop) else NA_real_)),
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!identical(attr(object, "path_mode"), "separate")) {
+    return(summarize_block(object))
+  }
+  blocks <- split(as.data.frame(object), object$session)
+  out <- Map(function(block, label) {
+    data.frame(session = label, summarize_block(block),
+               stringsAsFactors = FALSE)
+  }, blocks, names(blocks))
+  result <- do.call(rbind, out)
+  rownames(result) <- NULL
+  result
 }

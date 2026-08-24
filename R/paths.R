@@ -223,12 +223,19 @@
     .temporal_bfs(sub, source, t0, upper = upper)
   })
   arr <- do.call(pmin, lapply(per, `[[`, "arrival"))
-  prev <- vapply(seq_along(arr), function(v) {
+  best_sessions <- lapply(seq_along(arr), function(v) {
     cand <- vapply(per, function(p) p$arrival[v], numeric(1L))
-    if (all(is.infinite(cand))) return(NA_integer_)
-    per[[which.min(cand)]]$previous[v]
+    which(is.finite(cand) & cand == arr[v])
+  })
+  best_sessions[[source]] <- integer(0)
+  previous <- vapply(seq_along(arr), function(v) {
+    selected <- best_sessions[[v]]
+    if (length(selected) != 1L) return(NA_integer_)
+    per[[selected]]$previous[v]
   }, integer(1L))
-  list(arrival = arr, previous = prev, source = source, origin = t0)
+  list(arrival = arr, previous = previous, source = source, origin = t0,
+       per_session = per, best_sessions = best_sessions,
+       session_names = names(per))
 }
 
 #' Run backward reachability with sessions acting as walls
@@ -269,20 +276,23 @@
       result$arrival[v] == latest[v] && result$attained[v]
     }, logical(1L)))
   }, logical(1L))
-  previous <- vapply(seq_along(latest), function(v) {
+  best_sessions <- lapply(seq_along(latest), function(v) {
     candidate <- vapply(per, function(result) result$arrival[v], numeric(1L))
-    eligible <- candidate == latest[v]
-    if (attained[v]) {
-      candidate_attained <- vapply(per, function(result) {
-        result$attained[v]
-      }, logical(1L))
-      eligible <- eligible & candidate_attained
-    }
-    if (!any(eligible) || !is.finite(latest[v])) return(NA_integer_)
-    per[[which(eligible)[1L]]]$previous[v]
+    candidate_attained <- vapply(per, function(result) {
+      result$attained[v]
+    }, logical(1L))
+    which(is.finite(candidate) & candidate == latest[v] &
+      candidate_attained == attained[v])
+  })
+  best_sessions[[target]] <- integer(0)
+  previous <- vapply(seq_along(latest), function(v) {
+    selected <- best_sessions[[v]]
+    if (length(selected) != 1L) return(NA_integer_)
+    per[[selected]]$previous[v]
   }, integer(1L))
   list(arrival = latest, attained = attained, previous = previous,
-       source = target, origin = deadline)
+       source = target, origin = deadline, per_session = per,
+       best_sessions = best_sessions, session_names = names(per))
 }
 
 #' Resolve a path traversal window
@@ -338,6 +348,163 @@
   list(start = lower, end = upper)
 }
 
+#' Reconstruct endpoint-specific path routes
+#'
+#' @param bfs A forward or backward search result.
+#' @param n Number of vertices.
+#' @param direction `"forward"` or `"backward"`.
+#' @return A list per endpoint; each element contains every best-session route.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+#' @keywords internal
+.path_routes <- function(bfs, n, direction) {
+  direction <- match.arg(direction, c("forward", "backward"))
+  lapply(seq_len(n), function(endpoint) {
+    if (!is.finite(bfs$arrival[endpoint])) return(list())
+    if (endpoint == bfs$source) {
+      return(list(list(vertices = bfs$source, path_session = NA_character_,
+                            result = bfs)))
+    }
+    if (is.null(bfs$best_sessions)) {
+      selected <- list(list(result = bfs, path_session = NA_character_))
+    } else {
+      indices <- bfs$best_sessions[[endpoint]]
+      selected <- lapply(indices, function(index) list(
+        result = bfs$per_session[[index]],
+        path_session = bfs$session_names[index]
+      ))
+    }
+    routes <- lapply(selected, function(choice) {
+      vertices <- .trace(
+        choice$result$previous, bfs$source, endpoint
+      )
+      if (identical(direction, "backward")) vertices <- rev(vertices)
+      list(vertices = vertices, path_session = choice$path_session,
+           result = choice$result)
+    })
+    routes[vapply(routes, function(route) length(route$vertices) > 0L,
+                  logical(1L))]
+  })
+}
+
+#' Build primary and step tables from one path search
+#'
+#' @param enc Encoded edge list.
+#' @param bfs Forward or backward search result.
+#' @param direction `"forward"` or `"backward"`.
+#' @param mode Session mode for this result.
+#' @param session_label Session label for a separate-session block.
+#' @return A list with tidy `paths` and `steps` data frames.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+#' @keywords internal
+.paths_tables <- function(enc, bfs, direction,
+                          mode = c("collapse", "bounded", "separate"),
+                          session_label = NULL) {
+  direction <- match.arg(direction, c("forward", "backward"))
+  mode <- match.arg(mode)
+  routes <- .path_routes(bfs, enc$n, direction)
+  reachable <- is.finite(bfs$arrival)
+  hops <- vapply(seq_len(enc$n), function(endpoint) {
+    if (endpoint == bfs$source) return(0L)
+    if (!reachable[endpoint]) return(NA_integer_)
+    values <- vapply(routes[[endpoint]], function(route) {
+      length(route$vertices) - 1L
+    }, integer(1L))
+    if (length(values) == 0L || length(unique(values)) > 1L) {
+      return(NA_integer_)
+    }
+    values[1L]
+  }, integer(1L))
+  path_session <- vapply(seq_len(enc$n), function(endpoint) {
+    if (endpoint == bfs$source || !reachable[endpoint]) return(NA_character_)
+    if (identical(mode, "separate")) return(as.character(session_label))
+    labels <- unique(vapply(routes[[endpoint]], function(route) {
+      route$path_session
+    }, character(1L)))
+    if (length(labels) == 1L && !is.na(labels)) labels else NA_character_
+  }, character(1L))
+  n_best_sessions <- if (identical(mode, "collapse")) {
+    rep(NA_integer_, enc$n)
+  } else {
+    vapply(seq_len(enc$n), function(endpoint) {
+      if (endpoint == bfs$source || !reachable[endpoint]) return(0L)
+      length(routes[[endpoint]])
+    }, integer(1L))
+  }
+  attained <- if (identical(direction, "backward")) {
+    bfs$attained & reachable
+  } else {
+    reachable
+  }
+  latency <- if (identical(direction, "backward")) {
+    bfs$origin - bfs$arrival
+  } else {
+    bfs$arrival - bfs$origin
+  }
+  latency[!reachable] <- NA_real_
+  paths <- data.frame(
+    node = enc$names,
+    reachable = reachable,
+    arrival_time = ifelse(reachable, bfs$arrival, NA_real_),
+    attained = attained,
+    latency = latency,
+    n_hops = hops,
+    stringsAsFactors = FALSE
+  )
+  if (identical(mode, "bounded")) {
+    paths$path_session <- path_session
+    paths$n_best_sessions <- n_best_sessions
+  }
+  if (identical(mode, "separate")) {
+    paths <- data.frame(
+      session = rep(as.character(session_label), enc$n),
+      origin = rep(bfs$origin, enc$n), paths,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  step_frames <- unlist(lapply(seq_len(enc$n), function(endpoint) {
+    lapply(routes[[endpoint]], function(route) {
+      vertices <- route$vertices
+      route_session <- if (endpoint == bfs$source) {
+        NA_character_
+      } else if (identical(mode, "separate")) {
+        as.character(session_label)
+      } else {
+        route$path_session
+      }
+      state_attained <- if (identical(direction, "backward")) {
+        route$result$attained[vertices]
+      } else {
+        rep(TRUE, length(vertices))
+      }
+      frame <- data.frame(
+        endpoint = rep(enc$names[endpoint], length(vertices)),
+        path_session = rep(route_session, length(vertices)),
+        step = seq_along(vertices) - 1L,
+        node = enc$names[vertices],
+        time = route$result$arrival[vertices],
+        attained = state_attained,
+        stringsAsFactors = FALSE
+      )
+      if (identical(mode, "separate")) {
+        frame <- data.frame(
+          session = rep(as.character(session_label), nrow(frame)), frame,
+          stringsAsFactors = FALSE
+        )
+      }
+      frame
+    })
+  }), recursive = FALSE)
+  steps <- do.call(rbind, step_frames)
+  rownames(paths) <- NULL
+  rownames(steps) <- NULL
+  list(paths = paths, steps = steps, routes = routes)
+}
+
 
 # ===========================================================================
 # dyn_paths()
@@ -376,8 +543,9 @@
 #' @return An object of class `"dynet_paths"`: a tidy data frame with one row
 #'   per vertex and columns `node`, `reachable`, `arrival_time`, `attained`
 #'   (whether that optimum itself is realized), `latency` (time taken from the
-#'   source), `n_hops` and `previous` (the adjacent vertex on the reported
-#'   journey, by name).
+#'   source), and `n_hops`. Bounded mode adds `path_session` and
+#'   `n_best_sessions`; separate mode adds `session` and `origin`. Use
+#'   `as.data.frame(x, what = "steps")` for reconstructed routes.
 #'
 #' @details
 #' A valid forward journey has distinct vertices and traversal times
@@ -399,8 +567,17 @@
 #' For backward paths, `arrival_time` is the latest-departure supremum for a
 #' journey ending at the named target by the resolved `end`, and `latency` is
 #' `end` minus that value. A supremum at an interval's excluded terminus need
-#' not itself be an attainable departure. The `previous` column points one hop
-#' onward toward the target.
+#' not itself be an attainable departure.
+#'
+#' With `sessions = "bounded"`, each endpoint is optimized across complete
+#' session-specific searches. A unique winner is named in `path_session`; ties
+#' leave it missing and are counted in `n_best_sessions`. No merged predecessor
+#' tree is exposed. The steps accessor retains a complete route from every tied
+#' best session, so each route stays inside one session. With
+#' `sessions = "separate"`, every session contributes a complete vertex block
+#' and resolves its own default origin. In the steps table, `time` is the
+#' optimal search label at that route vertex. For backward interval paths it
+#' can be an unattained supremum, as indicated by `attained = FALSE`.
 #'
 #' @references
 #' Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
@@ -428,70 +605,86 @@ dyn_paths <- function(dn, from, at = NULL,
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
-  window <- .path_window(dn, direction, at, start, end)
   .check("`from` must be a single vertex name." =
               length(from) == 1L && !is.na(from))
 
-  enc <- .encode(dn)
-  src <- match(as.character(from), enc$names)
+  base_enc <- .encode(dn)
+  src <- match(as.character(from), base_enc$names)
   if (is.na(src)) {
     stop(errorCondition(
       sprintf("Vertex %s is not in this network. Vertices are: %s",
-              sQuote(from), paste(utils::head(enc$names, 10), collapse = ", ")),
+              sQuote(from), paste(utils::head(base_enc$names, 10), collapse = ", ")),
       class = "dynet_unknown_vertex", call = NULL))
   }
-  if (!dn$directed) enc <- .undirect_or_reverse(enc, FALSE, "forward")
 
-  t0 <- if (identical(direction, "backward")) window$end else window$start
-
-  bfs <- if (identical(direction, "backward")) {
-    .bfs_backward_bounded(
-      dn, enc, src, t0, identical(sessions, "bounded"),
-      lower = window$start
-    )
+  if (identical(sessions, "separate")) {
+    parts <- .split_sessions(dn, "separate")
+    blocks <- Map(function(enc, label) {
+      if (!dn$directed) {
+        enc <- .undirect_or_reverse(enc, FALSE, "forward")
+      }
+      window <- .path_window(
+        dn, direction, at, start, end,
+        default_start = min(enc$start), default_end = max(enc$end),
+        clamp_missing = TRUE
+      )
+      origin <- if (identical(direction, "backward")) {
+        window$end
+      } else {
+        window$start
+      }
+      bfs <- if (identical(direction, "backward")) {
+        .bfs_backward_bounded(
+          dn, enc, src, origin, FALSE, lower = window$start
+        )
+      } else {
+        .bfs_bounded(dn, enc, src, origin, FALSE, upper = window$end)
+      }
+      .paths_tables(enc, bfs, direction, "separate", label)
+    }, parts, names(parts))
+    out <- do.call(rbind, lapply(blocks, `[[`, "paths"))
+    steps <- do.call(rbind, lapply(blocks, `[[`, "steps"))
+    origins <- vapply(blocks, function(block) {
+      unique(block$paths$origin)
+    }, numeric(1L))
+    names(origins) <- names(parts)
+    path_mode <- "separate"
+    tree_previous <- NULL
   } else {
-    .bfs_bounded(
-      dn, enc, src, t0, identical(sessions, "bounded"),
-      upper = window$end
-    )
+    window <- .path_window(dn, direction, at, start, end)
+    enc <- base_enc
+    if (!dn$directed) enc <- .undirect_or_reverse(enc, FALSE, "forward")
+    origin <- if (identical(direction, "backward")) {
+      window$end
+    } else {
+      window$start
+    }
+    bounded <- identical(sessions, "bounded") && !is.null(dn$meta$sessions)
+    bfs <- if (identical(direction, "backward")) {
+      .bfs_backward_bounded(
+        dn, enc, src, origin, bounded, lower = window$start
+      )
+    } else {
+      .bfs_bounded(dn, enc, src, origin, bounded, upper = window$end)
+    }
+    path_mode <- if (bounded) "bounded" else "collapse"
+    tables <- .paths_tables(enc, bfs, direction, path_mode)
+    out <- tables$paths
+    steps <- tables$steps
+    origins <- origin
+    tree_previous <- if (identical(path_mode, "collapse")) {
+      bfs$previous
+    } else {
+      NULL
+    }
   }
-  reach <- is.finite(bfs$arrival)
-  hops <- vapply(seq_len(enc$n), function(v) {
-    if (v == src) return(0L)
-    if (!reach[v]) return(NA_integer_)
-    p <- .trace(bfs$previous, src, v)
-    if (length(p) > 0L) length(p) - 1L else NA_integer_
-  }, integer(1L))
-
-  arrival <- bfs$arrival
-  latency <- if (identical(direction, "backward")) {
-    t0 - bfs$arrival
-  } else {
-    bfs$arrival - t0
-  }
-  latency[!reach] <- NA_real_
-  attained <- if (identical(direction, "backward")) {
-    bfs$attained & reach
-  } else {
-    reach
-  }
-
-  out <- data.frame(
-    node         = enc$names,
-    reachable    = reach,
-    arrival_time = ifelse(reach, arrival, NA_real_),
-    attained     = attained,
-    latency      = latency,
-    n_hops       = hops,
-    previous     = ifelse(is.na(bfs$previous), NA_character_,
-                          enc$names[bfs$previous]),
-    stringsAsFactors = FALSE
-  )
   rownames(out) <- NULL
+  rownames(steps) <- NULL
   structure(out, class = c("dynet_paths", "data.frame"),
-            source = enc$names[src], direction = direction,
-            origin = t0,
-            time_unit = dn$meta$time_unit)
+            source = base_enc$names[src], direction = direction,
+            origin = origins, time_unit = dn$meta$time_unit,
+            path_mode = path_mode, steps = steps,
+            tree_previous = tree_previous)
 }
 
 #' Adapt an encoding for undirected traversal or backward search

@@ -328,7 +328,7 @@ dyn_centrality <- function(dn,
       hits <- lapply(trees, function(tr) {
         targets <- which(is.finite(tr$arrival) & seq_len(n) != tr$source)
         inner <- as.integer(unlist(lapply(targets, function(t) {
-          path <- .trace(tr$previous, tr$source, t)
+          path <- .temporal_tree_path(tr, t)
           if (length(path) > 2L) path[-c(1L, length(path))] else integer(0)
         }), use.names = FALSE))
         tabulate(inner, nbins = n)
@@ -336,4 +336,31 @@ dyn_centrality <- function(dn,
       Reduce(`+`, hits, accumulate = FALSE)
     }
   )
+}
+
+#' Reconstruct one session-integral temporal tree path
+#'
+#' Bounded searches have an endpoint-specific set of winning sessions. Until
+#' temporal betweenness gains path multiplicity in P10, ties retain its
+#' established one-tree convention by selecting the first complete winning
+#' session search. At no point may the predecessor vectors be merged across
+#' endpoints because that can create a route that exists in no session.
+#'
+#' @param tree A temporal search result.
+#' @param target Target vertex index.
+#' @return An integer vertex path, or `integer(0)` when unreachable.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' enc <- Dynet:::.encode(dn)
+#' tree <- Dynet:::.bfs_bounded(dn, enc, 1L, 0, FALSE)
+#' Dynet:::.temporal_tree_path(tree, 2L)
+#' @keywords internal
+.temporal_tree_path <- function(tree, target) {
+  if (is.null(tree$best_sessions)) {
+    return(.trace(tree$previous, tree$source, target))
+  }
+  selected <- tree$best_sessions[[target]]
+  if (length(selected) == 0L) return(integer(0))
+  previous <- tree$per_session[[selected[1L]]]$previous
+  .trace(previous, tree$source, target)
 }

@@ -37,8 +37,9 @@ instead of \code{at}.}
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
 per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{attained}
 (whether that optimum itself is realized), \code{latency} (time taken from the
-source), \code{n_hops} and \code{previous} (the adjacent vertex on the reported
-journey, by name).
+source), and \code{n_hops}. Bounded mode adds \code{path_session} and
+\code{n_best_sessions}; separate mode adds \code{session} and \code{origin}. Use
+\code{as.data.frame(x, what = "steps")} for reconstructed routes.
 }
 \description{
 Follows every time-respecting path out of (or into) one vertex and reports
@@ -75,8 +76,17 @@ equal-time closure at one timestamp.
 For backward paths, \code{arrival_time} is the latest-departure supremum for a
 journey ending at the named target by the resolved \code{end}, and \code{latency} is
 \code{end} minus that value. A supremum at an interval's excluded terminus need
-not itself be an attainable departure. The \code{previous} column points one hop
-onward toward the target.
+not itself be an attainable departure.
+
+With \code{sessions = "bounded"}, each endpoint is optimized across complete
+session-specific searches. A unique winner is named in \code{path_session}; ties
+leave it missing and are counted in \code{n_best_sessions}. No merged predecessor
+tree is exposed. The steps accessor retains a complete route from every tied
+best session, so each route stays inside one session. With
+\code{sessions = "separate"}, every session contributes a complete vertex block
+and resolves its own default origin. In the steps table, \code{time} is the
+optimal search label at that route vertex. For backward interval paths it
+can be an unattained supremum, as indicated by \code{attained = FALSE}.
 }
 \examples{
 dn <- dynet(school_contacts)

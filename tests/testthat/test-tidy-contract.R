@@ -35,8 +35,14 @@ test_that("results identify vertices by name, never by index", {
     expect_true(all(verbs[[nm]]$node %in% as.data.frame(dn, what = "nodes")$name))
   }
   expect_type(verbs$durations$from, "character")
-  expect_type(dyn_paths(dn, from = "v1")$node, "character")
-  expect_type(dyn_paths(dn, from = "v1")$previous, "character")
+  paths <- dyn_paths(dn, from = "v1")
+  steps <- as.data.frame(paths, what = "steps")
+  expect_type(paths$node, "character")
+  expect_false("previous" %in% names(paths))
+  expect_type(steps$endpoint, "character")
+  expect_type(steps$node, "character")
+  expect_type(steps$path_session, "character")
+  expect_false(any(vapply(steps, is.list, logical(1L))))
 })
 
 test_that("sessions add rows rather than nesting the result in a list", {
