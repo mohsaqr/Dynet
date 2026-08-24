@@ -601,32 +601,142 @@ and metamorphic oracle gates pass, and the limited `tsna` calibration passes.
 **Purpose:** choose the order used to decide which temporal journeys are
 optimal before closeness, multiplicity, or betweenness depends on it.
 
-Compare the published candidates explicitly: foremost (earliest arrival),
-shortest (fewest hops among time-respecting journeys), fastest (least elapsed
-travel time), and explicitly ordered lexicographic forms.
-State whether the criterion is source-relative or query-bound-relative and
-whether waiting contributes to cost.
+**Status:** complete in 0.3.9 as a definition-and-oracle milestone; P08 is the
+first production implementation of this order.
 
-The recommended candidate for finite tied-path counting is
-foremost-then-shortest: minimize arrival time, then hops. It is not approved
-until the definition review proves how prefixes are retained and shows that
-simultaneous zero-time
-cycles cannot create an infinite optimal family.
+**Approved criterion:** use the published **shortest foremost** temporal path,
+spelled out as **foremost, then shortest** to make the priority unambiguous.
+For a fixed source-ready lower bound \(L\), completion bound \(H\), traversal
+duration \(\delta\), and session policy, let \({\cal J}_{sz}\) be the set of
+complete P01–P05 vertex-simple journeys from \(s\) to \(z\). If journey \(J\)
+has final completion \(A(J)\) and \(h(J)\) hops, its cost is
 
-For standard vertex centrality, optimal journeys are vertex-simple. A
-walk-based quantity that permits revisits is out of scope unless its state also
-retains visited-vertex history and its vertex-credit rule receives a different
-name.
+\[
+  \kappa(J) = (A(J), h(J)),
+\]
 
-**Public surface:** retain one default criterion only if it has a clear
-published interpretation. Supporting more than one requires a named argument,
-not separate result-processing rituals.
+ordered lexicographically ascending. Thus a journey is shortest foremost when
+it first has the earliest attainable final completion and, among journeys with
+that completion, has the fewest hops. The empty source journey has cost
+\((L,0)\). Absolute completion is retained in forward public output. Replacing
+\(A(J)\) by \(A(J)-L\) gives the same order because \(L\) is fixed, but this is
+still foremost cost rather than fastest cost.
 
-**Fixtures:** earliest-but-longer, later-but-shorter, fastest-but-later,
-simultaneous cycle, waiting, and positive traversal duration.
+Every reachable forward pair has such an attained earliest completion. For
+each finite vertex/spell sequence, the P01–P05 earliest-entry recurrence either
+produces an attained completion or proves infeasibility: interval onsets are
+closed, point triggers are exact, and positive-duration interval completion
+may equal the component terminus. There are finitely many vertex-simple
+discrete sequences, so the attainable sequence minima have an attainable
+global minimum. This existence property does not extend automatically to
+fastest infima or backward latest-departure suprema.
 
-**Exit:** every fixture has one literal optimal set under the approved order,
-and optimality is independent of row order and names.
+Unlimited waiting remains part of P01. Waiting from \(L\), intermediate
+waiting, and every positive traversal duration can therefore increase final
+completion; hop count ignores them. A point at \(q\) completes at
+\(q+\delta\). Feasibility continues to require final completion no later than
+\(H\) and one complete session-integral journey where the session policy
+requires it.
+
+**Rejected alternatives:** pure foremost minimizes only \(A(J)\) and leaves
+unequal-hop ties; under a walk interpretation it would also leave cycle-padded
+ties. Pure shortest minimizes only \(h(J)\) and may deliberately arrive later.
+Fastest minimizes
+\(A(J)-D(J)\), where \(D(J)\) is actual first-hop entry; it excludes waiting at
+the source before departure but includes later waiting and traversal duration.
+Using \(A(J)-L\) as "fastest" would silently collapse it into foremost.
+Fastest can also have an unattained infimum at a half-open interval boundary.
+The reverse lexicographic order \((h,A)\) is shortest-then-foremost and is a
+different criterion. None of these alternatives is exposed by P07.
+
+**Path, prefix, and finiteness contract:** standard vertex centrality uses
+temporal paths, not walks: no vertex repeats. This agrees with Buß et al.'s
+path definition and is also forced by the approved order. If a feasible walk
+repeats a vertex, delete the closed subwalk and wait at that vertex until the
+unchanged suffix begins. Final completion is preserved and hop count strictly
+falls, for both positive-duration traversal and simultaneous zero-duration
+cycles. A repeated-vertex walk therefore cannot be shortest foremost.
+
+A shortest-foremost complete path need not have a shortest-foremost prefix to
+an intermediate vertex. A later one-hop prefix may wait for the same final
+contact as an earlier two-hop prefix and produce the shorter foremost complete
+path. P08 must consequently retain vertex-appearance/contact states rather
+than one lexicographically best label per vertex. Safe pruning is componentwise
+dominance: state \((a_1,h_1)\) dominates \((a_2,h_2)\) only when
+\(a_1\le a_2\) and \(h_1\le h_2\), with at least one strict inequality and
+with compatible session/identity state. At a fixed arrival, every prefix of a
+minimum-hop path to that vertex appearance is minimum-hop for its own arrival
+appearance. Hop count strictly increases along every predecessor transition,
+so equal-time non-strict contacts do not create a cycle in an expanded state
+graph whose predecessor arcs are traversal/contact arcs and whose waiting is
+implicit. P08 must not insert explicit zero-hop waiting or dominance arcs and
+then reuse this acyclicity proof.
+
+Vertex simplicity makes the set of vertex sequences finite, but arbitrary
+continuous waiting schedules over interval spells would still create
+uncountably many timed realizations. P08 must freeze a discrete journey
+identity before it counts ties; P07 does not equate different waiting schedules
+with new public paths.
+
+**Direction scope:** temporal closeness and betweenness use forward ordered
+pairs with source ready at \(L\). P02's backward query is the time-reversal
+dual: maximize the original-time latest-departure label into deadline \(H\),
+then minimize hops when the maximum is attained and ties are eventually
+implemented. An unattained latest-departure supremum has no maximizing journey,
+so no optimal path family exists on which to apply the hop tie-break; retain
+only P02's reach/supremum label in that case. Backward route selection must not
+be used as the path family for forward centrality.
+
+**Public surface and sequencing:** P07 adds no argument, output column, or
+metadata because the current one-label earliest-arrival tree cannot implement
+the hop tie-break. In particular, its `n_hops` and reconstructed `steps` are
+representative route(s) from the current foremost tree(s), not yet guaranteed
+shortest foremost. P08 implements the state engine; P09 then approves
+closeness; P10 approves exact dependency distribution. Reach and reach count
+remain criterion-independent.
+If several criteria are genuinely implemented later, add one final named
+`criterion` argument and a query-wide attribute; never encode the choice as a
+tidy result column or accept unsupported values in advance.
+
+**Fixtures:** earliest-but-longer versus later-but-shorter; the critical
+later-fewer-hop prefix followed by one shared final contact; pure shortest
+arriving later; fastest departing later; source and intermediate waiting;
+positive traversal duration; simultaneous zero-time cycle; equal-arrival
+unequal-hop routes; session walls; bounds; row permutation; relabelling; and
+time translation.
+
+**Oracle:** exhaustively enumerate complete P01–P05 vertex-simple journeys on
+tiny networks, compute `(final_completion, hops)` only after enumeration, and
+select the literal lexicographic minimum. Separately compute the pure foremost,
+shortest, shortest-then-foremost, and prefix-foremost sets so every candidate
+is proved distinct. For fastest, compute the infimum and its attainment state,
+and return a fastest set only when the infimum is attained; include a literal
+half-open-interval fixture with no minimizer. The oracle must reject
+one-label-prefix, pure foremost, reversed-priority, source-wait-excluding,
+walk/cycle, row-order, and session-crossing mutants.
+
+Installed `tsna::tPath()` calibrates earliest-arrival/latest-departure labels
+and chooses one route under ties; it does not validate a shortest-foremost tied
+family. Its help mentions `fewest.steps`, but installed 0.3.6 does not accept
+that value in the function's `type` argument. `networkDynamic` supplies the
+activity representation and `ndtv` supplies no mathematical path-selection
+API.
+
+**References:** Bui-Xuan, Ferreira, and Jarry (2003) distinguish shortest by
+hop count, foremost by arrival date, and fastest by time span in
+[Computing Shortest, Fastest, and Foremost Journeys in Dynamic Networks](https://www-npa.lip6.fr/~buixuan/files/BFJ03.pdf).
+Buß, Molter, Niedermeier, and Rymar define vertex-simple temporal paths and
+shortest foremost paths as earliest-arrival paths with minimum transitions in
+[Algorithmic Aspects of Temporal Betweenness](https://www.cambridge.org/core/journals/network-science/article/algorithmic-aspects-of-temporal-betweenness/5AC743D74B11417B032C389E3D0C5B27E).
+Rymar et al. formalize prefix compatibility and exchangeability in
+[JGAA 27(3), 2023](https://jgaa.info/index.php/jgaa/article/download/paper619/2333/2140).
+
+**Exit:** the literal and exhaustive definition oracle passes; every competing
+criterion differs on at least one fixture; loop erasure, state dominance, and
+expanded-state acyclicity obligations are recorded for P08; the exhaustive
+oracle's selected optimal family is invariant to input row order, names, and
+time translation; and no unsupported public criterion is promised before its
+engine exists.
 
 ### P08 — State-expanded optimal-path multiplicity
 
