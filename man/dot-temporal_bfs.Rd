@@ -4,7 +4,14 @@
 \alias{.temporal_bfs}
 \title{Earliest-arrival times from one source}
 \usage{
-.temporal_bfs(enc, source, t0, max_sweeps = NULL, upper = Inf)
+.temporal_bfs(
+  enc,
+  source,
+  t0,
+  max_sweeps = NULL,
+  upper = Inf,
+  traversal_time = 0
+)
 }
 \arguments{
 \item{enc}{Encoded edge list from \code{\link[=.encode]{.encode()}}.}
@@ -16,6 +23,8 @@
 \item{max_sweeps}{Iteration cap.}
 
 \item{upper}{Latest admissible traversal time.}
+
+\item{traversal_time}{Nonnegative duration charged for every hop.}
 }
 \value{
 A list with \code{arrival}, \code{previous}, \code{source} and \code{origin}.
@@ -28,13 +37,14 @@ apparent once a later edge has been relaxed.
 }
 \details{
 Forward traversal follows non-strict, vertex-simple temporal journeys.
-Waiting is allowed and traversal itself takes zero time. A positive-duration
-interval \verb{[start, end)} can be boarded after arrival only while arrival is
-strictly before \code{end}; its earliest traversal time is the later of arrival
-and \code{start}. An instantaneous event is a separate case: it can be used when
-arrival is at or before its timestamp, and arrival at the next vertex is
-that timestamp. Consequently, several events at the same time can compose
-into a journey, independent of input row order.
+Waiting is allowed. At zero traversal duration, a positive interval
+\verb{[start, end)} can be entered after arrival only strictly before \code{end}, and
+a point event transmits exactly at its timestamp. With positive duration,
+continuous interval activity is unioned by oriented pair and the complete
+traversal must fit inside one activity component; completion exactly at its
+terminus is allowed. A point event triggers at its timestamp and reaches the
+endpoint after the same delay. Consequently equal-time point chains compose
+only when the traversal duration is zero.
 }
 \examples{
 dn <- dynet(school_contacts)

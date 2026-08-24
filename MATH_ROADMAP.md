@@ -441,23 +441,98 @@ source-session, and bounds-after-selection mutants fail.
 
 **Purpose:** allow crossing an edge to consume positive time.
 
-**Contract:** for interval `[s, e)`, entry must be strictly before `e`. A
-positive-duration traversal occupying `[entry, entry + delta)` may finish
-exactly at `e`. Decide separately whether an instantaneous contact transmits at
-its event time and then incurs a delay, or cannot support positive occupancy.
-Do not inherit `tsna`'s choice accidentally.
+**Status:** complete in 0.3.7.
 
-**Candidate public surface:** `traversal_time = 0` on paths, reach, and temporal
-centrality.
+**Public surface:** add a final `traversal_time = 0` argument to `dyn_paths()`,
+`dyn_reachability()`, and `dyn_centrality()`. It is one constant nonnegative
+finite duration per hop, not an edge-weight interpretation. A numeric value is
+measured in the network's stored time unit. A scalar `difftime` is converted
+for calendar networks and rejected for numeric step networks. Dates and
+date-times are instants, not durations, and are invalid here. A nonzero value
+is valid only for temporal centrality; snapshot centrality rejects it.
 
-**Fixtures:** edge exactly long enough, edge too short, multi-hop chain,
-waiting then traversal, and instantaneous event with positive delay.
+**Journey contract:** write `delta = traversal_time`. A journey retains P01's
+distinct vertices, selected spells, unlimited waiting, and session rules. If a
+hop is entered at `x`, its endpoint is reached at `y = x + delta`; the next hop
+cannot be entered before `y`. The source is ready at the resolved lower bound
+`L`, and the final completion cannot exceed the closed upper bound `H`.
 
-**Oracle:** literal cases and `tsna::tPath(graph.step.time = ...)` only where
-the instantaneous and interval semantics match.
+For interval activity, first union overlapping or touching positive intervals
+for the same oriented pair under the selected session policy. Bounded and
+separate modes union only within one label; collapse ignores labels before the
+union. This makes traversal invariant to arbitrary segmentation of continuous
+edge activity. In one resulting component `[s,e)`, the occupied traversal
+`[x,x + delta)` must fit: `s <= x` and `x + delta <= e`. Finishing exactly at
+the excluded component terminus is eligible because no occupancy occurs at
+`e`. At `delta = 0`, preserve P01 exactly and require `s <= x < e`; zero
+duration does not turn the terminus into an entry point.
 
-**Exit:** zero preserves the P01 baseline; positive traversal never enters at a
-terminus and may finish exactly there under the approved occupancy rule.
+A point event is deliberately not treated as an empty interval. It triggers a
+hop exactly at its timestamp `q`, after which the endpoint is reached at
+`q + delta`. This preserves positive-delay analysis for contact-format
+networks while preventing a second point event at `q` from composing after a
+positive delay. It is an explicit event-trigger latency rule, not a claim that
+the relation remains active during `(q,q + delta)`. This differs deliberately
+from `tsna`'s inconsistent positive-delay point behavior.
+
+**Forward recurrence:** for an interval, set `x = max(arrival[u], s)` and
+candidate completion `y = x + delta`; require the applicable spell rule and
+`y <= H`. For a point event, require `arrival[u] <= q` and `q + delta <= H`,
+then propose `q + delta`. Minimize completion as before. Public forward
+`arrival_time` is endpoint completion and `latency` includes waiting plus every
+hop duration.
+
+**Backward recurrence:** the target begins at `(B,attained) = (H,TRUE)`. For
+an incoming interval `[s,e)`, let `m = min(B,e)` and candidate entry
+`d = m - delta`. Its attainment is
+`(delta > 0 || m < e) && (m < B || attained)`. Retain it when `d > s`, or when
+`d == s` and attained, and apply the same attained equality rule at `L`.
+Across candidates maximize `d`, preferring attained over unattained at equal
+numeric values. This reduces exactly to P02 when `delta = 0`; for positive
+duration, entry at `e - delta` and completion at `e` are attained.
+
+For a point event `q`, require `q + delta < B`, or equality with an attained
+downstream bound, plus `q >= L`. Its candidate latest entry is `(q,TRUE)`.
+Public backward `arrival_time` remains latest entry/departure and latency is
+`H - arrival_time`.
+
+**Result contract:** primary and metric columns remain stable. Store the
+resolved scalar as `traversal_time` metadata and show a positive value in print
+headers. The steps table keeps its node-label meaning: forward `time` is the
+completion/arrival label at that node; backward `time` is the latest entry
+label. Together with the scalar and consecutive route vertices, these labels
+make every hop's entry, completion, and waiting interval checkable.
+
+**Fixtures:** interval exactly long enough and just too short; entry at a
+terminus; completion exactly at the spell and query termini; multi-hop and
+waiting chains; point trigger followed by an interval; simultaneous point
+chain at zero and positive duration; backward exact-fit attainment and the
+zero-duration unattained counterpart; lower bounds; directed/undirected;
+bounded/collapse/separate sessions and tied winners; calendar `difftime`;
+translation, scaling, monotonicity, row order, duplicates, overlapping and
+touching interval splits, positive gaps, and zero-duration regression across
+every P01–P04 fixture.
+
+**Oracle and comparison:** independently enumerate vertex-simple journeys
+from literal spells, carrying entry, completion, session, and backward
+attainment states. Deliberate mutants add the duration only once, report entry
+as arrival, require strict completion, ignore completion at the horizon, leave
+point arrivals undelayed, compose positive-delay simultaneous events, reverse
+the backward sign, lose attainment, merge sessions, or alter the zero case.
+
+Installed `tsna::tPath(graph.step.time = ...)` is comparison evidence only for
+interior positive-duration interval cases with `start = 0`. Its implementation
+can accept completion after `end`, departure before `start`, and insufficient
+later spells, and its point-event result changes with origin and direction.
+`networkDynamic` supplies activity data but no path-duration algorithm; `ndtv`
+has no mathematical path API.
+
+**Exit:** zero is mathematically and numerically identical to P01–P04; positive
+duration cannot improve reach or arrival; every reported hop satisfies its
+activity component and the closed query horizon; backward values are the exact
+original-time dual with correct attainment; path, reachability, and temporal
+centrality agree; session-integral reconstruction survives; the exhaustive
+oracle and limited `tsna` calibration pass; and all deliberate mutants fail.
 
 ### P06 — Temporal reach contract
 

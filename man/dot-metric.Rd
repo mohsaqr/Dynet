@@ -4,7 +4,16 @@
 \alias{.metric}
 \title{Wrap a long data frame as a temporal measure}
 \usage{
-.metric(df, level, what, dn, note = NULL, spec = NULL, mode = NULL)
+.metric(
+  df,
+  level,
+  what,
+  dn,
+  note = NULL,
+  spec = NULL,
+  mode = NULL,
+  traversal_time = NULL
+)
 }
 \arguments{
 \item{df}{Long data frame with \code{measure} and \code{value} and, depending on
@@ -22,6 +31,8 @@
 measure was taken on one.}
 
 \item{mode}{The direction convention used, when it applied.}
+
+\item{traversal_time}{Per-hop traversal duration for temporal paths.}
 }
 \value{
 An object of class \code{c("dynet_metric", "data.frame")}.

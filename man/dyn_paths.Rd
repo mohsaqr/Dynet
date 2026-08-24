@@ -11,7 +11,8 @@ dyn_paths(
   direction = c("forward", "backward"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
-  end = NULL
+  end = NULL,
+  traversal_time = 0
 )
 }
 \arguments{
@@ -32,6 +33,9 @@ scale. It cannot be combined with \code{start} or \code{end}.}
 \item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
 spells remain terminus-exclusive. When these are supplied, use them
 instead of \code{at}.}
+
+\item{traversal_time}{Nonnegative duration charged for every hop, in the
+network's time unit. A calendar network also accepts a scalar \code{difftime}.}
 }
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
@@ -50,28 +54,31 @@ travel back in time.
 The source vertex is named, not numbered. \code{dyn_paths(dn, from = "Ana")}
 works; there is no vertex index to look up first.
 
-Forward paths use nondecreasing traversal times, so relations active at the
-same instant may form a multi-hop chain. Waiting is allowed. Interval spells
-are onset-inclusive and terminus-exclusive; point events are traversable at
-their exact timestamp through a distinct event rule. Reach and arrival do
-not depend on edge-row order or duplicate spell rows.
+At the default zero traversal duration, forward paths use nondecreasing hop
+times, so relations active at the same instant may form a multi-hop chain.
+Waiting is allowed. Interval spells are onset-inclusive and
+terminus-exclusive; point events trigger at their exact timestamp through a
+distinct event rule. A positive duration separates a hop's trigger or entry
+from its completion, as detailed below. Reach and arrival do not depend on
+edge-row order or duplicate spell rows.
 }
 \details{
-A valid forward journey has distinct vertices and traversal times
-\verb{start <= t1 <= ... <= tk <= end}. At each hop, either an interval is active
-at the traversal time or a point event occurs exactly then. The empty journey
-reaches the source at the resolved \code{start}. With \code{at}, that value supplies
-\code{start} for forward paths or \code{end} for backward paths. Cycles are unnecessary
-for reach and earliest arrival because deleting a repeated-vertex section
-and waiting at that vertex preserves every later hop. This contract defines
-feasibility and arrival; optimal-journey ties and multiplicity are separate
-quantities.
+A valid forward journey has distinct vertices, hop-entry times \code{x}, and
+completion times \code{y = x + traversal_time}. The source is ready at \code{start},
+each later entry is no earlier than the preceding completion, and final
+completion is at or before \code{end}. At zero duration, entry and completion
+coincide and recover P01's nondecreasing traversal times. The empty journey
+reaches the source at \code{start}. With \code{at}, that value supplies \code{start} for
+forward paths or \code{end} for backward paths. Cycles are unnecessary for reach
+and earliest arrival because deleting a repeated-vertex section and waiting
+at that vertex preserves every later hop.
 
-\code{start} and \code{end} form a closed window for traversal times: a hop may occur
-at either bound. This does not close interval spells on the right. An event
-or interval onset at \code{end} is eligible, while an interval whose own terminus
-equals \code{end} is not active at that instant. \code{start = end} computes the
-equal-time closure at one timestamp.
+\code{start} and \code{end} form a closed bound on the complete journey: entry may
+equal \code{start} and completion may equal \code{end}. This does not close interval
+activity on the right. At zero duration, an event or interval onset at
+\code{end} is eligible while an interval terminating there cannot be entered.
+With positive duration, no nonempty hop can both enter and complete at
+\code{end}; \code{start = end} therefore leaves only the empty journey.
 
 For backward paths, \code{arrival_time} is the latest-departure supremum for a
 journey ending at the named target by the resolved \code{end}, and \code{latency} is
@@ -87,6 +94,13 @@ best session, so each route stays inside one session. With
 and resolves its own default origin. In the steps table, \code{time} is the
 optimal search label at that route vertex. For backward interval paths it
 can be an unattained supremum, as indicated by \code{attained = FALSE}.
+
+With positive \code{traversal_time}, an interval hop entered at \code{x} arrives at
+\code{x + traversal_time} and must fit within continuous activity for that pair;
+overlapping or touching interval spells form one component. Completion
+exactly at the component terminus is allowed. A point event triggers at its
+timestamp and arrives after the same duration; it does not represent
+continued edge activity. The query \code{end} bounds completion, not only entry.
 }
 \examples{
 dn <- dynet(school_contacts)

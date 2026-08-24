@@ -118,6 +118,52 @@
   as.numeric(v)
 }
 
+#' Resolve a per-hop traversal duration
+#'
+#' Numeric values are expressed in the network's stored time unit. A
+#' `difftime` is converted for calendar networks; a numeric-step network has no
+#' calendar unit with which to interpret it.
+#'
+#' @param value Requested traversal duration.
+#' @param dn A `dynet` object.
+#' @return One finite nonnegative numeric duration in network units.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.as_traversal_time(1, dn)
+#' @keywords internal
+.as_traversal_time <- function(value, dn) {
+  if (inherits(value, "Date") || inherits(value, "POSIXt")) {
+    stop(errorCondition(
+      "`traversal_time` is a duration, not a date or date-time.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  if (inherits(value, "difftime")) {
+    if (length(value) != 1L || is.na(value)) {
+      stop(errorCondition(
+        "`traversal_time` must be one finite nonnegative duration.",
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    if (identical(dn$meta$time_unit, "step")) {
+      stop(errorCondition(
+        "A numeric-step network needs `traversal_time` in numeric steps, not `difftime`.",
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    value <- as.numeric(value, units = "secs") /
+      .unit_seconds(dn$meta$time_unit)
+  }
+  if (!is.numeric(value) || length(value) != 1L ||
+      !is.finite(value) || value < 0) {
+    stop(errorCondition(
+      "`traversal_time` must be one finite nonnegative duration.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  as.numeric(value)
+}
+
 #' Resolve and validate the four measurement-grid arguments
 #'
 #' Called once at the top of every verb that measures over time, so the

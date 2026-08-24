@@ -16,7 +16,8 @@ dyn_centrality(
   end = NULL,
   step = NULL,
   window = NULL,
-  exponent = 1
+  exponent = 1,
+  traversal_time = 0
 )
 }
 \arguments{
@@ -63,6 +64,10 @@ overlapping window; \code{0} samples the network at each point in time.}
 \item{exponent}{Attenuation factor for Bonacich \code{"power"}. Positive rewards
 being connected to well-connected others; negative rewards the opposite,
 which is the bargaining reading.}
+
+\item{traversal_time}{Nonnegative duration charged for every temporal-path
+hop, in the network's time unit. A calendar network also accepts a scalar
+\code{difftime}. Nonzero values require \code{scope = "temporal"}.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time
@@ -105,10 +110,13 @@ rather than the Brandes quantity.
 
 Temporal measures use \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing
 times, unlimited waiting, half-open interval spells, and a separate exact
-timestamp rule for point events. \code{start} and \code{end} may bound temporal
-\code{"reach"}; bounded temporal closeness and betweenness remain deferred until
-their path-optimality definitions are completed. In separate-session output,
-a session outside a one-sided bound contributes zero-reach rows.
+timestamp rule for point events. Positive \code{traversal_time} requires an
+interval traversal to finish within continuous pair activity; a point event
+triggers at its timestamp and reaches its endpoint after that duration.
+\code{start} and \code{end} may bound temporal \code{"reach"}; bounded temporal closeness
+and betweenness remain deferred until their path-optimality definitions are
+completed. In separate-session output, a session outside a one-sided bound
+contributes zero-reach rows.
 }
 \examples{
 dn <- dynet(school_contacts)

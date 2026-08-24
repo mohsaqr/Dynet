@@ -4,7 +4,14 @@
 \alias{.temporal_bfs_backward}
 \title{Latest-departure suprema into one target}
 \usage{
-.temporal_bfs_backward(enc, target, deadline, max_sweeps = NULL, lower = -Inf)
+.temporal_bfs_backward(
+  enc,
+  target,
+  deadline,
+  max_sweeps = NULL,
+  lower = -Inf,
+  traversal_time = 0
+)
 }
 \arguments{
 \item{enc}{Encoded edge list from \code{\link[=.encode]{.encode()}}.}
@@ -16,6 +23,8 @@
 \item{max_sweeps}{Iteration cap.}
 
 \item{lower}{Earliest admissible traversal time.}
+
+\item{traversal_time}{Nonnegative duration charged for every hop.}
 }
 \value{
 A list with \code{arrival}, \code{attained}, \code{previous}, \code{source} and
@@ -26,10 +35,12 @@ points from each predecessor toward the target.
 Latest-departure suprema into one target
 }
 \details{
-Backward traversal is evaluated in original time. For a positive-duration
-interval \verb{[start, end)}, the latest usable time can equal \code{end} only as an
-unattained supremum. The \code{attained} state preserves that distinction so an
-exact point event cannot incorrectly compose through the excluded endpoint.
+Backward traversal is evaluated in original time. At zero traversal
+duration, an interval's latest usable entry can equal its excluded terminus
+only as an unattained supremum. With positive duration, entry at
+\code{end - traversal_time} is attained because occupancy finishes exactly at
+\code{end}. The \code{attained} state preserves both cases and prevents an exact point
+event from composing through an unavailable downstream bound.
 }
 \examples{
 dn <- dynet(school_contacts)

@@ -10,7 +10,8 @@ dyn_reachability(
   at = NULL,
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
-  end = NULL
+  end = NULL,
+  traversal_time = 0
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ combined with \code{start} or \code{end}.}
 
 \item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
 spells remain terminus-exclusive.}
+
+\item{traversal_time}{Nonnegative duration charged for every hop, in the
+network's time unit. A calendar network also accepts a scalar \code{difftime}.}
 }
 \value{
 A \code{dynet_metric} at node level with measures \code{forward_reach} and
@@ -42,10 +46,12 @@ reach depends on whether the timing lines up.
 \details{
 Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing times,
 unlimited waiting, half-open interval spells, and a separate exact timestamp
-rule for point events. For backward reachability, the resolved \code{end} is a
-common deadline and latest-departure suprema determine whether a vertex can
-reach the target. The canonical \code{start} and \code{end} bounds apply one closed
-traversal-time window to both forward and backward queries.
+rule for point events. Positive \code{traversal_time} requires interval occupancy
+to finish within continuous pair activity and delays a point-trigger arrival.
+For backward reachability, the resolved \code{end} is a common deadline and
+latest-departure suprema determine whether a vertex can reach the target.
+The canonical \code{start} and \code{end} bounds apply one closed traversal-time window
+to both forward and backward queries.
 
 In separate-session output, a session entirely outside a one-sided bound
 contributes zero-reach rows rather than aborting the complete result. Its

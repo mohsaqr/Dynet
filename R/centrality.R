@@ -63,6 +63,9 @@
 #' @param exponent Attenuation factor for Bonacich `"power"`. Positive rewards
 #'   being connected to well-connected others; negative rewards the opposite,
 #'   which is the bargaining reading.
+#' @param traversal_time Nonnegative duration charged for every temporal-path
+#'   hop, in the network's time unit. A calendar network also accepts a scalar
+#'   `difftime`. Nonzero values require `scope = "temporal"`.
 #'
 #' @return A `dynet_metric`: a tidy data frame with one row per vertex, time
 #'   point and measure. Columns are `session` (only when the network has
@@ -91,10 +94,13 @@
 #'
 #' Temporal measures use [dyn_paths()] traversal semantics: nondecreasing
 #' times, unlimited waiting, half-open interval spells, and a separate exact
-#' timestamp rule for point events. `start` and `end` may bound temporal
-#' `"reach"`; bounded temporal closeness and betweenness remain deferred until
-#' their path-optimality definitions are completed. In separate-session output,
-#' a session outside a one-sided bound contributes zero-reach rows.
+#' timestamp rule for point events. Positive `traversal_time` requires an
+#' interval traversal to finish within continuous pair activity; a point event
+#' triggers at its timestamp and reaches its endpoint after that duration.
+#' `start` and `end` may bound temporal `"reach"`; bounded temporal closeness
+#' and betweenness remain deferred until their path-optimality definitions are
+#' completed. In separate-session output, a session outside a one-sided bound
+#' contributes zero-reach rows.
 #'
 #' @references
 #' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
@@ -125,11 +131,12 @@ dyn_centrality <- function(dn,
                            mode = c("all", "out", "in"),
                            start = NULL, end = NULL,
                            step = NULL, window = NULL,
-                           exponent = 1) {
+                           exponent = 1, traversal_time = 0) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
   mode  <- match.arg(mode)
+  traversal_time <- .as_traversal_time(traversal_time, dn)
   window <- .legacy_sample(window, sample)
   .check(
     "`measure` must be a character vector." = is.character(measure),
@@ -192,7 +199,16 @@ dyn_centrality <- function(dn,
         class = "dynet_bad_input", call = NULL
       ))
     }
-    return(.temporal_centrality(dn, measure, sessions, start, end))
+    return(.temporal_centrality(
+      dn, measure, sessions, start, end, traversal_time
+    ))
+  }
+
+  if (traversal_time > 0) {
+    stop(errorCondition(
+      "A nonzero `traversal_time` applies only to `scope = \"temporal\"`.",
+      class = "dynet_bad_input", call = NULL
+    ))
   }
 
   spec <- .window_spec(dn, start, end, step, window)
@@ -276,10 +292,12 @@ dyn_centrality <- function(dn,
 #' @param measure One or more of "closeness", "betweenness", "reach".
 #' @param sessions Session mode.
 #' @param start,end Optional traversal bounds for temporal reach.
+#' @param traversal_time Nonnegative duration charged for every hop.
 #' @return A `dynet_metric` at node level with no time column.
 #' @keywords internal
 .temporal_centrality <- function(dn, measure, sessions,
-                                 start = NULL, end = NULL) {
+                                 start = NULL, end = NULL,
+                                 traversal_time = 0) {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   frames <- Map(function(enc, label) {
@@ -291,7 +309,10 @@ dyn_centrality <- function(dn,
     )
     t0 <- horizon$start
     trees <- lapply(seq_len(enc$n), function(s)
-      .bfs_bounded(dn, walk, s, t0, bounded, upper = horizon$end))
+      .bfs_bounded(
+        dn, walk, s, t0, bounded, upper = horizon$end,
+        traversal_time = traversal_time
+      ))
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc)), measure)
     data.frame(session = label, node = enc$names,
@@ -304,7 +325,8 @@ dyn_centrality <- function(dn,
   .metric(df, level = "node",
           what = if (length(measure) == 1L) .measure_label(measure) else "Temporal centrality",
           dn = dn,
-          note = "computed on time-respecting paths across the whole window")
+          note = "computed on time-respecting paths across the whole window",
+          traversal_time = traversal_time)
 }
 
 #' Reduce a set of earliest-arrival trees to one temporal measure

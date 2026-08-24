@@ -272,6 +272,11 @@ print.dynet_paths <- function(x, n = 12L, ...) {
       cat("# routes are endpoint-specific session-integral optima, not one predecessor tree\n")
     }
   }
+  traversal_time <- attr(x, "traversal_time") %||% 0
+  if (traversal_time > 0) {
+    cat(sprintf("# traversal %s %s per hop\n",
+                format(traversal_time), attr(x, "time_unit")))
+  }
   print(utils::head(as.data.frame(x), n), row.names = FALSE)
   if (nrow(x) > n) {
     suffix <- if (identical(mode, "collapse")) {

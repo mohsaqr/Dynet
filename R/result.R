@@ -13,10 +13,11 @@
 #' @param spec The resolved measurement grid from [.window_spec()], when the
 #'   measure was taken on one.
 #' @param mode The direction convention used, when it applied.
+#' @param traversal_time Per-hop traversal duration for temporal paths.
 #' @return An object of class `c("dynet_metric", "data.frame")`.
 #' @keywords internal
 .metric <- function(df, level, what, dn, note = NULL, spec = NULL,
-                    mode = NULL) {
+                    mode = NULL, traversal_time = NULL) {
   # A session column that is entirely absent of sessions is noise; drop it.
   if ("session" %in% names(df) && all(is.na(df$session) | df$session == "all")) {
     df$session <- NULL
@@ -35,6 +36,7 @@
     step      = spec$step,
     window    = spec$window,
     mode      = mode,
+    traversal_time = traversal_time,
     n_nodes   = nrow(dn$nodes),
     directed  = dn$directed,
     net_format = dn$meta$format
@@ -118,6 +120,11 @@ print.dynet_metric <- function(x, n = 12L, ...) {
   }
   if (!is.null(attr(x, "mode"))) {
     bits <- c(bits, sprintf("mode %s", attr(x, "mode")))
+  }
+  traversal_time <- attr(x, "traversal_time")
+  if (!is.null(traversal_time) && traversal_time > 0) {
+    bits <- c(bits, sprintf("traversal %s %s per hop",
+                            format(traversal_time), unit))
   }
   if ("session" %in% names(x)) {
     bits <- c(bits, sprintf("%d sessions", length(unique(x$session))))
