@@ -23,4 +23,10 @@ A BFS result list.
 \description{
 Run reachability with sessions acting as walls
 }
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.bfs_bounded(
+  dn, Dynet:::.encode(dn), source = 1L, t0 = 0, bounded = FALSE
+)
+}
 \keyword{internal}

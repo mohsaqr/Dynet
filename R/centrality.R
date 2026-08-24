@@ -87,6 +87,10 @@
 #' all equally-early paths, so it is a count on the earliest-arrival tree
 #' rather than the Brandes quantity.
 #'
+#' Temporal measures use [dyn_paths()] traversal semantics: nondecreasing
+#' times, unlimited waiting, half-open interval spells, and a separate exact
+#' timestamp rule for point events.
+#'
 #' @references
 #' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
 #' (2013). Graph metrics for temporal networks. In *Temporal Networks*

@@ -100,6 +100,10 @@ Temporal betweenness counts how many earliest-arrival paths pass through a
 vertex, taken over one path per source-target pair. It is not averaged over
 all equally-early paths, so it is a count on the earliest-arrival tree
 rather than the Brandes quantity.
+
+Temporal measures use \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing
+times, unlimited waiting, half-open interval spells, and a separate exact
+timestamp rule for point events.
 }
 \examples{
 dn <- dynet(school_contacts)

@@ -39,10 +39,40 @@ travel back in time.
 
 The source vertex is named, not numbered. \code{dyn_paths(dn, from = "Ana")}
 works; there is no vertex index to look up first.
+
+Forward paths use nondecreasing traversal times, so relations active at the
+same instant may form a multi-hop chain. Waiting is allowed. Interval spells
+are onset-inclusive and terminus-exclusive; point events are traversable at
+their exact timestamp through a distinct event rule. Reach and arrival do
+not depend on edge-row order or duplicate spell rows.
+}
+\details{
+A valid forward journey has distinct vertices and traversal times
+\verb{at <= t1 <= ... <= tk}. At each hop, either an interval is active at the
+traversal time or a point event occurs exactly then. The empty journey
+reaches the source at \code{at}. Cycles are unnecessary for reach and earliest
+arrival because deleting a repeated-vertex section and waiting at that
+vertex preserves every later hop. This contract defines feasibility and
+arrival; optimal-journey ties and multiplicity are separate quantities.
+
+Backward paths retain their existing latest-departure boundary convention;
+it is not the forward interval predicate applied without transformation.
 }
 \examples{
 dn <- dynet(school_contacts)
 dyn_paths(dn, from = "Ana")
 summary(dyn_paths(dn, from = "Ana"))
 
+}
+\references{
+Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
+problems for temporal networks. \emph{Journal of Computer and System Sciences},
+64(4), 820-842.
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
+519(3), 97-125.
+
+Casteigts, A., Corsini, A., & Sarkar, W. (2024). Simple, strict, proper,
+happy: A study of reachability in temporal graphs. \emph{Theoretical Computer
+Science}, 991, 114434.
 }

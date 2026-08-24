@@ -15,4 +15,8 @@ An encoded edge list with direction and time both reversed.
 \description{
 Reverse a network in time, for latest-departure computations
 }
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.reverse_time(Dynet:::.encode(dn))
+}
 \keyword{internal}

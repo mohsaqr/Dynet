@@ -14,6 +14,23 @@
 #' @param t0 Time at which the source becomes active.
 #' @param max_sweeps Iteration cap.
 #' @return A list with `arrival`, `previous`, `source` and `origin`.
+#'
+#' @details
+#' Forward traversal follows non-strict, vertex-simple temporal journeys.
+#' Waiting is allowed and traversal itself takes zero time. A positive-duration
+#' interval `[start, end)` can be boarded after arrival only while arrival is
+#' strictly before `end`; its earliest traversal time is the later of arrival
+#' and `start`. An instantaneous event is a separate case: it can be used when
+#' arrival is at or before its timestamp, and arrival at the next vertex is
+#' that timestamp. Consequently, several events at the same time can compose
+#' into a journey, independent of input row order.
+#'
+#' A reversed-time encoding retains the supremum convention used by backward
+#' latest-departure paths; it does not inherit the forward end predicate.
+#'
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.temporal_bfs(Dynet:::.encode(dn), source = 1L, t0 = 0)
 #' @keywords internal
 .temporal_bfs <- function(enc, source, t0, max_sweeps = NULL) {
   n <- enc$n
@@ -28,7 +45,9 @@
   repeat {
     sweep <- sweep + 1L
     a_from <- arrival[f]
-    usable <- is.finite(a_from) & a_from <= e
+    interval_usable <- if (isTRUE(enc$reversed)) a_from <= e else a_from < e
+    usable <- is.finite(a_from) &
+      ((enc$instant & a_from <= s) | (!enc$instant & interval_usable))
     if (!any(usable)) break
     cand <- pmax(a_from, s)
     cand[!usable] <- Inf
@@ -71,6 +90,9 @@
 #' Reverse a network in time, for latest-departure computations
 #' @param enc Encoded edge list.
 #' @return An encoded edge list with direction and time both reversed.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.reverse_time(Dynet:::.encode(dn))
 #' @keywords internal
 .reverse_time <- function(enc) {
   out <- enc
@@ -78,6 +100,7 @@
   out$to    <- enc$from
   out$start <- -enc$end
   out$end   <- -enc$start
+  out$reversed <- !isTRUE(enc$reversed)
   out
 }
 
@@ -88,6 +111,11 @@
 #' @param t0 Start time.
 #' @param bounded Whether a path must stay within one session.
 #' @return A BFS result list.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.bfs_bounded(
+#'   dn, Dynet:::.encode(dn), source = 1L, t0 = 0, bounded = FALSE
+#' )
 #' @keywords internal
 .bfs_bounded <- function(dn, enc, source, t0, bounded) {
   if (!bounded || is.null(dn$meta$sessions)) {
@@ -99,7 +127,9 @@
     sub <- enc
     sub$from <- enc$from[rows]; sub$to <- enc$to[rows]
     sub$start <- enc$start[rows]; sub$end <- enc$end[rows]
+    sub$weight <- enc$weight[rows]
     sub$session <- enc$session[rows]
+    sub$instant <- enc$instant[rows]
     .temporal_bfs(sub, source, t0)
   })
   arr <- do.call(pmin, lapply(per, `[[`, "arrival"))
@@ -127,6 +157,12 @@
 #' The source vertex is named, not numbered. `dyn_paths(dn, from = "Ana")`
 #' works; there is no vertex index to look up first.
 #'
+#' Forward paths use nondecreasing traversal times, so relations active at the
+#' same instant may form a multi-hop chain. Waiting is allowed. Interval spells
+#' are onset-inclusive and terminus-exclusive; point events are traversable at
+#' their exact timestamp through a distinct event rule. Reach and arrival do
+#' not depend on edge-row order or duplicate spell rows.
+#'
 #' @param dn A temporal network from [dynet()].
 #' @param from Name of the vertex to start from.
 #' @param at Time at which the source becomes active. Defaults to the start of
@@ -139,6 +175,30 @@
 #'   per vertex and columns `node`, `reachable`, `arrival_time`, `latency`
 #'   (time taken from the source), `n_hops` and `previous` (the vertex
 #'   arrived from, by name).
+#'
+#' @details
+#' A valid forward journey has distinct vertices and traversal times
+#' `at <= t1 <= ... <= tk`. At each hop, either an interval is active at the
+#' traversal time or a point event occurs exactly then. The empty journey
+#' reaches the source at `at`. Cycles are unnecessary for reach and earliest
+#' arrival because deleting a repeated-vertex section and waiting at that
+#' vertex preserves every later hop. This contract defines feasibility and
+#' arrival; optimal-journey ties and multiplicity are separate quantities.
+#'
+#' Backward paths retain their existing latest-departure boundary convention;
+#' it is not the forward interval predicate applied without transformation.
+#'
+#' @references
+#' Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
+#' problems for temporal networks. *Journal of Computer and System Sciences*,
+#' 64(4), 820-842.
+#'
+#' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+#' 519(3), 97-125.
+#'
+#' Casteigts, A., Corsini, A., & Sarkar, W. (2024). Simple, strict, proper,
+#' happy: A study of reachability in temporal graphs. *Theoretical Computer
+#' Science*, 991, 114434.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -246,6 +306,11 @@ dyn_paths <- function(dn, from, at = NULL,
 #'
 #' @return A `dynet_metric` at node level with measures `forward_reach` and
 #'   `backward_reach`, each the proportion of other vertices involved.
+#'
+#' @details
+#' Reachability uses [dyn_paths()] traversal semantics: nondecreasing times,
+#' unlimited waiting, half-open interval spells, and a separate exact timestamp
+#' rule for point events.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)

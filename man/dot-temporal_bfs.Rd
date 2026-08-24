@@ -24,4 +24,21 @@ is not enough: an edge with an early onset but a late terminus can be
 boarded long after it first appears, so its usefulness may only become
 apparent once a later edge has been relaxed.
 }
+\details{
+Forward traversal follows non-strict, vertex-simple temporal journeys.
+Waiting is allowed and traversal itself takes zero time. A positive-duration
+interval \verb{[start, end)} can be boarded after arrival only while arrival is
+strictly before \code{end}; its earliest traversal time is the later of arrival
+and \code{start}. An instantaneous event is a separate case: it can be used when
+arrival is at or before its timestamp, and arrival at the next vertex is
+that timestamp. Consequently, several events at the same time can compose
+into a journey, independent of input row order.
+
+A reversed-time encoding retains the supremum convention used by backward
+latest-departure paths; it does not inherit the forward end predicate.
+}
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.temporal_bfs(Dynet:::.encode(dn), source = 1L, t0 = 0)
+}
 \keyword{internal}

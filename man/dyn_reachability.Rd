@@ -31,6 +31,11 @@ for component membership: in a static network two vertices in the same
 component reach each other by definition, whereas in a temporal network
 reach depends on whether the timing lines up.
 }
+\details{
+Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing times,
+unlimited waiting, half-open interval spells, and a separate exact timestamp
+rule for point events.
+}
 \examples{
 dn <- dynet(school_contacts)
 dyn_reachability(dn)
