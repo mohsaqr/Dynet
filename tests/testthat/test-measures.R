@@ -29,7 +29,9 @@ test_that("temporal centrality on a chain matches hand calculation", {
     got$value[match(paste(c("A", "B", "C", "D", "E"), measure),
                     paste(got$node, got$measure))]
   expect_equal(take("reach"), c(1, 3 / 4, 2 / 4, 1 / 4, 0))
-  expect_equal(take("closeness"), c(1 / 2, 1 / 2, 2 / 5, 1 / 3, 0))
+  # A reaches B at the window origin, and zero-latency reachable endpoints
+  # remain in the inverse-mean-latency numerator.
+  expect_equal(take("closeness"), c(2 / 3, 1 / 2, 2 / 5, 1 / 3, 0))
   expect_equal(take("betweenness"), c(0, 3, 4, 3, 0))
 })
 

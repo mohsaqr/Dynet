@@ -15,4 +15,7 @@ A single character string.
 \description{
 Human-readable label for an event measure
 }
+\examples{
+Dynet:::.event_label("formation_fraction")
+}
 \keyword{internal}

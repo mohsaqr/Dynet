@@ -4,7 +4,17 @@
 \alias{.snapshot_measure}
 \title{Compute one snapshot centrality measure}
 \usage{
-.snapshot_measure(m, a, directed, damping, mode = "all", exponent = 1)
+.snapshot_measure(
+  m,
+  a,
+  directed,
+  damping,
+  mode = "all",
+  exponent = 1,
+  prestige = "indegree",
+  rescale = FALSE,
+  lambda = 1
+)
 }
 \arguments{
 \item{m}{Measure name.}
@@ -18,6 +28,12 @@
 \item{mode}{Which edges count: \code{"all"}, \code{"out"} or \code{"in"}.}
 
 \item{exponent}{Attenuation factor for Bonacich power.}
+
+\item{prestige}{Prestige definition.}
+
+\item{rescale}{Whether to normalize prestige by its block total.}
+
+\item{lambda}{Diffusion-degree multiplier.}
 }
 \value{
 A numeric vector, one value per vertex.

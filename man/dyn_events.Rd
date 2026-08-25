@@ -19,8 +19,14 @@ dyn_events(
 
 \item{measure}{One or more of \code{"formation"} (spells beginning in the bin),
 \code{"dissolution"} (spells ending in the bin), \code{"active"} (spells alive
-during the bin) and \code{"new_pairs"} (vertex pairs meeting for the first
-time).}
+during the bin), \code{"new_pairs"} (vertex pairs meeting for the first time),
+and \code{"formation_fraction"} (confirmed binary pair formations divided by
+their exact two-sided inactive risk set), or \code{"dissolution_fraction"}
+(confirmed binary pair dissolutions divided by their exact two-sided
+active risk set), or \code{"formation_rate"} (confirmed formations divided by
+exact integrated inactive eligible pair-time), or \code{"dissolution_rate"}
+(confirmed dissolutions divided by exact integrated active eligible
+pair-time).}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
@@ -50,10 +56,86 @@ Formation and dissolution are counted inside each window, so overlapping
 windows (\code{window > step}) count the same event more than once by design --
 that is what a rolling total is. Setting \code{window} equal to \code{step}, the
 default, gives disjoint counts that sum to the total turnover.
+Explicitly onset-censored raw limits are not formations, and explicitly
+terminus-censored limits are not dissolutions. A left-censored observed tie
+is prior evidence for \code{new_pairs}; raw censor state never changes activity.
+
+Formation fraction is defined only with \code{window = 0}. For a positive
+half-open interval \verb{[s,e)}, its pre-batch state at \code{t} is
+\verb{s < t <= e} and its post-batch state is \verb{s <= t < e}. These predicates are
+binary-unioned per nonloop ordered pair or undirected dyad after the entire
+timestamp batch. Points are absent on both sides. A pair enters risk only
+when observation and both endpoints are eligible immediately before and
+after \code{t} and the pair is inactive before. A formation is confirmed when it
+is active after and at least one contributing positive raw spell has a known
+onset at \code{t}. The ratio is in \verb{[0,1]}; zero risk returns \code{NA}.
+
+Duplicate, overlapping, or adjacent raw spells cannot multiply pair-state
+transitions. Observation and vertex boundaries are excluded by two-sided
+eligibility. Onset censoring suppresses confirmation but not state;
+terminus censoring, weights, loops, and point contacts do not contribute.
+Collapse erases labels, bounded authorizes within sessions before unioning
+each calendar pair, and separate returns session-local fractions.
+
+Dissolution fraction is the dual exact-time quantity. For each nonloop pair,
+let \verb{E-} and \verb{E+} be binary-union state on the symbolic one-sided limits and
+let \code{L} mean at least one positive raw spell ends exactly at the timestamp
+with a known terminus. The numerator is \verb{Z * E- * (1 - E+) * L}, where \code{Z}
+requires two-sided observation and endpoint eligibility; the denominator is
+\verb{sum(Z * E-)}, including pairs that remain active. Zero risk returns
+\code{NA_real_}, while positive risk with no confirmed dissolution returns zero.
+Censor flags do not change state: one known terminus confirms a disappearance
+but an all-censored disappearance is unconfirmed. Duplicate, overlapping,
+adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
+and administrative observation/activity boundaries do not create transitions.
+Collapse erases labels, bounded unions authorized session-local states, and
+separate reports local rows. Positive windows are rejected because T04 owns
+dissolution rates.
+
+Dissolution rate is the active-risk dual over a positive window. Its
+numerator sums confirmed T02 binary pair dissolutions at included timestamp
+batches; its denominator integrates exact eligible active nonloop pair-time
+over observation, vertex, edge, and window change cells. Right-censored
+termini retain state and exposure but do not confirm an event, while one
+known duplicate suffices. Zero active exposure returns \code{NA_real_}; positive
+exposure without a confirmed dissolution is zero. The unit is inverse
+network time. It is not raw terminus intensity, spell-duration sum, or an
+average of instantaneous fractions; positive windows are required and T04
+owns this rate.
+
+Formation rate is the positive-window counterpart. Its numerator sums the
+confirmed T01 binary pair formations at each included timestamp, while its
+denominator integrates exact inactive eligible nonloop pair-time over
+change-point cells cut by the window, observation components, vertex
+activity, and edge state. It is not an average of instantaneous fractions,
+a raw-onset intensity, or an ever-observed-pair quantity. Zero exposure
+returns \code{NA_real_}; positive exposure with no confirmed formation returns
+zero. The unit is inverse network time and scales inversely with positive
+time scaling. Points have zero exposure, onset censoring suppresses only
+confirmation, and gap/boundary, duplicate, overlap, adjacency, loop,
+weight, and session rules follow the exact T01 ledger. \code{window = 0} is
+rejected because T01 owns instant fractions.
 }
 \examples{
 dn <- dynet(school_contacts)
 dyn_events(dn)
 plot(dyn_events(dn, measure = c("formation", "dissolution")))
+dyn_events(dn, measure = "formation_fraction", start = 1, end = 1,
+           window = 0)
+dyn_events(dn, measure = "dissolution_fraction", start = 1, end = 1,
+           window = 0)
+dyn_events(dn, measure = "formation_rate", start = 1, end = 2,
+           window = 1)
+dyn_events(dn, measure = "dissolution_rate", start = 1, end = 2,
+           window = 1)
 
+}
+\references{
+Andersen, P. K., & Gill, R. D. (1982). Cox's regression model for counting
+processes: a large sample study. \emph{Annals of Statistics}, 10, 1100-1120.
+\doi{10.1214/aos/1176345976}
+
+Butts, C. T., Leslie-Cook, A., Krivitsky, P. N., & Bender-deMoll, S.
+(2024). \emph{networkDynamic: Dynamic Extensions for Network Objects}, version
+0.11.5. \doi{10.32614/CRAN.package.networkDynamic}
 }

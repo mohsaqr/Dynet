@@ -37,9 +37,11 @@ overlapping window; \code{0} samples the network at each point in time.}
 }
 \value{
 A \code{dynet_metric} at graph level with one row per time point and
-ordered group pair. Alongside \code{measure} (rendered as \code{"A -> B"}) and
-\code{value} (the edge count) it carries \code{from_group} and \code{to_group} columns,
-so a single pairing can be pulled out with \code{\link[=subset]{subset()}}.
+group pair. Directed \code{measure} labels use \code{"A -> B"}; undirected labels
+use \code{"A -- B"}. \code{value} is the active binary-dyad count, and the
+authoritative \code{from_group} and \code{to_group} columns identify the cell.
+Attributes record unit, pair-domain, normalization, weight, loop,
+missing-group, and session-aggregation conventions.
 }
 \description{
 How much each kind of vertex interacted with each other kind, in every time
@@ -50,9 +52,42 @@ whether the pattern held or decayed.
 The grouping variable comes from the vertex attributes supplied to
 \code{\link[=dynet]{dynet()}} through its \code{nodes} argument.
 }
+\details{
+Each cell is a raw count of distinct active binary vertex dyads. Repeated,
+overlapping, or split spells and edge weights do not multiply a dyad.
+Retained self-loops count once. For directed networks, every ordered group
+pair is reported and
+\deqn{M_{ab}=\sum_{u:g(u)=a}\sum_{v:g(v)=b}Y_{uv}.}
+The row and column margins are grouped outdegree and indegree, and the table
+sum is the active directed edge count including retained loops.
+
+Undirected networks report one lexicographically canonical cell for each
+unordered group pair, with display labels such as \code{"A -- B"}. A within-group
+edge or loop contributes once to its diagonal cell. The group stub margin is
+\deqn{d_a=2M_{aa}+\sum_{b\ne a}M_{\min(a,b),\max(a,b)},}
+so the margins sum to twice the table total. These are unnormalized counts,
+not Newman's mixing proportions.
+
+Missing attribute values are retained as a collision-safe explicit group
+ordered after observed labels. Bounded and collapsed modes both use the
+binary calendar union: a dyad active in two sessions at the same time counts
+once. Separate mode returns session-local tables over the fixed group
+universe. Every supported cell is emitted, including zeros.
+Declared vertex activity first induces the endpoint-valid snapshot. The
+complete group-cell universe remains fixed, but inactive vertices and
+eligible isolates contribute no dyad.
+}
 \examples{
 dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
 dyn_mixing(dn, attribute = "role")
 plot(dyn_mixing(dn, attribute = "role"))
 
+}
+\references{
+Newman, M. E. J. (2003). Mixing patterns in networks. \emph{Physical Review E},
+67, 026126. \doi{10.1103/PhysRevE.67.026126}
+
+Morris, M., Handcock, M. S., & Hunter, D. R. (2008). Specification of
+exponential-family random graph models: terms and computational aspects.
+\emph{Journal of Statistical Software}, 24(4). \doi{10.18637/jss.v024.i04}
 }

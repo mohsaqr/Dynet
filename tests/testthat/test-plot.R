@@ -34,18 +34,20 @@ test_that("node-link views are drawn by cograph and return the network", {
   expect_identical(suppressMessages(plot(dn, type = "snapshots", panels = 4L)), dn)
   expect_identical(plot(dn, type = "proximity", phases = 2L, slices = 30L), dn)
   p <- dyn_paths(dn, from = "Ana")
-  expect_identical(plot(p), p)
+  expect_error(plot(p), class = "dynet_unsupported_plot")
 })
 
-test_that("a bin with no active edge refuses to be drawn", {
+test_that("a bin with eligible isolates and no edge can be drawn", {
   skip_if_not_installed("cograph")
   gap <- data.frame(from = c("A", "C"), to = c("B", "D"),
                     start = c(0, 20), end = c(1, 21), stringsAsFactors = FALSE)
   dn <- quiet_dynet(gap, interval = 1)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off(), add = TRUE)
-  expect_error(plot(dn, type = "network", at = 10),
-               class = "dynet_empty_result")
+  expect_identical(plot(dn, type = "network", at = 10), dn)
+  view <- Dynet:::.bin_netobject(dn, 10)
+  expect_equal(nrow(view$nodes), 4)
+  expect_equal(nrow(view$edges), 0)
 })
 
 test_that("measures plot as lines, heatmaps and bars", {
@@ -57,6 +59,20 @@ test_that("measures plot as lines, heatmaps and bars", {
   expect_no_error(ggplot2::ggplot_build(plot(deg, highlight = c("Ana", "Ben"))))
   expect_no_error(ggplot2::ggplot_build(plot(dyn_burstiness(dn))))
   expect_no_error(ggplot2::ggplot_build(plot(dyn_durations(dn))))
+})
+
+test_that("infinite temporal closeness survives default bar selection", {
+  skip_if_not_installed("ggplot2")
+  targets <- sprintf("A%02d", seq_len(31L))
+  dn <- quiet_dynet(data.frame(
+    from = rep("ZZZ", length(targets)), to = targets, time = 0
+  ))
+  closeness <- dyn_centrality(
+    dn, measure = "closeness", scope = "temporal", start = 0, end = 0
+  )
+  panel <- plot(closeness)
+  expect_true("ZZZ" %in% panel$data$.row)
+  expect_identical(panel$data$value[panel$data$.row == "ZZZ"], Inf)
 })
 
 test_that("the vertex partition is written where cograph looks for it", {
@@ -268,7 +284,7 @@ test_that("the temporal layout puts arrival time across and hops down", {
                class = "dynet_bad_input")
 })
 
-test_that("a path tree carries its own layout, and it is honoured", {
+test_that("shortest-foremost path families reject a false tree rendering", {
   skip_if_not_installed("cograph")
   dn <- quiet_dynet(school_contacts)
   p <- dyn_paths(dn, from = "Ana")
@@ -278,7 +294,7 @@ test_that("a path tree carries its own layout, and it is honoured", {
   # Rebuild what plot() builds, to check the object rather than the picture.
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off(), add = TRUE)
-  expect_identical(plot(p), p)
+  expect_error(plot(p), class = "dynet_unsupported_plot")
 
   # A netobject with coordinates must have them forwarded, because
   # cograph::splot.netobject() passes on only $weights and drops $nodes.

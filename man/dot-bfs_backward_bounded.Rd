@@ -11,7 +11,9 @@
   deadline,
   bounded,
   lower = -Inf,
-  traversal_time = 0
+  traversal_time = 0,
+  activity_mode = c("collapse", "separate"),
+  activity_session = NULL
 )
 }
 \arguments{

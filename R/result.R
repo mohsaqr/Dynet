@@ -22,8 +22,9 @@
   if ("session" %in% names(df) && all(is.na(df$session) | df$session == "all")) {
     df$session <- NULL
   }
-  front <- intersect(c("session", "time", "node", "from", "to", "measure",
-                       "value"), names(df))
+  front <- intersect(c("session", "time", "node", "vertex_spell", "implicit",
+                       "from", "to", "raw_spell", "measure", "value"),
+                     names(df))
   df <- df[, c(front, setdiff(names(df), front)), drop = FALSE]
   rownames(df) <- NULL
   structure(df,
@@ -337,6 +338,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
   n_row <- length(unique(df$.row))
   if (n_row > top) {
     rank <- vapply(split(abs(df$value), df$.row), function(v) {
+      if (any(is.infinite(v))) return(Inf)
       v <- v[is.finite(v)]
       if (length(v) == 0L) 0 else max(v)
     }, numeric(1L))

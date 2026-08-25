@@ -41,9 +41,10 @@ network's time unit. A calendar network also accepts a scalar \code{difftime}.}
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
 per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{attained}
 (whether that optimum itself is realized), \code{latency} (time taken from the
-source), and \code{n_hops}. Bounded mode adds \code{path_session} and
+source), \code{n_hops}, and the exact count \code{n_paths}. Bounded mode adds \code{path_session} and
 \code{n_best_sessions}; separate mode adds \code{session} and \code{origin}. Use
-\code{as.data.frame(x, what = "steps")} for reconstructed routes.
+\code{as.data.frame(x, what = "steps")} for every reconstructed optimal route;
+its endpoint-local \code{path_id} distinguishes tied atom sequences.
 }
 \description{
 Follows every time-respecting path out of (or into) one vertex and reports
@@ -80,6 +81,17 @@ activity on the right. At zero duration, an event or interval onset at
 With positive duration, no nonempty hop can both enter and complete at
 \code{end}; \code{start = end} therefore leaves only the empty journey.
 
+Declared vertex activity gates traversal appearances. The forward source
+must be active exactly at \code{start}, and the backward target exactly at \code{end};
+otherwise every fixed-universe row, including the anchor, is unreachable.
+After a valid anchor, waiting may cross inactive periods. A zero-duration
+hop requires both endpoints at its time. A positive-duration interval hop
+requires both endpoints continuously on the closed traversal from entry
+through completion. A delayed point contact requires both endpoints at its
+trigger and the receiver again at completion, but creates no continuous
+edge or tail occupancy. Several activity-created timing domains of one
+canonical contact remain one path atom and cannot multiply \code{n_paths}.
+
 For backward paths, \code{arrival_time} is the latest-departure supremum for a
 journey ending at the named target by the resolved \code{end}, and \code{latency} is
 \code{end} minus that value. A supremum at an interval's excluded terminus need
@@ -101,6 +113,15 @@ overlapping or touching interval spells form one component. Completion
 exactly at the component terminus is allowed. A point event triggers at its
 timestamp and arrives after the same duration; it does not represent
 continued edge activity. The query \code{end} bounds completion, not only entry.
+
+Optimal forward journeys are shortest foremost: final completion is
+minimized first and hop count second. Journey identity is the ordered
+sequence of canonical oriented contacts. Duplicate points, overlapping or
+touching interval segmentation, weights, and waiting schedules do not
+multiply paths; genuinely recurrent contacts do. \code{n_paths} is exact through
+\code{2^53}, after which a \code{dynet_path_overflow} condition is raised. The empty
+journey has one path, an unreachable endpoint has zero, and an unattained
+backward supremum has zero because it has no maximizing journey.
 }
 \examples{
 dn <- dynet(school_contacts)

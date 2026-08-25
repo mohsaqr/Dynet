@@ -7,31 +7,126 @@
 dyn_durations(
   dn,
   measure = c("events", "total", "mean"),
-  sessions = c("bounded", "collapse", "separate")
+  sessions = c("bounded", "collapse", "separate"),
+  censored = c("include", "exclude"),
+  unit = c("pair", "spell", "vertex_activity", "vertex_spell", "node_ties"),
+  mode = c("out", "in", "all")
 )
 }
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{measure}{One or more of \code{"events"} (number of spells), \code{"total"}
-(summed duration), \code{"mean"}, \code{"median"}, \code{"first"} (time of the first
-spell) and \code{"last"} (time the pair was last active).}
+\item{measure}{For pair unit, one or more of \code{"events"} (number of spells),
+\code{"total"} (summed duration), \code{"union"} (binary pair occupancy), \code{"mean"},
+\code{"median"}, \code{"first"}, and \code{"last"}. For spell unit, one or more of
+\code{"duration"}, \code{"first"}, and \code{"last"}; its default is \code{"duration"}.
+Vertex-activity unit allows the pair-like measures and defaults to
+\code{"events"}, \code{"total"}, and \code{"union"}; vertex-spell unit allows the same
+measures as edge spell and defaults to \code{"duration"}.
+Node-ties unit allows \code{"events"} (incident raw-spell endpoint stubs),
+\code{"total"} (their summed endpoint-valid duration), and \code{"union"} (binary
+incident calendar exposure), defaulting to events and total.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+
+\item{censored}{Whether to \code{"include"} known follow-up or \code{"exclude"} an
+entire edge raw spell or canonical vertex component with either explicit
+outer censor flag. Administrative observation cuts never cause exclusion.}
+
+\item{unit}{\code{"pair"} retains the existing pair summary and adds union
+duration; \code{"spell"} returns one row per retained raw edge-spell identity;
+\code{"vertex_activity"} returns fixed-node aggregates; \code{"vertex_spell"}
+returns retained canonical V01 activity identities; \code{"node_ties"} returns
+fixed-node incident-tie quantities.}
+
+\item{mode}{For \code{unit = "node_ties"}, \code{"out"}, \code{"in"}, or \code{"all"} endpoint
+incidence. Undirected networks normalize every request to \code{"all"}. An
+explicitly supplied mode is invalid for every other duration unit.}
 }
 \value{
-A \code{dynet_metric} at edge level: one row per vertex pair and
-measure, with columns \code{from}, \code{to}, \code{measure} and \code{value}.
+A \code{dynet_metric}. Pair and edge-spell units are edge-level: pair has
+columns \code{from}, \code{to}, \code{measure}, and \code{value}, while spell additionally has
+\code{raw_spell}.
+Administrative observation and endpoint-activity fragments are recombined
+by raw spell before the \code{censored} policy is applied. Vertex-activity unit
+has \code{node}, \code{measure}, and \code{value}; vertex-spell additionally has
+\code{vertex_spell} and \code{implicit}; both vertex units are node-level metrics.
+Node-ties is also node-level and has the fixed schema \code{node}, \code{measure},
+and \code{value} (plus \code{session} only for separate mode).
 }
 \description{
-One row per vertex pair, summarising every spell they shared. Duration is
+Pair unit returns one row per vertex pair and measure, summarising every
+retained raw spell they shared. Spell unit returns each retained raw edge
+identity. Vertex-activity unit returns fixed-universe vertex summaries;
+vertex-spell unit returns canonical V01 activity components. Duration is
 what separates an interval network from a contact network: a pair that met
 fifty times briefly and a pair that met once at length have the same edge
 weight in a static network and nothing else in common.
 }
+\details{
+Positive spell duration is the observed time during which both endpoints
+are eligible. Genuine eligible point contacts are retained with duration
+zero. Pair \code{total} sums these raw-spell durations, so overlapping identities
+intentionally multiply time; pair \code{union} counts binary calendar occupancy
+once. Consequently \code{union <= total}, and union cannot exceed the pair's V04
+eligible opportunity time. Pair \code{events} counts retained raw identities.
+Formally, if retained raw spell \code{i} has endpoint-valid fragments
+\code{F[i]}, then \verb{duration[i] = sum((b - a) for [a,b) in F[i])}.
+For pair \code{p}, \code{total[p] = sum(duration[i])}, while
+\code{union[p]} is the Lebesgue measure of the calendar union of every positive
+fragment belonging to \code{p}. Point contacts therefore count as events and
+spells but contribute zero duration. These conventions follow the spell and
+dyad distinction in \code{tsna::edgeDuration()} (Butts, 2024,
+doi:10.32614/CRAN.package.tsna), with Dynet additionally applying its
+observation and endpoint-eligibility contract.
+
+Collapse erases edge and vertex session labels before gating. Bounded gates
+within each session and then pools spell identities while unioning overlapping
+pair occupancy once on the shared calendar. Separate returns local blocks.
+Weights and vertex censor flags do not affect durations. Excluding raw edge
+censoring removes the whole identity, never only an observed fragment.
+
+For a retained canonical vertex component \code{k}, let \code{S[k]} be its observed
+support, \code{d[k]} its total positive width, and \code{f[k]} and \code{l[k]} its extrema.
+Vertex \code{total} is \code{sum(d[k])}, while \code{union} is the measure of the calendar
+union of every positive \code{S[k]}; therefore \verb{0 <= union <= total}. Points count
+as identities with zero duration. A declared vertex with no retained support
+has zero events/total/union and missing mean/median/first/last. A wholly
+undeclared vertex has one measurement-only implicit always-active identity
+over observed support. This is stream-graph node presence duration as in
+Latapy, Viard, and Magnien (2018), doi:10.1007/s13278-018-0537-7, and agrees
+with \code{tsna::vertexDuration()} only under matching continuous-observation,
+non-session conventions.
+
+Node-ties uses the same endpoint-valid raw spell supports as pair/spell
+duration. Directed out credits the tail, in credits the head, and all adds
+both endpoint stubs. A retained loop therefore contributes once to out,
+once to in, and twice to additive all-mode events/total; undirected results
+use the same two-stub rule. In contrast, node-tie \code{union} Boolean-unions all
+positive incident fragments, so loops, reciprocal overlap, duplicate rows,
+and simultaneous neighbors occupy calendar time only once. Consequently
+\code{union <= total}, and directed all equals out plus in only for events and
+total. Formally, for endpoint-stub multiplicity \code{c[v,i,m]}, retained raw
+identity duration \code{d[i]}, and positive support \code{F[i]}, node-tie events are
+\code{sum(c[v,i,m])}, total is \code{sum(c[v,i,m] * d[i])}, and union is the measure
+of the calendar union of all \code{F[i]} having positive multiplicity. These
+union values cannot exceed the corresponding D02 eligible vertex-activity
+union. Isolates, inactive vertices, and loopless singletons receive exact
+zeros for every node-tie measure. The additive quantities match
+\code{tsna::tiedDuration()} only for continuous observation, static eligible
+endpoints, uncensored matched spells, and no sessions; \code{tsna} is not an
+oracle for union, gaps/points, endpoint schedules, source censor filtering,
+or session policies (Bender-deMoll and Morris, 2025,
+doi:10.32614/CRAN.package.tsna).
+}
 \examples{
 dn <- dynet(school_contacts)
 dyn_durations(dn)
+dyn_durations(dn, measure = "union")
+dyn_durations(dn, unit = "spell", measure = "duration")
+dyn_durations(dn, unit = "vertex_activity")
+dyn_durations(dn, unit = "vertex_spell")
+dyn_durations(dn, unit = "node_ties", mode = "all")
 summary(dyn_durations(dn), by = "measure")
 
 }

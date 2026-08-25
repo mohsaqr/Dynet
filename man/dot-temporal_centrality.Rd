@@ -21,7 +21,7 @@
 
 \item{sessions}{Session mode.}
 
-\item{start, end}{Optional traversal bounds for temporal reach.}
+\item{start, end}{Optional traversal bounds for every temporal measure.}
 
 \item{traversal_time}{Nonnegative duration charged for every hop.}
 }

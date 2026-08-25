@@ -415,11 +415,10 @@ test_that("reach measure validation is classed", {
     ),
     class = "dynet_bad_input"
   )
-  expect_error(
+  expect_no_error(
     dyn_centrality(
       dn, measure = c("reach_count", "closeness"), scope = "temporal",
       start = 1, end = 2
-    ),
-    class = "dynet_bad_input"
+    )
   )
 })

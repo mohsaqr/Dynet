@@ -33,6 +33,31 @@
   stats::setNames(ev, nm)
 }
 
+#' Diffusion degree centrality
+#'
+#' Sums a vertex's selected degree and the selected degrees of its distinct
+#' one-step neighbours, then applies a scalar multiplier. This is the binary,
+#' loop-free definition used by `centiserve::diffusion.degree()` under matching
+#' direction and loop conventions.
+#'
+#' @param a Adjacency matrix.
+#' @param directed Whether to respect direction.
+#' @param mode One of `"all"`, `"out"`, or `"in"`.
+#' @param lambda Nonnegative multiplier.
+#' @return A named numeric vector.
+#' @keywords internal
+.diffusion_degree <- function(a, directed = TRUE,
+                              mode = c("all", "out", "in"), lambda = 1) {
+  mode <- match.arg(mode)
+  b <- .binary(a, directed)
+  degree <- .margin(b, directed, mode)
+  neighbourhood <- if (!directed) {
+    b
+  } else switch(mode, out = b, `in` = t(b), all = pmax(b, t(b)))
+  value <- lambda * (degree + as.numeric(neighbourhood %*% degree))
+  stats::setNames(value, rownames(a))
+}
+
 #' Harary graph centrality
 #'
 #' The reciprocal of eccentricity: one over the distance to the furthest

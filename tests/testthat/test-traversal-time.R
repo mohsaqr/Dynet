@@ -355,9 +355,10 @@ test_that("duration respects bounded and separate session paths", {
   )
   target <- traversal_rows(tied, "T")
   expect_equal(target$arrival_time, 5)
-  expect_equal(target$n_best_sessions, 2L)
-  expect_true(is.na(target$path_session))
-  expect_true(is.na(target$n_hops))
+  expect_equal(target$n_best_sessions, 1L)
+  expect_identical(target$path_session, "s1")
+  expect_equal(target$n_hops, 1L)
+  expect_equal(target$n_paths, 1)
 })
 
 test_that("interval unions cross labels only in collapse mode", {

@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.dynet_paths}
 \alias{plot.dynet_paths}
-\title{Draw a time-respecting path tree}
+\title{Plot time-respecting paths when a valid renderer exists}
 \usage{
 \method{plot}{dynet_paths}(x, palette = "okabe", ...)
 }
@@ -15,22 +15,23 @@ coloured by how many hops they are from the source.}
 \item{...}{Passed to \code{cograph::splot()}.}
 }
 \value{
-The tree is drawn on the current device by cograph and \code{x} is
-returned invisibly.
+For current shortest-foremost results, a classed
+\code{dynet_unsupported_plot} condition. The legacy tree renderer remains only
+for older serialized results without criterion metadata.
 }
 \description{
-The tree of earliest-arrival paths out of one vertex, drawn by
-\code{cograph::splot()} on coordinates that carry meaning: horizontal position
-is the real arrival time and vertical position is depth in hops, so a
-vertex that took a long time to reach sits far to the right whether it took
-one hop or four.
+Rendering endpoint-local shortest-foremost families is not currently
+supported. Such paths need not share prefix-optimal routes, so they do not
+form one predecessor tree. Inspect their compact counts and expanded steps
+instead.
 
-Only collapsed paths form one predecessor tree. Bounded and separate
-session results raise a \code{dynet_unsupported_plot} condition; inspect their
-endpoint-specific routes with \code{as.data.frame(x, what = "steps")}.
+All P08 shortest-foremost results raise a \code{dynet_unsupported_plot}
+condition, regardless of session mode. This keeps rendering from implying
+a prefix-compatible tree that the endpoint-local criterion does not define.
 }
 \examples{
 dn <- dynet(school_contacts)
-plot(dyn_paths(dn, from = "Ana"))
+paths <- dyn_paths(dn, from = "Ana")
+try(plot(paths), silent = TRUE)
 
 }

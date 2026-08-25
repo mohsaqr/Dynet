@@ -42,4 +42,8 @@ windows overlap and share most of their edges. That is what makes the
 trajectories smooth: every drawn point is a real measurement of a real
 window, and nothing between two measurements is invented.
 }
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.proximity_slices(dn, slices = 5)
+}
 \keyword{internal}

@@ -30,4 +30,12 @@ Lines are solid. A dash pattern would fight the thickness encoding: base
 graphics scales dash length by line width, so a dashed line disintegrates
 precisely where it is thinnest, making low activity look like missing data.
 }
+\examples{
+file <- tempfile(fileext = ".pdf")
+grDevices::pdf(file)
+graphics::plot.new()
+Dynet:::.draw_proximity_line(1:3, c(0, NA, 1), c(1, NA, 2), "black", 0)
+grDevices::dev.off()
+unlink(file)
+}
 \keyword{internal}

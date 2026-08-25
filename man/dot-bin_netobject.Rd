@@ -12,9 +12,14 @@
 \item{at}{Time falling inside the wanted bin.}
 }
 \value{
-A \code{dynet} netobject holding only the spells active in that bin.
+A \code{dynet} netobject holding the eligible vertices and active,
+endpoint-valid spells in that bin.
 }
 \description{
 The netobject for a single time bin
+}
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.bin_netobject(dn, 1)
 }
 \keyword{internal}

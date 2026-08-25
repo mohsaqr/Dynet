@@ -8,7 +8,8 @@
   x,
   row.names = NULL,
   optional = FALSE,
-  what = c("edges", "nodes", "bins", "network"),
+  what = c("edges", "nodes", "bins", "network", "observations", "observed_edges",
+    "vertex_spells"),
   ...
 )
 }
@@ -19,20 +20,29 @@
 
 \item{optional}{Ignored; present for compatibility with the generic.}
 
-\item{what}{\code{"edges"} for the edge spells, \code{"nodes"} for the vertex table,
-\code{"bins"} for the time grid the measure verbs use, \code{"network"} for the
-aggregate edge list cograph renders.}
+\item{what}{\code{"edges"} for raw edge spells, \code{"observed_edges"} for derived
+observation fragments, \code{"observations"} for canonical observed support,
+\code{"vertex_spells"} for canonical declared vertex activity, \code{"nodes"} for
+the vertex table, \code{"bins"} for the measurement grid, or \code{"network"} for
+the aggregate edge list cograph renders.}
 
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}. For \code{"edges"}: one row per edge spell with
-\code{from}, \code{to} (vertex names, never indices), \code{start}, \code{end}, \code{duration},
-\code{weight} and any session, thread or group label. For \code{"nodes"}: one row
-per vertex with \code{name} and any attributes supplied. For \code{"bins"}: one row
-per time bin with \code{bin}, \code{lo}, \code{hi} and \code{time}. For \code{"network"}: one row
-per vertex pair with \code{from}, \code{to} (again by name) and the summed
-\code{weight}.
+A plain \code{data.frame}. \code{"edges"} returns one unchanged raw spell.
+Explicit interval censor columns are retained as \code{onset_censored} and
+\code{terminus_censored} on raw edges and copied unchanged to fragments.
+\code{"observations"} returns canonical \code{observation}, \code{start}, \code{end},
+\code{duration}, and \code{instant} components. \code{"observed_edges"} returns derived
+fragments with \code{raw_spell}, \code{observation}, \code{fragment}, raw and observed
+endpoints, and strict left/right administrative censor flags in addition
+to edge identity, weight, and session. \code{"vertex_spells"} returns maximal
+declared activity components with stable IDs, half-open positive spells,
+exact points, sessions, and explicit raw censor state. Undeclared vertices
+are implicit static and do not receive synthetic rows. \code{"nodes"} returns
+names and supplied attributes; \code{"bins"} returns measurement windows
+(component-qualified for discontinuous observation); and \code{"network"}
+returns aggregate named pairs with summed weight.
 }
 \description{
 Tidy tables from a temporal network
@@ -41,5 +51,6 @@ Tidy tables from a temporal network
 dn <- dynet(school_contacts)
 head(as.data.frame(dn))
 as.data.frame(dn, what = "nodes")
+as.data.frame(dn, what = "vertex_spells")
 
 }

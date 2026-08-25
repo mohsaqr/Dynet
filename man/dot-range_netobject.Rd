@@ -12,9 +12,14 @@
 \item{from, to}{Time bounds; edges overlapping the span are kept.}
 }
 \value{
-A \code{dynet} netobject, or \code{NULL} when nothing is active.
+A \code{dynet} netobject containing eligible vertices and endpoint-valid
+edges, or \code{NULL} when the eligible set is empty.
 }
 \description{
 A netobject for one span of time
+}
+\examples{
+dn <- dynet(school_contacts)
+Dynet:::.range_netobject(dn, 0, 2)
 }
 \keyword{internal}

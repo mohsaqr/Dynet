@@ -25,14 +25,16 @@ for the same ordered pair, or dyad in an undirected network, are unioned
 before their duration is counted.
 }
 \details{
-Let \eqn{A_q} be the union of the active intervals for relational
-opportunity \eqn{q}, and let \eqn{T} be the stored observation span. Then
-temporal density is
-\deqn{\rho = \frac{\sum_q |A_q|}{M T},}
-where \eqn{M = n(n-1)} for directed networks and
-\eqn{M = n(n-1)/2} for undirected networks. Self-loops, weights, session
-labels, and zero-duration contacts do not add exposure. A network with no
-possible non-loop pair or a zero observation span has undefined temporal
+Let \eqn{Y_q(t)} indicate that both endpoints of relational opportunity
+\eqn{q} are eligible at positive observed time \eqn{t}, and let
+\eqn{E_q(t)} indicate binary union edge activity. Temporal density is
+\deqn{\rho = \frac{\sum_q \int Y_q(t)E_q(t)dt}
+                        {\sum_q \int Y_q(t)dt}.}
+Directed opportunities are ordered; undirected opportunities are unordered.
+The integrals are evaluated exactly over observation, vertex, and edge change
+points. Self-loops, weights, session labels, duplicate spells, genuine
+points, and observation gaps do not add exposure. A network with no positive
+time containing two coeligible distinct vertices has undefined temporal
 density and reports \code{NA}.
 
 This is an occupancy definition. Unlike summing spell durations, it remains
@@ -49,4 +51,8 @@ Network Analysis}. R package version 0.3.6.
 
 Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
 519(3), 97-125.
+
+Latapy, M., Viard, T., & Magnien, C. (2018). Stream graphs and link streams
+for the modeling of interactions over time. \emph{Social Network Analysis and
+Mining}, 8, 61.
 }

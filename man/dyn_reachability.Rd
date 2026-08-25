@@ -55,6 +55,10 @@ Reachability uses \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: non
 unlimited waiting, half-open interval spells, and a separate exact timestamp
 rule for point events. Positive \code{traversal_time} requires interval occupancy
 to finish within continuous pair activity and delays a point-trigger arrival.
+Declared vertex activity additionally requires an exact active query anchor
+and active hop endpoints. Waiting after a valid anchor may cross vertex
+inactivity; interval traversal requires both endpoints continuously through
+completion, while a delayed point requires the receiver again at completion.
 For backward reachability, the resolved \code{end} is a common deadline and
 latest-departure suprema determine whether a vertex can reach the target.
 The canonical \code{start} and \code{end} bounds apply one closed traversal-time window

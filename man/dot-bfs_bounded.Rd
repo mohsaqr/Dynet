@@ -4,7 +4,17 @@
 \alias{.bfs_bounded}
 \title{Run reachability with sessions acting as walls}
 \usage{
-.bfs_bounded(dn, enc, source, t0, bounded, upper = Inf, traversal_time = 0)
+.bfs_bounded(
+  dn,
+  enc,
+  source,
+  t0,
+  bounded,
+  upper = Inf,
+  traversal_time = 0,
+  activity_mode = c("collapse", "separate"),
+  activity_session = NULL
+)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}

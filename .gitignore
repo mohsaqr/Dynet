@@ -13,6 +13,9 @@ HANDOFF.md
 LEARNINGS.md
 CHANGES.md
 
+# Rendered reproduction output: regenerate by rendering the Rmd beside it
+inst/reproduction/**/*.html
+
 # Build products
 *.tar.gz
 *.Rcheck/

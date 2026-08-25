@@ -20,18 +20,44 @@ dyn_burstiness(
 }
 \value{
 A \code{dynet_metric} at node level with no time column: one row per
-vertex and measure. Vertices with fewer than three events give \code{NA} for
-burstiness and fewer than four for memory, because the quantity is not
-defined there.
+vertex and measure. Attributes record the event identity, dispersion,
+memory, loop, weight, and session-gap conventions as
+\code{event_identity = "incident_spell_start"}, \code{dispersion = "population"},
+\code{memory = "lag1_pearson"}, \code{loop_contribution = "one_event"},
+\code{weights = "ignored"}, and mode-specific \code{session_gaps}.
 }
 \description{
 Whether a vertex acts in bursts or at a steady pace. Burstiness compares
-the spread of the gaps between a vertex's events with their average: it is
-\code{1} for a perfectly bursty sequence, \code{0} for a Poisson process and \code{-1} for
-a metronome. The memory coefficient asks a different question -- whether a
-short gap tends to be followed by another short gap.
+the spread of the gaps between a vertex's events with their average: it
+approaches \code{1} for increasingly heterogeneous sequences, has theoretical
+reference value \code{0} for a Poisson process, and is \code{-1} for a metronome. The
+memory coefficient asks a different question -- whether a short gap tends
+to be followed by another short gap.
 
 Two vertices can post the same number of times and differ entirely on both.
+}
+\details{
+One raw spell row contributes its start time once to each distinct incident
+vertex. A self-loop is one event, equal-time rows remain distinct events,
+direction does not alter incidence, and interval ends and weights are
+ignored. Sorted equal times therefore create legitimate zero gaps.
+Explicitly onset-censored limits are not observed onset events and are
+excluded; terminus censoring does not affect this onset sequence.
+
+If the usable interevent gaps are \eqn{\tau_1,\ldots,\tau_k}, burstiness is
+\deqn{B=(\sigma-\mu)/(\sigma+\mu),}
+where \eqn{\mu} is their mean and
+\eqn{\sigma=\sqrt{k^{-1}\sum_i(\tau_i-\mu)^2}} is the population standard
+deviation of the equal-mass empirical gap distribution. \code{mean_gap} needs at
+least one gap. Burstiness needs at least two and is \code{NA} if every usable gap
+is zero. Its finite-sample range is \verb{[-1, 1)}.
+
+Memory is the ordinary Pearson correlation between consecutive gaps. It
+needs at least two adjacent-gap pairs and nonzero variation on both sides;
+otherwise it is \code{NA}. In \code{sessions = "bounded"}, primitive gaps and adjacent
+pairs are formed within each session and then pooled, so no cross-session
+gap is introduced. Collapse includes calendar gaps after erasing labels;
+separate returns session-local blocks over the fixed vertex universe.
 }
 \examples{
 dn <- dynet(school_contacts)
@@ -40,5 +66,6 @@ dyn_burstiness(dn)
 }
 \references{
 Goh, K.-I., & Barabasi, A.-L. (2008). Burstiness and memory in complex
-systems. \emph{Europhysics Letters}, 81(4), 48002.
+systems. \emph{Europhysics Letters}, 81(4), 48002, equations 1 and 4.
+\doi{10.1209/0295-5075/81/48002}
 }

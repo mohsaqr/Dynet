@@ -2,14 +2,14 @@
 % Please edit documentation in R/centrality.R
 \name{.temporal_measure}
 \alias{.temporal_measure}
-\title{Reduce a set of earliest-arrival trees to one temporal measure}
+\title{Reduce a set of optimal forward searches to one temporal measure}
 \usage{
 .temporal_measure(m, trees, enc)
 }
 \arguments{
 \item{m}{Measure name.}
 
-\item{trees}{List of BFS results, one per source.}
+\item{trees}{List of optimal search results, one per source.}
 
 \item{enc}{Encoded edge list.}
 }
@@ -17,6 +17,6 @@
 A numeric vector, one value per vertex.
 }
 \description{
-Reduce a set of earliest-arrival trees to one temporal measure
+Reduce a set of optimal forward searches to one temporal measure
 }
 \keyword{internal}

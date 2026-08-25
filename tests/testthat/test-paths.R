@@ -95,5 +95,5 @@ test_that("an unreachable vertex has no tree to draw", {
   dn <- quiet_dynet(isolated)
   p <- dyn_paths(dn, from = "D")
   expect_equal(sum(p$reachable), 1L)
-  expect_error(plot(p), class = "dynet_empty_result")
+  expect_error(plot(p), class = "dynet_unsupported_plot")
 })

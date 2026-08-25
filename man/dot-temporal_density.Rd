@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods.R
 \name{.temporal_density}
 \alias{.temporal_density}
-\title{Temporal occupancy over every possible relation}
+\title{Temporal occupancy over every eligible relation}
 \usage{
 .temporal_density(dn)
 }
@@ -13,7 +13,7 @@
 A numeric scalar in \verb{[0, 1]}, or \code{NA} when the denominator is zero.
 }
 \description{
-Temporal occupancy over every possible relation
+Temporal occupancy over every eligible relation
 }
 \examples{
 dn <- dynet(school_contacts)

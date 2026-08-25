@@ -47,12 +47,180 @@ being spelled out. Times may be numeric, `Date`, `POSIXct` or character
 date-time strings; date-time input is converted to elapsed time in a unit
 chosen to suit the span, and the unit is reported.
 
+When the study window is known independently of the event log, declare it on
+construction:
+
+```r
+dn <- dynet(
+  school_contacts,
+  observation_start = 0,
+  observation_end = 20
+)
+```
+
+Observation bounds clip analytical exposure and constrain path horizons without
+rewriting the source spells. Positive intervals use their half-open
+intersection with the study window; genuine point contacts at either limit are
+retained. `as.data.frame(dn)` still returns the original spell boundaries, and
+clipping never fabricates formation, dissolution, or censoring events.
+
+For interrupted observation, supply the observed spells directly:
+
+```r
+dn <- dynet(
+  school_contacts,
+  observation_spells = data.frame(
+    start = c(0, 12),
+    end = c(8, 20)
+  )
+)
+as.data.frame(dn, what = "observations")
+as.data.frame(dn, what = "observed_edges")
+```
+
+Overlapping or adjacent observation spells are normalized into canonical
+components. Exposure denominators sum their durations rather than using the
+hull, events in gaps are excluded, and an edge spanning a gap is exposed as
+separate administratively censored fragments without changing its raw row.
+Measurement grids restart within components and never create gap-only bins.
+Temporal paths may wait at a persistent vertex across an observation gap, but
+every positive-duration interval traversal must fit inside one observed
+fragment. A point contact still triggers its configured delayed arrival;
+session boundaries remain path walls.
+
+When interval limits are themselves censored, name strict logical source
+columns explicitly:
+
+```r
+dn <- dynet(
+  interval_log,
+  onset_censored = "left_censored",
+  terminus_censored = "right_censored"
+)
+```
+
+These are raw-data states, not inferred observation cuts. A censored onset is
+not counted as a formation or burst event, and a censored terminus is not a
+dissolution, but all known activity still contributes to snapshots, paths,
+density, and observed exposure. `dyn_durations(censored = "include")` retains
+that known follow-up; `censored = "exclude"` restricts summaries to raw spells
+whose two boundaries are known. Observed fragments expose raw censor flags and
+administrative observation-cut flags separately.
+
+When the eligible vertex population itself changes, provide a separate tidy
+activity table:
+
+```r
+dn <- dynet(
+  interval_log,
+  vertex_spells = data.frame(
+    node = c("A", "A", "B"),
+    start = c(0, 8, 2),
+    end = c(5, 12, 10)
+  )
+)
+as.data.frame(dn, what = "vertex_spells")
+```
+
+Positive vertex spells use `[start, end)` and points are exact. Overlapping or
+adjacent declarations are unioned per named vertex; a point at an interval's
+excluded terminus remains a separate active instant. Vertices not declared in
+the table remain statically eligible, and names appearing only in the activity
+table join the fixed vertex universe. Snapshot verbs independently take the
+any-time union of vertex activity and edge activity over a positive window,
+then remove edges whose endpoints are not eligible. A point snapshot instead
+evaluates vertices and edges together at the exact time. Graph denominators
+and censuses use only the eligible population; snapshot centrality retains the
+fixed node rows and reports `NA` for inactive vertices, while eligible isolates
+keep the ordinary static-kernel value. `dyn_snapshots()` stays edge-only, so it
+does not fabricate rows for eligible isolates. Raw edge and vertex tables are
+never clipped or rewritten. Temporal paths use the same declarations as
+traversal gates: the named source or backward target must be active at the
+query anchor, and every hop requires active endpoints. Waiting after a valid
+anchor may cross an inactive period. A positive-duration interval traversal
+requires both endpoints throughout the traversal; a delayed point contact
+requires both endpoints at its trigger and the receiver again at completion.
+Activity may split the feasible times of a contact without multiplying path
+identity or counts. Whole-window risk sets use a separate integrated contract.
+
+Whole-window temporal density integrates occupied pair-time over the exact
+eligible pair-time risk set. Thus a period with two eligible vertices and a
+period with four eligible vertices contribute different numbers of relational
+opportunities; Dynet integrates those opportunities before dividing. Exact
+contacts, exact vertex appearances, and observation gaps contribute no duration,
+while duplicates, weights, loops, and overlapping session labels cannot
+multiply exposure.
+
+`dyn_metrics()` exposes that exact ledger inside every reporting window. Use
+`temporal_density` for occupancy over all eligible pair-time and
+`observed_pair_density` to condition the denominator on pairs with valid
+evidence anywhere in the stored history. The matching `onset_intensity` and
+`observed_pair_onset_intensity` selectors count known raw spell starts per unit
+of those two opportunity clocks. A point contact adds an onset but no duration;
+an onset-censored start does not count. The existing `density` selector remains
+the any-time snapshot density, so it can intentionally differ from integrated
+occupancy in a positive window.
+
 The threaded format is worth naming explicitly. Forum and chat data carry a
 timestamp and no end, so the duration of a tie has to be derived. Dynet applies
 the rule from Saqr and Nouri (2020): a post is active from the moment it appears
 until the last post in the same thread, so a message that provoked a long
 argument stays live longer than one that fell flat. Deriving that by hand takes
 a grouped mutate before you can build anything; here it is one argument.
+
+## Editing without breaking time
+
+Dynet objects are immutable: editing returns a rebuilt object and leaves the
+source unchanged. Add isolates before referring to them as tie endpoints, then
+add or remove temporal identities by name and time:
+
+```r
+dn2 <- add_nodes(dn, data.frame(name = "New student", role = "student"))
+dn2 <- add_ties(dn2, data.frame(
+  from = "Ana", to = "New student", start = 4, end = 6
+))
+dn2 <- remove_ties(dn2, from = "Ana", to = "New student", start = 4)
+dn2 <- remove_nodes(dn2, "New student")
+```
+
+`add_arcs()` and `remove_arcs()` are directed-only aliases. Every mutation
+rebuilds the canonical spell identities and cograph projection together;
+cograph's static setters should be used only on a flattened cograph copy, not
+to edit a temporal Dynet object.
+
+The rest of the temporal state is editable by the same immutable contract:
+
+```r
+dn2 <- update_nodes(dn2, data.frame(name = "Ana", role = "facilitator"))
+dn2 <- rename_nodes(dn2, c(Ana = "Ana S."))
+dn2 <- update_ties(dn2, 1, data.frame(kind = "reply", weight = 2))
+dn2 <- set_vertex_spells(dn2, activity_table)
+dn2 <- add_vertex_spells(dn2, new_activity)
+dn2 <- set_observations(dn2, data = observed_periods)
+dn2 <- set_tie_sessions(dn2, session_labels)
+dn2 <- rename_sessions(dn2, c(old = "new"))
+
+# An edge-attribute-induced temporal subgraph
+course <- induce_subgraph(
+  dn2, ties = as.data.frame(dn2)$course_group == "course_1"
+)
+```
+
+`update_vertex_spells()` and `remove_vertex_spells()` complete vertex-activity
+editing; `clear_observations()` restores continuous implicit observation.
+Overlapping activity or observation spells are canonicalized after every edit.
+
+Existing `networkDynamic` objects can enter through `as_dynet()`, including
+their activity spells, semantic vertex names, observation support, weights,
+and compatible static attributes. Collapse any range back to a static cograph
+network with duration, count, and weight summaries:
+
+```r
+dn <- as_dynet(readRDS("legacy-network.rds"))
+flat <- collapse_network(dn, start = 0, end = 10,
+                         weight = "union_duration")
+cograph::splot(flat)
+```
 
 ## Measuring
 
@@ -64,14 +232,118 @@ dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
 
 dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
+dyn_metrics(dn, measure = c("degree_mean", "concurrent_share", "two_paths"))
+dyn_metrics(dn, measure = c("temporal_density", "onset_intensity"))
 dyn_events(dn)
+dyn_events(dn, measure = "formation_fraction", start = 1, end = 1,
+           window = 0)
 dyn_durations(dn)
+dyn_durations(dn, unit = "vertex_activity")
+dyn_durations(dn, unit = "vertex_spell")
+dyn_durations(dn, unit = "node_ties", mode = "all")
 dyn_burstiness(dn)
 dyn_paths(dn, from = "Ana")
+path_network(dyn_paths(dn, from = "Ana"))
+plot_path_timeline(dyn_paths(dn, from = "Ana"))
+plot_path_trajectories(dyn_paths(dn, from = "Ana"),
+                       measure = "frequency", orientation = "vertical")
 dyn_reachability(dn)
+dyn_pshifts(dn)
 dyn_mixing(forum, attribute = "role")
 dyn_snapshots(dn, at = 3)
 ```
+
+`dyn_pshifts()` converts uncensored observed raw spell onsets into Gibson's
+thirteen consecutive-turn participation-shift classes. It returns fixed,
+typed totals by default; `output = "cumulative"` exposes the running state.
+Use `sessions = "separate"` to retain session labels or
+`group_events = "none"` to keep simultaneous recipients as dyads.
+
+Lightweight structural descriptives stay inside `dyn_metrics()`. Degree
+summaries, concurrent-node counts and shares, directed in/out 2-stars, and
+two-paths use the same endpoint-induced snapshot semantics as density and the
+existing dyad census; no ERGM package or formula interface is required.
+
+Duration units stay explicit: pair summaries and raw edge spells use `pair`
+and `spell`, while fixed-universe vertex-presence summaries and canonical V01
+activity components use `vertex_activity` and `vertex_spell`. Vertex `total`
+sums retained component durations; `union` measures binary vertex-time once.
+Wholly undeclared vertices are represented by one measurement-only implicit
+always-active component over observed support.
+
+Node-tie duration keeps multiplicity and exposure separate. `events` and
+`total` count/sum incident raw-spell endpoint stubs (so a loop contributes once
+to each directed margin), while `union` measures the calendar time with at
+least one qualifying incident tie. Out, in, and all modes never silently mix
+these two quantities.
+
+Raw formation counts and formation transitions are deliberately different.
+`formation` counts known raw spell starts, including point contacts and
+redundant starts on an already-active pair. `formation_fraction` instead asks,
+at one exact time, what share of two-sided eligible pairs that were inactive
+immediately before the whole timestamp batch became active immediately after.
+Duplicate, overlapping, and adjacent spells are binary-unioned; points do not
+change persistent state; observation or vertex entry/exit cannot fabricate a
+transition. Use `window = 0`; positive-window turnover rates are separate
+quantities.
+
+`dissolution_fraction` is the dual exact-time quantity: confirmed binary
+active-to-inactive pair-union transitions divided by all two-sided eligible
+pairs active immediately before the complete timestamp batch. A positive raw
+spell ending at the timestamp with a known terminus confirms the transition;
+duplicate, overlapping, adjacent, and tied rows are unioned, so raw terminus
+counts are not the numerator. Stable active pairs remain in the denominator,
+zero active risk is `NA`, and positive risk without a confirmed end is zero.
+Points, loops, weights, onset censoring, observation/activity boundaries, and
+all-censored endings do not create confirmed transitions. Use
+`dyn_events(dn, "dissolution_fraction", start = t, end = t, window = 0)`;
+positive-width dissolution rates are reserved for T04.
+
+`formation_rate` is the positive-window version of the formation transition:
+its numerator sums confirmed binary pair formations at included timestamp
+batches, while its denominator is exact integrated inactive eligible
+nonloop pair-time across observation/activity/edge change cells. It is not a
+raw-onset count or an average of instantaneous fractions. Zero exposure is
+`NA`, positive exposure with no confirmed formation is zero, and the unit is
+inverse network time. Use
+`dyn_events(dn, "formation_rate", start = lo, end = hi, window = hi - lo)`;
+instantaneous formation fractions remain the `window = 0` quantity.
+
+`dissolution_rate` is the active-risk dual: confirmed binary pair dissolutions
+per exact integrated active eligible pair-time over a positive window. Known
+right-censored termini retain exposure but do not confirm an event; zero active
+exposure is `NA`, while positive exposure without a confirmed dissolution is
+zero. It is an inverse-time rate, not a raw terminus intensity or spell-time
+sum. T03 and T04 can be requested together at positive width; instant
+dissolution fractions remain the `window = 0` quantity.
+
+`dyn_paths()` selects shortest-foremost journeys: earliest completion first,
+then the fewest hops. Its compact endpoint table reports the exact `n_paths`
+over canonical contact sequences; the steps accessor adds endpoint-local
+`path_id` rows when tied routes are expanded. `plot_path_trajectories()` draws
+those routes as a counted prefix tree, repeating a vertex when it occurs under
+a different temporal history; it supports top-down and left-to-right layouts.
+
+`dyn_burstiness()` treats each raw spell onset as one event at each distinct
+incident vertex. It uses population gap dispersion and lag-one Pearson memory;
+bounded sessions pool only within-session gaps and never bridge session walls.
+
+`dyn_mixing()` reports raw active binary-dyad counts: ordered group cells for
+directed networks and one unordered triangle for undirected networks. Repeated
+spells and weights do not multiply a dyad; explicitly retained loops count
+once, and missing group values remain an explicit collision-safe level.
+
+Temporal closeness is inverse mean forward latency over reachable nonself
+vertices. Immediate contacts are included: an all-zero reachable family has
+infinite closeness, while a source reaching nobody has value zero. Explicit
+`start` and `end` bounds, traversal duration, and session walls use the same
+contract as temporal paths.
+
+Temporal betweenness distributes each reachable ordered source-target pair's
+dependency over every canonical shortest-foremost journey. It reports the raw
+sum: tied routes and tied winning sessions split one pair's credit exactly,
+and source/target endpoints receive none. Undirected contacts still use ordered
+pairs because chronological reach need not be symmetric.
 
 Ask for several measures in one call and they arrive stacked in one frame with
 a `measure` column. Every result prints, summarises and plots:
@@ -92,7 +364,9 @@ plot(deg, top = 5)
 trajectory of ordinary centrality. `scope = "temporal"` measures the vertex
 against time-respecting paths across the whole window. The second has no static
 counterpart: it cannot travel backwards in time, so it is never inflated the way
-a flattened network is.
+a flattened network is. Explicit vertex activity gates these temporal paths;
+an inactive source has zero temporal reach and closeness, while fixed node rows
+and fixed risk-set denominators are retained.
 
 ### When the network is measured
 
@@ -137,13 +411,17 @@ subset of the full series.
 
 `dyn_metrics()` covers the graph level and `dyn_centrality()` the vertex level.
 Together they cover the core graph and vertex statistics exposed by
-`tsna::tSnaStats()`. The generic `prestige` family is not yet included, and
+`tsna::tSnaStats()`, including directed binary indegree prestige before sender
+normalization, after sender-row normalization, and after full row-column
+balancing. The remaining prestige definitions are being added one calibrated
+definition at a time, and
 `load` follows Goh's relay-only definition rather than `sna::loadcent()`, which
 also credits path endpoints.
 
 | graph level | |
 |---|---|
 | structure | `density`, `edges`, `active_nodes`, `isolates`, `components`, `components_strong`, `largest_component` |
+| temporal exposure | `temporal_density`, `observed_pair_density`, `onset_intensity`, `observed_pair_onset_intensity` |
 | cohesion | `transitivity`, `reciprocity`, `assortativity`, `mean_distance`, `diameter` |
 | censuses | `mutual`, `asymmetric`, `null`, `triads` |
 | centralisation | `centralization_degree`, `centralization_betweenness`, `centralization_closeness` |
@@ -151,7 +429,7 @@ also credits path endpoints.
 
 | vertex level | |
 |---|---|
-| degree family | `degree`, `strength`, `coreness` |
+| degree and prestige | `degree`, `strength`, `coreness`, `prestige` (`indegree`, `indegree.rownorm`, `indegree.rowcolnorm`, `domain`, `domain.proximity`, `eigenvector`, `eigenvector.rownorm`, `eigenvector.colnorm`, `eigenvector.rowcolnorm`) |
 | distance family | `closeness`, `betweenness`, `harary`, `load` |
 | spectral family | `eigenvector`, `pagerank`, `hub`, `authority`, `power` |
 | flow and brokerage | `flow_betweenness`, `information`, `constraint` |
@@ -163,6 +441,49 @@ fine on a classroom, slow on a cohort. Eigenvector centrality is unique when
 the Perron eigenvalue has a one-dimensional eigenspace; strong connectivity is
 a sufficient condition. Disconnected snapshots with equally dominant
 components can admit more than one correct answer.
+
+Row-column-normalized indegree prestige is defined only when every active
+binary dyad belongs to a perfect matching of the full vertex matrix. Undefined
+blocks are reported as `NA` with a classed warning. Every feasible score is
+necessarily uniform (one raw, or `1/n` rescaled), so this option diagnoses a
+balancing transform rather than ranking vertices.
+
+Domain prestige counts the distinct other vertices that can reach each vertex
+by any directed path in the active snapshot. It is incoming static transitive
+reach, not chronology-aware temporal reach through the raw spells; loops never
+credit self. `rescale = TRUE` turns the counts into shares of all reachable
+ordered nonself pairs, with an all-zero block reported as `NaN`.
+
+Domain-proximity prestige multiplies that incoming domain fraction by the
+inverse mean directed hop distance of its members. Partial domains remain valid
+and positive; unreachable vertices are excluded before distances are summed.
+This follows the published Lin/Wasserman--Faust equation and deliberately
+differs from `sna` 2.8's `0 * Inf` behavior on disconnected graphs.
+
+Eigenvector prestige uses the incoming nonnegative Perron ray of the binary
+snapshot. Raw scores have Euclidean norm one; rescaled scores sum to one.
+Zero-radius or nonunique Perron blocks are `NA` with a classed warning instead
+of an arbitrary eigensolver basis. Periodic cycles remain valid because their
+real Perron ray is unique even when complex roots share its modulus.
+
+Row-normalized eigenvector prestige first gives every active sender one unit
+split equally across its distinct outgoing binary dyads, then solves the same
+certified incoming Perron equation. Zero sender rows remain zero, retained
+loops enter the row denominator, and session union occurs before normalization.
+Use `prestige = "eigenvector.rownorm"`.
+
+Column-normalized eigenvector prestige instead divides each nonzero binary
+receiver column by its incoming-dyad count before the certified solve; zero
+columns remain zero. When every vertex has positive indegree, every certified
+score is necessarily uniform. Nonuniform defined rankings arise only when a
+zero-indegree vertex is present. Use `prestige = "eigenvector.colnorm"`.
+
+Row-column-normalized eigenvector prestige first requires total support, then
+balances binary adjacency to doubly stochastic form, and only then certifies
+the incoming Perron ray. Infeasible support, nonconvergent balancing, and a
+nonunique balanced ray have distinct diagnostics. Every fully certified score
+is necessarily uniform, so this is a transform/irreducibility diagnostic
+rather than a ranking. Use `prestige = "eigenvector.rowcolnorm"`.
 
 ### Which edges count: `mode`
 
@@ -181,8 +502,8 @@ to the common `degree` plus `mode` interface.
 `mode` applies to `degree`, `strength`, `closeness`, `coreness`, `harary` and
 `eigenvector`. `"all"` is the default and counts both directions, so a
 reciprocated pair counts twice — igraph's and cograph's convention. Measures
-with a single directional definition (betweenness, PageRank, hub, authority,
-constraint, load, information, flow betweenness) ignore it, as does an
+with a single directional definition (prestige, betweenness, PageRank, hub,
+authority, constraint, load, information, flow betweenness) ignore it, as does an
 undirected network.
 
 ## Drawing
@@ -209,7 +530,9 @@ plot(dn, type = "proximity")      # composite, see below           (cograph)
 plot(dn, type = "network")        # the flattened network          (cograph)
 plot(dn, type = "network", at = 13)  # one time bin                (cograph)
 plot(dn, type = "snapshots")      # small multiples, shared layout (cograph)
-plot(dyn_paths(dn, from = "Ana")) # the path tree                  (cograph)
+plot_path_trajectories(
+  dyn_paths(dn, from = "Ana"), orientation = "vertical"
+)                                  # counted temporal prefix tree   (ggplot)
 ```
 
 ### The proximity timeline

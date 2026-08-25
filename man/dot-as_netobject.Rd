@@ -4,7 +4,7 @@
 \alias{.as_netobject}
 \title{Assemble a temporal network as a cograph netobject}
 \usage{
-.as_netobject(spells, nodes, directed, groups, meta)
+.as_netobject(spells, nodes, directed, groups, meta, vertex_spells = NULL)
 }
 \arguments{
 \item{spells}{Canonical spell table with character endpoints.}
@@ -17,6 +17,8 @@
 \code{NULL}.}
 
 \item{meta}{Metadata list.}
+
+\item{vertex_spells}{Canonical declared vertex-activity components.}
 }
 \value{
 An object of class \code{c("dynet", "netobject", "cograph_network")}.

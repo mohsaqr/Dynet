@@ -71,7 +71,7 @@ test_that("bounded paths exclude a journey assembled across sessions", {
   expect_equal(collapsed_reach$value[collapsed_reach$node == "S"], 1)
 })
 
-test_that("bounded temporal betweenness traces one complete winning session", {
+test_that("bounded temporal betweenness combines complete winning sessions", {
   spells <- data.frame(
     from = c("A", "X", "B", "A", "Y"),
     to = c("X", "B", "C", "Y", "B"), time = c(4, 4, 5, 1, 1),
@@ -130,7 +130,7 @@ test_that("separate paths return complete session blocks and local origins", {
   expect_setequal(unique(described$session), c("s1", "s2", "s3"))
 })
 
-test_that("bounded ties retain every best session without arbitrary selection", {
+test_that("bounded paths break arrival ties by hop count", {
   spells <- data.frame(
     from = c("S", "S", "A"), to = c("T", "A", "T"),
     time = c(5, 2, 5), session = c("s1", "s2", "s2"),
@@ -141,15 +141,15 @@ test_that("bounded ties retain every best session without arbitrary selection", 
   target <- path_rows(paths, "T")
 
   expect_equal(target$arrival_time, 5)
-  expect_true(is.na(target$path_session))
-  expect_equal(target$n_best_sessions, 2L)
-  expect_true(is.na(target$n_hops))
+  expect_identical(target$path_session, "s1")
+  expect_equal(target$n_best_sessions, 1L)
+  expect_equal(target$n_hops, 1L)
+  expect_equal(target$n_paths, 1)
 
   steps <- as.data.frame(paths, what = "steps")
   steps <- steps[steps$endpoint == "T", , drop = FALSE]
-  expect_setequal(unique(steps$path_session), c("s1", "s2"))
-  expect_equal(as.integer(table(steps$path_session)[c("s1", "s2")]),
-               c(2L, 3L))
+  expect_identical(unique(steps$path_session), "s1")
+  expect_equal(nrow(steps), 2L)
 
   permuted <- quiet_dynet(spells[c(3, 1, 2), ], session = "session")
   again <- path_rows(
@@ -157,7 +157,7 @@ test_that("bounded ties retain every best session without arbitrary selection", 
   )
   expect_equal(again$arrival_time, target$arrival_time)
   expect_equal(again$n_best_sessions, target$n_best_sessions)
-  expect_true(is.na(again$path_session))
+  expect_identical(again$path_session, "s1")
 })
 
 test_that("equal-hop session ties keep an unambiguous hop count", {
@@ -194,14 +194,12 @@ test_that("bounded backward routes do not merge predecessor sessions", {
 
   expect_equal(primary$arrival_time, c(7, 9, 9))
   expect_identical(primary$attained, c(FALSE, TRUE, TRUE))
-  expect_identical(primary$path_session, c("s2", "s1", NA_character_))
-  expect_equal(primary$n_hops, c(2L, 1L, 0L))
+  expect_identical(primary$path_session, c(NA_character_, "s1", NA_character_))
+  expect_equal(primary$n_hops, c(NA_integer_, 1L, 0L))
+  expect_equal(primary$n_paths, c(0, 1, 1))
 
   to_a <- route_steps(paths, "A", "s2")
-  expect_identical(to_a$node, c("A", "B", "T"))
-  expect_equal(to_a$time, c(7, 9, 9))
-  expect_identical(to_a$attained, c(FALSE, FALSE, TRUE))
-  expect_true(all(to_a$path_session == "s2"))
+  expect_equal(nrow(to_a), 0L)
 
   to_b <- route_steps(paths, "B", "s1")
   expect_identical(to_b$node, c("B", "T"))
@@ -237,7 +235,7 @@ test_that("attainment resolves a backward session tie before session identity", 
   expect_identical(unique(steps$path_session), "s1")
 })
 
-test_that("unattained backward session ties remain explicit", {
+test_that("unattained backward session ties have no maximizing family", {
   spells <- data.frame(
     from = c("A", "A"), to = c("T", "T"),
     start = c(0, 1), end = c(5, 5), session = c("s1", "s2"),
@@ -253,11 +251,11 @@ test_that("unattained backward session ties remain explicit", {
   expect_equal(actor$arrival_time, 5)
   expect_false(actor$attained)
   expect_true(is.na(actor$path_session))
-  expect_equal(actor$n_best_sessions, 2L)
-  expect_equal(actor$n_hops, 1L)
+  expect_equal(actor$n_best_sessions, 0L)
+  expect_true(is.na(actor$n_hops))
+  expect_equal(actor$n_paths, 0)
   steps <- route_steps(paths, "A")
-  expect_setequal(unique(steps$path_session), c("s1", "s2"))
-  expect_false(all(steps$attained[steps$node == "A"]))
+  expect_equal(nrow(steps), 0L)
 })
 
 test_that("session optima are selected after applying path bounds", {

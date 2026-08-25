@@ -19,4 +19,8 @@ A named numeric vector; length one except for \code{"triads"}.
 \description{
 Compute one graph-level measure
 }
+\examples{
+a <- matrix(c(0, 1, 0, 0), 2, 2)
+Dynet:::.graph_measure("density", a, directed = TRUE)
+}
 \keyword{internal}

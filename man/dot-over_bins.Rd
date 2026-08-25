@@ -4,18 +4,29 @@
 \alias{.over_bins}
 \title{Apply a function across every window of every session}
 \usage{
-.over_bins(dn, sessions, fun, spec = NULL, node_level = FALSE)
+.over_bins(
+  dn,
+  sessions,
+  fun,
+  spec = NULL,
+  node_level = FALSE,
+  snapshot = FALSE
+)
 }
 \arguments{
 \item{dn}{A \code{dynet} object.}
 
 \item{sessions}{Session mode.}
 
-\item{fun}{Function of \verb{(enc, active, bin)}.}
+\item{fun}{Function of \verb{(enc, active, bin)}, plus \code{state} when \code{snapshot}
+is true.}
 
 \item{spec}{A resolved measurement grid from \code{\link[=.window_spec]{.window_spec()}}.}
 
 \item{node_level}{Whether \code{fun} returns one value per vertex.}
+
+\item{snapshot}{Whether to apply declared vertex eligibility and pass the
+resulting snapshot state to \code{fun}.}
 }
 \value{
 A long data frame with \code{session}, \code{time}, optionally \code{node}, plus
@@ -25,5 +36,11 @@ A long data frame with \code{session}, \code{time}, optionally \code{node}, plus
 The workhorse behind every time-series verb. \code{fun} receives the encoding,
 the active-edge mask and the window row, and returns either a single value
 or a named vector of values; the result is stacked into one long frame.
+}
+\examples{
+dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+Dynet:::.over_bins(dn, "bounded", function(enc, active, bin) {
+  c(active_edges = sum(active))
+})
 }
 \keyword{internal}

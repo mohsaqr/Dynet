@@ -4,10 +4,12 @@
 \alias{.measure_label}
 \title{Human-readable label for a measure name}
 \usage{
-.measure_label(m)
+.measure_label(m, prestige = "indegree")
 }
 \arguments{
 \item{m}{Measure name.}
+
+\item{prestige}{Prestige definition used when \code{m = "prestige"}.}
 }
 \value{
 A single character string.

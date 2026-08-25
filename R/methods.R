@@ -7,28 +7,40 @@
 #' @param x A temporal network from [dynet()].
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
-#' @param what `"edges"` for the edge spells, `"nodes"` for the vertex table,
-#'   `"bins"` for the time grid the measure verbs use, `"network"` for the
-#'   aggregate edge list cograph renders.
+#' @param what `"edges"` for raw edge spells, `"observed_edges"` for derived
+#'   observation fragments, `"observations"` for canonical observed support,
+#'   `"vertex_spells"` for canonical declared vertex activity, `"nodes"` for
+#'   the vertex table, `"bins"` for the measurement grid, or `"network"` for
+#'   the aggregate edge list cograph renders.
 #' @param ... Ignored.
 #'
-#' @return A plain `data.frame`. For `"edges"`: one row per edge spell with
-#'   `from`, `to` (vertex names, never indices), `start`, `end`, `duration`,
-#'   `weight` and any session, thread or group label. For `"nodes"`: one row
-#'   per vertex with `name` and any attributes supplied. For `"bins"`: one row
-#'   per time bin with `bin`, `lo`, `hi` and `time`. For `"network"`: one row
-#'   per vertex pair with `from`, `to` (again by name) and the summed
-#'   `weight`.
+#' @return A plain `data.frame`. `"edges"` returns one unchanged raw spell.
+#'   Explicit interval censor columns are retained as `onset_censored` and
+#'   `terminus_censored` on raw edges and copied unchanged to fragments.
+#'   `"observations"` returns canonical `observation`, `start`, `end`,
+#'   `duration`, and `instant` components. `"observed_edges"` returns derived
+#'   fragments with `raw_spell`, `observation`, `fragment`, raw and observed
+#'   endpoints, and strict left/right administrative censor flags in addition
+#'   to edge identity, weight, and session. `"vertex_spells"` returns maximal
+#'   declared activity components with stable IDs, half-open positive spells,
+#'   exact points, sessions, and explicit raw censor state. Undeclared vertices
+#'   are implicit static and do not receive synthetic rows. `"nodes"` returns
+#'   names and supplied attributes; `"bins"` returns measurement windows
+#'   (component-qualified for discontinuous observation); and `"network"`
+#'   returns aggregate named pairs with summed weight.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' head(as.data.frame(dn))
 #' as.data.frame(dn, what = "nodes")
+#' as.data.frame(dn, what = "vertex_spells")
 #'
 #' @export
 as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
                                 what = c("edges", "nodes", "bins",
-                                         "network"), ...) {
+                                         "network", "observations",
+                                         "observed_edges",
+                                         "vertex_spells"), ...) {
   what <- match.arg(what)
   out <- switch(what,
     edges = {
@@ -36,15 +48,42 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
       e$duration <- e$end - e$start
       front <- c("from", "to", "start", "end", "duration", "weight")
       e <- e[, c(front, setdiff(names(e), front)), drop = FALSE]
+      e$.raw_spell <- NULL
+      if (!identical(x$meta$raw_censoring, "explicit")) {
+        e$onset_censored <- NULL
+        e$terminus_censored <- NULL
+      }
       if (all(is.na(e$session))) e$session <- NULL
       e
     },
+    observed_edges = {
+      e <- .observed_fragments(x)
+      e$duration <- e$end - e$start
+      if (!identical(x$meta$raw_censoring, "explicit")) {
+        e$onset_censored <- NULL
+        e$terminus_censored <- NULL
+      }
+      if (all(is.na(e$session))) e$session <- NULL
+      e
+    },
+    observations = {
+      e <- .observation_table(x)
+      if (is.null(e)) {
+        bounds <- x$meta$time_range
+        e <- data.frame(
+          observation = 1L, start = bounds[["start"]], end = bounds[["end"]],
+          duration = bounds[["end"]] - bounds[["start"]],
+          instant = bounds[["start"]] == bounds[["end"]]
+        )
+      }
+      e
+    },
+    vertex_spells = x$vertex_spells %||% .empty_vertex_spells(),
     nodes = {
       n <- x$nodes
       n[, setdiff(names(n), c("id", "label", "x", "y")), drop = FALSE]
     },
-    bins  = .bins(x$meta$time_range[["start"]], x$meta$time_range[["end"]],
-                  .window_spec(x)),
+    bins  = .grid_for(.encode(x), x, .window_spec(x)),
     network = {
       nm <- x$nodes$name
       data.frame(from = nm[x$edges$from], to = nm[x$edges$to],
@@ -105,14 +144,16 @@ print.dynet <- function(x, ...) {
 #'   property.
 #'
 #' @details
-#' Let \eqn{A_q} be the union of the active intervals for relational
-#' opportunity \eqn{q}, and let \eqn{T} be the stored observation span. Then
-#' temporal density is
-#' \deqn{\rho = \frac{\sum_q |A_q|}{M T},}
-#' where \eqn{M = n(n-1)} for directed networks and
-#' \eqn{M = n(n-1)/2} for undirected networks. Self-loops, weights, session
-#' labels, and zero-duration contacts do not add exposure. A network with no
-#' possible non-loop pair or a zero observation span has undefined temporal
+#' Let \eqn{Y_q(t)} indicate that both endpoints of relational opportunity
+#' \eqn{q} are eligible at positive observed time \eqn{t}, and let
+#' \eqn{E_q(t)} indicate binary union edge activity. Temporal density is
+#' \deqn{\rho = \frac{\sum_q \int Y_q(t)E_q(t)dt}
+#'                         {\sum_q \int Y_q(t)dt}.}
+#' Directed opportunities are ordered; undirected opportunities are unordered.
+#' The integrals are evaluated exactly over observation, vertex, and edge change
+#' points. Self-loops, weights, session labels, duplicate spells, genuine
+#' points, and observation gaps do not add exposure. A network with no positive
+#' time containing two coeligible distinct vertices has undefined temporal
 #' density and reports `NA`.
 #'
 #' This is an occupancy definition. Unlike summing spell durations, it remains
@@ -124,6 +165,10 @@ print.dynet <- function(x, ...) {
 #'
 #' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
 #' 519(3), 97-125.
+#'
+#' Latapy, M., Viard, T., & Magnien, C. (2018). Stream graphs and link streams
+#' for the modeling of interactions over time. *Social Network Analysis and
+#' Mining*, 8, 61.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -137,7 +182,7 @@ summary.dynet <- function(object, ...) {
   span <- m$time_range[["end"]] - m$time_range[["start"]]
   snap <- dyn_metrics(object, measure = "density", sessions = "collapse")
 
-  data.frame(
+  out <- data.frame(
     property = c("format", "directed", "vertices", "edge spells",
                  "distinct pairs", "time unit", "observed from", "observed to",
                  "span", "bin width", "time bins",
@@ -162,6 +207,19 @@ summary.dynet <- function(object, ...) {
     ),
     stringsAsFactors = FALSE
   )
+  attr(out, "vertex_population") <- "eligible_at_time"
+  attr(out, "opportunity_domain") <- if (object$directed) {
+    "eligible_nonloop_ordered_pairs"
+  } else {
+    "eligible_nonloop_unordered_dyads"
+  }
+  attr(out, "risk_clock") <- "positive_observed_time"
+  attr(out, "occupancy") <- "binary_pair_union"
+  attr(out, "risk_integration") <- "exact_change_point"
+  attr(out, "instantaneous_exposure") <- "zero"
+  attr(out, "session_aggregation") <-
+    "calendar_union_after_session_erasure"
+  out
 }
 
 #' Union the duration of one relation's intervals
@@ -199,7 +257,311 @@ summary.dynet <- function(object, ...) {
   sum(running_end[end_index] - union_start)
 }
 
-#' Temporal occupancy over every possible relation
+#' Enumerate nonloop relational opportunities
+#' @param n Number of vertices.
+#' @param directed Whether opportunities are ordered.
+#' @return A data frame with integer `from`, `to`, and collision-free `key`.
+#' @examples
+#' Dynet:::.relational_opportunities(3, directed = TRUE)
+#' @keywords internal
+.relational_opportunities <- function(n, directed) {
+  if (n < 2L) {
+    return(data.frame(from = integer(), to = integer(), key = integer()))
+  }
+  pairs <- expand.grid(
+    from = seq_len(n), to = seq_len(n), KEEP.OUT.ATTRS = FALSE
+  )
+  pairs <- if (directed) {
+    pairs[pairs$from != pairs$to, , drop = FALSE]
+  } else pairs[pairs$from < pairs$to, , drop = FALSE]
+  pairs$key <- (pairs$from - 1L) * n + pairs$to
+  rownames(pairs) <- NULL
+  pairs
+}
+
+#' Encode a relational pair without string concatenation
+#' @param from,to Integer endpoint vectors.
+#' @param n Fixed vertex count.
+#' @param directed Whether endpoint order is meaningful.
+#' @return Integer pair keys matching [.relational_opportunities()].
+#' @examples
+#' Dynet:::.relational_pair_key(c(1L, 2L), c(2L, 1L), 2L, FALSE)
+#' @keywords internal
+.relational_pair_key <- function(from, to, n, directed) {
+  if (!directed) {
+    left <- pmin(from, to)
+    to <- pmax(from, to)
+    from <- left
+  }
+  (from - 1L) * n + to
+}
+
+#' Exact eligible and occupied pair state
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param time Numeric instant strictly inside an exposure cell.
+#' @param sessions Session aggregation policy.
+#' @param label Session label for a separate block.
+#' @param opportunities Pre-enumerated nonloop pair table.
+#' @return Lists of eligible and occupied integer pair keys.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+#' Dynet:::.temporal_pair_state(dn, Dynet:::.encode(dn), 1, "collapse")
+#' @keywords internal
+.temporal_pair_state <- function(dn, enc, time,
+                                 sessions = c("bounded", "collapse", "separate"),
+                                 label = "all",
+                                 opportunities = NULL) {
+  sessions <- match.arg(sessions)
+  opportunities <- opportunities %||%
+    .relational_opportunities(enc$n, dn$directed)
+  empty <- list(eligible = integer(), occupied = integer())
+  if (!nrow(opportunities) || !.time_in_observation(dn, time)) return(empty)
+  activity <- .encode_vertex_activity(dn, enc$names)
+  point <- data.frame(lo = time, hi = time, closed = TRUE, time = time)
+  has_sessions <- !is.null(dn$meta$sessions)
+  scopes <- if (identical(sessions, "collapse") || !has_sessions) {
+    list(list(session = NULL, erase = TRUE, rows = rep(TRUE, length(enc$start))))
+  } else if (identical(sessions, "separate")) {
+    list(list(session = label, erase = FALSE,
+              rows = enc$session == label))
+  } else lapply(dn$meta$sessions, function(one) list(
+    session = one, erase = FALSE, rows = enc$session == one
+  ))
+
+  eligible_keys <- lapply(scopes, function(scope) {
+    eligible <- .vertex_eligibility(
+      activity, point, 0, session = scope$session,
+      erase_sessions = scope$erase
+    )
+    opportunities$key[
+      eligible[opportunities$from] & eligible[opportunities$to]
+    ]
+  })
+  raw_active <- .active(enc, time, time, last = TRUE, window = 0) &
+    !enc$instant & enc$from != enc$to
+  occupied_keys <- lapply(scopes, function(scope) {
+    eligible <- .vertex_eligibility(
+      activity, point, 0, session = scope$session,
+      erase_sessions = scope$erase
+    )
+    rows <- which(raw_active & scope$rows &
+                    eligible[enc$from] & eligible[enc$to])
+    unique(.relational_pair_key(
+      enc$from[rows], enc$to[rows], enc$n, dn$directed
+    ))
+  })
+  list(
+    eligible = sort(unique(unlist(eligible_keys, use.names = FALSE))),
+    occupied = sort(unique(unlist(occupied_keys, use.names = FALSE)))
+  )
+}
+
+#' Test exact endpoint eligibility for raw edge evidence
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param rows Raw-event indices.
+#' @param time Raw start or terminus times aligned with `rows`.
+#' @param sessions Session aggregation policy.
+#' @param label Session label for a separate block.
+#' @return Logical vector, one value per raw event.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+#' Dynet:::.raw_endpoint_eligible(dn, Dynet:::.encode(dn), 1L, 0,
+#'                                "collapse")
+#' @keywords internal
+.raw_endpoint_eligible <- function(dn, enc, rows, time,
+                                   sessions = c("bounded", "collapse", "separate"),
+                                   label = "all") {
+  sessions <- match.arg(sessions)
+  if (!length(rows)) return(logical())
+  activity <- .encode_vertex_activity(dn, enc$names)
+  has_sessions <- !is.null(dn$meta$sessions)
+  vapply(seq_along(rows), function(index) {
+    row <- rows[[index]]
+    at <- time[[index]]
+    if (!.time_in_observation(dn, at)) return(FALSE)
+    point <- data.frame(lo = at, hi = at, closed = TRUE, time = at)
+    if (identical(sessions, "collapse") || !has_sessions) {
+      eligible <- .vertex_eligibility(
+        activity, point, 0, erase_sessions = TRUE
+      )
+    } else {
+      edge_session <- if (identical(sessions, "separate")) {
+        label
+      } else enc$raw_event_session[[row]]
+      eligible <- .vertex_eligibility(
+        activity, point, 0, session = edge_session,
+        erase_sessions = FALSE
+      )
+    }
+    eligible[enc$raw_from[[row]]] && eligible[enc$raw_to[[row]]]
+  }, logical(1L))
+}
+
+#' Exposure change points inside a reporting window
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param lo,hi Reporting limits.
+#' @return Sorted unique change points clipped to `[lo, hi]`.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+#' Dynet:::.temporal_exposure_changes(dn, Dynet:::.encode(dn), 0, 2)
+#' @keywords internal
+.temporal_exposure_changes <- function(dn, enc, lo, hi) {
+  activity <- .encode_vertex_activity(dn, enc$names)
+  observations <- .observation_table(dn)
+  change <- c(lo, hi, enc$start[enc$observed_activity],
+              enc$end[enc$observed_activity], activity$start, activity$end)
+  if (!is.null(observations)) {
+    change <- c(change, observations$start, observations$end)
+  }
+  sort(unique(pmax(lo, pmin(hi, change[is.finite(change)]))))
+}
+
+#' Pairs with endpoint-valid evidence anywhere in stored history
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param sessions Session aggregation policy.
+#' @param label Session label for a separate block.
+#' @return Sorted collision-free integer pair keys.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+#' Dynet:::.ever_observed_pairs(dn, Dynet:::.encode(dn), "collapse")
+#' @keywords internal
+.ever_observed_pairs <- function(dn, enc,
+                                 sessions = c("bounded", "collapse", "separate"),
+                                 label = "all") {
+  sessions <- match.arg(sessions)
+  opportunities <- .relational_opportunities(enc$n, dn$directed)
+  if (!nrow(opportunities)) return(integer())
+  bounds <- dn$meta$time_range
+  change <- .temporal_exposure_changes(
+    dn, enc, bounds[["start"]], bounds[["end"]]
+  )
+  positive <- if (length(change) < 2L) integer() else {
+    width <- diff(change)
+    midpoint <- change[-length(change)] + width / 2
+    states <- lapply(midpoint[width > 0], function(time) {
+      .temporal_pair_state(
+        dn, enc, time, sessions, label, opportunities
+      )$occupied
+    })
+    unique(unlist(states, use.names = FALSE))
+  }
+  raw <- which(enc$raw_from != enc$raw_to)
+  endpoint_keys <- lapply(c("raw_event_start", "raw_event_end"), function(field) {
+    time <- enc[[field]][raw]
+    keep <- .raw_endpoint_eligible(dn, enc, raw, time, sessions, label)
+    .relational_pair_key(
+      enc$raw_from[raw[keep]], enc$raw_to[raw[keep]], enc$n, dn$directed
+    )
+  })
+  sort(unique(c(positive, unlist(endpoint_keys, use.names = FALSE))))
+}
+
+#' Integrate temporal edge opportunity, occupancy, and raw onsets
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param bin One reporting-window row with `lo`, `hi`, and `closed`.
+#' @param sessions Session aggregation policy.
+#' @param label Session label for a separate block.
+#' @param cohort Optional precomputed ever-observed pair keys.
+#' @return Named `risk`, `occupied`, `observed_risk`, and `onsets` values.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
+#' Dynet:::.temporal_edge_ledger(
+#'   dn, Dynet:::.encode(dn), data.frame(lo = 0, hi = 2, closed = TRUE),
+#'   "collapse"
+#' )
+#' @keywords internal
+.temporal_edge_ledger <- function(dn, enc, bin,
+                                  sessions = c("bounded", "collapse", "separate"),
+                                  label = "all", cohort = NULL) {
+  sessions <- match.arg(sessions)
+  opportunities <- .relational_opportunities(enc$n, dn$directed)
+  cohort <- cohort %||% .ever_observed_pairs(dn, enc, sessions, label)
+  lo <- bin$lo[[1L]]
+  hi <- bin$hi[[1L]]
+  change <- .temporal_exposure_changes(dn, enc, lo, hi)
+  totals <- c(risk = 0, occupied = 0, observed_risk = 0)
+  if (hi > lo && length(change) >= 2L) {
+    width <- diff(change)
+    midpoint <- change[-length(change)] + width / 2
+    cells <- vapply(seq_along(midpoint), function(index) {
+      if (width[[index]] <= 0) {
+        return(c(risk = 0, occupied = 0, observed_risk = 0))
+      }
+      state <- .temporal_pair_state(
+        dn, enc, midpoint[[index]], sessions, label, opportunities
+      )
+      c(
+        risk = length(state$eligible), occupied = length(state$occupied),
+        observed_risk = sum(state$eligible %in% cohort)
+      )
+    }, numeric(3L))
+    totals <- rowSums(sweep(cells, 2L, width, `*`))
+  }
+  raw <- which(
+    enc$raw_from != enc$raw_to & !enc$raw_event_onset_censored &
+      .time_in_observation(dn, enc$raw_event_start)
+  )
+  within <- if (isTRUE(bin$closed[[1L]])) {
+    enc$raw_event_start[raw] >= lo & enc$raw_event_start[raw] <= hi
+  } else {
+    enc$raw_event_start[raw] >= lo & enc$raw_event_start[raw] < hi
+  }
+  raw <- raw[within]
+  onsets <- sum(.raw_endpoint_eligible(
+    dn, enc, raw, enc$raw_event_start[raw], sessions, label
+  ))
+  c(totals, onsets = onsets)
+}
+
+#' Convert a temporal edge ledger to named public quantities
+#' @param ledger Named output from [.temporal_edge_ledger()].
+#' @return The four D04 graph measures, with `NA` for a zero denominator.
+#' @examples
+#' Dynet:::.temporal_edge_values(c(
+#'   risk = 2, occupied = 1, observed_risk = 1, onsets = 1
+#' ))
+#' @keywords internal
+.temporal_edge_values <- function(ledger) {
+  ratio <- function(numerator, denominator) {
+    if (denominator <= 0) NA_real_ else unname(numerator / denominator)
+  }
+  c(
+    temporal_density = ratio(ledger[["occupied"]], ledger[["risk"]]),
+    observed_pair_density = ratio(
+      ledger[["occupied"]], ledger[["observed_risk"]]
+    ),
+    onset_intensity = ratio(ledger[["onsets"]], ledger[["risk"]]),
+    observed_pair_onset_intensity = ratio(
+      ledger[["onsets"]], ledger[["observed_risk"]]
+    )
+  )
+}
+
+#' Integrate eligible relational risk and occupancy
+#' @param dn A temporal network from [dynet()].
+#' @return Named `risk`, `occupied`, and `empty` pair-time values.
+#' @keywords internal
+.temporal_risk_ledger <- function(dn) {
+  .check_dynet(dn, sessions = "collapse")
+  enc <- .encode(dn)
+  bounds <- dn$meta$time_range
+  ledger <- .temporal_edge_ledger(
+    dn, enc,
+    data.frame(lo = bounds[["start"]], hi = bounds[["end"]], closed = TRUE),
+    sessions = "collapse", label = "all", cohort = integer()
+  )
+  c(
+    risk = ledger[["risk"]], occupied = ledger[["occupied"]],
+    empty = ledger[["risk"]] - ledger[["occupied"]]
+  )
+}
+
+#' Temporal occupancy over every eligible relation
 #'
 #' @param dn A temporal network from [dynet()].
 #' @return A numeric scalar in `[0, 1]`, or `NA` when the denominator is zero.
@@ -208,40 +570,9 @@ summary.dynet <- function(object, ...) {
 #' Dynet:::.temporal_density(dn)
 #' @keywords internal
 .temporal_density <- function(dn) {
-  .check_dynet(dn, sessions = "collapse")
-  bounds <- dn$meta$time_range
-  span <- bounds[["end"]] - bounds[["start"]]
-  n <- nrow(dn$nodes)
-  possible_pairs <- if (dn$directed) n * (n - 1L) else choose(n, 2L)
-  if (possible_pairs == 0L || span <= 0) return(NA_real_)
-
-  spells <- dn$spells
-  spells <- spells[spells$from != spells$to, , drop = FALSE]
-  if (nrow(spells) == 0L) return(0)
-
-  start <- pmax(spells$start, bounds[["start"]])
-  end <- pmin(spells$end, bounds[["end"]])
-  positive <- end > start
-  if (!any(positive)) return(0)
-  spells <- spells[positive, , drop = FALSE]
-  start <- start[positive]
-  end <- end[positive]
-
-  from_id <- match(spells$from, dn$nodes$name)
-  to_id <- match(spells$to, dn$nodes$name)
-  if (!dn$directed) {
-    left <- pmin(from_id, to_id)
-    right <- pmax(from_id, to_id)
-    from_id <- left
-    to_id <- right
-  }
-  pair <- (to_id - 1L) * n + from_id
-  intervals <- split(seq_along(pair), pair)
-  occupied <- sum(vapply(intervals, function(rows) {
-    .union_duration(start[rows], end[rows])
-  }, numeric(1L)))
-
-  occupied / (possible_pairs * span)
+  ledger <- .temporal_risk_ledger(dn)
+  if (ledger[["risk"]] <= 0) return(NA_real_)
+  unname(ledger[["occupied"]] / ledger[["risk"]])
 }
 
 #' Print time-respecting paths
@@ -294,7 +625,8 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
 #' @param what `"paths"` for the endpoint summary or `"steps"` for the tidy
-#'   reconstructed routes.
+#'   reconstructed optimal routes. The latter includes endpoint-local
+#'   `path_id` values for tied contact sequences.
 #' @param ... Ignored.
 #' @return A plain `data.frame`, one row per endpoint for `"paths"` or one row
 #'   per route step for `"steps"`.
@@ -303,7 +635,9 @@ as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
                                       what = c("paths", "steps"), ...) {
   what <- match.arg(what)
   if (identical(what, "steps")) {
-    out <- attr(x, "steps")
+    descriptor <- attr(x, "optimal_search")
+    out <- if (is.null(descriptor)) attr(x, "steps") else
+      .optimal_steps(descriptor)
     rownames(out) <- NULL
     return(out)
   }
@@ -325,6 +659,7 @@ summary.dynet_paths <- function(object, ...) {
     r <- block$reachable & block$node != attr(object, "source")
     lat <- block$latency[r]
     hop <- block$n_hops[r]
+    hop <- hop[!is.na(hop)]
     data.frame(
       property = c("source", "direction", "reachable", "reachable share",
                    "median latency", "max latency", "median hops", "max hops"),
@@ -333,8 +668,8 @@ summary.dynet_paths <- function(object, ...) {
                 format(round(sum(r) / (nrow(block) - 1), 3)),
                 format(if (any(r)) stats::median(lat) else NA_real_),
                 format(if (any(r)) max(lat) else NA_real_),
-                format(if (any(r)) stats::median(hop) else NA_real_),
-                format(if (any(r)) max(hop) else NA_real_)),
+                format(if (length(hop)) stats::median(hop) else NA_real_),
+                format(if (length(hop)) max(hop) else NA_real_)),
       stringsAsFactors = FALSE
     )
   }

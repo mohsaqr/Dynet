@@ -290,7 +290,9 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
   # bin's netobject, so every panel is a positioned network in its own right.
   coords <- cograph::layout_oval(x)
   invisible(lapply(times, function(t) {
-    net <- cograph::set_layout(.bin_netobject(x, t), coords)
+    net <- .bin_netobject(x, t)
+    position <- match(net$nodes$name, x$nodes$name)
+    net <- cograph::set_layout(net, coords[position, , drop = FALSE])
     args <- .splot_args(net, utils::modifyList(
       list(title = sprintf("t = %s", format(t))), list(...)), palette)
     do.call(cograph::splot, c(list(net), args))
@@ -301,25 +303,46 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #' The netobject for a single time bin
 #' @param x A `dynet` object.
 #' @param at Time falling inside the wanted bin.
-#' @return A `dynet` netobject holding only the spells active in that bin.
+#' @return A `dynet` netobject holding the eligible vertices and active,
+#'   endpoint-valid spells in that bin.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.bin_netobject(dn, 1)
 #' @keywords internal
 .bin_netobject <- function(x, at) {
   enc <- .encode(x)
   grid <- .grid_for(enc, x)
   k <- which(grid$lo <= at & grid$hi > at)
-  if (length(k) == 0L) k <- if (at >= max(grid$hi)) nrow(grid) else 1L
-  act <- .active(enc, grid$lo[k], grid$hi[k], last = grid$closed[k])
-  keep <- x$spells[act, , drop = FALSE]
-  if (nrow(keep) == 0L) {
+  if (length(k) == 0L && at == max(grid$hi) && isTRUE(grid$closed[nrow(grid)])) {
+    k <- nrow(grid)
+  }
+  if (length(k) == 0L) {
     stop(errorCondition(
-      sprintf("No edge is active at t = %s, so there is nothing to draw.",
+      sprintf("No vertex is observed at t = %s, so there is nothing to draw.",
+              format(at)),
+      class = "dynet_empty_result", call = NULL
+    ))
+  }
+  state <- .snapshot_state(
+    x, enc, grid[k, , drop = FALSE], grid$hi[k] - grid$lo[k],
+    "bounded", "all"
+  )
+  raw_ids <- unique(enc$raw_spell[state$active])
+  keep <- x$spells[x$spells$.raw_spell %in% raw_ids, , drop = FALSE]
+  if (nrow(keep) == 0L && !any(state$eligible)) {
+    stop(errorCondition(
+      sprintf("No vertex is eligible at t = %s, so there is nothing to draw.",
               format(at)),
       class = "dynet_empty_result", call = NULL))
   }
   groups <- if ("groups" %in% names(x$nodes)) "groups" else NULL
-  nodes <- x$nodes[, setdiff(names(x$nodes), c("id", "label", "x", "y")),
-                   drop = FALSE]
-  .as_netobject(keep, nodes, x$directed, groups, x$meta)
+  nodes <- x$nodes[state$eligible,
+    setdiff(names(x$nodes), c("id", "label", "x", "y")), drop = FALSE
+  ]
+  vertex_spells <- x$vertex_spells[
+    x$vertex_spells$node %in% nodes$name, , drop = FALSE
+  ]
+  .as_netobject(keep, nodes, x$directed, groups, x$meta, vertex_spells)
 }
 
 #' Timeline of edge spells
@@ -365,34 +388,41 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
     ggplot2::labs(title = "Edges forming, dissolving and active")
 }
 
-#' Draw a time-respecting path tree
+#' Plot time-respecting paths when a valid renderer exists
 #'
 #' @description
-#' The tree of earliest-arrival paths out of one vertex, drawn by
-#' `cograph::splot()` on coordinates that carry meaning: horizontal position
-#' is the real arrival time and vertical position is depth in hops, so a
-#' vertex that took a long time to reach sits far to the right whether it took
-#' one hop or four.
+#' Rendering endpoint-local shortest-foremost families is not currently
+#' supported. Such paths need not share prefix-optimal routes, so they do not
+#' form one predecessor tree. Inspect their compact counts and expanded steps
+#' instead.
 #'
-#' Only collapsed paths form one predecessor tree. Bounded and separate
-#' session results raise a `dynet_unsupported_plot` condition; inspect their
-#' endpoint-specific routes with `as.data.frame(x, what = "steps")`.
+#' All P08 shortest-foremost results raise a `dynet_unsupported_plot`
+#' condition, regardless of session mode. This keeps rendering from implying
+#' a prefix-compatible tree that the endpoint-local criterion does not define.
 #'
 #' @param x A `dynet_paths` from [dyn_paths()].
 #' @param palette Palette specification, as in [plot.dynet()]. Vertices are
 #'   coloured by how many hops they are from the source.
 #' @param ... Passed to `cograph::splot()`.
 #'
-#' @return The tree is drawn on the current device by cograph and `x` is
-#'   returned invisibly.
+#' @return For current shortest-foremost results, a classed
+#'   `dynet_unsupported_plot` condition. The legacy tree renderer remains only
+#'   for older serialized results without criterion metadata.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' plot(dyn_paths(dn, from = "Ana"))
+#' paths <- dyn_paths(dn, from = "Ana")
+#' try(plot(paths), silent = TRUE)
 #'
 #' @export
 plot.dynet_paths <- function(x, palette = "okabe", ...) {
   mode <- attr(x, "path_mode") %||% "collapse"
+  if (!is.null(attr(x, "criterion"))) {
+    stop(errorCondition(
+      "Shortest-foremost paths are endpoint-local and do not necessarily form one predecessor tree. Inspect `as.data.frame(x, what = \"steps\")` until optimal-family rendering is implemented.",
+      class = "dynet_unsupported_plot", call = NULL
+    ))
+  }
   if (!identical(mode, "collapse")) {
     stop(errorCondition(
       "Bounded or separate session paths do not form one predecessor tree. Plot a collapsed path result until session-aware rendering is implemented.",

@@ -287,13 +287,18 @@ test_that("bounded paths, reachability, and temporal reach agree", {
   expect_equal(stats::setNames(centrality$value, centrality$node), expected)
   expect_equal(stats::setNames(path_share, c("A", "B", "C", "D")),
                expected)
-  expect_error(dyn_centrality(
+  expect_no_error(dyn_centrality(
     dn, measure = "closeness", scope = "temporal", start = 0, end = 5
-  ), class = "dynet_bad_input")
-  expect_error(dyn_centrality(
+  ))
+  bounded_centrality <- as.data.frame(dyn_centrality(
     dn, measure = c("reach", "betweenness"), scope = "temporal",
     start = 0, end = 5
-  ), class = "dynet_bad_input")
+  ))
+  between <- bounded_centrality[
+    bounded_centrality$measure == "betweenness", , drop = FALSE
+  ]
+  expect_identical(stats::setNames(between$value, between$node),
+                   c(A = 0, B = 1, C = 0, D = 0))
 })
 
 test_that("backward reachability respects the common lower horizon", {

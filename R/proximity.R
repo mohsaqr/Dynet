@@ -24,6 +24,9 @@
 #'   them.
 #' @return A list with `pos` and `weight` (both vertices-by-slices matrices),
 #'   `times`, `window` and `names`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.proximity_slices(dn, slices = 5)
 #' @keywords internal
 .proximity_slices <- function(x, measure = "degree", slices = 120L,
                               window = NULL, default_dist = 2) {
@@ -32,20 +35,54 @@
   w <- window %||% .default_window(x)
 
   if (is.null(slices)) {
-    grid <- .grid_for(enc, x)
+    grid <- .grid_for(enc, x, .window_spec(x, window = w))
     lo <- grid$lo; hi <- grid$hi; times <- grid$time
+    closed <- grid$closed
   } else {
     times <- seq(rng[["start"]], rng[["end"]], length.out = slices)
     lo <- times - w / 2
     hi <- times + w / 2
+    closed <- seq_along(times) == length(times)
+    observations <- .observation_table(x)
+    if (!is.null(observations)) {
+      component <- vapply(times, function(one) {
+        hit <- which(one >= observations$start & one <= observations$end)
+        if (length(hit)) hit[1L] else NA_integer_
+      }, integer(1L))
+      observed <- !is.na(component)
+      lo[observed] <- pmax(
+        lo[observed], observations$start[component[observed]]
+      )
+      hi[observed] <- pmin(
+        hi[observed], observations$end[component[observed]]
+      )
+      lo[!observed] <- times[!observed]
+      hi[!observed] <- times[!observed]
+      closed <- rep(FALSE, length(times))
+      closed[observed] <-
+        hi[observed] == observations$end[component[observed]]
+    }
   }
   n_slice <- length(times)
 
   measured <- lapply(seq_len(n_slice), function(k) {
-    act <- .active(enc, lo[k], hi[k], last = k == n_slice)
-    a <- .adjacency(enc, act, x$directed)
-    list(pos = .slice_position(a, default_dist, enc$n, times[k]),
-         w = .snapshot_measure(measure, a, x$directed, 0.85))
+    bin <- data.frame(
+      lo = lo[k], hi = hi[k], time = times[k], closed = closed[k]
+    )
+    state <- .snapshot_state(x, enc, bin, w, "bounded", "all")
+    full <- .adjacency(enc, state$active, x$directed)
+    a <- full[state$index, state$index, drop = FALSE]
+    pos <- rep(NA_real_, enc$n)
+    weight <- rep(NA_real_, enc$n)
+    if (length(state$index)) {
+      pos[state$index] <- .slice_position(
+        a, default_dist, length(state$index), times[k]
+      )
+      weight[state$index] <- .snapshot_measure(
+        measure, a, x$directed, 0.85
+      )
+    }
+    list(pos = pos, w = weight)
   })
 
   # Classical scaling fixes neither sign nor scale. Standardising makes one
@@ -53,8 +90,10 @@
   # to agree with the one before stops the lines zig-zagging for reasons that
   # have nothing to do with the data.
   aligned <- Reduce(function(prev, cur) {
-    if (stats::sd(cur) == 0 || stats::sd(prev) == 0) return(cur)
-    if (stats::cor(prev, cur) < 0) -cur else cur
+    shared <- is.finite(prev) & is.finite(cur)
+    if (sum(shared) < 2L || stats::sd(cur[shared]) == 0 ||
+        stats::sd(prev[shared]) == 0) return(cur)
+    if (stats::cor(prev[shared], cur[shared]) < 0) -cur else cur
   }, lapply(measured, `[[`, "pos"), accumulate = TRUE)
 
   list(pos    = matrix(unlist(aligned, use.names = FALSE), nrow = enc$n),
@@ -110,18 +149,33 @@
 #' A netobject for one span of time
 #' @param x A `dynet` object.
 #' @param from,to Time bounds; edges overlapping the span are kept.
-#' @return A `dynet` netobject, or `NULL` when nothing is active.
+#' @return A `dynet` netobject containing eligible vertices and endpoint-valid
+#'   edges, or `NULL` when the eligible set is empty.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.range_netobject(dn, 0, 2)
 #' @keywords internal
 .range_netobject <- function(x, from, to) {
-  keep <- x$spells$start < to & x$spells$end >= from |
-    (x$spells$end <= x$spells$start & x$spells$start >= from &
-       x$spells$start <= to)
-  if (!any(keep)) return(NULL)
+  enc <- .encode(x)
+  width <- to - from
+  state <- .snapshot_state(
+    x, enc,
+    data.frame(lo = from, hi = to, time = from, closed = TRUE),
+    width, "bounded", "all"
+  )
+  raw_ids <- unique(enc$raw_spell[state$active])
+  keep <- x$spells$.raw_spell %in% raw_ids
+  if (!any(keep) && !isTRUE(x$meta$vertex_activity == "explicit")) return(NULL)
+  if (!any(state$eligible)) return(NULL)
   groups <- if ("groups" %in% names(x$nodes)) "groups" else NULL
-  nodes <- x$nodes[, setdiff(names(x$nodes), c("id", "label", "x", "y")),
-                   drop = FALSE]
+  nodes <- x$nodes[state$eligible,
+    setdiff(names(x$nodes), c("id", "label", "x", "y")), drop = FALSE
+  ]
+  vertex_spells <- x$vertex_spells[
+    x$vertex_spells$node %in% nodes$name, , drop = FALSE
+  ]
   .as_netobject(x$spells[keep, , drop = FALSE], nodes, x$directed, groups,
-                x$meta)
+                x$meta, vertex_spells)
 }
 
 #' Split the observation window into phases
@@ -252,8 +306,15 @@
                          flow = as.integer(flow))
   })
   if (labels) {
-    ends <- vapply(drawn, function(d) d$y[length(d$y)], numeric(1L))
-    .draw_end_labels(prox$names, ends, faded, xlim, ylim, style)
+    ends <- vapply(drawn, function(d) {
+      if (length(d$y)) d$y[length(d$y)] else NA_real_
+    }, numeric(1L))
+    present <- is.finite(ends)
+    if (any(present)) {
+      .draw_end_labels(
+        prox$names[present], ends[present], faded[present], xlim, ylim, style
+      )
+    }
   }
 
   # ---- the phase strip -----------------------------------------------------
@@ -365,15 +426,39 @@
 #' @param col Line colour.
 #' @param flow Corner-cutting passes, or `0` to leave the joints sharp.
 #' @return A list with the drawn `x` and `y`.
+#' @examples
+#' file <- tempfile(fileext = ".pdf")
+#' grDevices::pdf(file)
+#' graphics::plot.new()
+#' Dynet:::.draw_proximity_line(1:3, c(0, NA, 1), c(1, NA, 2), "black", 0)
+#' grDevices::dev.off()
+#' unlink(file)
 #' @keywords internal
 .draw_proximity_line <- function(times, pos, w, col, flow = 2L) {
-  span <- diff(range(w))
-  lwd <- if (span == 0) rep(1.6, length(w)) else 0.5 + 4.2 * (w - min(w)) / span
-  path <- cbind(times, pos, lwd)
-  if (flow > 0L) path <- .chaikin(path, flow)
-  m <- nrow(path)
-  graphics::segments(path[-m, 1L], path[-m, 2L], path[-1L, 1L], path[-1L, 2L],
-                     col = col, lwd = path[-m, 3L], lend = 0L)
+  present <- is.finite(times) & is.finite(pos)
+  if (!any(present)) return(list(x = numeric(), y = numeric()))
+  lwd <- rep(1.6, length(w))
+  valued <- present & is.finite(w)
+  if (any(valued)) {
+    span <- diff(range(w[valued]))
+    if (span > 0) lwd[valued] <- 0.5 + 4.2 *
+      (w[valued] - min(w[valued])) / span
+  }
+  index <- which(present)
+  run <- cumsum(c(TRUE, diff(index) != 1L))
+  paths <- lapply(split(index, run), function(i) {
+    path <- cbind(times[i], pos[i], lwd[i])
+    if (flow > 0L) path <- .chaikin(path, flow)
+    m <- nrow(path)
+    if (m > 1L) {
+      graphics::segments(
+        path[-m, 1L], path[-m, 2L], path[-1L, 1L], path[-1L, 2L],
+        col = col, lwd = path[-m, 3L], lend = 0L
+      )
+    }
+    path
+  })
+  path <- do.call(rbind, paths)
   list(x = path[, 1L], y = path[, 2L])
 }
 

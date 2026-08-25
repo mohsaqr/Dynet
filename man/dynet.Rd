@@ -23,7 +23,13 @@ dynet(
   directed = TRUE,
   interval = 1,
   time_unit = "auto",
-  loops = FALSE
+  observation_start = NULL,
+  observation_end = NULL,
+  observation_spells = NULL,
+  loops = FALSE,
+  onset_censored = NULL,
+  terminus_censored = NULL,
+  vertex_spells = NULL
 )
 }
 \arguments{
@@ -73,8 +79,32 @@ undirected.}
 \code{"auto"}, \code{"seconds"}, \code{"minutes"}, \code{"hours"}, \code{"days"} or \code{"weeks"}.
 Numeric times are left alone and reported as \code{"step"}.}
 
+\item{observation_start, observation_end}{Optional bounds of the continuous
+observation interval. Supply numeric values in the network's internal
+time scale, or \code{Date}/\code{POSIXct} values for a calendar network. Either
+bound may be omitted, in which case the corresponding raw event limit is
+used. Positive spells are measured on their half-open intersection with
+this interval; instantaneous events are retained at either boundary.
+Raw spell endpoints returned by \code{\link[=as.data.frame]{as.data.frame()}} are never changed.}
+
+\item{observation_spells}{Optional data frame with \code{start} and \code{end} columns
+defining discontinuous observed support. Overlapping and adjacent positive
+intervals are merged; isolated points are retained. This is mutually
+exclusive with \code{observation_start} and \code{observation_end}.}
+
 \item{loops}{Whether to keep self-loops. \code{FALSE} drops them with a message,
 which is almost always what relational logs need.}
+
+\item{onset_censored, terminus_censored}{Optional logical column names for
+explicit raw interval-boundary censor state. These selectors are available
+only for interval input, are never auto-detected, and may not flag a
+zero-duration point.}
+
+\item{vertex_spells}{Optional tidy vertex-activity table with exact columns
+\code{node}, \code{start}, and \code{end}, plus optional \code{session}, \code{onset_censored}, and
+\code{terminus_censored}. Positive spells use \verb{[start,end)} and points are exact.
+Overlapping and adjacent positive spells are unioned independently by node
+and session. A vertex absent from this table remains active at all times.}
 }
 \value{
 An object of class \code{c("dynet", "netobject", "cograph_network")}.
@@ -110,6 +140,23 @@ converted to elapsed time since the first event in a readable unit.
 
 Vertices are addressed by name everywhere in this package. Integer vertex
 indices are used internally for speed but are never part of any result.
+
+Explicit observation bounds are administrative measurement limits, not a
+destructive filter. A positive spell \verb{[s,e)} contributes the half-open
+intersection \verb{[max(s,L),min(e,U))} when it has positive duration, while a
+genuine instantaneous event is retained at either \code{L} or \code{U}. Original
+endpoints remain the only formation and dissolution events, censoring is
+never inferred from equality with a limit, and temporal paths must both
+start and finish inside the declared interval.
+
+Vertex activity is a separate declaration. A vertex with at least one row
+in \code{vertex_spells} is eligible only on the union of those half-open positive
+spells and exact points; a vertex with no row remains eligible at all times.
+Snapshot measurements independently union eligible vertices and active
+edges over each positive window and then induce on eligible endpoints;
+point snapshots evaluate both at the exact time. Explicit vertex censor
+flags describe raw outer-boundary state and are never inferred from
+observation limits or used to alter eligibility.
 }
 \examples{
 # An interval log: each row carries its own start and end
@@ -121,6 +168,20 @@ dynet(forum_posts, thread = "thread")
 # A co-presence log: actors sharing a group become connected
 dynet(seminar_attendance, actor = "student", group = "seminar")
 
+# Declare observation time without rewriting the source spell.
+bounded <- dynet(data.frame(
+  from = "A", to = "B", start = -2, end = 8
+), observation_start = 0, observation_end = 5)
+as.data.frame(bounded)
+
+# Declare changing vertex eligibility without altering edge spells.
+scheduled <- dynet(data.frame(
+  from = "A", to = "B", start = 0, end = 10
+), vertex_spells = data.frame(
+  node = c("A", "A"), start = c(0, 7), end = c(4, 10)
+))
+as.data.frame(scheduled, what = "vertex_spells")
+
 }
 \references{
 Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis to
@@ -129,4 +190,7 @@ International Conference on Learning Analytics & Knowledge}, 314-319.
 
 Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
 519(3), 97-125.
+
+Butts, C. T. (2008). network: a package for managing relational data in R.
+\emph{Journal of Statistical Software}, 24(2), 1-36.
 }

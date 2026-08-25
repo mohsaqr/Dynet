@@ -1,0 +1,294 @@
+# ===========================================================================
+# Immutable attribute editing and temporal subgraphs
+# ===========================================================================
+
+.edit_row_selector <- function(selector, n, argument = "rows") {
+  if (is.logical(selector)) {
+    if (length(selector) != n || anyNA(selector)) {
+      stop(errorCondition(
+        sprintf("A logical `%s` mask must have length %d.", argument, n),
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    return(which(selector))
+  }
+  if (!is.numeric(selector) || !length(selector) || any(!is.finite(selector)) ||
+      any(selector != as.integer(selector)) || any(selector < 1L | selector > n)) {
+    stop(errorCondition(
+      sprintf("`%s` must contain valid integer row positions.", argument),
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  unique(as.integer(selector))
+}
+
+.replace_attribute_values <- function(existing, index, value, n) {
+  if (length(value) == 1L) value <- value[rep(1L, length(index))]
+  if (length(value) != length(index)) {
+    stop(errorCondition(
+      "Each update column must have one value or one value per selected row.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  if (is.null(existing)) {
+    existing <- value[rep(NA_integer_, n)]
+  }
+  if (is.factor(existing)) {
+    levels <- union(levels(existing), unique(as.character(value)))
+    existing <- factor(as.character(existing), levels = levels,
+                       ordered = is.ordered(existing))
+    value <- factor(as.character(value), levels = levels,
+                    ordered = is.ordered(existing))
+  }
+  existing[index] <- value
+  existing
+}
+
+#' Update static node attributes
+#'
+#' @param dn A temporal network.
+#' @param data A nonempty data frame with a `name` key and one or more
+#'   attributes to add or replace. Only named nodes are changed.
+#' @return A new internally consistent `dynet` object.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
+#' update_nodes(dn, data.frame(name = "A", role = "initiator"))
+#' @export
+update_nodes <- function(dn, data) {
+  .check_dynet(dn, "bounded")
+  if (!is.data.frame(data) || !nrow(data) || !"name" %in% names(data) ||
+      ncol(data) < 2L || anyDuplicated(names(data))) {
+    stop(errorCondition(
+      "`data` must be a nonempty data frame with `name` and attributes.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  forbidden <- intersect(names(data), c("id", "label", "x", "y"))
+  if (length(forbidden)) {
+    stop(errorCondition(
+      sprintf("Cograph structural column(s) cannot be updated: %s.",
+              paste(forbidden, collapse = ", ")),
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  key <- as.character(data$name)
+  if (anyNA(key) || anyDuplicated(key)) {
+    stop(errorCondition("Update node names must be unique and complete.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  nodes <- as.data.frame(dn, what = "nodes")
+  index <- match(key, nodes$name)
+  if (anyNA(index)) {
+    stop(errorCondition(
+      sprintf("Unknown node(s): %s.", paste(key[is.na(index)], collapse = ", ")),
+      class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL
+    ))
+  }
+  for (attribute in setdiff(names(data), "name")) {
+    value <- data[[attribute]]
+    if (!is.atomic(value) || !is.null(dim(value))) {
+      stop(errorCondition(
+        sprintf("Node attribute %s must be an atomic vector.", sQuote(attribute)),
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    nodes[[attribute]] <- .replace_attribute_values(
+      nodes[[attribute]], index, value, nrow(nodes)
+    )
+  }
+  .rebuild_ties(
+    dn, dn$spells, identical(dn$meta$raw_censoring, "explicit"),
+    match.call(), nodes = nodes
+  )
+}
+
+#' Rename nodes everywhere in a temporal network
+#'
+#' @param dn A temporal network.
+#' @param mapping A named character vector whose names are old node names and
+#'   values are replacements, or a two-column data frame named `old` and
+#'   `new`.
+#' @return A new `dynet` object with edge endpoints, node attributes, vertex
+#'   activity, cograph labels, and groups renamed together.
+#' @export
+rename_nodes <- function(dn, mapping) {
+  .check_dynet(dn, "bounded")
+  if (is.data.frame(mapping) && all(c("old", "new") %in% names(mapping))) {
+    old <- as.character(mapping$old)
+    new <- as.character(mapping$new)
+  } else if (is.character(mapping) && !is.null(names(mapping))) {
+    old <- names(mapping)
+    new <- as.character(mapping)
+  } else {
+    stop(errorCondition(
+      "`mapping` must be a named character vector or an old/new data frame.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  if (!length(old) || anyNA(old) || anyNA(new) || anyDuplicated(old) ||
+      anyDuplicated(new)) {
+    stop(errorCondition("Rename mappings must be nonempty, complete, and unique.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  unknown <- setdiff(old, dn$nodes$name)
+  if (length(unknown)) {
+    stop(errorCondition(
+      sprintf("Unknown node(s): %s.", paste(unknown, collapse = ", ")),
+      class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL
+    ))
+  }
+  collision <- intersect(new, setdiff(dn$nodes$name, old))
+  if (length(collision)) {
+    stop(errorCondition(
+      sprintf("Replacement node name(s) already exist: %s.",
+              paste(collision, collapse = ", ")),
+      class = c("dynet_duplicate_node", "dynet_bad_input"), call = NULL
+    ))
+  }
+  translate <- function(value) {
+    hit <- match(value, old)
+    value[!is.na(hit)] <- new[hit[!is.na(hit)]]
+    value
+  }
+  spells <- dn$spells
+  spells$from <- translate(spells$from)
+  spells$to <- translate(spells$to)
+  nodes <- as.data.frame(dn, what = "nodes")
+  nodes$name <- translate(nodes$name)
+  vertex_spells <- dn$vertex_spells
+  vertex_spells$node <- translate(vertex_spells$node)
+  .rebuild_ties(
+    dn, spells, identical(dn$meta$raw_censoring, "explicit"),
+    match.call(), nodes = nodes, vertex_spells = vertex_spells
+  )
+}
+
+#' Update temporal ties and their attributes
+#'
+#' @param dn A temporal network.
+#' @param ties Integer row positions or a logical mask referring to
+#'   `as.data.frame(dn, what = "edges")`.
+#' @param data A data frame with one row or one row per selected tie. Columns
+#'   may be canonical tie fields or arbitrary atomic spell attributes.
+#' @param loops Whether an endpoint update may introduce a new self-loop.
+#'   Existing loops may always be retained.
+#' @return A new internally consistent `dynet` object.
+#' @export
+update_ties <- function(dn, ties, data, loops = FALSE) {
+  .check_dynet(dn, "bounded")
+  .check("`loops` must be one non-missing logical value." =
+           is.logical(loops) && length(loops) == 1L && !is.na(loops))
+  index <- .edit_row_selector(ties, nrow(dn$spells), "ties")
+  if (!is.data.frame(data) || !nrow(data) || anyDuplicated(names(data)) ||
+      !ncol(data)) {
+    stop(errorCondition("`data` must be a nonempty update data frame.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  if (nrow(data) != 1L && nrow(data) != length(index)) {
+    stop(errorCondition(
+      "`data` must have one row or one row per selected tie.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  if (any(names(data) %in% c("duration", ".raw_spell"))) {
+    stop(errorCondition("`duration` and `.raw_spell` are derived and read-only.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  if (nrow(data) == 1L && length(index) > 1L) {
+    data <- data[rep(1L, length(index)), , drop = FALSE]
+  }
+  all_spells <- dn$spells[, setdiff(names(dn$spells), ".raw_spell"), drop = FALSE]
+  selected <- all_spells[index, , drop = FALSE]
+  old_loop <- selected$from == selected$to
+  for (attribute in names(data)) {
+    value <- data[[attribute]]
+    if (!is.atomic(value) || !is.null(dim(value))) {
+      stop(errorCondition(
+        sprintf("Tie attribute %s must be an atomic vector.", sQuote(attribute)),
+        class = "dynet_bad_input", call = NULL
+      ))
+    }
+    selected[[attribute]] <- value
+  }
+  new_loop <- as.character(selected$from) == as.character(selected$to)
+  if (any(new_loop & !old_loop) && !loops) {
+    stop(errorCondition(
+      "An endpoint update that creates a self-loop requires `loops = TRUE`.",
+      class = c("dynet_loop_not_allowed", "dynet_bad_input"), call = NULL
+    ))
+  }
+  if (is.null(dn$meta$sessions)) selected$session <- NULL
+  normalized <- .normalize_added_ties(dn, selected, loops = TRUE)
+  explicit <- identical(dn$meta$raw_censoring, "explicit") ||
+    any(c("onset_censored", "terminus_censored") %in% names(data))
+  attr(normalized, "censor_explicit") <- NULL
+  remaining <- all_spells[-index, , drop = FALSE]
+  rebuilt <- .bind_added_ties(remaining, normalized)
+  .rebuild_ties(dn, rebuilt, explicit, match.call(), format = "interval")
+}
+
+#' Extract an induced temporal subgraph
+#'
+#' @param dn A temporal network.
+#' @param nodes Optional character node names. Only ties whose two endpoints
+#'   are in this set are eligible.
+#' @param ties Optional integer row positions or logical mask over the raw
+#'   spell table. This supports legacy edge-attribute filtering, for example
+#'   `ties = as.data.frame(dn)$course_group == "course_1"`.
+#' @param keep_isolates Whether named nodes without a selected tie remain.
+#' @return A new `dynet` object with selected ties, nodes, vertex activity, and
+#'   all static attributes retained.
+#' @export
+induce_subgraph <- function(dn, nodes = NULL, ties = NULL,
+                            keep_isolates = FALSE) {
+  .check_dynet(dn, "bounded")
+  .check("`keep_isolates` must be one non-missing logical value." =
+           is.logical(keep_isolates) && length(keep_isolates) == 1L &&
+             !is.na(keep_isolates))
+  if (is.null(nodes) && is.null(ties)) {
+    stop(errorCondition("Supply `nodes`, `ties`, or both.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  keep <- rep(TRUE, nrow(dn$spells))
+  requested_nodes <- dn$nodes$name
+  if (!is.null(nodes)) {
+    if (!is.character(nodes) || !length(nodes) || anyNA(nodes)) {
+      stop(errorCondition("`nodes` must contain complete node names.",
+                          class = "dynet_bad_input", call = NULL))
+    }
+    requested_nodes <- unique(nodes)
+    unknown <- setdiff(requested_nodes, dn$nodes$name)
+    if (length(unknown)) {
+      stop(errorCondition(
+        sprintf("Unknown node(s): %s.", paste(unknown, collapse = ", ")),
+        class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL
+      ))
+    }
+    keep <- keep & dn$spells$from %in% requested_nodes &
+      dn$spells$to %in% requested_nodes
+  }
+  if (!is.null(ties)) {
+    tie_index <- .edit_row_selector(ties, nrow(dn$spells), "ties")
+    tie_keep <- rep(FALSE, nrow(dn$spells))
+    tie_keep[tie_index] <- TRUE
+    keep <- keep & tie_keep
+  }
+  spells <- dn$spells[keep, , drop = FALSE]
+  if (!nrow(spells)) {
+    stop(errorCondition("The requested temporal subgraph has no ties.",
+                        class = "dynet_empty_network", call = NULL))
+  }
+  endpoint_nodes <- unique(c(spells$from, spells$to))
+  kept_names <- if (keep_isolates && !is.null(nodes)) {
+    unique(c(requested_nodes, endpoint_nodes))
+  } else endpoint_nodes
+  public_nodes <- as.data.frame(dn, what = "nodes")
+  public_nodes <- public_nodes[public_nodes$name %in% kept_names, , drop = FALSE]
+  vertex_spells <- dn$vertex_spells[
+    dn$vertex_spells$node %in% kept_names, , drop = FALSE
+  ]
+  .rebuild_ties(
+    dn, spells, identical(dn$meta$raw_censoring, "explicit"),
+    match.call(), nodes = public_nodes, vertex_spells = vertex_spells
+  )
+}

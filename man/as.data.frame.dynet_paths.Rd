@@ -20,7 +20,8 @@
 \item{optional}{Ignored; present for compatibility with the generic.}
 
 \item{what}{\code{"paths"} for the endpoint summary or \code{"steps"} for the tidy
-reconstructed routes.}
+reconstructed optimal routes. The latter includes endpoint-local
+\code{path_id} values for tied contact sequences.}
 
 \item{...}{Ignored.}
 }

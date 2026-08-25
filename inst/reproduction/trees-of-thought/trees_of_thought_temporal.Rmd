@@ -1,0 +1,400 @@
+---
+title: "Trees of Thought: temporal-network reproduction with Dynet"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+params:
+  data_dir: "/Users/mohammedsaqr/Library/CloudStorage/GoogleDrive-saqr@saqr.me/Other computers/My MacBook Pro (2)/My_Data/Zips/Trees_of_thought 2"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE, echo = TRUE,
+  fig.width = 10, fig.height = 6, dpi = 120
+)
+input_file <- knitr::current_input(dir = TRUE)
+repo_dir <- normalizePath(file.path(dirname(input_file), "../../.."),
+                          mustWork = TRUE)
+devtools::load_all(repo_dir, quiet = TRUE)
+data_dir <- normalizePath(params$data_dir, mustWork = TRUE)
+```
+
+# Rule 0
+
+This is a Dynet reproduction, not a second implementation hidden in a
+notebook. Every temporal-network result below comes directly from an exported
+Dynet function. The notebook imports the saved network, calls those functions,
+and plots their returned objects. It does not reconstruct statistics, reshape
+them into substitute statistics, perform package-parity tests, or silently
+alter the supplied network.
+
+# Import the saved temporal network
+
+```{r import}
+dn <- as_dynet(readRDS(file.path(
+  data_dir, "Out", "Dynamic_network_Weightedloops.RDS"
+)))
+dn
+summary(dn)
+```
+
+The saved network contains ten codes, weighted directed edge spells, and nine
+self-loop spells. They remain in the imported object. Each Dynet statistic
+applies its documented loop convention.
+
+# See the temporal network
+
+## Edge-spell timeline
+
+```{r edge-spell-timeline, fig.height=8}
+plot(dn, type = "timeline")
+```
+
+## Formation, dissolution, and active ties
+
+```{r edge-activity}
+plot(dn, type = "activity")
+```
+
+## Whole-window network through cograph
+
+```{r whole-window-network, fig.height=8}
+cograph::splot(
+  dn,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2),
+  edge_alpha = 0.30,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+## Duration-weighted collapsed network
+
+```{r collapsed-network, fig.height=8}
+collapsed <- collapse_network(dn, weight = "union_duration")
+collapsed
+cograph::splot(
+  collapsed,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2.5),
+  edge_alpha = 0.40,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+## Temporal snapshots
+
+```{r snapshots, fig.height=9, fig.width=10}
+plot(dn, type = "snapshots", panels = 9)
+```
+
+## Proximity timeline with phase networks
+
+```{r proximity-networks, fig.height=8, fig.width=12}
+plot(dn, type = "proximity", measure = "degree",
+     phases = 5, slices = 80)
+```
+
+## Proximity trajectories alone
+
+```{r proximity-lines, fig.height=7, fig.width=12}
+plot(dn, type = "proximity", measure = "betweenness",
+     networks = FALSE, slices = 80)
+```
+
+# Graph-level trajectories
+
+## Main structural descriptives
+
+```{r graph-main}
+graph_main <- dyn_metrics(
+  dn,
+  measure = c(
+    "density", "efficiency", "connectedness", "reciprocity",
+    "edges", "mean_degree"
+  ),
+  step = 0.1, window = 0.1
+)
+graph_main
+plot(graph_main, type = "ridge")
+```
+
+## Dyad census
+
+```{r dyad-census}
+dyads <- dyn_metrics(
+  dn, measure = c("mutual", "asymmetric", "null"),
+  step = 0.1, window = 0.1
+)
+dyads
+plot(dyads)
+```
+
+## Triad census
+
+```{r triad-census, fig.height=8}
+triads <- dyn_metrics(dn, measure = "triads", step = 0.1, window = 0.1)
+triads
+plot(triads, type = "heatmap")
+```
+
+## Lightweight ERGM-style descriptives
+
+```{r ergm-descriptives}
+ergm_descriptives <- dyn_metrics(
+  dn,
+  measure = c(
+    "indegree_1_5", "outdegree_1_5", "triangles",
+    "in_2stars", "out_2stars", "two_paths"
+  ),
+  step = 0.1, window = 0.1
+)
+ergm_descriptives
+plot(ergm_descriptives, type = "ridge")
+```
+
+# Node-level trajectories
+
+## Centrality
+
+```{r centrality-heatmap, fig.height=11}
+centrality <- dyn_centrality(
+  dn,
+  measure = c(
+    "degree", "closeness", "betweenness", "eigenvector",
+    "flow_betweenness", "diffusion"
+  ),
+  step = 0.1, window = 0.1
+)
+centrality
+plot(centrality, type = "heatmap")
+```
+
+```{r centrality-trajectories, fig.height=10}
+plot(centrality, type = "ridge", top = 10)
+```
+
+## In-degree and out-degree
+
+```{r directed-degree, fig.height=7}
+directed_degree <- dyn_centrality(
+  dn, measure = "degree", mode = "in",
+  step = 0.1, window = 0.1
+)
+out_degree <- dyn_centrality(
+  dn, measure = "degree", mode = "out",
+  step = 0.1, window = 0.1
+)
+plot(directed_degree, type = "heatmap")
+plot(out_degree, type = "heatmap")
+```
+
+## Prestige
+
+```{r prestige, fig.height=7}
+prestige_indegree <- dyn_centrality(
+  dn, measure = "prestige", prestige = "indegree",
+  step = 0.1, window = 0.1
+)
+prestige_eigenvector <- dyn_centrality(
+  dn, measure = "prestige", prestige = "eigenvector",
+  step = 0.1, window = 0.1
+)
+prestige_domain <- dyn_centrality(
+  dn, measure = "prestige", prestige = "domain",
+  step = 0.1, window = 0.1
+)
+prestige_proximity <- dyn_centrality(
+  dn, measure = "prestige", prestige = "domain.proximity",
+  step = 0.1, window = 0.1
+)
+plot(prestige_indegree, type = "heatmap")
+plot(prestige_eigenvector, type = "heatmap")
+plot(prestige_domain, type = "heatmap")
+plot(prestige_proximity, type = "heatmap")
+```
+
+# Code-to-code mixing
+
+```{r mixing-heatmap, fig.height=14}
+mixing <- dyn_mixing(dn, attribute = "name", step = 0.1, window = 0.1)
+mixing
+plot(mixing, type = "heatmap")
+```
+
+The original scripts singled out mixing involving group regulation. The same
+selection is passed to Dynet's plot method as a highlight; no mixing statistic
+is rebuilt in the notebook.
+
+```{r mixing-group-regulation, fig.height=7}
+group_regulation_flows <- grep(
+  "Group_regulation", unique(mixing$measure), value = TRUE, fixed = TRUE
+)
+plot(mixing, highlight = group_regulation_flows)
+```
+
+# Tie and vertex duration
+
+## Incident tie counts and durations by node
+
+```{r node-tie-duration, fig.height=10}
+node_ties_all <- dyn_durations(
+  dn, unit = "node_ties", mode = "all",
+  measure = c("events", "total", "union")
+)
+node_ties_in <- dyn_durations(
+  dn, unit = "node_ties", mode = "in",
+  measure = c("events", "total", "union")
+)
+node_ties_out <- dyn_durations(
+  dn, unit = "node_ties", mode = "out",
+  measure = c("events", "total", "union")
+)
+plot(node_ties_all)
+plot(node_ties_in)
+plot(node_ties_out)
+```
+
+## Edge-pair duration
+
+```{r pair-duration, fig.height=10}
+pair_duration <- dyn_durations(
+  dn, unit = "pair",
+  measure = c("events", "total", "union", "mean")
+)
+pair_duration
+plot(pair_duration)
+```
+
+## Vertex activity duration
+
+```{r vertex-duration, fig.height=8}
+vertex_duration <- dyn_durations(dn, unit = "vertex_activity")
+vertex_duration
+plot(vertex_duration)
+```
+
+# Temporal reachability and centrality
+
+```{r reachability, fig.height=8}
+reachability <- dyn_reachability(
+  dn, direction = "both", measure = c("reach", "reach_count")
+)
+reachability
+plot(reachability)
+```
+
+```{r temporal-centrality, fig.height=9}
+temporal_centrality <- dyn_centrality(
+  dn,
+  measure = c("closeness", "betweenness", "reach", "reach_count"),
+  scope = "temporal"
+)
+temporal_centrality
+plot(temporal_centrality)
+```
+
+# Forward temporal paths from every code
+
+Each source gets a left-to-right trajectory tree. The tree repeats a node when it
+occurs under a different temporal history; branch width and fill show the
+number of optimal routes. The original scripts charged
+`graph.step.time = 0.1`; Dynet receives the same value as
+`traversal_time = 0.1`.
+
+```{r forward-path-atlas, results='asis', fig.height=8, fig.width=12}
+for (source_node in as.data.frame(dn, what = "nodes")$name) {
+  cat("\n\n## ", source_node, "\n\n", sep = "")
+  forward_paths <- dyn_paths(
+    dn, from = source_node, direction = "forward", traversal_time = 0.1
+  )
+  print(plot_path_trajectories(
+    forward_paths, measure = "frequency", orientation = "horizontal"
+  ))
+}
+```
+
+# Backward temporal paths to every code
+
+The paper's latest-departure views used a deadline within the five-day display
+window. Here the same question is asked with `end = 4`, where the supplied
+interval network has attained backward routes.
+
+```{r backward-path-atlas, results='asis', fig.height=8, fig.width=12}
+for (target_node in as.data.frame(dn, what = "nodes")$name) {
+  cat("\n\n## ", target_node, "\n\n", sep = "")
+  backward_paths <- dyn_paths(
+    dn, from = target_node, direction = "backward", start = 0, end = 4,
+    traversal_time = 0.1
+  )
+  print(plot_path_trajectories(
+    backward_paths, measure = "frequency", orientation = "horizontal"
+  ))
+}
+```
+
+# Course-group temporal subnetwork
+
+```{r group-subnetwork-import}
+full_dn <- as_dynet(readRDS(file.path(data_dir, "Out", "DyanmicFULL.RDS")))
+full_ties <- as.data.frame(full_dn)
+group_dn <- induce_subgraph(
+  full_dn, ties = full_ties$course_group == "295_437"
+)
+group_dn
+```
+
+```{r group-subnetwork-splot, fig.height=8}
+cograph::splot(
+  group_dn,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2.5),
+  edge_alpha = 0.40,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+```{r group-subnetwork-timeline, fig.height=8}
+plot(group_dn, type = "timeline")
+```
+
+```{r group-subnetwork-snapshots, fig.height=9}
+plot(group_dn, type = "snapshots", panels = 9)
+```
+
+```{r group-subnetwork-metrics}
+plot(dyn_metrics(
+  group_dn,
+  measure = c("density", "edges", "reciprocity", "connectedness"),
+  step = 0.1, window = 0.1
+), type = "ridge")
+```
+
+# Session information
+
+```{r session-info}
+sessionInfo()
+```

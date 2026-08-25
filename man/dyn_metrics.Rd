@@ -27,7 +27,13 @@ dyn_metrics(
 \code{"centralization_closeness"}, \code{"triads"}, \code{"connectedness"},
 \code{"efficiency"}, \code{"hierarchy"}, \code{"lubness"}. \code{"triads"} expands to the
 sixteen triad classes; the last four are Krackhardt's indices of
-hierarchy.}
+hierarchy. Lightweight structural summaries are \code{"degree_mean"},
+\code{"degree_variance"}, \code{"degree_min"}, \code{"degree_max"},
+\code{"mean_degree"}, \code{"indegree_1_5"}, \code{"outdegree_1_5"}, \code{"triangles"},
+\code{"concurrent_nodes"}, \code{"concurrent_share"}, \code{"in_2stars"},
+\code{"out_2stars"}, and \code{"two_paths"}. Exact window-integrated quantities are \code{"temporal_density"},
+\code{"observed_pair_density"}, \code{"onset_intensity"}, and
+\code{"observed_pair_onset_intensity"}.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
@@ -56,16 +62,47 @@ course tells you nothing about a group that was dense in week two and
 silent in week five.
 }
 \details{
-Density here counts realised edges against possible ones in each bin. A
-second, genuinely temporal density -- observed edge duration against the
-maximum possible duration -- is reported by \code{\link[=summary]{summary()}} on the network
-itself, because it describes the whole window rather than a bin.
+\code{"density"} counts the any-time union of realised edges against eligible
+possible edges in each bin. The four temporal selectors instead integrate
+exact state over positive observed time inside every reporting window.
+\code{"temporal_density"} is binary occupied pair-time divided by all eligible
+nonloop ordered-pair time (directed) or dyad time (undirected).
+\code{"observed_pair_density"} uses the same numerator but restricts opportunity
+to pairs having endpoint-valid evidence anywhere in the complete stored
+history. That cohort is not reset by reporting windows or observation gaps.
+\code{\link[=summary]{summary()}} reports the first quantity over the pooled full history.
+
+If \code{Y[r](t)} is exact simultaneous endpoint eligibility, \code{E[r](t)} is
+binary edge presence, and \code{H} is the ever-observed pair set, the exposure
+ledgers are \verb{R = sum(r) integral(Y[r](t) dt)},
+\verb{O = sum(r) integral(Y[r](t) E[r](t) dt)}, and
+\verb{R_H = sum(r in H) integral(Y[r](t) dt)}. The two occupancies are \code{O/R}
+and \code{O/R_H} and lie in \verb{[0, 1]}. Loops, weights, duplicates, and censor
+flags cannot multiply occupancy.
+
+\code{"onset_intensity"} and \code{"observed_pair_onset_intensity"} divide the
+number of known raw spell starts by \code{R} and \code{R_H}. Each nonloop raw row,
+including a point contact, contributes once when its start is observed,
+not onset-censored, and has exactly eligible endpoints. Termini are not
+events; overlaps and duplicates remain distinct onsets. Intensities are
+nonnegative, unbounded, and measured in inverse network time. A zero
+denominator gives \code{NA} for every temporal selector, even when a point event
+exists. A positive denominator with a zero numerator gives zero. Therefore
+\code{window = 0} makes all four temporal selectors undefined while snapshot
+measures retain their exact point-state meanings.
 
 \code{step} and \code{window} are separate on purpose: \code{step} is how often you look,
 \code{window} is how much of the timeline each look takes in. A seven-day window
 stepped one day at a time smooths a noisy series without giving up daily
 resolution. They match \code{time.interval} and \code{aggregate.dur} in
 \code{tsna::tSnaStats()}.
+
+When vertex activity was declared in \code{\link[=dynet]{dynet()}}, every measure is computed
+on the endpoint-induced eligible vertex set for the window. Positive
+windows independently use the any-time vertex and edge unions before
+induction; \code{window = 0} evaluates the exact state. Density and census
+opportunities, components, isolate counts, largest-component shares, and
+Freeman denominators therefore use eligible rather than fixed order.
 
 Krackhardt's four indices -- \code{"connectedness"}, \code{"efficiency"},
 \code{"hierarchy"} and \code{"lubness"} -- describe how far a directed network
@@ -75,6 +112,22 @@ rather than a number that would mislead.
 
 Triad census cost grows with the cube of the vertex count. On a network of
 a few hundred vertices it is the slowest measure here by a wide margin.
+
+The lightweight structural selectors use the binary, loop-free induced
+snapshot. Directed total degree is in-degree plus out-degree;
+\code{"degree_variance"} is the sample variance across eligible vertices.
+\code{"mean_degree"} is the mean out-degree for a directed graph (identically,
+the mean in-degree) and the ordinary mean degree for an undirected graph;
+this matches ERGM's \code{meandeg} statistic. \code{"indegree_1_5"} and
+\code{"outdegree_1_5"} sum the corresponding vertex degrees raised to 1.5.
+Directed \code{"triangles"} is the sum of cyclic and transitive triples, while
+an undirected triangle is counted once.
+A concurrent vertex has at least two distinct neighbours, so a reciprocal
+dyad still supplies only one neighbour. \code{"in_2stars"} and \code{"out_2stars"}
+sum \code{choose(degree, 2)} over directed in- and out-degrees. Directed
+\code{"two_paths"} counts ordered \code{i -> j -> k} paths with \code{i != k};
+undirected two-paths count each unordered wedge once. Empty eligible
+snapshots return zero for all selectors.
 }
 \examples{
 dn <- dynet(school_contacts)
@@ -83,4 +136,24 @@ dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
 dyn_metrics(dn, measure = "density", step = 1, window = 3)
 plot(dyn_metrics(dn, measure = c("mutual", "asymmetric")))
 
+}
+\references{
+Freeman, L. C. (1979). Centrality in social networks: conceptual
+clarification. \emph{Social Networks}, 1, 215-239.
+\doi{10.1016/0378-8733(78)90021-7}
+
+Butts, C. T., Leslie-Cook, A., Krivitsky, P. N., & Bender-deMoll, S.
+(2024). \emph{networkDynamic: Dynamic Extensions for Network Objects}, version
+0.11.5. \doi{10.32614/CRAN.package.networkDynamic}
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
+519(3), 97-125. \doi{10.1016/j.physrep.2012.03.001}
+
+Latapy, M., Viard, T., & Magnien, C. (2018). Stream graphs and link streams
+for the modeling of interactions over time. \emph{Social Network Analysis and
+Mining}, 8, 61. \doi{10.1007/s13278-018-0537-7}
+
+Andersen, P. K., & Gill, R. D. (1982). Cox's regression model for counting
+processes: a large sample study. \emph{Annals of Statistics}, 10, 1100-1120.
+\doi{10.1214/aos/1176345976}
 }

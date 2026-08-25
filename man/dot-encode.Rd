@@ -12,8 +12,9 @@
 \item{rows}{Optional row subset of the spell table.}
 }
 \value{
-A list with integer \code{from}/\code{to}, numeric \code{start}/\code{end}/\code{weight},
-logical \code{instant}, and the vertex \code{names}.
+A list with integer \code{from}/\code{to}, observation-clipped numeric
+\code{start}/\code{end}, preserved \code{raw_start}/\code{raw_end}, numeric \code{weight}, logical
+raw \code{instant}, logical \code{observed_activity}, and the vertex \code{names}.
 }
 \description{
 Integer-encode a canonical edge frame against the vertex table

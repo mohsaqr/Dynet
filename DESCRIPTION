@@ -1,6 +1,6 @@
 Package: Dynet
 Title: Tidy Temporal Network Analysis
-Version: 0.3.9
+Version: 0.3.43
 Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre"),
     email = "saqr@saqr.me")
 Description: Construction, measurement and visualisation of temporal
@@ -31,6 +31,7 @@ Suggests:
     networkDynamic,
     sna,
     testthat (>= 3.0.0),
+    transitiontrees,
     tsna
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

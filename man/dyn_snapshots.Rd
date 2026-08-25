@@ -41,7 +41,9 @@ A \code{data.frame} with one row per active edge per bin: \code{session}
 (when present), \code{time}, \code{from}, \code{to}, \code{weight} and \code{n_spells}. A pair
 joined by more than one spell in the same bin is one edge, with
 \code{n_spells} recording how many spells were collapsed -- so the edge counts
-here agree with those from \code{\link[=dyn_metrics]{dyn_metrics()}}.
+here agree with those from \code{\link[=dyn_metrics]{dyn_metrics()}}. Eligible isolates have no
+synthetic edge row; use \code{\link[=dyn_centrality]{dyn_centrality()}} or \code{\link[=dyn_metrics]{dyn_metrics()}} when the
+eligible population itself is required.
 }
 \description{
 The edges alive in each time bin, as one tidy table. Useful for exporting a
