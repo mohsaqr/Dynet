@@ -337,25 +337,25 @@ test_that("V01 raw storage stays non-destructive after V03 derived views", {
   expect_equal(as.data.frame(explicit, what = "bins"),
                as.data.frame(legacy, what = "bins"), ignore_attr = TRUE)
   expect_false(identical(
-    as.data.frame(dyn_metrics(explicit, measure = "density"))$value,
-    as.data.frame(dyn_metrics(legacy, measure = "density"))$value
+    as.data.frame(metrics(explicit, measure = "density"))$value,
+    as.data.frame(metrics(legacy, measure = "density"))$value
   ))
-  expect_equal(nrow(dyn_snapshots(explicit, at = 3, window = 0)), 0)
-  expect_gt(nrow(dyn_snapshots(legacy, at = 3, window = 0)), 0)
-  explicit_paths <- as.data.frame(dyn_paths(explicit, from = "A"))
-  legacy_paths <- as.data.frame(dyn_paths(legacy, from = "A"))
+  expect_equal(nrow(snapshots(explicit, at = 3, window = 0)), 0)
+  expect_gt(nrow(snapshots(legacy, at = 3, window = 0)), 0)
+  explicit_paths <- as.data.frame(paths(explicit, from = "A"))
+  legacy_paths <- as.data.frame(paths(legacy, from = "A"))
   expect_false(any(explicit_paths$reachable))
   expect_true(all(explicit_paths$n_paths == 0))
   expect_true(all(legacy_paths$reachable))
-  expect_equal(as.data.frame(dyn_events(
+  expect_equal(as.data.frame(events(
     explicit, measure = c("formation", "dissolution", "active", "new_pairs")
-  )), as.data.frame(dyn_events(
+  )), as.data.frame(events(
     legacy, measure = c("formation", "dissolution", "active", "new_pairs")
   )), ignore_attr = TRUE)
-  explicit_duration <- as.data.frame(dyn_durations(
+  explicit_duration <- as.data.frame(durations(
     explicit, measure = c("events", "total")
   ))
-  legacy_duration <- as.data.frame(dyn_durations(
+  legacy_duration <- as.data.frame(durations(
     legacy, measure = c("events", "total")
   ))
   expect_equal(nrow(explicit_duration), 0L)

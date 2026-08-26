@@ -93,7 +93,7 @@ test_that("E01 literal session ledger yields one of every class", {
     .ps_all_classes(), session = "session",
     observation_start = 0, observation_end = 3
   )
-  separate <- dyn_pshifts(dn, sessions = "separate")
+  separate <- pshifts(dn, sessions = "separate")
   expect_s3_class(separate, "dynet_pshifts")
   expect_identical(names(separate), c("session", "shift", "family", "count"))
   expect_identical(separate$shift, rep(.ps_labels, 13L))
@@ -102,7 +102,7 @@ test_that("E01 literal session ledger yields one of every class", {
     block <- separate[separate$session == sprintf("s%02d", i), ]
     expect_identical(block$count, as.integer(seq_len(13L) == i))
   }
-  bounded <- dyn_pshifts(dn, sessions = "bounded")
+  bounded <- pshifts(dn, sessions = "bounded")
   expect_identical(bounded$count, rep(1L, 13L))
 })
 
@@ -113,7 +113,7 @@ test_that("E01 cumulative output uses public labels and terminal class state", {
       start = c(1, 2), end = c(1, 2)
     ), observation_start = 0, observation_end = 3
   )
-  cumulative <- dyn_pshifts(dn, output = "cumulative")
+  cumulative <- pshifts(dn, output = "cumulative")
   expect_identical(
     names(cumulative),
     c("sequence", "event", "time", "speaker", "target", "group",
@@ -127,7 +127,7 @@ test_that("E01 cumulative output uses public labels and terminal class state", {
   expect_identical(cumulative$count[1:13], integer(13L))
   expect_identical(cumulative$count[14:26], c(1L, integer(12L)))
   terminal <- cumulative[cumulative$event == max(cumulative$event), ]
-  expect_identical(terminal$count, dyn_pshifts(dn)$count)
+  expect_identical(terminal$count, pshifts(dn)$count)
 
   group <- quiet_dynet(
     data.frame(
@@ -135,7 +135,7 @@ test_that("E01 cumulative output uses public labels and terminal class state", {
       start = c(1, 1), end = c(1, 1)
     ), observation_start = 0, observation_end = 2
   )
-  grouped <- dyn_pshifts(group, output = "cumulative")
+  grouped <- pshifts(group, output = "cumulative")
   expect_identical(nrow(grouped), 13L)
   expect_true(all(grouped$group))
   expect_type(grouped$target, "character")
@@ -150,15 +150,15 @@ test_that("E01 simultaneous inference differs from repeated dyads and opt-out", 
   group_dn <- quiet_dynet(
     group_edges, observation_start = 0, observation_end = 3
   )
-  inferred <- dyn_pshifts(group_dn)
+  inferred <- pshifts(group_dn)
   expect_identical(inferred$count, as.integer(seq_len(13L) == 2L))
-  opt_out <- dyn_pshifts(group_dn, group_events = "none")
+  opt_out <- pshifts(group_dn, group_events = "none")
   expected <- integer(13L)
   expected[c(3L, 13L)] <- 1L
   expect_identical(opt_out$count, expected)
 
   duplicate <- transform(group_edges, to = c("B", "C", "C"))
-  repeated <- dyn_pshifts(quiet_dynet(
+  repeated <- pshifts(quiet_dynet(
     duplicate, observation_start = 0, observation_end = 3
   ))
   expect_identical(repeated$count, as.integer(seq_len(13L) == 3L))
@@ -166,7 +166,7 @@ test_that("E01 simultaneous inference differs from repeated dyads and opt-out", 
   permuted <- quiet_dynet(
     group_edges[c(3, 1, 2), ], observation_start = 0, observation_end = 3
   )
-  expect_identical(dyn_pshifts(permuted)$count, inferred$count)
+  expect_identical(pshifts(permuted)$count, inferred$count)
 
   tied <- data.frame(
     from = c("C", "A"), to = c("D", "B"),
@@ -174,9 +174,9 @@ test_that("E01 simultaneous inference differs from repeated dyads and opt-out", 
   )
   tied_dn <- quiet_dynet(tied, observation_start = 0, observation_end = 2)
   tied_expected <- as.integer(seq_len(13L) == 10L)
-  expect_identical(dyn_pshifts(tied_dn)$count, tied_expected)
+  expect_identical(pshifts(tied_dn)$count, tied_expected)
   expect_identical(
-    dyn_pshifts(quiet_dynet(
+    pshifts(quiet_dynet(
       tied[2:1, ], observation_start = 0, observation_end = 2
     ))$count,
     tied_expected
@@ -190,8 +190,8 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 6), end = c(1, 6)
     ), observation_spells = data.frame(start = c(0, 5), end = c(2, 7))
   )
-  expect_identical(dyn_pshifts(gap)$count, integer(13L))
-  gap_cumulative <- dyn_pshifts(gap, output = "cumulative")
+  expect_identical(pshifts(gap)$count, integer(13L))
+  gap_cumulative <- pshifts(gap, output = "cumulative")
   expect_identical(unique(gap_cumulative$sequence), 1:2)
 
   within_components <- quiet_dynet(
@@ -200,9 +200,9 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 2, 6, 7), end = c(1, 2, 6, 7)
     ), observation_spells = data.frame(start = c(0, 5), end = c(3, 8))
   )
-  within_final <- dyn_pshifts(within_components)
+  within_final <- pshifts(within_components)
   expect_identical(within_final$count, c(2L, integer(12L)))
-  within_cumulative <- dyn_pshifts(within_components, output = "cumulative")
+  within_cumulative <- pshifts(within_components, output = "cumulative")
   expect_identical(unique(within_cumulative$sequence), 1:2)
   terminal <- within_cumulative[
     within_cumulative$sequence == 2L & within_cumulative$event == 2L, ]
@@ -214,7 +214,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 3), end = c(1, 3)
     ), observation_spells = data.frame(start = c(1, 3), end = c(1, 3))
   )
-  expect_identical(dyn_pshifts(point_components)$count, integer(13L))
+  expect_identical(pshifts(point_components)$count, integer(13L))
 
   closed_endpoint <- quiet_dynet(
     data.frame(
@@ -224,7 +224,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
   )
   endpoint_expected <- integer(13L)
   endpoint_expected[c(3L, 8L)] <- 1L
-  expect_identical(dyn_pshifts(closed_endpoint)$count, endpoint_expected)
+  expect_identical(pshifts(closed_endpoint)$count, endpoint_expected)
 
   range_dn <- quiet_dynet(
     data.frame(
@@ -232,8 +232,8 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 2), end = c(1, 2)
     ), observation_start = 0, observation_end = 3
   )
-  expect_identical(dyn_pshifts(range_dn)$count, c(1L, integer(12L)))
-  expect_identical(dyn_pshifts(range_dn, start = 2)$count, integer(13L))
+  expect_identical(pshifts(range_dn)$count, c(1L, integer(12L)))
+  expect_identical(pshifts(range_dn, start = 2)$count, integer(13L))
 
   loop <- quiet_dynet(
     data.frame(
@@ -241,7 +241,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = 1:3, end = 1:3
     ), loops = TRUE, observation_start = 0, observation_end = 4
   )
-  expect_identical(dyn_pshifts(loop)$count, integer(13L))
+  expect_identical(pshifts(loop)$count, integer(13L))
 
   loop_with_group <- quiet_dynet(
     data.frame(
@@ -249,7 +249,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 2, 2, 2), end = c(1, 2, 2, 2)
     ), loops = TRUE, observation_start = 0, observation_end = 3
   )
-  expect_identical(dyn_pshifts(loop_with_group)$count, integer(13L))
+  expect_identical(pshifts(loop_with_group)$count, integer(13L))
 
   session_edges <- data.frame(
     from = c("A", "B"), to = c("B", "A"),
@@ -259,11 +259,11 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
     session_edges, session = "session",
     observation_start = 0, observation_end = 3
   )
-  expect_identical(dyn_pshifts(session_dn, sessions = "collapse")$count,
+  expect_identical(pshifts(session_dn, sessions = "collapse")$count,
                    c(1L, integer(12L)))
-  expect_identical(dyn_pshifts(session_dn, sessions = "bounded")$count,
+  expect_identical(pshifts(session_dn, sessions = "bounded")$count,
                    integer(13L))
-  separate <- dyn_pshifts(session_dn, sessions = "separate")
+  separate <- pshifts(session_dn, sessions = "separate")
   expect_true(all(separate$count == 0L))
 })
 
@@ -278,13 +278,13 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
     edges, weight = "weight", onset_censored = "left",
     terminus_censored = "right", observation_start = 0, observation_end = 10
   )
-  expect_identical(dyn_pshifts(dn)$count, c(1L, integer(12L)))
+  expect_identical(pshifts(dn)$count, c(1L, integer(12L)))
   changed <- transform(edges, end = start + 1, weight = c(1, 1, 1))
   changed_dn <- quiet_dynet(
     changed, weight = "weight", onset_censored = "left",
     terminus_censored = "right", observation_start = 0, observation_end = 10
   )
-  expect_identical(dyn_pshifts(changed_dn)$count, dyn_pshifts(dn)$count)
+  expect_identical(pshifts(changed_dn)$count, pshifts(dn)$count)
 
   translated <- transform(edges, start = start + 20, end = end + 20)
   translated_dn <- quiet_dynet(
@@ -298,8 +298,8 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
     terminus_censored = "right", observation_start = 0,
     observation_end = 50
   )
-  expect_identical(dyn_pshifts(translated_dn)$count, dyn_pshifts(dn)$count)
-  expect_identical(dyn_pshifts(scaled_dn)$count, dyn_pshifts(dn)$count)
+  expect_identical(pshifts(translated_dn)$count, pshifts(dn)$count)
+  expect_identical(pshifts(scaled_dn)$count, pshifts(dn)$count)
 
   contacts <- quiet_dynet(
     data.frame(from = c("A", "B"), to = c("B", "A"), time = c(1, 2)),
@@ -317,9 +317,9 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
       thread = c("x", "x")
     ), thread = "thread", observation_start = 0, observation_end = 3
   )
-  expect_identical(dyn_pshifts(contacts)$count, c(1L, integer(12L)))
-  expect_identical(dyn_pshifts(intervals)$count, dyn_pshifts(contacts)$count)
-  expect_identical(dyn_pshifts(threaded)$count, dyn_pshifts(contacts)$count)
+  expect_identical(pshifts(contacts)$count, c(1L, integer(12L)))
+  expect_identical(pshifts(intervals)$count, pshifts(contacts)$count)
+  expect_identical(pshifts(threaded)$count, pshifts(contacts)$count)
 })
 
 test_that("E01 empty and singleton outputs preserve fixed public schemas", {
@@ -327,12 +327,12 @@ test_that("E01 empty and singleton outputs preserve fixed public schemas", {
     data.frame(from = "A", to = "B", start = 1, end = 1),
     observation_start = 0, observation_end = 2
   )
-  final <- dyn_pshifts(one)
+  final <- pshifts(one)
   expect_identical(final$shift, .ps_labels)
   expect_identical(final$family, .ps_families)
   expect_identical(final$count, integer(13L))
 
-  empty <- dyn_pshifts(one, output = "cumulative", start = 2, end = 2)
+  empty <- pshifts(one, output = "cumulative", start = 2, end = 2)
   expect_identical(
     names(empty),
     c("sequence", "event", "time", "speaker", "target", "group",
@@ -349,7 +349,7 @@ test_that("E01 metadata, errors, and fixed output labels are explicit", {
     data.frame(from = "A", to = "B", start = 1, end = 1),
     observation_start = 0, observation_end = 2
   )
-  out <- dyn_pshifts(dn)
+  out <- pshifts(dn)
   expect_identical(attr(out, "event_identity"),
                    "uncensored_observed_raw_spell_start")
   expect_identical(attr(out, "classification"), "gibson_13")
@@ -365,8 +365,8 @@ test_that("E01 metadata, errors, and fixed output labels are explicit", {
     data.frame(from = "A", to = "B", start = 1, end = 1),
     directed = FALSE, observation_start = 0, observation_end = 2
   )
-  expect_error(dyn_pshifts(undirected), class = "dynet_needs_directed")
-  expect_error(dyn_pshifts(undirected), class = "dynet_bad_input")
-  expect_error(dyn_pshifts(dn, output = "bad"))
-  expect_error(dyn_pshifts(dn, group_events = "bad"))
+  expect_error(pshifts(undirected), class = "dynet_needs_directed")
+  expect_error(pshifts(undirected), class = "dynet_bad_input")
+  expect_error(pshifts(dn, output = "bad"))
+  expect_error(pshifts(dn, group_events = "bad"))
 })

@@ -27,7 +27,7 @@ test_that("D03 directed out, in, and all incidence is literal", {
                 D = c(2, 6, 4), E = c(0, 0, 0))
   )
   invisible(lapply(c("out", "in", "all"), function(mode) {
-    got <- dyn_durations(
+    got <- durations(
       dn, unit = "node_ties", mode = mode,
       measure = c("events", "total", "union")
     )
@@ -51,11 +51,11 @@ test_that("D03 all is additive but incident union is calendar binary", {
                start = 0, end = 4),
     observation_start = 0, observation_end = 4
   )
-  out <- dyn_durations(reciprocal, unit = "node_ties", mode = "out",
+  out <- durations(reciprocal, unit = "node_ties", mode = "out",
                        measure = c("events", "total", "union"))
-  incoming <- dyn_durations(reciprocal, unit = "node_ties", mode = "in",
+  incoming <- durations(reciprocal, unit = "node_ties", mode = "in",
                             measure = c("events", "total", "union"))
-  combined <- dyn_durations(reciprocal, unit = "node_ties", mode = "all",
+  combined <- durations(reciprocal, unit = "node_ties", mode = "all",
                             measure = c("events", "total", "union"))
   invisible(lapply(c("A", "B"), function(node) {
     expect_equal(node_tie_value(out, node, "events"), 1)
@@ -82,7 +82,7 @@ test_that("D03 undirected modes expose both endpoint stubs and double loops", {
     vertex_spells = data.frame(node = "D", start = 0, end = 5),
     observation_start = 0, observation_end = 5
   )
-  results <- lapply(c("out", "in", "all"), function(mode) dyn_durations(
+  results <- lapply(c("out", "in", "all"), function(mode) durations(
     dn, unit = "node_ties", mode = mode,
     measure = c("events", "total", "union")
   ))
@@ -115,7 +115,7 @@ test_that("D03 gaps fragment time without multiplying identities or points", {
   dn <- quiet_dynet(
     edges, observation_spells = data.frame(start = c(0, 6), end = c(4, 10))
   )
-  out <- dyn_durations(dn, unit = "node_ties", mode = "out",
+  out <- durations(dn, unit = "node_ties", mode = "out",
                        measure = c("events", "total", "union"))
   expect_equal(c(node_tie_value(out, "A", "events"),
                  node_tie_value(out, "A", "total"),
@@ -123,7 +123,7 @@ test_that("D03 gaps fragment time without multiplying identities or points", {
   expect_equal(c(node_tie_value(out, "B", "events"),
                  node_tie_value(out, "B", "total"),
                  node_tie_value(out, "B", "union")), c(1, 4, 4))
-  all <- dyn_durations(dn, unit = "node_ties", mode = "all",
+  all <- durations(dn, unit = "node_ties", mode = "all",
                        measure = c("events", "total", "union"))
   expect_equal(c(node_tie_value(all, "A", "events"),
                  node_tie_value(all, "A", "total"),
@@ -145,7 +145,7 @@ test_that("D03 reuses endpoint activity and raw edge censor semantics", {
     edges, vertex_spells = activity,
     observation_start = 0, observation_end = 10
   )
-  out <- dyn_durations(dn, unit = "node_ties", mode = "out",
+  out <- durations(dn, unit = "node_ties", mode = "out",
                        measure = c("events", "total", "union"))
   expect_equal(c(node_tie_value(out, "A", "events"),
                  node_tie_value(out, "A", "total"),
@@ -153,10 +153,10 @@ test_that("D03 reuses endpoint activity and raw edge censor semantics", {
   expect_equal(c(node_tie_value(out, "B", "events"),
                  node_tie_value(out, "B", "total"),
                  node_tie_value(out, "B", "union")), c(1, 1, 1))
-  all_ties <- as.data.frame(dyn_durations(
+  all_ties <- as.data.frame(durations(
     dn, unit = "node_ties", mode = "all", measure = "union"
   ))
-  eligible <- as.data.frame(dyn_durations(
+  eligible <- as.data.frame(durations(
     dn, unit = "vertex_activity", measure = "union"
   ))
   expect_true(all(all_ties$value <= eligible$value))
@@ -168,7 +168,7 @@ test_that("D03 reuses endpoint activity and raw edge censor semantics", {
     edges, vertex_spells = flagged_activity,
     observation_start = 0, observation_end = 10
   )
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     flagged, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   )), as.data.frame(out), ignore_attr = TRUE)
@@ -182,11 +182,11 @@ test_that("D03 reuses endpoint activity and raw edge censor semantics", {
     censor_edges, onset_censored = "left", terminus_censored = "right",
     observation_start = 0, observation_end = 10
   )
-  included <- dyn_durations(
+  included <- durations(
     censored, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   )
-  excluded <- dyn_durations(
+  excluded <- durations(
     censored, unit = "node_ties", mode = "out", censored = "exclude",
     measure = c("events", "total", "union")
   )
@@ -205,11 +205,11 @@ test_that("D03 session policies keep local authorization and union shared time",
   )
   dn <- quiet_dynet(edges, session = "wave",
                     observation_start = 0, observation_end = 10)
-  bounded <- dyn_durations(
+  bounded <- durations(
     dn, unit = "node_ties", mode = "out", sessions = "bounded",
     measure = c("events", "total", "union")
   )
-  collapsed <- dyn_durations(
+  collapsed <- durations(
     dn, unit = "node_ties", mode = "out", sessions = "collapse",
     measure = c("events", "total", "union")
   )
@@ -218,7 +218,7 @@ test_that("D03 session policies keep local authorization and union shared time",
   expect_equal(c(node_tie_value(bounded, "A", "events"),
                  node_tie_value(bounded, "A", "total"),
                  node_tie_value(bounded, "A", "union")), c(2, 12, 10))
-  separate <- dyn_durations(
+  separate <- durations(
     dn, unit = "node_ties", mode = "out", sessions = "separate",
     measure = c("events", "total", "union")
   )
@@ -244,15 +244,15 @@ test_that("D03 session policies keep local authorization and union shared time",
     vertex_spells = authorization_activity,
     observation_start = 0, observation_end = 5
   )
-  collapse_auth <- dyn_durations(
+  collapse_auth <- durations(
     authorization, unit = "node_ties", mode = "out", sessions = "collapse"
   )
-  bounded_auth <- dyn_durations(
+  bounded_auth <- durations(
     authorization, unit = "node_ties", mode = "out", sessions = "bounded"
   )
   expect_equal(node_tie_value(collapse_auth, "A", "events"), 1)
   expect_equal(node_tie_value(bounded_auth, "A", "events"), 0)
-  expect_identical(attr(dyn_durations(
+  expect_identical(attr(durations(
     authorization, unit = "node_ties", censored = "exclude"
   ), "raw_censoring"), "excluded")
 })
@@ -281,7 +281,7 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
     start = "double", end = "double", instant = "logical"
   ))
 
-  default <- dyn_durations(dn, unit = "node_ties")
+  default <- durations(dn, unit = "node_ties")
   expect_identical(unique(as.data.frame(default)$measure), c("events", "total"))
   expect_identical(attr(default, "duration_unit"), "node_ties")
   expect_identical(attr(default, "duration_quantity"), c("events", "total"))
@@ -297,9 +297,9 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
                    "positive_support_plus_genuine_points")
   expect_identical(attr(default, "raw_censoring"), "included")
   expect_identical(attr(default, "session_aggregation"), "labels_erased")
-  expect_error(dyn_durations(dn, unit = "node_ties", measure = "mean"),
+  expect_error(durations(dn, unit = "node_ties", measure = "mean"),
                class = "dynet_unknown_measure")
-  expect_error(dyn_durations(dn, mode = "in"),
+  expect_error(durations(dn, mode = "in"),
                class = "dynet_incompatible_duration_mode")
 
   coordinate_edges <- data.frame(
@@ -314,10 +314,10 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
     coordinate_edges[c(3, 1, 2), ], weight = "weight",
     observation_start = 0, observation_end = 4
   )
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     permuted, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
-  )), as.data.frame(dyn_durations(
+  )), as.data.frame(durations(
     coordinate, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   )), ignore_attr = TRUE)
@@ -327,11 +327,11 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
   renamed <- quiet_dynet(
     renamed_edges, weight = "weight", observation_start = 0, observation_end = 4
   )
-  renamed_result <- as.data.frame(dyn_durations(
+  renamed_result <- as.data.frame(durations(
     renamed, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   ))
-  coordinate_result <- as.data.frame(dyn_durations(
+  coordinate_result <- as.data.frame(durations(
     coordinate, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   ))
@@ -343,17 +343,17 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
   transposed <- quiet_dynet(
     transposed_edges, weight = "weight", observation_start = 0, observation_end = 4
   )
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     coordinate, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
-  )), as.data.frame(dyn_durations(
+  )), as.data.frame(durations(
     transposed, unit = "node_ties", mode = "in",
     measure = c("events", "total", "union")
   )), ignore_attr = TRUE)
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     coordinate, unit = "node_ties", mode = "all",
     measure = c("events", "total", "union")
-  )), as.data.frame(dyn_durations(
+  )), as.data.frame(durations(
     transposed, unit = "node_ties", mode = "all",
     measure = c("events", "total", "union")
   )), ignore_attr = TRUE)
@@ -361,11 +361,11 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
     transform(edge, start = 7 + 3 * start, end = 7 + 3 * end),
     observation_start = 7, observation_end = 19
   )
-  transformed <- as.data.frame(dyn_durations(
+  transformed <- as.data.frame(durations(
     affine, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   ))
-  reference <- as.data.frame(dyn_durations(
+  reference <- as.data.frame(durations(
     dn, unit = "node_ties", mode = "out",
     measure = c("events", "total", "union")
   ))
@@ -378,7 +378,7 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
     data.frame(from = "A", to = "A", start = 0, end = 2), loops = TRUE,
     observation_start = 0, observation_end = 2
   )
-  singleton_all <- dyn_durations(
+  singleton_all <- durations(
     singleton, unit = "node_ties", mode = "all",
     measure = c("events", "total", "union")
   )

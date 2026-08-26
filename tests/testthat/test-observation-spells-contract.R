@@ -60,7 +60,7 @@ test_that("O02 exposes exact fragments and administrative cuts", {
 
 test_that("O02 events, durations, and density use raw identities and observed risk", {
   dn <- o02_fixture()
-  events <- as.data.frame(dyn_events(
+  events <- as.data.frame(events(
     dn, measure = c("formation", "dissolution"), end = 10,
     step = 2, window = 0
   ))
@@ -71,7 +71,7 @@ test_that("O02 events, durations, and density use raw identities and observed ri
   expect_equal(sum(formation), 4)
   expect_equal(sum(dissolution), 4)
 
-  duration <- as.data.frame(dyn_durations(
+  duration <- as.data.frame(durations(
     dn, measure = c("events", "total", "mean", "median", "first", "last")
   ))
   value <- function(pair, measure) duration$value[
@@ -103,24 +103,24 @@ test_that("O02 component grids omit gaps and qualify observations", {
   expect_false(any(bins$time > 4 & bins$time < 6))
   expect_true(all(bins$closed[c(4, 8)]))
 
-  explicit <- as.data.frame(dyn_events(
+  explicit <- as.data.frame(events(
     dn, measure = "active", start = 1, end = 9, step = 2
   ))
   expect_equal(explicit$observation, c(1L, 1L, 2L, 2L))
   expect_equal(explicit$time, c(1, 3, 7, 9))
   expect_error(
-    dyn_events(dn, start = 4.5, end = 5.5),
+    events(dn, start = 4.5, end = 5.5),
     class = "dynet_outside_observation"
   )
   expect_error(
-    dyn_paths(dn, from = "A", start = 4.5, end = 5.5),
+    paths(dn, from = "A", start = 4.5, end = 5.5),
     class = "dynet_outside_observation"
   )
 
   phased <- quiet_dynet(data.frame(
     from = "A", to = "B", start = 0, end = 9
   ), observation_spells = data.frame(start = c(2, 6), end = c(4, 8)))
-  phase_grid <- as.data.frame(dyn_events(
+  phase_grid <- as.data.frame(events(
     phased, measure = "active", start = 1, end = 8, step = 2
   ))
   expect_equal(phase_grid$time, c(3, 7))
@@ -132,7 +132,7 @@ test_that("O02 gaps permit waiting but cannot be coalesced into traversal", {
     from = c("A", "B"), to = c("B", "C"),
     time = c(2, 7)
   ), observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  path <- as.data.frame(dyn_paths(waiting, from = "A", at = 0))
+  path <- as.data.frame(paths(waiting, from = "A", at = 0))
   expect_equal(path$arrival_time[path$node == "C"], 7)
 
   crossing <- quiet_dynet(data.frame(
@@ -142,15 +142,15 @@ test_that("O02 gaps permit waiting but cannot be coalesced into traversal", {
   enc <- Dynet:::.coalesce_traversal_intervals(Dynet:::.encode(crossing))
   expect_equal(enc$start[enc$from == 1L & enc$to == 2L], c(2, 6))
   expect_equal(enc$end[enc$from == 1L & enc$to == 2L], c(4, 8))
-  path <- as.data.frame(dyn_paths(
+  path <- as.data.frame(paths(
     crossing, from = "A", at = 0, traversal_time = 3
   ))
   expect_false(path$reachable[path$node == "B"])
-  later_component <- as.data.frame(dyn_paths(
+  later_component <- as.data.frame(paths(
     crossing, from = "A", at = 0, traversal_time = 5
   ))
   expect_false(later_component$reachable[later_component$node == "B"])
-  backward <- as.data.frame(dyn_paths(
+  backward <- as.data.frame(paths(
     crossing, from = "B", direction = "backward", at = 10,
     traversal_time = 5
   ))
@@ -159,7 +159,7 @@ test_that("O02 gaps permit waiting but cannot be coalesced into traversal", {
   delayed_point <- quiet_dynet(data.frame(
     from = "A", to = "B", time = 3
   ), observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  delayed <- as.data.frame(dyn_paths(
+  delayed <- as.data.frame(paths(
     delayed_point, from = "A", at = 0, traversal_time = 4
   ))
   expect_equal(delayed$arrival_time[delayed$node == "B"], 7)
@@ -171,9 +171,9 @@ test_that("O02 new pairs and burst gaps use observed evidence time", {
     to = c("B", "B", "D", "D", "D"),
     time = c(5, 7, 2, 7, 8)
   ), observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  fresh <- as.data.frame(dyn_events(dn, measure = "new_pairs"))
+  fresh <- as.data.frame(events(dn, measure = "new_pairs"))
   expect_equal(fresh$value[fresh$time == 7], 1)
-  burst <- as.data.frame(dyn_burstiness(dn, measure = c("events", "mean_gap")))
+  burst <- as.data.frame(burstiness(dn, measure = c("events", "mean_gap")))
   expect_equal(burst$value[burst$node == "C" & burst$measure == "events"], 3)
   expect_equal(burst$value[burst$node == "C" & burst$measure == "mean_gap"], 2)
   expect_equal(burst$value[burst$node == "A" & burst$measure == "events"], 1)
@@ -209,7 +209,7 @@ test_that("O02 validates interface, supports calendar time, and crosses sessions
     session = c("s1", "s2")
   ), session = "session",
   observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  separate <- as.data.frame(dyn_events(
+  separate <- as.data.frame(events(
     sessioned, measure = "active", sessions = "separate"
   ))
   expect_equal(unique(paste(separate$session, separate$observation)),
@@ -227,7 +227,7 @@ test_that("O02 point-only support retains events but has no exposure", {
   expect_true(is.na(Dynet:::.temporal_density(dn)))
   expect_equal(as.data.frame(dn, what = "bins")$time, c(2, 7))
   expect_equal(nrow(as.data.frame(dn, what = "observed_edges")), 2L)
-  expect_equal(sum(as.data.frame(dyn_events(dn, measure = "formation"))$value), 2)
+  expect_equal(sum(as.data.frame(events(dn, measure = "formation"))$value), 2)
 })
 
 test_that("O02 new-pair history does not reset at gaps", {
@@ -235,7 +235,7 @@ test_that("O02 new-pair history does not reset at gaps", {
     from = c("A", "A", "X", "X"), to = c("B", "B", "Y", "Y"),
     start = c(-1, 7, 5, 7), end = c(3, 7, 5, 7)
   ), observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  fresh <- as.data.frame(dyn_events(dn, measure = "new_pairs"))
+  fresh <- as.data.frame(events(dn, measure = "new_pairs"))
   expect_equal(sum(fresh$value), 1)
   expect_equal(fresh$value[fresh$time == 7], 1)
 
@@ -243,7 +243,7 @@ test_that("O02 new-pair history does not reset at gaps", {
     from = c("X", "X"), to = c("Y", "Y"),
     start = c(5, 8), end = c(7, 8)
   ), observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  expect_equal(sum(as.data.frame(dyn_events(
+  expect_equal(sum(as.data.frame(events(
     preactive_later, measure = "new_pairs"
   ))$value), 0)
 })
@@ -254,10 +254,10 @@ test_that("O02 session walls remain independent of observation gaps", {
     session = c("s1", "s2")
   ), session = "session",
   observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
-  collapsed <- as.data.frame(dyn_paths(
+  collapsed <- as.data.frame(paths(
     dn, from = "A", at = 0, sessions = "collapse"
   ))
-  bounded <- as.data.frame(dyn_paths(
+  bounded <- as.data.frame(paths(
     dn, from = "A", at = 0, sessions = "bounded"
   ))
   expect_true(collapsed$reachable[collapsed$node == "C"])
@@ -347,14 +347,14 @@ test_that("O02 supports POSIX components and empty fixed public views", {
   observation_spells = data.frame(start = c(0, 6), end = c(4, 10)))
   expect_equal(nrow(as.data.frame(empty, what = "observed_edges")), 0L)
   expect_equal(nrow(as.data.frame(empty, what = "bins")), 8L)
-  empty_path <- as.data.frame(dyn_paths(empty, from = "A", at = 0))
+  empty_path <- as.data.frame(paths(empty, from = "A", at = 0))
   expect_equal(empty_path$reachable, c(TRUE, FALSE, FALSE))
 
   singleton <- quiet_dynet(data.frame(
     from = "A", to = "A", time = 5
   ), nodes = data.frame(name = "A"), loops = TRUE,
   observation_spells = data.frame(start = c(2, 7), end = c(2, 7)))
-  singleton_path <- as.data.frame(dyn_paths(singleton, from = "A"))
+  singleton_path <- as.data.frame(paths(singleton, from = "A"))
   expect_equal(singleton_path$reachable, TRUE)
   expect_equal(singleton_path$n_hops, 0L)
 })

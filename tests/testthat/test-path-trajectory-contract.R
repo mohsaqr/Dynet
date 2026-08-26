@@ -9,7 +9,7 @@
 }
 
 .school_paths <- function() {
-  dyn_paths(dynet(school_contacts), from = "Ana")
+  paths(dynet(school_contacts), from = "Ana")
 }
 
 # ---- structural equivalence with transitiontrees -------------------------
@@ -138,7 +138,7 @@ test_that("the synthetic root is kept only when it really branches", {
     start = c(0, 1, 0, 1), end = c(1, 2, 1, 2),
     term = c("t1", "t1", "t2", "t2")
   ), session = "term")
-  sessioned <- path_trajectories(dyn_paths(dn, from = "A",
+  sessioned <- path_trajectories(paths(dn, from = "A",
                                           sessions = "separate"))
   expect_true(any(sessioned$node == "(start)"))
   expect_identical(sum(sessioned$parent %in% "(start)"), 2L)
@@ -185,7 +185,7 @@ test_that("branch counts and probabilities are internally consistent", {
 })
 
 test_that("a backward family is rooted at the queried target", {
-  paths <- dyn_paths(dynet(school_contacts), from = "Ben",
+  paths <- paths(dynet(school_contacts), from = "Ben",
                      direction = "backward", at = 14)
   tree <- path_trajectories(paths)
   expect_identical(tree$vertex[tree$depth == 0L], "Ben")
@@ -209,7 +209,7 @@ test_that("separate sessions never merge into one branch", {
     start = c(0, 1, 0, 1), end = c(1, 2, 1, 2),
     term = c("t1", "t1", "t2", "t2")
   ), session = "term")
-  paths <- dyn_paths(dn, from = "A", sessions = "separate")
+  paths <- paths(dn, from = "A", sessions = "separate")
   tree <- path_trajectories(paths)
 
   # Both sessions carry the identical vertex sequence at identical times, so
@@ -268,7 +268,7 @@ test_that("a backward family with no attained departure has no branch", {
   # sender has a maximising journey and only the queried target's own
   # zero-hop route survives. The tree must show that emptiness honestly
   # rather than inventing branches or refusing to build.
-  paths <- dyn_paths(dynet(school_contacts), from = "Ben",
+  paths <- paths(dynet(school_contacts), from = "Ben",
                      direction = "backward", at = 21.52)
   expect_identical(sum(as.data.frame(paths)$n_paths), 1)
 
@@ -310,7 +310,7 @@ test_that("a branching forward family is visually stable", {
 })
 
 test_that("a backward family is visually stable", {
-  paths <- dyn_paths(dynet(school_contacts), from = "Ben",
+  paths <- paths(dynet(school_contacts), from = "Ben",
                      direction = "backward", at = 14)
   expect_snapshot(str(.plot_fingerprint(
     plot_path_trajectories(paths, measure = "time",

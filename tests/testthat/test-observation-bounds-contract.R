@@ -76,7 +76,7 @@ test_that("clipping does not fabricate endpoint events", {
     end = c(0, 3, 4, 12, 12), stringsAsFactors = FALSE
   ), observation_start = 0, observation_end = 10, interval = 10)
 
-  at_limits <- as.data.frame(dyn_events(
+  at_limits <- as.data.frame(events(
     dn, measure = c("formation", "dissolution"),
     start = 0, end = 10, step = 10, window = 0
   ))
@@ -87,7 +87,7 @@ test_that("clipping does not fabricate endpoint events", {
   expect_identical(at_ten$value[at_ten$measure == "formation"], 1)
   expect_identical(at_ten$value[at_ten$measure == "dissolution"], 0)
 
-  durations <- as.data.frame(dyn_durations(
+  durations <- as.data.frame(durations(
     dn, measure = c("events", "total", "first", "last")
   ))
   expect_false(any(durations$from %in% c("left_touch", "right_touch")))
@@ -96,7 +96,7 @@ test_that("clipping does not fabricate endpoint events", {
     c("inside", "left_clip", "right_clip")
   ], c(inside = 2, left_clip = 3, right_clip = 2))
 
-  burst <- as.data.frame(dyn_burstiness(dn, measure = "events"))
+  burst <- as.data.frame(burstiness(dn, measure = "events"))
   counts <- stats::setNames(burst$value, burst$node)
   expect_identical(counts[c("left_touch", "left_clip")],
                    c(left_touch = 0, left_clip = 0))
@@ -109,7 +109,7 @@ test_that("pre-observation activity suppresses a fabricated new-pair event", {
     from = c("A", "A", "B"), to = c("B", "B", "C"),
     start = c(-2, 4, -2), end = c(2, 5, -1), stringsAsFactors = FALSE
   ), observation_start = 0, observation_end = 6, interval = 6)
-  events <- as.data.frame(dyn_events(
+  events <- as.data.frame(events(
     dn, measure = c("formation", "new_pairs"),
     start = 0, end = 0, window = 6
   ))
@@ -123,7 +123,7 @@ test_that("fully unobserved history does not suppress first observed evidence", 
     from = c("A", "A"), to = c("B", "B"),
     start = c(-3, 2), end = c(-2, 3), stringsAsFactors = FALSE
   ), observation_start = 0, observation_end = 4, interval = 4)
-  events <- as.data.frame(dyn_events(
+  events <- as.data.frame(events(
     dn, measure = "new_pairs", start = 0, end = 0, window = 4
   ))
   expect_identical(events$value, 1)
@@ -133,7 +133,7 @@ test_that("event grids cannot recover endpoints outside observation", {
   dn <- quiet_dynet(data.frame(
     from = "A", to = "B", start = -2, end = 12
   ), observation_start = 0, observation_end = 10, interval = 2)
-  broad <- as.data.frame(dyn_events(
+  broad <- as.data.frame(events(
     dn, measure = c("formation", "dissolution"),
     start = -2, end = 12, step = 2, window = 0
   ))
@@ -141,7 +141,7 @@ test_that("event grids cannot recover endpoints outside observation", {
   expect_true(all(broad$time >= 0 & broad$time <= 10))
   expect_identical(broad$value, rep(0, nrow(broad)))
   expect_error(
-    dyn_events(dn, start = -3, end = -2, window = 0),
+    events(dn, start = -3, end = -2, window = 0),
     class = "dynet_outside_observation"
   )
 })
@@ -187,7 +187,7 @@ test_that("an empty observed view retains fixed vertices and returns empty snaps
   ))
   expect_identical(result$node, c("A", "B", "C"))
   expect_equal(result$value, c(0, 0, 0))
-  expect_equal(nrow(as.data.frame(dyn_durations(dn, measure = "events"))), 0L)
+  expect_equal(nrow(as.data.frame(durations(dn, measure = "events"))), 0L)
 })
 
 test_that("empty observed sessions retain zero reach in every mode", {
@@ -214,7 +214,7 @@ test_that("empty observed sessions retain zero reach in every mode", {
 
   for (direction in c("forward", "backward")) {
     # Directional empty-view paths are independent contract cases.
-    paths <- dyn_paths(
+    paths <- paths(
       dn, from = "A", direction = direction, sessions = "bounded"
     )
     primary <- as.data.frame(paths)
@@ -283,8 +283,8 @@ test_that("observation bounds are hard temporal-path horizons", {
   contact <- quiet_dynet(data.frame(
     from = "A", to = "B", time = 9
   ), observation_start = 0, observation_end = 10)
-  zero <- as.data.frame(dyn_paths(contact, from = "A"))
-  delayed <- as.data.frame(dyn_paths(
+  zero <- as.data.frame(paths(contact, from = "A"))
+  delayed <- as.data.frame(paths(
     contact, from = "A", traversal_time = 2
   ))
   expect_identical(zero$arrival[zero$node == "B"], 9)
@@ -293,8 +293,8 @@ test_that("observation bounds are hard temporal-path horizons", {
   terminal <- quiet_dynet(data.frame(
     from = "A", to = "B", time = 10
   ), observation_start = 0, observation_end = 10)
-  terminal_zero <- as.data.frame(dyn_paths(terminal, from = "A"))
-  terminal_delayed <- as.data.frame(dyn_paths(
+  terminal_zero <- as.data.frame(paths(terminal, from = "A"))
+  terminal_delayed <- as.data.frame(paths(
     terminal, from = "A", traversal_time = 1
   ))
   expect_identical(terminal_zero$arrival[terminal_zero$node == "B"], 10)
@@ -307,7 +307,7 @@ test_that("public paths and temporal closeness use the observation origin", {
     start = c(-2, 2, 6), end = c(3, 12, 7), stringsAsFactors = FALSE
   ), observation_start = 0, observation_end = 5,
   nodes = data.frame(name = c("A", "B", "C", "D")))
-  paths <- as.data.frame(dyn_paths(dn, from = "A"))
+  paths <- as.data.frame(paths(dn, from = "A"))
   arrival <- stats::setNames(paths$arrival, paths$node)
   expect_identical(arrival[c("A", "B", "C")], c(A = 0, B = 0, C = 2))
   expect_true(is.na(arrival[["D"]]))
@@ -320,12 +320,12 @@ test_that("public paths and temporal closeness use the observation origin", {
   ))
   expect_identical(close$value[close$node == "A"], 1 / 5)
 
-  broad_paths <- dyn_paths(latency, from = "A", start = -2, end = 12)
+  broad_paths <- paths(latency, from = "A", start = -2, end = 12)
   broad <- as.data.frame(broad_paths)
   expect_identical(attr(broad_paths, "origin"), 0)
   expect_identical(broad$arrival_time[broad$node == "B"], 5)
   expect_error(
-    dyn_paths(latency, from = "A", start = -3, end = -2),
+    paths(latency, from = "A", start = -3, end = -2),
     class = "dynet_outside_observation"
   )
 })

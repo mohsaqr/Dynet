@@ -12,7 +12,7 @@ test_that("E02 three nodes by three slices has exact states and arcs", {
       start = 0:2, end = 1:3
     ), nodes = nodes, observation_start = 0, observation_end = 3
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   expect_s3_class(projection, "dynet_projection")
   expect_type(projection, "list")
   expect_identical(names(projection), c("vertices", "edges", "meta"))
@@ -66,7 +66,7 @@ test_that("E02 metadata and fixed accessor schemas are public", {
     data.frame(from = "A", to = "B", start = 0, end = 1),
     observation_start = 0, observation_end = 1
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   expect_identical(names(projection$meta), c(
     "source_directed", "directed", "time_unit", "origin", "step", "window",
     "sessions", "n_nodes", "n_slices", "n_blocks", "vertex_rule",
@@ -107,7 +107,7 @@ test_that("E02 point membership uses later interior and closed final slices", {
       time = c(0, 1, 3)
     ), observation_start = 0, observation_end = 3
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   within <- as.data.frame(projection, what = "edges")
   within <- within[within$edge_type == "within_slice", ]
   expect_identical(within$from_state, c(1L, 5L, 9L))
@@ -119,7 +119,7 @@ test_that("E02 point membership uses later interior and closed final slices", {
     observation_start = 0, observation_end = 2
   )
   terminus_edges <- as.data.frame(
-    dyn_projection(terminus, step = 1, window = 1), what = "edges"
+    projection(terminus, step = 1, window = 1), what = "edges"
   )
   terminus_edges <- terminus_edges[terminus_edges$edge_type == "within_slice", ]
   expect_identical(terminus_edges$from_slice, 1L)
@@ -136,7 +136,7 @@ test_that("E02 retains inactive states and induces separately aggregated endpoin
     nodes = nodes, vertex_spells = activity,
     observation_start = 0, observation_end = 2
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   vertices <- as.data.frame(projection, what = "vertices")
   expect_identical(vertices$active, c(TRUE, TRUE, TRUE, FALSE,
                                       FALSE, FALSE, FALSE, TRUE))
@@ -161,7 +161,7 @@ test_that("E02 sums duplicate weights and expands undirected dyads", {
     observation_start = 0, observation_end = 1
   )
   directed_within <- as.data.frame(
-    dyn_projection(directed, step = 1, window = 1), what = "edges"
+    projection(directed, step = 1, window = 1), what = "edges"
   )
   directed_within <- directed_within[
     directed_within$edge_type == "within_slice", ]
@@ -174,7 +174,7 @@ test_that("E02 sums duplicate weights and expands undirected dyads", {
     edges, directed = FALSE, weight = "weight", loops = TRUE,
     observation_start = 0, observation_end = 1
   )
-  projection <- dyn_projection(undirected, step = 1, window = 1)
+  projection <- projection(undirected, step = 1, window = 1)
   undirected_within <- as.data.frame(projection, what = "edges")
   undirected_within <- undirected_within[
     undirected_within$edge_type == "within_slice", ]
@@ -194,7 +194,7 @@ test_that("E02 links observation components and point slices by calendar lag", {
       from = c("A", "B"), to = c("B", "C"), time = c(1, 3)
     ), observation_spells = data.frame(start = c(0, 3), end = c(1, 4))
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   vertices <- as.data.frame(projection, what = "vertices")
   expect_identical(vertices$observation, rep(1:2, each = 3))
   expect_identical(vertices$time, rep(c(0, 3), each = 3))
@@ -208,7 +208,7 @@ test_that("E02 links observation components and point slices by calendar lag", {
     data.frame(from = c("A", "B"), to = c("B", "A"), time = c(2, 5)),
     observation_spells = data.frame(start = c(2, 5), end = c(2, 5))
   )
-  point_projection <- dyn_projection(points, step = 1, window = 1)
+  point_projection <- projection(points, step = 1, window = 1)
   point_vertices <- as.data.frame(point_projection, what = "vertices")
   expect_identical(point_vertices$time, rep(c(2, 5), each = 2))
   point_identity <- as.data.frame(point_projection, what = "edges")
@@ -223,8 +223,8 @@ test_that("E02 sessions form deterministic blocks without cross-session arcs", {
       session = c("s1", "s2")
     ), session = "session", observation_start = 0, observation_end = 2
   )
-  bounded <- dyn_projection(dn, sessions = "bounded", step = 1, window = 1)
-  separate <- dyn_projection(dn, sessions = "separate", step = 1, window = 1)
+  bounded <- projection(dn, sessions = "bounded", step = 1, window = 1)
+  separate <- projection(dn, sessions = "separate", step = 1, window = 1)
   bounded_vertices <- as.data.frame(bounded, what = "vertices")
   separate_vertices <- as.data.frame(separate, what = "vertices")
   expect_identical(bounded_vertices, separate_vertices)
@@ -243,7 +243,7 @@ test_that("E02 sessions form deterministic blocks without cross-session arcs", {
   within <- bounded_edges[bounded_edges$edge_type == "within_slice", ]
   expect_identical(within$from_state, c(1L, 11L))
   expect_identical(within$to_state, c(2L, 12L))
-  collapsed <- dyn_projection(dn, sessions = "collapse", step = 1, window = 1)
+  collapsed <- projection(dn, sessions = "collapse", step = 1, window = 1)
   collapsed_vertices <- as.data.frame(collapsed, what = "vertices")
   expect_false("session" %in% names(collapsed_vertices))
   expect_identical(collapsed_vertices$state, 1:6)
@@ -264,7 +264,7 @@ test_that("E02 copied attributes use deterministic collision-safe names", {
     data.frame(from = "A", to = "B", start = 0, end = 1), nodes = nodes,
     observation_start = 0, observation_end = 1
   )
-  projection <- dyn_projection(dn, step = 1, window = 1)
+  projection <- projection(dn, step = 1, window = 1)
   vertices <- as.data.frame(projection, what = "vertices")
   expect_identical(
     names(vertices),
@@ -294,9 +294,9 @@ test_that("E02 validates grids and preserves affine-time structure", {
     transform(edges, start = start * 4, end = end * 4),
     observation_start = 0, observation_end = 8
   )
-  base_projection <- dyn_projection(base, step = 1, window = 1)
-  shifted_projection <- dyn_projection(shifted, step = 1, window = 1)
-  scaled_projection <- dyn_projection(scaled, step = 4, window = 4)
+  base_projection <- projection(base, step = 1, window = 1)
+  shifted_projection <- projection(shifted, step = 1, window = 1)
+  scaled_projection <- projection(scaled, step = 4, window = 4)
   base_vertices <- as.data.frame(base_projection, what = "vertices")
   shifted_vertices <- as.data.frame(shifted_projection, what = "vertices")
   scaled_vertices <- as.data.frame(scaled_projection, what = "vertices")
@@ -316,11 +316,11 @@ test_that("E02 validates grids and preserves affine-time structure", {
     as.data.frame(base_projection, what = "edges")$lag
   )
 
-  expect_error(dyn_projection(base, step = 0))
-  expect_error(dyn_projection(base, window = -1))
-  expect_error(dyn_projection(base, start = 2, end = 1), class = "dynet_bad_input")
-  expect_error(dyn_projection(base, start = 10, end = 11),
+  expect_error(projection(base, step = 0))
+  expect_error(projection(base, window = -1))
+  expect_error(projection(base, start = 2, end = 1), class = "dynet_bad_input")
+  expect_error(projection(base, start = 10, end = 11),
                class = "dynet_outside_observation")
-  expect_error(dyn_projection(base, sessions = "separate"),
+  expect_error(projection(base, sessions = "separate"),
                class = "dynet_no_sessions")
 })

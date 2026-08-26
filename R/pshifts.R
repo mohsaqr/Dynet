@@ -154,9 +154,9 @@
 #' dn <- dynet(data.frame(
 #'   from = c("A", "B"), to = c("B", "A"), start = c(1, 2), end = c(1, 2)
 #' ))
-#' dyn_pshifts(dn)
+#' pshifts(dn)
 #' @export
-dyn_pshifts <- function(
+pshifts <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
     output = c("final", "cumulative"), start = NULL, end = NULL,
     group_events = c("simultaneous", "none")) {
@@ -166,7 +166,7 @@ dyn_pshifts <- function(
   .check_dynet(dn, sessions)
   if (!isTRUE(dn$directed)) {
     stop(errorCondition(
-      "dyn_pshifts() requires a directed network.",
+      "pshifts() requires a directed network.",
       class = c("dynet_needs_directed", "dynet_bad_input"), call = NULL
     ))
   }

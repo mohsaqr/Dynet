@@ -93,7 +93,7 @@ test_that("positive traversal fits exactly inside intervals and query bounds", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  exact <- dyn_paths(
+  exact <- paths(
     dn, from = "A", start = 2, end = 5, traversal_time = 3
   )
   rows <- traversal_rows(exact, c("A", "B"))
@@ -104,12 +104,12 @@ test_that("positive traversal fits exactly inside intervals and query bounds", {
   expect_true(all(rows$attained))
   expect_equal(attr(exact, "traversal_time"), 3)
 
-  too_long <- dyn_paths(
+  too_long <- paths(
     dn, from = "A", start = 2, end = 5, traversal_time = 3.1
   )
   expect_false(traversal_rows(too_long, "B")$reachable)
 
-  at_terminus <- dyn_paths(
+  at_terminus <- paths(
     dn, from = "A", start = 5, end = 6, traversal_time = 0
   )
   expect_false(traversal_rows(at_terminus, "B")$reachable)
@@ -117,10 +117,10 @@ test_that("positive traversal fits exactly inside intervals and query bounds", {
   horizon <- quiet_dynet(data.frame(
     from = "A", to = "B", start = 0, end = 10
   ))
-  reaches_end <- dyn_paths(
+  reaches_end <- paths(
     horizon, from = "A", start = 3, end = 5, traversal_time = 2
   )
-  misses_end <- dyn_paths(
+  misses_end <- paths(
     horizon, from = "A", start = 3, end = 5, traversal_time = 2.1
   )
   expect_equal(traversal_rows(reaches_end, "B")$arrival_time, 5)
@@ -132,7 +132,7 @@ test_that("traversal time is charged once per hop after waiting", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(1, 4), end = c(4, 7), stringsAsFactors = FALSE
   ))
-  paths <- dyn_paths(
+  paths <- paths(
     chain, from = "A", start = 0, end = 7, traversal_time = 3
   )
   rows <- traversal_rows(paths, c("A", "B", "C"))
@@ -144,7 +144,7 @@ test_that("traversal time is charged once per hop after waiting", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(2, 8), end = c(6, 12), stringsAsFactors = FALSE
   ))
-  waited <- dyn_paths(
+  waited <- paths(
     waiting, from = "A", start = 0, end = 10, traversal_time = 2
   )
   expect_equal(
@@ -169,7 +169,7 @@ test_that("continuous interval activity is invariant to spell segmentation", {
     from = c("A", "A"), to = c("B", "B"),
     start = c(0, 2.1), end = c(2, 4)
   ))
-  query <- function(dn) dyn_paths(
+  query <- function(dn) paths(
     dn, from = "A", start = 1, end = 3, traversal_time = 2
   )
 
@@ -202,10 +202,10 @@ test_that("point events trigger a delayed arrival", {
   point <- quiet_dynet(data.frame(
     from = "A", to = "B", time = 5, stringsAsFactors = FALSE
   ))
-  exact <- dyn_paths(
+  exact <- paths(
     point, from = "A", start = 0, end = 7, traversal_time = 2
   )
-  too_early <- dyn_paths(
+  too_early <- paths(
     point, from = "A", start = 0, end = 6, traversal_time = 2
   )
   expect_equal(traversal_rows(exact, "B")$arrival_time, 7)
@@ -215,11 +215,11 @@ test_that("point events trigger a delayed arrival", {
     from = c("A", "B"), to = c("B", "C"), time = c(5, 5),
     stringsAsFactors = FALSE
   ))
-  delayed <- dyn_paths(
+  delayed <- paths(
     simultaneous, from = "A", start = 0, end = 10,
     traversal_time = 2
   )
-  immediate <- dyn_paths(
+  immediate <- paths(
     simultaneous, from = "A", start = 0, end = 10,
     traversal_time = 0
   )
@@ -231,7 +231,7 @@ test_that("point events trigger a delayed arrival", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(5, 7), end = c(5, 10), stringsAsFactors = FALSE
   ))
-  continued <- dyn_paths(
+  continued <- paths(
     triggered, from = "A", start = 0, end = 9,
     traversal_time = 2
   )
@@ -246,11 +246,11 @@ test_that("backward duration is the exact original-time dual", {
     from = "A", to = "B", start = 2, end = 5,
     stringsAsFactors = FALSE
   ))
-  positive <- dyn_paths(
+  positive <- paths(
     interval, from = "B", direction = "backward",
     start = 2, end = 5, traversal_time = 3
   )
-  zero <- dyn_paths(
+  zero <- paths(
     interval, from = "B", direction = "backward",
     start = 2, end = 5, traversal_time = 0
   )
@@ -264,7 +264,7 @@ test_that("backward duration is the exact original-time dual", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(1, 4), end = c(4, 8), stringsAsFactors = FALSE
   ))
-  backward <- dyn_paths(
+  backward <- paths(
     chain, from = "C", direction = "backward",
     start = 0, end = 7, traversal_time = 3
   )
@@ -274,11 +274,11 @@ test_that("backward duration is the exact original-time dual", {
   expect_equal(rows$n_hops, c(2L, 1L, 0L))
 
   point <- quiet_dynet(data.frame(from = "A", to = "B", time = 5))
-  point_ok <- dyn_paths(
+  point_ok <- paths(
     point, from = "B", direction = "backward", end = 7,
     traversal_time = 2
   )
-  point_late <- dyn_paths(
+  point_late <- paths(
     point, from = "B", direction = "backward", end = 6,
     traversal_time = 2
   )
@@ -286,7 +286,7 @@ test_that("backward duration is the exact original-time dual", {
   expect_true(traversal_rows(point_ok, "A")$attained)
   expect_false(traversal_rows(point_late, "A")$reachable)
 
-  excluded <- dyn_paths(
+  excluded <- paths(
     interval, from = "B", direction = "backward",
     start = 2 + 1e-6, end = 5, traversal_time = 3
   )
@@ -322,15 +322,15 @@ test_that("duration respects bounded and separate session paths", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  collapsed <- dyn_paths(
+  collapsed <- paths(
     dn, from = "A", start = 0, end = 8,
     sessions = "collapse", traversal_time = 2
   )
-  bounded <- dyn_paths(
+  bounded <- paths(
     dn, from = "A", start = 0, end = 8,
     sessions = "bounded", traversal_time = 2
   )
-  separate <- dyn_paths(
+  separate <- paths(
     dn, from = "A", start = 0, end = 8,
     sessions = "separate", traversal_time = 2
   )
@@ -349,7 +349,7 @@ test_that("duration respects bounded and separate session paths", {
     session = c("s1", "s2", "s2"), stringsAsFactors = FALSE
   )
   tied_dn <- quiet_dynet(tied_spells, session = "session")
-  tied <- dyn_paths(
+  tied <- paths(
     tied_dn, from = "S", start = 0, end = 5,
     sessions = "bounded", traversal_time = 2
   )
@@ -368,15 +368,15 @@ test_that("interval unions cross labels only in collapse mode", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  collapsed <- dyn_paths(
+  collapsed <- paths(
     dn, from = "A", start = 1, end = 3,
     sessions = "collapse", traversal_time = 2
   )
-  bounded <- dyn_paths(
+  bounded <- paths(
     dn, from = "A", start = 1, end = 3,
     sessions = "bounded", traversal_time = 2
   )
-  separate <- as.data.frame(dyn_paths(
+  separate <- as.data.frame(paths(
     dn, from = "A", start = 1, end = 3,
     sessions = "separate", traversal_time = 2
   ))
@@ -393,15 +393,15 @@ test_that("backward duration cannot assemble a path across sessions", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  collapsed <- dyn_paths(
+  collapsed <- paths(
     dn, from = "C", direction = "backward", start = 0, end = 8,
     sessions = "collapse", traversal_time = 2
   )
-  bounded <- dyn_paths(
+  bounded <- paths(
     dn, from = "C", direction = "backward", start = 0, end = 8,
     sessions = "bounded", traversal_time = 2
   )
-  separate <- dyn_paths(
+  separate <- paths(
     dn, from = "C", direction = "backward", start = 0, end = 8,
     sessions = "separate", traversal_time = 2
   )
@@ -443,7 +443,7 @@ test_that("path, reachability, and temporal reach share duration semantics", {
   expect_equal(attr(reach_result, "traversal_time"), 2)
   expect_equal(attr(centrality_result, "traversal_time"), 2)
 
-  paths <- dyn_paths(
+  paths <- paths(
     dn, from = "A", start = 0, end = 4, traversal_time = 2
   )
   expect_equal(
@@ -474,7 +474,7 @@ test_that("path kernels agree with exhaustive vertex-simple journeys", {
         spells, vertices, source, start = 0, end = 7,
         traversal_time = duration
       )
-      actual <- dyn_paths(
+      actual <- paths(
         dn, from = source, start = 0, end = 7,
         traversal_time = duration
       )
@@ -490,7 +490,7 @@ test_that("path kernels agree with exhaustive vertex-simple journeys", {
         spells, vertices, target, start = 0, end = 7,
         traversal_time = duration
       )
-      actual <- dyn_paths(
+      actual <- paths(
         dn, from = target, direction = "backward", start = 0, end = 7,
         traversal_time = duration
       )
@@ -515,13 +515,13 @@ test_that("increasing traversal duration cannot improve temporal paths", {
   dn <- quiet_dynet(spells)
   durations <- c(0, 1, 2, 3)
   forward <- lapply(durations, function(duration) {
-    traversal_rows(dyn_paths(
+    traversal_rows(paths(
       dn, from = "A", start = 0, end = 12,
       traversal_time = duration
     ), c("A", "B", "C", "D"))
   })
   backward <- lapply(durations, function(duration) {
-    traversal_rows(dyn_paths(
+    traversal_rows(paths(
       dn, from = "D", direction = "backward", start = 0, end = 12,
       traversal_time = duration
     ), c("A", "B", "C", "D"))
@@ -555,7 +555,7 @@ test_that("duration respects orientation, translation, and scaling", {
   translated <- transform(base, start = start + 10, end = end + 10)
   scaled <- transform(base, start = start * 2, end = end * 2)
   query <- function(spells, start, end, duration) {
-    traversal_rows(dyn_paths(
+    traversal_rows(paths(
       quiet_dynet(spells, directed = FALSE), from = "A",
       start = start, end = end, traversal_time = duration
     ), c("A", "B", "C"))
@@ -575,8 +575,8 @@ test_that("duration respects orientation, translation, and scaling", {
 
 test_that("zero traversal preserves the established path result", {
   dn <- quiet_dynet(random_edges(seed = 44L))
-  implicit <- dyn_paths(dn, from = "v1", start = 0, end = 20)
-  explicit <- dyn_paths(
+  implicit <- paths(dn, from = "v1", start = 0, end = 20)
+  explicit <- paths(
     dn, from = "v1", start = 0, end = 20, traversal_time = 0
   )
   expect_identical(as.data.frame(implicit), as.data.frame(explicit))
@@ -587,10 +587,10 @@ test_that("zero traversal preserves the established path result", {
   expect_identical(attr(implicit, "traversal_time"), 0)
   expect_identical(attr(explicit, "traversal_time"), 0)
 
-  backward_implicit <- dyn_paths(
+  backward_implicit <- paths(
     dn, from = "v2", direction = "backward", start = 0, end = 20
   )
-  backward_explicit <- dyn_paths(
+  backward_explicit <- paths(
     dn, from = "v2", direction = "backward", start = 0, end = 20,
     traversal_time = 0
   )
@@ -627,12 +627,12 @@ test_that("traversal duration validates units and centrality scope", {
   bad <- list(-1, Inf, NA_real_, c(1, 2), "one")
   invisible(lapply(bad, function(value) {
     expect_error(
-      dyn_paths(dn, from = "A", traversal_time = value),
+      paths(dn, from = "A", traversal_time = value),
       class = "dynet_bad_input"
     )
   }))
   expect_error(
-    dyn_paths(dn, from = "A", traversal_time = as.difftime(1, units = "days")),
+    paths(dn, from = "A", traversal_time = as.difftime(1, units = "days")),
     class = "dynet_bad_input"
   )
   expect_error(
@@ -640,11 +640,11 @@ test_that("traversal duration validates units and centrality scope", {
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_paths(dn, from = "A", traversal_time = as.Date("2026-01-01")),
+    paths(dn, from = "A", traversal_time = as.Date("2026-01-01")),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_paths(
+    paths(
       dn, from = "A",
       traversal_time = as.POSIXct("2026-01-01", tz = "UTC")
     ),
@@ -655,7 +655,7 @@ test_that("traversal duration validates units and centrality scope", {
     from = "A", to = "B",
     start = as.Date("2026-01-01"), end = as.Date("2026-01-04")
   ), time_unit = "days")
-  paths <- dyn_paths(
+  paths <- paths(
     calendar, from = "A", start = as.Date("2026-01-01"),
     end = as.Date("2026-01-04"),
     traversal_time = as.difftime(72, units = "hours")
@@ -678,7 +678,7 @@ test_that("interior interval duration agrees with tsna", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  ours <- dyn_paths(
+  ours <- paths(
     dn, from = "A", start = 0, end = 8, traversal_time = 3
   )
 

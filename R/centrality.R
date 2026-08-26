@@ -217,7 +217,7 @@
 #' invariant to translating the time axis, and scales inversely when time is
 #' rescaled.
 #'
-#' Temporal measures use [dyn_paths()] traversal semantics: nondecreasing
+#' Temporal measures use [paths()] traversal semantics: nondecreasing
 #' times, unlimited waiting, half-open interval spells, and a separate exact
 #' timestamp rule for point events. Positive `traversal_time` requires an
 #' interval traversal to finish within continuous pair activity; a point event

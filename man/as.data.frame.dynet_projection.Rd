@@ -13,7 +13,7 @@
 )
 }
 \arguments{
-\item{x}{A projection returned by \code{\link[=dyn_projection]{dyn_projection()}}.}
+\item{x}{A projection returned by \code{\link[=projection]{projection()}}.}
 
 \item{row.names}{Ignored; present for compatibility with the generic.}
 

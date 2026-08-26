@@ -1046,7 +1046,7 @@
 #' @return A list per endpoint; each element contains every best-session route.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+#' as.data.frame(paths(dn, from = "Ana"), what = "steps")
 #' @keywords internal
 .path_routes <- function(bfs, n, direction) {
   direction <- match.arg(direction, c("forward", "backward"))
@@ -1088,7 +1088,7 @@
 #' @return A list with tidy `paths` and `steps` data frames.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+#' as.data.frame(paths(dn, from = "Ana"), what = "steps")
 #' @keywords internal
 .paths_tables <- function(enc, bfs, direction,
                           mode = c("collapse", "bounded", "separate"),
@@ -1332,7 +1332,7 @@
 #' @param descriptor Search descriptor stored on a `dynet_paths` result.
 #' @return A tidy route-step data frame.
 #' @examples
-#' paths <- dyn_paths(dynet(school_contacts), from = "Ana")
+#' paths <- paths(dynet(school_contacts), from = "Ana")
 #' Dynet:::.optimal_steps(attr(paths, "optimal_search"))
 #' @keywords internal
 .optimal_steps <- function(descriptor) {
@@ -1396,7 +1396,7 @@
 
 
 # ===========================================================================
-# dyn_paths()
+# paths()
 # ===========================================================================
 
 #' Time-respecting paths from a vertex
@@ -1407,7 +1407,7 @@
 #' timing runs forward, so unlike a path in a flattened network it can never
 #' travel back in time.
 #'
-#' The source vertex is named, not numbered. `dyn_paths(dn, from = "Ana")`
+#' The source vertex is named, not numbered. `paths(dn, from = "Ana")`
 #' works; there is no vertex index to look up first.
 #'
 #' At the default zero traversal duration, forward paths use nondecreasing hop
@@ -1515,12 +1515,12 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_paths(dn, from = "Ana")
-#' dyn_paths(dn, from = "Ana", start = 0, end = 10)
-#' summary(dyn_paths(dn, from = "Ana"))
+#' paths(dn, from = "Ana")
+#' paths(dn, from = "Ana", start = 0, end = 10)
+#' summary(paths(dn, from = "Ana"))
 #'
 #' @export
-dyn_paths <- function(dn, from, at = NULL,
+paths <- function(dn, from, at = NULL,
                       direction = c("forward", "backward"),
                       sessions = c("bounded", "collapse", "separate"),
                       start = NULL, end = NULL, traversal_time = 0) {
@@ -1680,7 +1680,7 @@ dyn_paths <- function(dn, from, at = NULL,
 #'   `forward_reach_count` and `backward_reach_count`.
 #'
 #' @details
-#' Reachability uses [dyn_paths()] traversal semantics: nondecreasing times,
+#' Reachability uses [paths()] traversal semantics: nondecreasing times,
 #' unlimited waiting, half-open interval spells, and a separate exact timestamp
 #' rule for point events. Positive `traversal_time` requires interval occupancy
 #' to finish within continuous pair activity and delays a point-trigger arrival.

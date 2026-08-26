@@ -21,6 +21,6 @@ Reconstruct endpoint-specific path routes
 }
 \examples{
 dn <- dynet(school_contacts)
-as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+as.data.frame(paths(dn, from = "Ana"), what = "steps")
 }
 \keyword{internal}

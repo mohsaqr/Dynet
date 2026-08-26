@@ -9,7 +9,7 @@ verb here keeps time in the result.
 
 ## Two commitments
 
-**Vertices are named, never numbered.** `dyn_paths(dn, from = "Ana")`. There is
+**Vertices are named, never numbered.** `paths(dn, from = "Ana")`. There is
 no vertex index to look up first, and no result that hands you an integer where
 you expected a person. (The aggregate edge table uses integer endpoints because
 that is cograph's schema, but nothing in the public surface exposes them —
@@ -102,7 +102,7 @@ dn <- dynet(
 These are raw-data states, not inferred observation cuts. A censored onset is
 not counted as a formation or burst event, and a censored terminus is not a
 dissolution, but all known activity still contributes to snapshots, paths,
-density, and observed exposure. `dyn_durations(censored = "include")` retains
+density, and observed exposure. `durations(censored = "include")` retains
 that known follow-up; `censored = "exclude"` restricts summaries to raw spells
 whose two boundaries are known. Observed fragments expose raw censor flags and
 administrative observation-cut flags separately.
@@ -132,7 +132,7 @@ then remove edges whose endpoints are not eligible. A point snapshot instead
 evaluates vertices and edges together at the exact time. Graph denominators
 and censuses use only the eligible population; snapshot centrality retains the
 fixed node rows and reports `NA` for inactive vertices, while eligible isolates
-keep the ordinary static-kernel value. `dyn_snapshots()` stays edge-only, so it
+keep the ordinary static-kernel value. `snapshots()` stays edge-only, so it
 does not fabricate rows for eligible isolates. Raw edge and vertex tables are
 never clipped or rewritten. Temporal paths use the same declarations as
 traversal gates: the named source or backward target must be active at the
@@ -151,7 +151,7 @@ contacts, exact vertex appearances, and observation gaps contribute no duration,
 while duplicates, weights, loops, and overlapping session labels cannot
 multiply exposure.
 
-`dyn_metrics()` exposes that exact ledger inside every reporting window. Use
+`metrics()` exposes that exact ledger inside every reporting window. Use
 `temporal_density` for occupancy over all eligible pair-time and
 `observed_pair_density` to condition the denominator on pairs with valid
 evidence anywhere in the stored history. The matching `onset_intensity` and
@@ -224,6 +224,13 @@ cograph::splot(flat)
 
 ## Measuring
 
+Verbs are named plainly: `paths()`, `events()`, `metrics()`, `snapshots()`,
+`durations()`, `mixing()`, `burstiness()`, `projection()`, `pshifts()`. Two
+keep a `dyn_` prefix, and only because the plain name is already taken by a
+package you are likely to have attached: `dyn_centrality()`, since cograph
+exports `centrality()`, and `dyn_reachability()`, since sna exports
+`reachability()`. The prefix marks a real collision rather than a house style.
+
 ```r
 dn <- dynet(school_contacts)
 
@@ -231,35 +238,35 @@ dyn_centrality(dn, measure = "degree")
 dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
 
-dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
-dyn_metrics(dn, measure = c("degree_mean", "concurrent_share", "two_paths"))
-dyn_metrics(dn, measure = c("temporal_density", "onset_intensity"))
-dyn_events(dn)
-dyn_events(dn, measure = "formation_fraction", start = 1, end = 1,
+metrics(dn, measure = c("density", "reciprocity", "transitivity"))
+metrics(dn, measure = c("degree_mean", "concurrent_share", "two_paths"))
+metrics(dn, measure = c("temporal_density", "onset_intensity"))
+events(dn)
+events(dn, measure = "formation_fraction", start = 1, end = 1,
            window = 0)
-dyn_durations(dn)
-dyn_durations(dn, unit = "vertex_activity")
-dyn_durations(dn, unit = "vertex_spell")
-dyn_durations(dn, unit = "node_ties", mode = "all")
-dyn_burstiness(dn)
-dyn_paths(dn, from = "Ana")
-path_network(dyn_paths(dn, from = "Ana"))
-plot_path_timeline(dyn_paths(dn, from = "Ana"))
-plot_path_trajectories(dyn_paths(dn, from = "Ana"),
+durations(dn)
+durations(dn, unit = "vertex_activity")
+durations(dn, unit = "vertex_spell")
+durations(dn, unit = "node_ties", mode = "all")
+burstiness(dn)
+paths(dn, from = "Ana")
+path_network(paths(dn, from = "Ana"))
+plot_path_timeline(paths(dn, from = "Ana"))
+plot_path_trajectories(paths(dn, from = "Ana"),
                        measure = "frequency", orientation = "vertical")
 dyn_reachability(dn)
-dyn_pshifts(dn)
-dyn_mixing(forum, attribute = "role")
-dyn_snapshots(dn, at = 3)
+pshifts(dn)
+mixing(forum, attribute = "role")
+snapshots(dn, at = 3)
 ```
 
-`dyn_pshifts()` converts uncensored observed raw spell onsets into Gibson's
+`pshifts()` converts uncensored observed raw spell onsets into Gibson's
 thirteen consecutive-turn participation-shift classes. It returns fixed,
 typed totals by default; `output = "cumulative"` exposes the running state.
 Use `sessions = "separate"` to retain session labels or
 `group_events = "none"` to keep simultaneous recipients as dyads.
 
-Lightweight structural descriptives stay inside `dyn_metrics()`. Degree
+Lightweight structural descriptives stay inside `metrics()`. Degree
 summaries, concurrent-node counts and shares, directed in/out 2-stars, and
 two-paths use the same endpoint-induced snapshot semantics as density and the
 existing dyad census; no ERGM package or formula interface is required.
@@ -296,7 +303,7 @@ counts are not the numerator. Stable active pairs remain in the denominator,
 zero active risk is `NA`, and positive risk without a confirmed end is zero.
 Points, loops, weights, onset censoring, observation/activity boundaries, and
 all-censored endings do not create confirmed transitions. Use
-`dyn_events(dn, "dissolution_fraction", start = t, end = t, window = 0)`;
+`events(dn, "dissolution_fraction", start = t, end = t, window = 0)`;
 positive-width dissolution rates are reserved for T04.
 
 `formation_rate` is the positive-window version of the formation transition:
@@ -306,7 +313,7 @@ nonloop pair-time across observation/activity/edge change cells. It is not a
 raw-onset count or an average of instantaneous fractions. Zero exposure is
 `NA`, positive exposure with no confirmed formation is zero, and the unit is
 inverse network time. Use
-`dyn_events(dn, "formation_rate", start = lo, end = hi, window = hi - lo)`;
+`events(dn, "formation_rate", start = lo, end = hi, window = hi - lo)`;
 instantaneous formation fractions remain the `window = 0` quantity.
 
 `dissolution_rate` is the active-risk dual: confirmed binary pair dissolutions
@@ -317,18 +324,18 @@ zero. It is an inverse-time rate, not a raw terminus intensity or spell-time
 sum. T03 and T04 can be requested together at positive width; instant
 dissolution fractions remain the `window = 0` quantity.
 
-`dyn_paths()` selects shortest-foremost journeys: earliest completion first,
+`paths()` selects shortest-foremost journeys: earliest completion first,
 then the fewest hops. Its compact endpoint table reports the exact `n_paths`
 over canonical contact sequences; the steps accessor adds endpoint-local
 `path_id` rows when tied routes are expanded. `plot_path_trajectories()` draws
 those routes as a counted prefix tree, repeating a vertex when it occurs under
 a different temporal history; it supports top-down and left-to-right layouts.
 
-`dyn_burstiness()` treats each raw spell onset as one event at each distinct
+`burstiness()` treats each raw spell onset as one event at each distinct
 incident vertex. It uses population gap dispersion and lag-one Pearson memory;
 bounded sessions pool only within-session gaps and never bridge session walls.
 
-`dyn_mixing()` reports raw active binary-dyad counts: ordered group cells for
+`mixing()` reports raw active binary-dyad counts: ordered group cells for
 directed networks and one unordered triangle for undirected networks. Repeated
 spells and weights do not multiply a dyad; explicitly retained loops count
 once, and missing group values remain an explicit collision-safe level.
@@ -371,7 +378,7 @@ and fixed risk-set denominators are retained.
 ### When the network is measured
 
 Four arguments decide it, on every verb that returns a time series
-(`dyn_centrality`, `dyn_metrics`, `dyn_events`, `dyn_mixing`, `dyn_snapshots`):
+(`dyn_centrality`, `metrics`, `events`, `mixing`, `snapshots`):
 
 | argument | meaning | `tsna::tSnaStats()` |
 |---|---|---|
@@ -383,7 +390,7 @@ Four arguments decide it, on every verb that returns a time series
 measurement every day covering the last seven days is a **rolling window**:
 
 ```r
-dyn_metrics(dn, measure = "density", step = 1, window = 7)
+metrics(dn, measure = "density", step = 1, window = 7)
 ```
 
 Setting them equal partitions the period into disjoint bins, which is the
@@ -396,7 +403,7 @@ between two sample points, a real loss on bursty data.
 may be addressed with dates:
 
 ```r
-dyn_metrics(dn, measure = "density",
+metrics(dn, measure = "density",
             start = as.Date("2024-09-01"), end = as.Date("2024-12-01"),
             step = 7, window = 28)
 ```
@@ -409,7 +416,7 @@ subset of the full series.
 
 ### What can be measured
 
-`dyn_metrics()` covers the graph level and `dyn_centrality()` the vertex level.
+`metrics()` covers the graph level and `dyn_centrality()` the vertex level.
 Together they cover the core graph and vertex statistics exposed by
 `tsna::tSnaStats()`, including directed binary indegree prestige before sender
 normalization, after sender-row normalization, and after full row-column
@@ -531,7 +538,7 @@ plot(dn, type = "network")        # the flattened network          (cograph)
 plot(dn, type = "network", at = 13)  # one time bin                (cograph)
 plot(dn, type = "snapshots")      # small multiples, shared layout (cograph)
 plot_path_trajectories(
-  dyn_paths(dn, from = "Ana"), orientation = "vertical"
+  paths(dn, from = "Ana"), orientation = "vertical"
 )                                  # counted temporal prefix tree   (ggplot)
 ```
 

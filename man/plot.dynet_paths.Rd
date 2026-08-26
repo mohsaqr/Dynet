@@ -7,7 +7,7 @@
 \method{plot}{dynet_paths}(x, palette = "okabe", ...)
 }
 \arguments{
-\item{x}{A \code{dynet_paths} from \code{\link[=dyn_paths]{dyn_paths()}}.}
+\item{x}{A \code{dynet_paths} from \code{\link[=paths]{paths()}}.}
 
 \item{palette}{Palette specification, as in \code{\link[=plot.dynet]{plot.dynet()}}. Vertices are
 coloured by how many hops they are from the source.}
@@ -31,7 +31,7 @@ a prefix-compatible tree that the endpoint-local criterion does not define.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- dyn_paths(dn, from = "Ana")
+paths <- paths(dn, from = "Ana")
 try(plot(paths), silent = TRUE)
 
 }

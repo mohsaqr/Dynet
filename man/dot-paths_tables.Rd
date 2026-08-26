@@ -31,6 +31,6 @@ Build primary and step tables from one path search
 }
 \examples{
 dn <- dynet(school_contacts)
-as.data.frame(dyn_paths(dn, from = "Ana"), what = "steps")
+as.data.frame(paths(dn, from = "Ana"), what = "steps")
 }
 \keyword{internal}

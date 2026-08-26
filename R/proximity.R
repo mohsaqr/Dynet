@@ -469,7 +469,7 @@
 #' @return `NULL`, invisibly.
 #' @keywords internal
 .draw_event_marks <- function(x, ylim, style) {
-  ev <- as.data.frame(dyn_events(x, measure = "formation",
+  ev <- as.data.frame(events(x, measure = "formation",
                                  sessions = "collapse"))
   ev <- ev[ev$value > 0, , drop = FALSE]
   if (nrow(ev) == 0L) return(invisible(NULL))

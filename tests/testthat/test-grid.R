@@ -4,8 +4,8 @@
 
 test_that("the default grid is unchanged by the new arguments", {
   dn <- quiet_dynet(random_edges(seed = 5L), interval = 2)
-  plain <- as.data.frame(dyn_metrics(dn, measure = "edges"))
-  spelt <- as.data.frame(dyn_metrics(dn, measure = "edges", step = 2,
+  plain <- as.data.frame(metrics(dn, measure = "edges"))
+  spelt <- as.data.frame(metrics(dn, measure = "edges", step = 2,
                                      window = 2))
   expect_equal(plain$value, spelt$value)
   expect_equal(plain$time, spelt$time)
@@ -18,19 +18,19 @@ test_that("the default grid tiles the observed period with nothing to spare", {
                    start = c(0, 6), end = c(1, 12),
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 5)
-  got <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  got <- as.data.frame(metrics(dn, measure = "edges"))
   expect_equal(got$time, c(0, 5, 10))
 
   # An exact multiple must not gain an empty trailing window either.
   sp2 <- data.frame(from = "A", to = "B", start = 0, end = 10,
                     stringsAsFactors = FALSE)
   dn2 <- quiet_dynet(sp2, interval = 5)
-  got2 <- as.data.frame(dyn_metrics(dn2, measure = "edges"))
+  got2 <- as.data.frame(metrics(dn2, measure = "edges"))
   expect_equal(got2$time, c(0, 5))
 
   # And the whole period is still covered: no observation falls past the grid.
   dn3 <- quiet_dynet(random_edges(seed = 4L, span = 23), interval = 3)
-  g3 <- as.data.frame(dyn_metrics(dn3, measure = "edges"))
+  g3 <- as.data.frame(metrics(dn3, measure = "edges"))
   rng <- dn3$meta$time_range
   expect_lt(max(g3$time), rng[["end"]])
   expect_gte(max(g3$time) + 3, rng[["end"]])
@@ -38,13 +38,13 @@ test_that("the default grid tiles the observed period with nothing to spare", {
 
 test_that("measurements are taken at start, start + step, ... up to end", {
   dn <- quiet_dynet(random_edges(span = 40, seed = 6L))
-  got <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 5,
+  got <- as.data.frame(metrics(dn, measure = "edges", start = 5,
                                    end = 20, step = 3))
   expect_equal(unique(got$time), seq(5, 20, by = 3))
   # `end` is a bound, not a promise: 20 is not reachable from 5 in steps of 3.
   expect_equal(max(got$time), 20)
 
-  odd <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 5,
+  odd <- as.data.frame(metrics(dn, measure = "edges", start = 5,
                                    end = 21, step = 4))
   expect_equal(unique(odd$time), c(5, 9, 13, 17, 21))
 })
@@ -57,20 +57,20 @@ test_that("window is the width of a measurement and step is its spacing", {
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
 
-  narrow <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 0,
+  narrow <- as.data.frame(metrics(dn, measure = "edges", start = 0,
                                       end = 4, step = 1, window = 1))
   expect_equal(narrow$value, c(1, 0, 0, 0, 1))
 
-  wide <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 0,
+  wide <- as.data.frame(metrics(dn, measure = "edges", start = 0,
                                     end = 4, step = 1, window = 5))
   expect_equal(wide$value, c(2, 1, 1, 1, 1))
 })
 
 test_that("a rolling window overlaps and a disjoint one partitions", {
   dn <- quiet_dynet(random_edges(seed = 7L, span = 20))
-  roll <- as.data.frame(dyn_metrics(dn, measure = "edges", step = 1,
+  roll <- as.data.frame(metrics(dn, measure = "edges", step = 1,
                                     window = 5))
-  disj <- as.data.frame(dyn_metrics(dn, measure = "edges", step = 1,
+  disj <- as.data.frame(metrics(dn, measure = "edges", step = 1,
                                     window = 1))
   expect_equal(nrow(roll), nrow(disj))
   # Every rolling window contains the disjoint one that starts with it.
@@ -78,7 +78,7 @@ test_that("a rolling window overlaps and a disjoint one partitions", {
   expect_gt(sum(roll$value), sum(disj$value))
 
   # Disjoint formation counts partition the spells; rolling ones cannot.
-  ev <- as.data.frame(dyn_events(dn, measure = "formation"))
+  ev <- as.data.frame(events(dn, measure = "formation"))
   expect_equal(sum(ev$value), nrow(dn$spells))
 })
 
@@ -87,13 +87,13 @@ test_that("window = 0 samples at a point, matching the old instant rule", {
                       start = c(0, 1.3), end = c(2.5, 1.6),
                       stringsAsFactors = FALSE)
   dn <- quiet_dynet(brief, interval = 1)
-  at_point <- as.data.frame(dyn_metrics(dn, measure = "edges", window = 0))
+  at_point <- as.data.frame(metrics(dn, measure = "edges", window = 0))
   # A-B spans the sample points at 1 and 2; C-D lives between them.
   expect_equal(at_point$value[at_point$time == 1], 1)
   expect_equal(at_point$value[at_point$time == 2], 1)
 
   expect_warning(
-    legacy <- as.data.frame(dyn_metrics(
+    legacy <- as.data.frame(metrics(
       dn, measure = "edges", sample = "instant")),
     "deprecated")
   expect_equal(legacy, at_point)
@@ -104,7 +104,7 @@ test_that("point-sampled event measures count events at the sample point", {
                    start = c(0, 1), end = c(1, 2),
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
-  got <- as.data.frame(dyn_events(
+  got <- as.data.frame(events(
     dn, measure = c("formation", "dissolution", "new_pairs"),
     start = 0, end = 2, step = 1, window = 0))
   at <- function(time, measure)
@@ -125,25 +125,25 @@ test_that("the retired sample argument remains wired through public verbs", {
   new_c <- as.data.frame(dyn_centrality(dn, measure = "degree", window = 0))
   expect_equal(old_c, new_c)
 
-  expect_warning(old_s <- dyn_snapshots(dn, sample = "instant"), "deprecated")
-  new_s <- dyn_snapshots(dn, window = 0)
+  expect_warning(old_s <- snapshots(dn, sample = "instant"), "deprecated")
+  new_s <- snapshots(dn, window = 0)
   expect_equal(old_s, new_s)
 
   expect_error(
-    suppressWarnings(dyn_metrics(dn, sample = "instant", window = 2)),
+    suppressWarnings(metrics(dn, sample = "instant", window = 2)),
     class = "dynet_bad_input")
   expect_error(
-    suppressWarnings(dyn_metrics(dn, sample = "window", window = 0)),
+    suppressWarnings(metrics(dn, sample = "window", window = 0)),
     class = "dynet_bad_input")
 })
 
 test_that("a truncated range is an exact subset of the full series", {
   dn <- quiet_dynet(random_edges(seed = 8L, span = 30), interval = 1)
-  full <- as.data.frame(dyn_metrics(dn, measure = "edges", step = 1))
+  full <- as.data.frame(metrics(dn, measure = "edges", step = 1))
   # The default grid is anchored at the first observation, not at zero, so a
   # subset has to be asked for on that same phase.
   t0 <- dn$meta$time_range[["start"]]
-  cut <- as.data.frame(dyn_metrics(dn, measure = "edges", start = t0 + 4,
+  cut <- as.data.frame(metrics(dn, measure = "edges", start = t0 + 4,
                                    end = t0 + 11, step = 1))
   overlap <- full[full$time >= t0 + 4 - 1e-9 & full$time <= t0 + 11 + 1e-9, ]
   expect_equal(cut$value, overlap$value)
@@ -157,10 +157,10 @@ test_that("only a defaulted end closes its last window on the right", {
                    start = c(0, 3), end = c(1, 3),
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
-  auto <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  auto <- as.data.frame(metrics(dn, measure = "edges"))
   expect_equal(auto$value[auto$time == max(auto$time)], 1)
 
-  literal <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 0,
+  literal <- as.data.frame(metrics(dn, measure = "edges", start = 0,
                                        end = 2, step = 1))
   expect_equal(literal$value, c(1, 0, 0))
 })
@@ -170,23 +170,23 @@ test_that("every grid verb takes the four arguments and agrees on the grid", {
   args <- list(start = 2, end = 14, step = 3, window = 6)
   times <- seq(2, 14, by = 3)
 
-  expect_equal(unique(do.call(dyn_metrics,
+  expect_equal(unique(do.call(metrics,
     c(list(dn, measure = "density"), args))$time), times)
   expect_equal(unique(do.call(dyn_centrality,
     c(list(dn, measure = "degree"), args))$time), times)
-  expect_equal(unique(do.call(dyn_events,
+  expect_equal(unique(do.call(events,
     c(list(dn, measure = "formation"), args))$time), times)
-  expect_equal(unique(do.call(dyn_snapshots, c(list(dn), args))$time), times)
+  expect_equal(unique(do.call(snapshots, c(list(dn), args))$time), times)
 })
 
 test_that("the grid arguments are validated", {
   dn <- quiet_dynet(random_edges(seed = 10L))
-  expect_error(dyn_metrics(dn, step = 0), class = "dynet_bad_input")
-  expect_error(dyn_metrics(dn, step = -1), class = "dynet_bad_input")
-  expect_error(dyn_metrics(dn, window = -1), class = "dynet_bad_input")
-  expect_error(dyn_metrics(dn, start = 5, end = 2), class = "dynet_bad_input")
-  expect_error(dyn_metrics(dn, step = c(1, 2)), class = "dynet_bad_input")
-  expect_error(dyn_metrics(dn, start = "yesterday"), class = "dynet_bad_input")
+  expect_error(metrics(dn, step = 0), class = "dynet_bad_input")
+  expect_error(metrics(dn, step = -1), class = "dynet_bad_input")
+  expect_error(metrics(dn, window = -1), class = "dynet_bad_input")
+  expect_error(metrics(dn, start = 5, end = 2), class = "dynet_bad_input")
+  expect_error(metrics(dn, step = c(1, 2)), class = "dynet_bad_input")
+  expect_error(metrics(dn, start = "yesterday"), class = "dynet_bad_input")
   # Temporal scope has no grid to place; saying otherwise is a mistake, not a
   # silently ignored argument.
   expect_error(dyn_centrality(dn, measure = "closeness", scope = "temporal",
@@ -199,20 +199,20 @@ test_that("a network built from dates may be addressed with dates", {
                    end   = as.Date(c("2024-01-03", "2024-01-07", "2024-01-11")),
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
-  got <- as.data.frame(dyn_metrics(dn, measure = "edges",
+  got <- as.data.frame(metrics(dn, measure = "edges",
                                    start = as.Date("2024-01-05"),
                                    end = as.Date("2024-01-09"), step = 2))
   expect_equal(nrow(got), 3L)
   expect_equal(got$time, c(4, 6, 8))
 
   num <- quiet_dynet(random_edges(seed = 11L))
-  expect_error(dyn_metrics(num, start = as.Date("2024-01-01")),
+  expect_error(metrics(num, start = as.Date("2024-01-01")),
                class = "dynet_bad_input")
 })
 
 test_that("a degenerate range still yields one measurement", {
   dn <- quiet_dynet(random_edges(seed = 12L, span = 10), interval = 1)
-  one <- as.data.frame(dyn_metrics(dn, measure = "edges", start = 3,
+  one <- as.data.frame(metrics(dn, measure = "edges", start = 3,
                                    end = 3, window = 4))
   expect_equal(nrow(one), 1L)
   expect_equal(one$time, 3)

@@ -16,7 +16,7 @@ test_that("D02 returns literal canonical spell and fixed vertex quantities", {
   dn <- quiet_dynet(edges, nodes = nodes, vertex_spells = activity,
                     observation_start = 0, observation_end = 10)
   measures <- c("events", "total", "union", "mean", "median", "first", "last")
-  got <- as.data.frame(dyn_durations(
+  got <- as.data.frame(durations(
     dn, unit = "vertex_activity", measure = measures
   ))
   expect_identical(names(got), c("node", "measure", "value"))
@@ -41,7 +41,7 @@ test_that("D02 returns literal canonical spell and fixed vertex quantities", {
   rownames(expected_long) <- NULL
   expect_equal(got, expected_long, ignore_attr = TRUE)
 
-  spells <- as.data.frame(dyn_durations(
+  spells <- as.data.frame(durations(
     dn, unit = "vertex_spell", measure = c("duration", "first", "last")
   ))
   expect_identical(names(spells),
@@ -67,7 +67,7 @@ test_that("D02 recombines observation fragments and preserves genuine points", {
     edges, nodes = nodes, vertex_spells = activity,
     observation_spells = data.frame(start = c(0, 6), end = c(4, 10))
   )
-  got <- dyn_durations(
+  got <- durations(
     dn, unit = "vertex_activity",
     measure = c("events", "total", "union", "mean", "median", "first", "last")
   )
@@ -107,12 +107,12 @@ test_that("D02 canonical vertex censor exclusion removes whole identities", {
     nodes = data.frame(name = c("U", "L", "R", "B")),
     vertex_spells = activity, observation_start = 0, observation_end = 4
   )
-  included <- dyn_durations(
+  included <- durations(
     dn, unit = "vertex_activity", measure = c("events", "total"),
     censored = "include"
   )
   expect_equal(as.data.frame(included)$value, rep(c(1, 4), each = 4))
-  excluded <- dyn_durations(
+  excluded <- durations(
     dn, unit = "vertex_activity", measure = c("events", "total", "first"),
     censored = "exclude"
   )
@@ -120,7 +120,7 @@ test_that("D02 canonical vertex censor exclusion removes whole identities", {
   expect_equal(vertex_duration_value(excluded, "L", "events"), 0)
   expect_equal(vertex_duration_value(excluded, "R", "total"), 0)
   expect_true(is.na(vertex_duration_value(excluded, "B", "first")))
-  spell <- as.data.frame(dyn_durations(
+  spell <- as.data.frame(durations(
     dn, unit = "vertex_spell", censored = "exclude"
   ))
   expect_identical(spell$node, "U")
@@ -141,10 +141,10 @@ test_that("D02 session policies pool identities and union the shared calendar", 
     vertex_spells = activity, observation_start = 0, observation_end = 10
   )
   measures <- c("events", "total", "union", "mean", "median", "first", "last")
-  collapsed <- dyn_durations(
+  collapsed <- durations(
     dn, unit = "vertex_activity", measure = measures, sessions = "collapse"
   )
-  bounded <- dyn_durations(
+  bounded <- durations(
     dn, unit = "vertex_activity", measure = measures, sessions = "bounded"
   )
   expect_equal(as.data.frame(bounded), as.data.frame(collapsed),
@@ -154,7 +154,7 @@ test_that("D02 session policies pool identities and union the shared calendar", 
   expect_equal(vertex_duration_value(bounded, "B", "union"), 10)
   expect_equal(vertex_duration_value(bounded, "D", "total"), 10)
 
-  separate <- dyn_durations(
+  separate <- durations(
     dn, unit = "vertex_activity", measure = measures, sessions = "separate"
   )
   expect_equal(vertex_duration_value(separate, "B", "total", "s1"), 6)
@@ -173,7 +173,7 @@ test_that("D02 has typed zero, point, default and validation behavior", {
                                end = c(5, 7)),
     observation_start = 5, observation_end = 5
   )
-  got <- dyn_durations(
+  got <- durations(
     point, unit = "vertex_activity",
     measure = c("events", "total", "union", "mean", "first", "last")
   )
@@ -184,25 +184,25 @@ test_that("D02 has typed zero, point, default and validation behavior", {
   expect_equal(vertex_duration_value(got, "B", "mean"), 0)
   expect_equal(vertex_duration_value(got, "C", "events"), 0)
   expect_true(is.na(vertex_duration_value(got, "C", "last")))
-  empty_spells <- as.data.frame(dyn_durations(
+  empty_spells <- as.data.frame(durations(
     point, unit = "vertex_spell", censored = "exclude"
   ))
   expect_identical(names(empty_spells),
                    c("node", "vertex_spell", "implicit", "measure", "value"))
 
   expect_identical(
-    attr(dyn_durations(point, unit = "vertex_activity"), "duration_unit"),
+    attr(durations(point, unit = "vertex_activity"), "duration_unit"),
     "vertex_activity"
   )
   expect_identical(
-    unique(as.data.frame(dyn_durations(
+    unique(as.data.frame(durations(
       point, unit = "vertex_activity"
     ))$measure), c("events", "total", "union")
   )
-  expect_error(dyn_durations(point, unit = "vertex_activity",
+  expect_error(durations(point, unit = "vertex_activity",
                              measure = "duration"),
                class = "dynet_unknown_measure")
-  expect_error(dyn_durations(point, unit = "vertex_spell", measure = "union"),
+  expect_error(durations(point, unit = "vertex_spell", measure = "union"),
                class = "dynet_unknown_measure")
 
   truly_empty <- quiet_dynet(
@@ -210,7 +210,7 @@ test_that("D02 has typed zero, point, default and validation behavior", {
     vertex_spells = data.frame(node = c("A", "B"), start = 2, end = 3),
     observation_start = 0, observation_end = 1
   )
-  empty <- as.data.frame(dyn_durations(truly_empty, unit = "vertex_spell"))
+  empty <- as.data.frame(durations(truly_empty, unit = "vertex_spell"))
   expect_identical(names(empty),
                    c("node", "vertex_spell", "implicit", "measure", "value"))
   expect_equal(nrow(empty), 0L)
@@ -219,7 +219,7 @@ test_that("D02 has typed zero, point, default and validation behavior", {
     data.frame(from = "A", to = "A", start = 0, end = 0), loops = TRUE,
     observation_start = 0, observation_end = 5
   )
-  singleton_result <- dyn_durations(
+  singleton_result <- durations(
     singleton, unit = "vertex_activity", measure = c("events", "total", "union")
   )
   expect_equal(as.data.frame(singleton_result)$value, c(1, 5, 5))
@@ -234,12 +234,12 @@ test_that("D02 is invariant to edge rows and equivariant to node and time coordi
   measures <- c("events", "total", "union", "mean", "median", "first", "last")
   base <- quiet_dynet(edges, vertex_spells = activity,
                       observation_start = 0, observation_end = 4)
-  reference <- as.data.frame(dyn_durations(
+  reference <- as.data.frame(durations(
     base, unit = "vertex_activity", measure = measures
   ))
   permuted <- quiet_dynet(edges[2:1, ], vertex_spells = activity[3:1, ],
                           observation_start = 0, observation_end = 4)
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     permuted, unit = "vertex_activity", measure = measures
   )), reference, ignore_attr = TRUE)
 
@@ -248,7 +248,7 @@ test_that("D02 is invariant to edge rows and equivariant to node and time coordi
   renamed_activity <- transform(activity, node = c("X", "X", "Y"))
   renamed <- quiet_dynet(renamed_edges, vertex_spells = renamed_activity,
                          observation_start = 0, observation_end = 4)
-  relabeled <- as.data.frame(dyn_durations(
+  relabeled <- as.data.frame(durations(
     renamed, unit = "vertex_activity", measure = measures
   ))
   expect_equal(relabeled$value, reference$value)
@@ -259,7 +259,7 @@ test_that("D02 is invariant to edge rows and equivariant to node and time coordi
   )
   affine <- quiet_dynet(affine_edges, vertex_spells = affine_activity,
                         observation_start = 7, observation_end = 19)
-  transformed <- as.data.frame(dyn_durations(
+  transformed <- as.data.frame(durations(
     affine, unit = "vertex_activity", measure = measures
   ))
   expected <- reference$value
@@ -269,19 +269,19 @@ test_that("D02 is invariant to edge rows and equivariant to node and time coordi
     7 + 3 * expected[reference$measure %in% c("first", "last")]
   expect_equal(transformed$value, expected)
 
-  base_spell <- as.data.frame(dyn_durations(
+  base_spell <- as.data.frame(durations(
     base, unit = "vertex_spell", measure = c("duration", "first", "last")
   ))
-  permuted_spell <- as.data.frame(dyn_durations(
+  permuted_spell <- as.data.frame(durations(
     permuted, unit = "vertex_spell", measure = c("duration", "first", "last")
   ))
   expect_equal(permuted_spell, base_spell, ignore_attr = TRUE)
-  renamed_spell <- as.data.frame(dyn_durations(
+  renamed_spell <- as.data.frame(durations(
     renamed, unit = "vertex_spell", measure = c("duration", "first", "last")
   ))
   expect_equal(renamed_spell$vertex_spell, base_spell$vertex_spell)
   expect_equal(renamed_spell$value, base_spell$value)
-  affine_spell <- as.data.frame(dyn_durations(
+  affine_spell <- as.data.frame(durations(
     affine, unit = "vertex_spell", measure = c("duration", "first", "last")
   ))
   spell_expected <- base_spell$value
@@ -303,7 +303,7 @@ test_that("D02 global schedules repeat locally and metadata is explicit", {
     vertex_spells = data.frame(node = "A", start = 1, end = 4),
     observation_start = 0, observation_end = 5
   )
-  separate <- dyn_durations(
+  separate <- durations(
     dn, unit = "vertex_activity", sessions = "separate",
     measure = c("events", "total", "union")
   )
@@ -313,7 +313,7 @@ test_that("D02 global schedules repeat locally and metadata is explicit", {
   expect_equal(vertex_duration_value(separate, "A", "total", "s2"), 3)
   expect_equal(vertex_duration_value(separate, "B", "union", "s1"), 5)
   expect_equal(vertex_duration_value(separate, "B", "union", "s2"), 5)
-  spell <- as.data.frame(dyn_durations(
+  spell <- as.data.frame(durations(
     dn, unit = "vertex_spell", sessions = "separate"
   ))
   expect_identical(spell$vertex_spell[spell$node == "A"], c(1L, 1L))
@@ -329,22 +329,22 @@ test_that("D02 global schedules repeat locally and metadata is explicit", {
   expect_identical(attr(separate, "vertex_censoring"), "included")
   expect_identical(attr(separate, "directedness"), "irrelevant")
   expect_identical(attr(separate, "session_aggregation"), "session_local")
-  expect_identical(attr(dyn_durations(
+  expect_identical(attr(durations(
     dn, unit = "vertex_activity", sessions = "bounded"
   ), "session_aggregation"), "session_local_then_union")
-  expect_identical(attr(dyn_durations(
+  expect_identical(attr(durations(
     dn, unit = "vertex_activity", sessions = "collapse"
   ), "session_aggregation"), "labels_erased")
-  expect_identical(attr(dyn_durations(
+  expect_identical(attr(durations(
     dn, unit = "vertex_activity", censored = "exclude"
   ), "vertex_censoring"), "excluded")
-  spell_default <- dyn_durations(dn, unit = "vertex_spell")
+  spell_default <- durations(dn, unit = "vertex_spell")
   expect_identical(attr(spell_default, "duration_unit"), "vertex_spell")
   expect_identical(attr(spell_default, "duration_quantity"), "duration")
   unsessioned <- quiet_dynet(
     data.frame(from = "A", to = "B", start = 0, end = 1)
   )
-  expect_identical(attr(dyn_durations(
+  expect_identical(attr(durations(
     unsessioned, unit = "vertex_activity"
   ), "session_aggregation"), "labels_erased")
 })
@@ -368,14 +368,14 @@ test_that("D02 ignores every edge property outside universe and horizon", {
     vertex_spells = activity, observation_start = 0, observation_end = 4
   )
   measures <- c("events", "total", "union", "mean", "median", "first", "last")
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     elaborate, unit = "vertex_activity", measure = measures
-  )), as.data.frame(dyn_durations(
+  )), as.data.frame(durations(
     simple, unit = "vertex_activity", measure = measures
   )), ignore_attr = TRUE)
-  expect_equal(as.data.frame(dyn_durations(
+  expect_equal(as.data.frame(durations(
     elaborate, unit = "vertex_spell", measure = c("duration", "first", "last")
-  )), as.data.frame(dyn_durations(
+  )), as.data.frame(durations(
     simple, unit = "vertex_spell", measure = c("duration", "first", "last")
   )), ignore_attr = TRUE)
 })
@@ -386,7 +386,7 @@ test_that("D02 implicit activity is invariant to an empty-string vertex label", 
     nodes = data.frame(name = c("", "B")),
     observation_start = 0, observation_end = 2
   )
-  got <- dyn_durations(
+  got <- durations(
     dn, unit = "vertex_activity", measure = c("events", "total", "union")
   )
   expect_equal(c(

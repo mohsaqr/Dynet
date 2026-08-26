@@ -7,7 +7,7 @@
 \method{print}{dynet_paths}(x, n = 12L, ...)
 }
 \arguments{
-\item{x}{A \code{dynet_paths} from \code{\link[=dyn_paths]{dyn_paths()}}.}
+\item{x}{A \code{dynet_paths} from \code{\link[=paths]{paths()}}.}
 
 \item{n}{Number of rows to show.}
 

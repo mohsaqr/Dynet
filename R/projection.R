@@ -84,10 +84,10 @@
 
 #' Project a temporal network into directed vertex-time states
 #'
-#' `dyn_projection()` discretizes a temporal network into snapshot slices and
+#' `projection()` discretizes a temporal network into snapshot slices and
 #' connects each vertex state to its realization in the next slice. Within a
 #' slice it uses the same independently aggregated, endpoint-induced snapshot
-#' as [dyn_snapshots()]. Identity arcs always point forward and have weight
+#' as [snapshots()]. Identity arcs always point forward and have weight
 #' one. The result is a tidy projection object rather than a bare matrix.
 #'
 #' Every fixed-universe vertex receives one state in every emitted slice.
@@ -131,12 +131,12 @@
 #'   from = c("A", "B", "C"), to = c("B", "C", "A"),
 #'   start = 0:2, end = 1:3
 #' ), observation_start = 0, observation_end = 3)
-#' projected <- dyn_projection(dn, step = 1, window = 1)
+#' projected <- projection(dn, step = 1, window = 1)
 #' as.data.frame(projected, what = "vertices")
 #' as.data.frame(projected, what = "edges")
 #'
 #' @export
-dyn_projection <- function(
+projection <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
     start = NULL, end = NULL, step = NULL, window = NULL) {
   sessions <- match.arg(sessions)
@@ -303,7 +303,7 @@ dyn_projection <- function(
 
 #' Tidy tables from a time-projected network
 #'
-#' @param x A projection returned by [dyn_projection()].
+#' @param x A projection returned by [projection()].
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
 #' @param what `"vertices"` returns vertex-time states and `"edges"` returns
@@ -328,7 +328,7 @@ as.data.frame.dynet_projection <- function(
 }
 
 #' Print a time-projected network
-#' @param x A projection returned by [dyn_projection()].
+#' @param x A projection returned by [projection()].
 #' @param ... Ignored.
 #' @return `x`, invisibly.
 #' @export

@@ -89,7 +89,7 @@ test_that("explicit backward anchors use the original calendar", {
   expected_latency <- c(NA, 0, 0, 0, 2)
 
   invisible(Map(function(anchor, latest, latency) {
-    paths <- dyn_paths(dn, from = "B", at = anchor,
+    paths <- paths(dn, from = "B", at = anchor,
                        direction = "backward")
     expect_equal(.backward_times(paths, c("A", "B")), c(latest, anchor))
     expect_equal(.backward_latency(paths, c("A", "B")), c(latency, 0))
@@ -107,10 +107,10 @@ test_that("backward boundary state prevents false point-event propagation", {
     start = c(0, 0), end = c(1, 0), stringsAsFactors = FALSE
   )
 
-  false_paths <- dyn_paths(
+  false_paths <- paths(
     quiet_dynet(false_chain), from = "C", at = 1, direction = "backward"
   )
-  valid_paths <- dyn_paths(
+  valid_paths <- paths(
     quiet_dynet(valid_chain), from = "C", at = 0, direction = "backward"
   )
 
@@ -133,8 +133,8 @@ test_that("backward chronological chains return latest-departure suprema", {
     start = c(1, 3), end = c(4, 6), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(chain)
-  at_five <- dyn_paths(dn, from = "C", at = 5, direction = "backward")
-  at_three <- dyn_paths(dn, from = "C", at = 3, direction = "backward")
+  at_five <- paths(dn, from = "C", at = 5, direction = "backward")
+  at_three <- paths(dn, from = "C", at = 3, direction = "backward")
 
   expect_equal(.backward_times(at_five, c("A", "B", "C")), c(4, 5, 5))
   expect_equal(.backward_latency(at_five, c("A", "B", "C")), c(1, 0, 0))
@@ -147,7 +147,7 @@ test_that("backward traversal does not flatten impossible chronology", {
     start = c(5, 1), end = c(6, 2), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(impossible)
-  paths <- dyn_paths(dn, from = "C", at = 6, direction = "backward")
+  paths <- paths(dn, from = "C", at = 6, direction = "backward")
 
   expect_equal(.backward_times(paths, c("A", "B", "C")), c(NA, 2, 6))
 })
@@ -173,10 +173,10 @@ test_that("interval and event optima expose distinct attainment states", {
   event <- quiet_dynet(data.frame(
     from = "A", to = "B", start = 1, end = 1
   ))
-  interval_paths <- as.data.frame(dyn_paths(
+  interval_paths <- as.data.frame(paths(
     interval, from = "B", at = 1, direction = "backward"
   ))
-  event_paths <- as.data.frame(dyn_paths(
+  event_paths <- as.data.frame(paths(
     event, from = "B", at = 1, direction = "backward"
   ))
 
@@ -190,7 +190,7 @@ test_that("bounded session ties prefer an attained latest departure", {
     from = c("A", "A"), to = c("B", "B"),
     start = c(0, 1), end = c(1, 1), session = c("interval", "event")
   )
-  paths <- as.data.frame(dyn_paths(
+  paths <- as.data.frame(paths(
     quiet_dynet(spells, session = "session"),
     from = "B", at = 1, direction = "backward", sessions = "bounded"
   ))
@@ -228,9 +228,9 @@ test_that("backward session walls respect the explicit deadline", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  bounded <- dyn_paths(dn, from = "C", at = 5, direction = "backward",
+  bounded <- paths(dn, from = "C", at = 5, direction = "backward",
                        sessions = "bounded")
-  collapsed <- dyn_paths(dn, from = "C", at = 5, direction = "backward",
+  collapsed <- paths(dn, from = "C", at = 5, direction = "backward",
                          sessions = "collapse")
 
   expect_equal(.backward_times(bounded, c("A", "B", "C")), c(NA, 5, 5))
@@ -246,13 +246,13 @@ test_that("undirected backward paths ignore stored endpoint orientation", {
   left <- quiet_dynet(first, directed = FALSE)
   right <- quiet_dynet(second, directed = FALSE)
 
-  left_paths <- dyn_paths(left, from = "C", at = 7, direction = "backward")
-  right_paths <- dyn_paths(right, from = "C", at = 7, direction = "backward")
+  left_paths <- paths(left, from = "C", at = 7, direction = "backward")
+  right_paths <- paths(right, from = "C", at = 7, direction = "backward")
   expect_equal(.backward_times(left_paths, c("A", "B", "C")), c(7, 7, 7))
   expect_equal(.backward_times(left_paths, c("A", "B", "C")),
                .backward_times(right_paths, c("A", "B", "C")))
 
-  late <- dyn_paths(left, from = "C", at = 10, direction = "backward")
+  late <- paths(left, from = "C", at = 10, direction = "backward")
   expect_equal(.backward_times(late, c("A", "B", "C")), c(8, 9, 10))
 })
 
@@ -264,11 +264,11 @@ test_that("backward times translate and scale with their anchor", {
   translated <- transform(base, start = start + 10, end = end + 10)
   scaled <- transform(base, start = start * 2, end = end * 2)
 
-  original <- dyn_paths(quiet_dynet(base), from = "C", at = 5,
+  original <- paths(quiet_dynet(base), from = "C", at = 5,
                         direction = "backward")
-  shifted <- dyn_paths(quiet_dynet(translated), from = "C", at = 15,
+  shifted <- paths(quiet_dynet(translated), from = "C", at = 15,
                        direction = "backward")
-  stretched <- dyn_paths(quiet_dynet(scaled), from = "C", at = 10,
+  stretched <- paths(quiet_dynet(scaled), from = "C", at = 10,
                          direction = "backward")
 
   expect_equal(.backward_times(shifted, c("A", "B", "C")),
@@ -288,7 +288,7 @@ test_that("date anchors are converted before backward traversal", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spell, time_unit = "days")
-  paths <- dyn_paths(dn, from = "B", at = as.Date("2024-01-06"),
+  paths <- paths(dn, from = "B", at = as.Date("2024-01-06"),
                      direction = "backward")
 
   expect_equal(.backward_times(paths, c("A", "B")), c(4, 4))
@@ -302,8 +302,8 @@ test_that("default backward anchors still use the observed end", {
   )
   dn <- quiet_dynet(spell)
 
-  expect_equal(as.data.frame(dyn_paths(dn, from = "B", direction = "backward")),
-               as.data.frame(dyn_paths(dn, from = "B", at = 8,
+  expect_equal(as.data.frame(paths(dn, from = "B", direction = "backward")),
+               as.data.frame(paths(dn, from = "B", at = 8,
                                        direction = "backward")))
 })
 
@@ -332,7 +332,7 @@ test_that("backward paths agree with an exhaustive original-time oracle", {
       dn <- quiet_dynet(spells, directed = directed)
       invisible(lapply(vertices, function(target) {
         invisible(lapply(c(0, 1, 5, 9), function(deadline) {
-          paths <- dyn_paths(
+          paths <- paths(
             dn, from = target, at = deadline,
             direction = "backward", sessions = "collapse"
           )
@@ -389,7 +389,7 @@ test_that("interior backward values agree with tsna latest departure", {
   )
   deadline <- 5
   ours <- .backward_times(
-    dyn_paths(dn, from = "C", at = deadline, direction = "backward"),
+    paths(dn, from = "C", at = deadline, direction = "backward"),
     vertices
   )
   theirs <- tsna::tPath(

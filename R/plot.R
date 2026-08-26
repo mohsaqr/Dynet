@@ -383,7 +383,7 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #' @return A `ggplot` object.
 #' @keywords internal
 .plot_activity <- function(x, base_size) {
-  plot(dyn_events(x, measure = c("formation", "dissolution", "active")),
+  plot(events(x, measure = c("formation", "dissolution", "active")),
        base_size = base_size) +
     ggplot2::labs(title = "Edges forming, dissolving and active")
 }
@@ -400,7 +400,7 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #' condition, regardless of session mode. This keeps rendering from implying
 #' a prefix-compatible tree that the endpoint-local criterion does not define.
 #'
-#' @param x A `dynet_paths` from [dyn_paths()].
+#' @param x A `dynet_paths` from [paths()].
 #' @param palette Palette specification, as in [plot.dynet()]. Vertices are
 #'   coloured by how many hops they are from the source.
 #' @param ... Passed to `cograph::splot()`.
@@ -411,7 +411,7 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- dyn_paths(dn, from = "Ana")
+#' paths <- paths(dn, from = "Ana")
 #' try(plot(paths), silent = TRUE)
 #'
 #' @export

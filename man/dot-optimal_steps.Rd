@@ -16,7 +16,7 @@ A tidy route-step data frame.
 Lazily materialize optimal route steps
 }
 \examples{
-paths <- dyn_paths(dynet(school_contacts), from = "Ana")
+paths <- paths(dynet(school_contacts), from = "Ana")
 Dynet:::.optimal_steps(attr(paths, "optimal_search"))
 }
 \keyword{internal}

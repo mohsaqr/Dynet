@@ -12,7 +12,7 @@ test_that("D01 distinguishes endpoint-valid spell and pair duration units", {
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 6)
 
-  spell <- as.data.frame(dyn_durations(
+  spell <- as.data.frame(durations(
     dn, unit = "spell", measure = c("duration", "first", "last")
   ))
   expect_identical(names(spell),
@@ -21,7 +21,7 @@ test_that("D01 distinguishes endpoint-valid spell and pair duration units", {
   expect_equal(spell$value[spell$measure == "first"], c(1, 2))
   expect_equal(spell$value[spell$measure == "last"], c(4, 5))
 
-  pair <- dyn_durations(
+  pair <- durations(
     dn, unit = "pair",
     measure = c("events", "total", "union", "mean", "median", "first", "last")
   )
@@ -43,13 +43,13 @@ test_that("D01 observation gaps fragment time without multiplying raw spells", {
   dn <- quiet_dynet(
     edges, observation_spells = data.frame(start = c(0, 6), end = c(4, 10))
   )
-  spell <- as.data.frame(dyn_durations(
+  spell <- as.data.frame(durations(
     dn, unit = "spell", measure = c("duration", "first", "last")
   ))
   expect_equal(spell$value[spell$measure == "duration"], c(6, 4, 0))
   expect_equal(spell$value[spell$measure == "first"], c(1, 2, 4))
   expect_equal(spell$value[spell$measure == "last"], c(9, 8, 4))
-  pair <- dyn_durations(
+  pair <- durations(
     dn, unit = "pair", measure = c("events", "total", "union")
   )
   expect_equal(d01_value(pair, "events"), 3)
@@ -66,10 +66,10 @@ test_that("D01 censoring removes whole raw identities before every unit", {
     edges, onset_censored = "left", terminus_censored = "right",
     observation_start = 0, observation_end = 4
   )
-  included <- dyn_durations(
+  included <- durations(
     dn, unit = "pair", measure = c("events", "total", "union")
   )
-  excluded <- dyn_durations(
+  excluded <- durations(
     dn, unit = "pair", measure = c("events", "total", "union"),
     censored = "exclude"
   )
@@ -83,9 +83,9 @@ test_that("D01 censoring removes whole raw identities before every unit", {
 
 test_that("D01 validates unit-specific measure names", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
-  expect_error(dyn_durations(dn, unit = "spell", measure = "union"),
+  expect_error(durations(dn, unit = "spell", measure = "union"),
                class = "dynet_unknown_measure")
-  expect_error(dyn_durations(dn, unit = "pair", measure = "duration"),
+  expect_error(durations(dn, unit = "pair", measure = "duration"),
                class = "dynet_unknown_measure")
 })
 
@@ -99,13 +99,13 @@ test_that("D01 collapse authorizes across labels but bounded remains local", {
   )
   dn <- quiet_dynet(edges, session = "wave", vertex_spells = activity,
                     observation_start = 0, observation_end = 5)
-  collapsed <- as.data.frame(dyn_durations(
+  collapsed <- as.data.frame(durations(
     dn, unit = "pair", measure = "union", sessions = "collapse"
   ))
-  bounded <- as.data.frame(dyn_durations(
+  bounded <- as.data.frame(durations(
     dn, unit = "pair", measure = "union", sessions = "bounded"
   ))
-  separate <- as.data.frame(dyn_durations(
+  separate <- as.data.frame(durations(
     dn, unit = "pair", measure = "union", sessions = "separate"
   ))
   expect_equal(collapsed$value[collapsed$from == "A"], 5)
@@ -120,7 +120,7 @@ test_that("D01 direction, undirected dyads, loops, empties and defaults are exac
   )
   directed <- quiet_dynet(edges, loops = TRUE,
                           observation_start = 0, observation_end = 4)
-  got <- as.data.frame(dyn_durations(
+  got <- as.data.frame(durations(
     directed, unit = "pair", measure = c("events", "total", "union")
   ))
   expect_equal(got$value[got$from == "A" & got$to == "B" &
@@ -132,7 +132,7 @@ test_that("D01 direction, undirected dyads, loops, empties and defaults are exac
 
   undirected <- quiet_dynet(edges[1:2, ], directed = FALSE,
                             observation_start = 0, observation_end = 4)
-  dyad <- dyn_durations(
+  dyad <- durations(
     undirected, unit = "pair", measure = c("events", "total", "union")
   )
   expect_equal(d01_value(dyad, "events"), 2)
@@ -145,8 +145,8 @@ test_that("D01 direction, undirected dyads, loops, empties and defaults are exac
                                start = c(0, 1), end = c(1, 2)),
     observation_start = 0, observation_end = 2
   )
-  empty_pair <- as.data.frame(dyn_durations(inactive, unit = "pair"))
-  empty_spell <- as.data.frame(dyn_durations(inactive, unit = "spell"))
+  empty_pair <- as.data.frame(durations(inactive, unit = "pair"))
+  empty_spell <- as.data.frame(durations(inactive, unit = "spell"))
   expect_identical(names(empty_pair), c("from", "to", "measure", "value"))
   expect_identical(names(empty_spell),
                    c("from", "to", "raw_spell", "measure", "value"))
@@ -154,13 +154,13 @@ test_that("D01 direction, undirected dyads, loops, empties and defaults are exac
   expect_equal(nrow(empty_spell), 0L)
 
   expect_equal(
-    as.data.frame(dyn_durations(directed)),
-    as.data.frame(dyn_durations(
+    as.data.frame(durations(directed)),
+    as.data.frame(durations(
       directed, c("events", "total", "mean"), "bounded", "include",
       unit = "pair"
     )), ignore_attr = TRUE
   )
-  expect_identical(attr(dyn_durations(directed), "session_aggregation"),
+  expect_identical(attr(durations(directed), "session_aggregation"),
                    "labels_erased")
 })
 
@@ -195,11 +195,11 @@ test_that("D01 is invariant to coordinates and equivariant to affine time", {
   measures <- c("events", "total", "union", "mean", "median", "first", "last")
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 4)
-  reference <- as.data.frame(dyn_durations(dn, measure = measures))
+  reference <- as.data.frame(durations(dn, measure = measures))
 
   permuted <- quiet_dynet(edges[c(3, 1, 2), ], vertex_spells = activity,
                           observation_start = 0, observation_end = 4)
-  expect_equal(as.data.frame(dyn_durations(permuted, measure = measures)),
+  expect_equal(as.data.frame(durations(permuted, measure = measures)),
                reference, ignore_attr = TRUE)
 
   renamed_edges <- edges
@@ -209,7 +209,7 @@ test_that("D01 is invariant to coordinates and equivariant to affine time", {
   renamed_activity$node <- c("X", "Y")
   renamed <- quiet_dynet(renamed_edges, vertex_spells = renamed_activity,
                          observation_start = 0, observation_end = 4)
-  renamed_result <- as.data.frame(dyn_durations(renamed, measure = measures))
+  renamed_result <- as.data.frame(durations(renamed, measure = measures))
   expect_equal(renamed_result$value, reference$value)
   expect_identical(renamed_result$measure, reference$measure)
 
@@ -221,7 +221,7 @@ test_that("D01 is invariant to coordinates and equivariant to affine time", {
   affine_activity$end <- 10 + 2 * affine_activity$end
   affine <- quiet_dynet(affine_edges, vertex_spells = affine_activity,
                         observation_start = 10, observation_end = 18)
-  transformed <- as.data.frame(dyn_durations(affine, measure = measures))
+  transformed <- as.data.frame(durations(affine, measure = measures))
   expected <- reference$value
   duration_measure <- reference$measure %in%
     c("total", "union", "mean", "median")
@@ -230,10 +230,10 @@ test_that("D01 is invariant to coordinates and equivariant to affine time", {
   expected[endpoint_measure] <- 10 + 2 * expected[endpoint_measure]
   expect_equal(transformed$value, expected)
 
-  base_spell <- as.data.frame(dyn_durations(
+  base_spell <- as.data.frame(durations(
     dn, unit = "spell", measure = c("duration", "first", "last")
   ))
-  affine_spell <- as.data.frame(dyn_durations(
+  affine_spell <- as.data.frame(durations(
     affine, unit = "spell", measure = c("duration", "first", "last")
   ))
   spell_expected <- base_spell$value

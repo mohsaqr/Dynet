@@ -180,7 +180,7 @@ summary.dynet <- function(object, ...) {
   e <- object$spells
   n <- nrow(object$nodes)
   span <- m$time_range[["end"]] - m$time_range[["start"]]
-  snap <- dyn_metrics(object, measure = "density", sessions = "collapse")
+  snap <- metrics(object, measure = "density", sessions = "collapse")
 
   out <- data.frame(
     property = c("format", "directed", "vertices", "edge spells",
@@ -577,7 +577,7 @@ summary.dynet <- function(object, ...) {
 
 #' Print time-respecting paths
 #'
-#' @param x A `dynet_paths` from [dyn_paths()].
+#' @param x A `dynet_paths` from [paths()].
 #' @param n Number of rows to show.
 #' @param ... Ignored.
 #' @return `x`, invisibly.

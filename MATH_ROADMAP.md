@@ -322,7 +322,7 @@ attained. This state prevents an exact event from composing through an
 interval's excluded terminus.
 
 **Public surface:** no new argument. `at` is the backward deadline in
-`dyn_paths()` and `dyn_reachability()`. `dyn_paths()` exposes logical
+`paths()` and `dyn_reachability()`. `paths()` exposes logical
 `attained` beside the reported optimum.
 
 **Fixtures:** one arc before, at, inside, and after its bounds; a chronological
@@ -347,7 +347,7 @@ into P01's boundary repair.
 
 **Status:** complete in 0.3.5.
 
-**Approved public surface:** `dyn_paths()` and `dyn_reachability()` gain named
+**Approved public surface:** `paths()` and `dyn_reachability()` gain named
 `start` and `end` bounds. Existing `at` remains a compatibility alias for
 `start` in forward queries and `end` in backward queries; mixing `at` with a
 canonical bound is an error. For `dyn_centrality(scope = "temporal")`, its
@@ -443,7 +443,7 @@ source-session, and bounds-after-selection mutants fail.
 
 **Status:** complete in 0.3.7.
 
-**Public surface:** add a final `traversal_time = 0` argument to `dyn_paths()`,
+**Public surface:** add a final `traversal_time = 0` argument to `paths()`,
 `dyn_reachability()`, and `dyn_centrality()`. It is one constant nonnegative
 finite duration per hop, not an edge-weight interpretation. A numeric value is
 measured in the network's stored time unit. A scalar `difftime` is converted
@@ -1063,7 +1063,7 @@ four can define memory if both lag vectors vary. Equal-time zero gaps are data,
 not missingness. Translating time preserves every result. Positive scaling
 preserves events, burstiness, and memory while multiplying `mean_gap`.
 
-**Public surface:** retain `dyn_burstiness()` and its existing four measure
+**Public surface:** retain `burstiness()` and its existing four measure
 names. Results publish `event_identity = "incident_spell_start"`,
 `dispersion = "population"`, `memory = "lag1_pearson"`,
 `loop_contribution = "one_event"`, `weights = "ignored"`, and a
@@ -1154,7 +1154,7 @@ Separate mode reports one session-local table over the fixed global group
 universe and its existing session-local default grid. Consequently separate
 tables are not generally additive to the collapsed table.
 
-**Public surface:** retain `dyn_mixing()` and its arguments. `value` remains a
+**Public surface:** retain `mixing()` and its arguments. `value` remains a
 raw, unnormalized binary-dyad count; weighted mixing is not added, and any
 future weight-sum quantity needs a distinct public name. Directed display
 labels use `"A -> B"`; undirected labels change to the truthful `"A -- B"`.
@@ -2395,7 +2395,7 @@ does not affect an onset sequence.
 
 All censored spells retain their known observed follow-up in snapshots, paths,
 density, and exposure. Add `censored = c("include", "exclude")` to
-`dyn_durations()`, defaulting to `"include"` for compatibility. Inclusion
+`durations()`, defaulting to `"include"` for compatibility. Inclusion
 summarizes all eligible raw spells; exclusion first removes any raw spell with
 either explicit censor flag and then calculates the existing raw-spell
 `events`, `total`, `mean`, `median`, `first`, and `last`. O02 administrative
@@ -2631,8 +2631,8 @@ one; mean distance, diameter, assortativity, and centralizations are `NA`;
 efficiency, hierarchy, and LUBness are `NaN`. Centralization is always `NA`
 below three eligible vertices.
 
-**Other affected verbs:** `dyn_mixing()` retains A02's fixed complete group
-cell support but counts only endpoint-valid dyads. `dyn_snapshots()` emits
+**Other affected verbs:** `mixing()` retains A02's fixed complete group
+cell support but counts only endpoint-valid dyads. `snapshots()` emits
 only endpoint-valid edge rows and preserves weights and spell counts from
 surviving raw rows; it remains edge-only and does not fabricate rows for
 eligible isolates. Snapshot plotting and proximity views use the same state.
@@ -2702,7 +2702,7 @@ open-boundary supremum attainment.  Collapse erases edge and vertex session
 labels before feasibility; bounded and separate searches use global plus
 matching session activity and never cross a session wall.
 
-Apply this definition without a new public argument to `dyn_paths()`, both
+Apply this definition without a new public argument to `paths()`, both
 directions of `dyn_reachability()`, and temporal reach, closeness, and
 betweenness.  Output stays fixed-universe.  V03 changes feasible journey
 families only: V04 owns risk-set denominators, and event/duration measures stay
@@ -3027,7 +3027,7 @@ private-URL and slow-example notes only), and clean installed library
 
 ### D04 — Temporal edge-density variants
 
-**Purpose:** generalize C01 through `dyn_metrics()` using O and V semantics.
+**Purpose:** generalize C01 through `metrics()` using O and V semantics.
 
 **Status:** complete in Dynet 0.3.34. Four exact window-integrated selectors,
 global endpoint-valid pair cohorts, raw-onset exposure, points/censoring/gaps,
@@ -3050,7 +3050,7 @@ belong to T03 and T04 after the transition kernel exists.
 **Oracle:** change-point integration and `tsna::tEdgeDensity()` only where its
 experimental denominator matches.
 
-**Frozen definition (0.3.34):** retain `dyn_metrics(..., measure = "density")`
+**Frozen definition (0.3.34):** retain `metrics(..., measure = "density")`
 as the V02 any-time snapshot statistic and retain it as the default. Add exactly
 four selectors without a new argument or output column:
 
@@ -3252,7 +3252,7 @@ rates.
 below were frozen before production implementation.
 
 **Frozen definition (0.3.35):** add exactly
-`dyn_events(..., measure = "formation_fraction")`, labelled "Formation
+`events(..., measure = "formation_fraction")`, labelled "Formation
 transition fraction". Preserve the existing default raw formation/dissolution
 call, signature, meanings, and graph-level tidy schema. T01 is valid only for
 `window = 0`; requesting it with a positive or default window, including in a
@@ -3262,7 +3262,7 @@ event selectors at zero width. `start`, `end`, and `step` retain the ordinary
 requested exact-time grid and O02 component rows; T01 does not silently replace
 that grid with irregular change times. At an interior non-change time its
 numerator is zero and its value is zero when risk is positive. A simple public
-call is `dyn_events(dn, "formation_fraction", start = 1, end = 1, window = 0)`.
+call is `events(dn, "formation_fraction", start = 1, end = 1, window = 0)`.
 
 At sampled time `t`, define the exact one-sided state of every positive
 half-open interval `[s,e)` algebraically: it is present immediately before the
@@ -3416,7 +3416,7 @@ timestamp batch.
 were frozen before production implementation.
 
 **Frozen definition (0.3.36):** add exactly
-`dyn_events(..., measure = "dissolution_fraction")`, labelled "Dissolution
+`events(..., measure = "dissolution_fraction")`, labelled "Dissolution
 transition fraction". Existing raw `dissolution`, T01, defaults, signature,
 and tidy schema remain unchanged. T02 accepts only `window = 0`; positive or
 default windows (including mixed calls) raise
@@ -3520,7 +3520,7 @@ time over a positive window. State the inverse time unit in result metadata.
 were frozen before production implementation.
 
 **Frozen definition (0.3.37):** add exactly
-`dyn_events(..., measure = "formation_rate")`, labelled "Formation transition
+`events(..., measure = "formation_rate")`, labelled "Formation transition
 rate". Preserve existing raw events and T01/T02 meanings and tidy schema. T03
 is valid only for `window > 0`; `window = 0` raises
 `dynet_rate_requires_positive_window` inheriting from `dynet_bad_input` and
@@ -3636,7 +3636,7 @@ explicitly.
 were frozen before production implementation.
 
 **Frozen definition (0.3.38):** add exactly
-`dyn_events(..., measure = "dissolution_rate")`, labelled "Dissolution
+`events(..., measure = "dissolution_rate")`, labelled "Dissolution
 transition rate". It requires `window > 0`; `window = 0` raises
 `dynet_rate_requires_positive_window` inheriting from `dynet_bad_input` and
 directs users to T02. Any call containing a fraction and either rate raises
@@ -3741,7 +3741,7 @@ fractions with matching batch-state semantics.
 
 **Purpose:** implement Gibson's 13 classes.
 
-**Candidate public surface:** a dedicated `dyn_pshifts()` verb returning one
+**Candidate public surface:** a dedicated `pshifts()` verb returning one
 tidy row per class, or one row per event and class for cumulative output.
 
 Before implementation, define how each Dynet format becomes an event sequence:
@@ -3754,7 +3754,7 @@ endpoints, and session walls.
 are frozen before production implementation.
 
 **Frozen definition (0.3.39):** add
-`dyn_pshifts(dn, sessions = c("bounded", "collapse", "separate"),
+`pshifts(dn, sessions = c("bounded", "collapse", "separate"),
 output = c("final", "cumulative"), start = NULL, end = NULL,
 group_events = c("simultaneous", "none"))`. Require directed Dynet input;
 undirected/co-presence input raises `dynet_needs_directed` inheriting from
@@ -3831,7 +3831,7 @@ identity arcs.
 production tests and implementation.
 
 **Frozen definition (0.3.39):** add
-`dyn_projection(dn, sessions = c("bounded", "collapse", "separate"),
+`projection(dn, sessions = c("bounded", "collapse", "separate"),
 start = NULL, end = NULL, step = NULL, window = NULL)`. It returns a list of
 class `dynet_projection`, never a bare matrix. Its public tables are available
 through `as.data.frame(x, what = c("vertices", "edges"))`.
@@ -3929,10 +3929,10 @@ not define Dynet semantics.
 
 **Status:** complete as a deliberately bounded descriptive extension. Dynet
 does not implement an ERGM formula ecosystem and does not require `ergm`.
-Existing `dyn_metrics()` selectors already cover isolates, directed dyad
+Existing `metrics()` selectors already cover isolates, directed dyad
 census, density, reciprocity, transitivity, triads, and mixing.
 
-Add only the missing low-cost descriptive selectors through `dyn_metrics()`:
+Add only the missing low-cost descriptive selectors through `metrics()`:
 `degree_mean`, `degree_variance`, `degree_min`, `degree_max`,
 `concurrent_nodes`, `concurrent_share`, `in_2stars`, `out_2stars`, and
 `two_paths`. All use the binary loop-free endpoint-induced snapshot. Directed

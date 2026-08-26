@@ -5,10 +5,10 @@ all_verbs <- function(dn) {
   list(
     centrality  = dyn_centrality(dn, measure = c("degree", "closeness")),
     temporal    = dyn_centrality(dn, measure = "closeness", scope = "temporal"),
-    metrics     = dyn_metrics(dn, measure = c("density", "reciprocity")),
-    events      = dyn_events(dn),
-    durations   = dyn_durations(dn),
-    burstiness  = dyn_burstiness(dn),
+    metrics     = metrics(dn, measure = c("density", "reciprocity")),
+    events      = events(dn),
+    durations   = durations(dn),
+    burstiness  = burstiness(dn),
     reachability = dyn_reachability(dn)
   )
 }
@@ -35,7 +35,7 @@ test_that("results identify vertices by name, never by index", {
     expect_true(all(verbs[[nm]]$node %in% as.data.frame(dn, what = "nodes")$name))
   }
   expect_type(verbs$durations$from, "character")
-  paths <- dyn_paths(dn, from = "v1")
+  paths <- paths(dn, from = "v1")
   steps <- as.data.frame(paths, what = "steps")
   expect_type(paths$node, "character")
   expect_false("previous" %in% names(paths))
@@ -94,18 +94,18 @@ test_that("unknown measures and wrong directedness raise classed conditions", {
   dn <- quiet_dynet(random_edges())
   expect_error(dyn_centrality(dn, measure = "nonsense"),
                class = "dynet_unknown_measure")
-  expect_error(dyn_metrics(dn, measure = "nonsense"),
+  expect_error(metrics(dn, measure = "nonsense"),
                class = "dynet_unknown_measure")
-  expect_error(dyn_paths(dn, from = "not_a_vertex"),
+  expect_error(paths(dn, from = "not_a_vertex"),
                class = "dynet_unknown_vertex")
   expect_error(dyn_centrality(dn, sessions = "separate"),
                class = "dynet_no_sessions")
-  expect_error(dyn_mixing(dn, attribute = "role"),
+  expect_error(mixing(dn, attribute = "role"),
                class = "dynet_unknown_attribute")
 
   und <- quiet_dynet(random_edges(), directed = FALSE)
   expect_error(dyn_centrality(und, measure = "hub"),
                class = "dynet_needs_directed")
-  expect_error(dyn_metrics(und, measure = "reciprocity"),
+  expect_error(metrics(und, measure = "reciprocity"),
                class = "dynet_needs_directed")
 })

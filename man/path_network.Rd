@@ -7,13 +7,13 @@
 path_network(x)
 }
 \arguments{
-\item{x}{A result from \code{\link[=dyn_paths]{dyn_paths()}}.}
+\item{x}{A result from \code{\link[=paths]{paths()}}.}
 }
 \value{
 A static \code{dynet_path_network} cograph netobject.
 }
 \description{
-\code{dyn_paths()} uses an endpoint-local foremost-then-shortest criterion, so
+\code{paths()} uses an endpoint-local foremost-then-shortest criterion, so
 its routes need not form one predecessor tree. This function therefore
 returns the honest union of all expanded optimal route hops. Edge \code{weight}
 is the number of endpoint/path families using the hop; \code{first_time} and

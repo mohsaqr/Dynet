@@ -129,7 +129,7 @@ test_that("tied paths and sessions count endpoints once", {
     from = c("S", "S", "A", "B"), to = c("A", "B", "T", "T"),
     time = c(1, 1, 2, 2)
   ))
-  paths <- dyn_paths(diamond, from = "S", start = 0, end = 2)
+  paths <- paths(diamond, from = "S", start = 0, end = 2)
   expect_equal(paths$n_paths[paths$node == "T"], 2)
   expect_equal(unname(closeness_values(
     diamond, start = 0, end = 2

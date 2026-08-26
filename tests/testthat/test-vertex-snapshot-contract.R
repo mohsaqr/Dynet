@@ -22,7 +22,7 @@ test_that("V02 exact snapshots use the eligible induced population", {
   wanted <- c("edges", "active_nodes", "isolates", "density", "mutual",
               "asymmetric", "null", "components", "components_strong",
               "largest_component")
-  got <- dyn_metrics(dn, wanted, start = 0, end = 5, step = 1, window = 0)
+  got <- metrics(dn, wanted, start = 0, end = 5, step = 1, window = 0)
   expect_equal(v02_values(got, "edges"), c(2, 5, 3, 5, 5, 0))
   expect_equal(v02_values(got, "active_nodes"), c(3, 4, 3, 4, 4, 0))
   expect_equal(v02_values(got, "isolates"), c(0, 0, 1, 1, 0, 1))
@@ -33,7 +33,7 @@ test_that("V02 exact snapshots use the eligible induced population", {
   expect_equal(v02_values(got, "components"), c(1, 1, 2, 2, 1, 1))
   expect_equal(v02_values(got, "components_strong"), c(3, 1, 2, 2, 1, 1))
   expect_equal(v02_values(got, "largest_component"), c(1, 1, 3/4, 4/5, 1, 1))
-  centralization <- dyn_metrics(
+  centralization <- metrics(
     dn, c("centralization_degree", "centralization_betweenness",
           "centralization_closeness"),
     start = 0, end = 5, step = 1, window = 0
@@ -66,11 +66,11 @@ test_that("V02 positive windows use independent any unions before induction", {
   )
   dn <- quiet_dynet(edges, vertex_spells = vertices,
                     observation_start = 0, observation_end = 2)
-  wide <- dyn_metrics(dn, c("edges", "density"), start = 0, end = 0,
+  wide <- metrics(dn, c("edges", "density"), start = 0, end = 0,
                       step = 1, window = 2)
   expect_equal(v02_values(wide, "edges"), 1)
   expect_equal(v02_values(wide, "density"), 1/2)
-  exact <- as.data.frame(dyn_snapshots(dn, start = 0, end = 2,
+  exact <- as.data.frame(snapshots(dn, start = 0, end = 2,
                                        step = .25, window = 0))
   expect_equal(nrow(exact), 0)
 })
@@ -83,9 +83,9 @@ test_that("V02 genuine terminus points authorize exact edges", {
   without_point <- quiet_dynet(edge, vertex_spells = data.frame(
     node = c("A", "B"), start = c(0, 2), end = c(2, 4)
   ))
-  expect_equal(nrow(dyn_snapshots(with_point, start = 2, end = 2,
+  expect_equal(nrow(snapshots(with_point, start = 2, end = 2,
                                   step = 1, window = 0)), 1)
-  expect_equal(nrow(dyn_snapshots(without_point, start = 2, end = 2,
+  expect_equal(nrow(snapshots(without_point, start = 2, end = 2,
                                   step = 1, window = 0)), 0)
 })
 
@@ -103,7 +103,7 @@ test_that("V02 empty and singleton eligible populations retain exact pins", {
     "centralization_closeness", "triads", "connectedness", "efficiency",
     "hierarchy", "lubness"
   )
-  got <- as.data.frame(dyn_metrics(empty, all_measures, start = 2, end = 2,
+  got <- as.data.frame(metrics(empty, all_measures, start = 2, end = 2,
                                    step = 1, window = 0))
   scalar <- setNames(got$value, got$measure)
   expect_equal(unname(scalar[c("density", "edges", "active_nodes", "isolates",
@@ -124,7 +124,7 @@ test_that("V02 empty and singleton eligible populations retain exact pins", {
   singleton <- quiet_dynet(edge, nodes = nodes, vertex_spells = data.frame(
     node = c("A", "B", "C"), start = c(2, 0, 0), end = c(3, 1, 1)
   ))
-  one <- dyn_metrics(singleton, c("density", "edges", "active_nodes",
+  one <- metrics(singleton, c("density", "edges", "active_nodes",
                                   "isolates", "components", "components_strong",
                                   "largest_component", "efficiency"),
                      start = 2, end = 2, step = 1, window = 0)
@@ -150,11 +150,11 @@ test_that("V02 bounded filters sessions locally and collapse may authorize", {
   dn <- quiet_dynet(edges, session = "wave", nodes = data.frame(
     name = c("A", "B", "C", "D")
   ), vertex_spells = vertices)
-  bounded <- dyn_metrics(dn, c("edges", "density"), sessions = "bounded",
+  bounded <- metrics(dn, c("edges", "density"), sessions = "bounded",
                          start = 1, end = 1, step = 1, window = 0)
-  collapsed <- dyn_metrics(dn, c("edges", "density"), sessions = "collapse",
+  collapsed <- metrics(dn, c("edges", "density"), sessions = "collapse",
                            start = 1, end = 1, step = 1, window = 0)
-  separate <- as.data.frame(dyn_metrics(
+  separate <- as.data.frame(metrics(
     dn, c("edges", "density"), sessions = "separate",
     start = 1, end = 1, step = 1, window = 0
   ))
@@ -175,11 +175,11 @@ test_that("V02 snapshots, mixing, loops, weights and isolates share one state", 
   vertices <- data.frame(node = c("A", "B", "C"), start = 0, end = 2)
   dn <- quiet_dynet(edges, nodes = nodes, groups = "group", weight = "weight",
                     loops = TRUE, vertex_spells = vertices)
-  snap <- dyn_snapshots(dn, start = 1, end = 1, step = 1, window = 0)
+  snap <- snapshots(dn, start = 1, end = 1, step = 1, window = 0)
   pair <- paste(snap$from, snap$to, sep = "->")
   expect_equal(snap$weight[match(c("A->A", "A->B"), pair)], c(7, 7))
   expect_equal(snap$n_spells[match(c("A->A", "A->B"), pair)], c(1L, 2L))
-  graph <- dyn_metrics(dn, c("edges", "active_nodes", "isolates", "density"),
+  graph <- metrics(dn, c("edges", "active_nodes", "isolates", "density"),
                        start = 1, end = 1, step = 1, window = 0)
   expect_equal(v02_values(graph, "edges"), 1)
   expect_equal(v02_values(graph, "active_nodes"), 2)
@@ -190,7 +190,7 @@ test_that("V02 snapshots, mixing, loops, weights and isolates share one state", 
   ))
   expect_equal(node$value[node$measure == "degree"], c(3, 1, 0))
   expect_equal(node$value[node$measure == "strength"], c(21, 7, 0))
-  mix <- as.data.frame(dyn_mixing(dn, "group", start = 1, end = 1,
+  mix <- as.data.frame(mixing(dn, "group", start = 1, end = 1,
                                   step = 1, window = 0))
   expect_equal(sum(mix$value), 2)
   expect_equal(nrow(mix), 9)
@@ -265,13 +265,13 @@ test_that("V02 no-activity compatibility preserves public values and shape", {
   empty <- quiet_dynet(v02_edges(), weight = "weight", vertex_spells = data.frame(
     node = character(), start = numeric(), end = numeric()
   ))
-  expect_equal(dyn_metrics(base, c("density", "triads")),
-               dyn_metrics(empty, c("density", "triads")),
+  expect_equal(metrics(base, c("density", "triads")),
+               metrics(empty, c("density", "triads")),
                ignore_attr = TRUE)
   expect_equal(dyn_centrality(base, c("degree", "pagerank", "strength")),
                dyn_centrality(empty, c("degree", "pagerank", "strength")),
                ignore_attr = TRUE)
-  expect_equal(dyn_snapshots(base), dyn_snapshots(empty))
+  expect_equal(snapshots(base), snapshots(empty))
 })
 
 test_that("V02 proximity slices use induced state and mask inactive vertices", {
@@ -304,7 +304,7 @@ test_that("V02 snapshots are invariant to rows, names, translation and scale", {
   vertices <- v02_vertices()
   baseline <- quiet_dynet(edges, weight = "weight", vertex_spells = vertices)
   measure <- function(dn, start, end, step) {
-    x <- as.data.frame(dyn_metrics(
+    x <- as.data.frame(metrics(
       dn, c("density", "active_nodes", "isolates", "triads"),
       start = start, end = end, step = step, window = 0
     ))

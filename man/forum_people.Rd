@@ -19,10 +19,10 @@ forum_people
 }
 \description{
 Vertex attributes for \link{forum_posts}. Passed to \code{\link[=dynet]{dynet()}} through its \code{nodes}
-argument, these become available to \code{\link[=dyn_mixing]{dyn_mixing()}}.
+argument, these become available to \code{\link[=mixing]{mixing()}}.
 }
 \examples{
 dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-dyn_mixing(dn, attribute = "role")
+mixing(dn, attribute = "role")
 }
 \keyword{datasets}

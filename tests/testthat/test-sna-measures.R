@@ -83,7 +83,7 @@ test_that("the new measures reach the public verbs", {
   finite_only <- node$value[node$measure != "power"]
   expect_true(all(is.finite(finite_only)))
 
-  graph <- as.data.frame(dyn_metrics(dn,
+  graph <- as.data.frame(metrics(dn,
     measure = c("connectedness", "efficiency", "hierarchy", "lubness",
                 "components_strong")))
   expect_setequal(unique(graph$measure),
@@ -92,7 +92,7 @@ test_that("the new measures reach the public verbs", {
   conn <- graph$value[graph$measure == "connectedness"]
   expect_true(all(conn >= 0 & conn <= 1))
   # Strong components can never be fewer than weak ones.
-  weak <- as.data.frame(dyn_metrics(dn, measure = "components"))$value
+  weak <- as.data.frame(metrics(dn, measure = "components"))$value
   expect_true(all(graph$value[graph$measure == "components_strong"] >= weak))
 })
 

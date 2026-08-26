@@ -7,7 +7,7 @@
 .path_route_sequences(x)
 }
 \arguments{
-\item{x}{A result from \code{\link[=dyn_paths]{dyn_paths()}}.}
+\item{x}{A result from \code{\link[=paths]{paths()}}.}
 }
 \value{
 A list of character vectors, one per optimal route.

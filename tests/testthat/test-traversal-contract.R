@@ -63,7 +63,7 @@ test_that("arrival at an interval terminus cannot board it", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  paths <- dyn_paths(dn, from = "A", at = 0, sessions = "collapse")
+  paths <- paths(dn, from = "A", at = 0, sessions = "collapse")
 
   expect_equal(.path_arrivals(paths, c("A", "B", "C")), c(0, 5, NA))
   reach <- dyn_reachability(dn, direction = "forward", at = 0,
@@ -85,7 +85,7 @@ test_that("P01 does not change the current backward boundary convention", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  paths <- dyn_paths(dn, from = "C", direction = "backward")
+  paths <- paths(dn, from = "C", direction = "backward")
 
   expect_true(all(as.data.frame(paths)$reachable))
   expect_equal(.path_arrivals(paths, c("A", "B", "C")), c(0, 0, 1))
@@ -98,11 +98,11 @@ test_that("interval onset is included and waiting is allowed", {
   )
   dn <- quiet_dynet(spell)
 
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 0), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 0), c("A", "B")),
                c(0, 5))
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 5), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 5), c("A", "B")),
                c(5, 5))
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 10), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 10), c("A", "B")),
                c(10, NA))
 })
 
@@ -113,7 +113,7 @@ test_that("a long-open interval can be boarded after its onset", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  paths <- dyn_paths(dn, from = "Z", at = 50)
+  paths <- paths(dn, from = "Z", at = 50)
 
   expect_equal(.path_arrivals(paths, c("Z", "A", "B")), c(50, 50, 50))
   expect_equal(as.data.frame(paths)$n_hops[
@@ -128,12 +128,12 @@ test_that("point events are traversable at their timestamp only", {
   )
   dn <- quiet_dynet(event)
 
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 0), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 0), c("A", "B")),
                c(0, 5))
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 5), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 5), c("A", "B")),
                c(5, 5))
   expect_equal(.path_arrivals(
-    dyn_paths(dn, from = "A", at = 5 + 1e-6), c("A", "B")
+    paths(dn, from = "A", at = 5 + 1e-6), c("A", "B")
   ), c(5 + 1e-6, NA))
 })
 
@@ -148,7 +148,7 @@ test_that("simultaneous point events compose independently of row order", {
   )
   results <- lapply(permutations, function(rows) {
     dn <- quiet_dynet(chain[rows, , drop = FALSE])
-    as.data.frame(dyn_paths(dn, from = "A", at = 0))
+    as.data.frame(paths(dn, from = "A", at = 0))
   })
 
   invisible(lapply(results, function(paths) {
@@ -166,7 +166,7 @@ test_that("a simultaneous cycle terminates without changing the source time", {
   )
   dn <- quiet_dynet(cycle)
 
-  expect_no_warning(paths <- dyn_paths(dn, from = "A", at = 0))
+  expect_no_warning(paths <- paths(dn, from = "A", at = 0))
   expect_equal(.path_arrivals(paths, c("A", "B", "C")), c(0, 5, 5))
   reach <- dyn_reachability(dn, direction = "forward", at = 0)
   expect_equal(as.data.frame(reach)$value, rep(1, 3))
@@ -180,13 +180,13 @@ test_that("parallel, duplicate, and overlapping spells preserve reach", {
   )
   dn <- quiet_dynet(spells)
 
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 3), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 3), c("A", "B")),
                c(3, 3))
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 4), c("A", "B")),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 4), c("A", "B")),
                c(4, NA))
   duplicate <- quiet_dynet(rbind(spells, spells))
-  expect_equal(.path_arrivals(dyn_paths(dn, from = "A", at = 3), c("A", "B")),
-               .path_arrivals(dyn_paths(duplicate, from = "A", at = 3),
+  expect_equal(.path_arrivals(paths(dn, from = "A", at = 3), c("A", "B")),
+               .path_arrivals(paths(duplicate, from = "A", at = 3),
                               c("A", "B")))
 })
 
@@ -197,8 +197,8 @@ test_that("bounded sessions are traversal walls", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  bounded <- dyn_paths(dn, from = "A", at = 0, sessions = "bounded")
-  collapsed <- dyn_paths(dn, from = "A", at = 0, sessions = "collapse")
+  bounded <- paths(dn, from = "A", at = 0, sessions = "bounded")
+  collapsed <- paths(dn, from = "A", at = 0, sessions = "collapse")
 
   expect_equal(.path_arrivals(bounded, c("A", "B", "C")), c(0, 1, NA))
   expect_equal(.path_arrivals(collapsed, c("A", "B", "C")), c(0, 1, 2))
@@ -211,7 +211,7 @@ test_that("bounded session searches retain each spell's point-event flag", {
     session = c("s1", "s1", "s2"), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(dn, from = "A", at = 0, sessions = "bounded")
+  paths <- paths(dn, from = "A", at = 0, sessions = "bounded")
 
   expect_equal(.path_arrivals(paths, c("A", "B", "C", "D", "E")),
                c(0, 1, 1, NA, NA))
@@ -226,11 +226,11 @@ test_that("undirected traversal does not depend on input orientation", {
   left <- quiet_dynet(first, directed = FALSE)
   right <- quiet_dynet(second, directed = FALSE)
 
-  expect_equal(.path_arrivals(dyn_paths(left, from = "A", at = 0),
+  expect_equal(.path_arrivals(paths(left, from = "A", at = 0),
                               c("A", "B", "C")), c(0, 1, 2))
-  expect_equal(.path_arrivals(dyn_paths(left, from = "A", at = 0),
+  expect_equal(.path_arrivals(paths(left, from = "A", at = 0),
                               c("A", "B", "C")),
-               .path_arrivals(dyn_paths(right, from = "A", at = 0),
+               .path_arrivals(paths(right, from = "A", at = 0),
                               c("A", "B", "C")))
 })
 
@@ -242,12 +242,12 @@ test_that("path time translates and scales consistently", {
   translated <- transform(base, start = start + 10, end = end + 10)
   scaled <- transform(base, start = start * 3, end = end * 3)
 
-  original <- as.data.frame(dyn_paths(quiet_dynet(base), from = "A", at = 1))
+  original <- as.data.frame(paths(quiet_dynet(base), from = "A", at = 1))
   shifted <- as.data.frame(
-    dyn_paths(quiet_dynet(translated), from = "A", at = 11)
+    paths(quiet_dynet(translated), from = "A", at = 11)
   )
   stretched <- as.data.frame(
-    dyn_paths(quiet_dynet(scaled), from = "A", at = 3)
+    paths(quiet_dynet(scaled), from = "A", at = 3)
   )
 
   expect_equal(shifted$arrival_time, original$arrival_time + 10)
@@ -295,7 +295,7 @@ test_that("path traversal agrees with exhaustive vertex-simple journeys", {
   invisible(lapply(cases, function(case) {
     dn <- quiet_dynet(case$spells, directed = case$directed)
     ours <- .path_arrivals(
-      dyn_paths(dn, from = case$source, at = case$at, sessions = "collapse"),
+      paths(dn, from = case$source, at = case$at, sessions = "collapse"),
       case$vertices
     )
     oracle <- .journey_oracle(
@@ -328,7 +328,7 @@ test_that("matching boundary cases agree with networkDynamic and tsna", {
       ),
       start = min(c(0, spells$start)), end = max(spells$end), verbose = FALSE
     )
-    ours <- .path_arrivals(dyn_paths(dn, from = "A", at = 0), vertices)
+    ours <- .path_arrivals(paths(dn, from = "A", at = 0), vertices)
     theirs <- tsna::tPath(nd, v = match("A", vertices), start = 0,
                           direction = "fwd")$tdist
     theirs[is.infinite(theirs)] <- NA_real_

@@ -3,7 +3,7 @@ test_that("path_network represents the union of endpoint-local optimal routes", 
     from = c("A", "A", "B", "C"), to = c("B", "C", "D", "D"),
     start = c(0, 0, 1, 1), end = c(1, 1, 2, 2)
   ))
-  paths <- dyn_paths(dn, from = "A", start = 0, end = 2)
+  paths <- paths(dn, from = "A", start = 0, end = 2)
   net <- path_network(paths)
   edges <- as.data.frame(net)
 

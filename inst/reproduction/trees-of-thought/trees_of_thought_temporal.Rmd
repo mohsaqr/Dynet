@@ -123,7 +123,7 @@ plot(dn, type = "proximity", measure = "betweenness",
 ## Main structural descriptives
 
 ```{r graph-main}
-graph_main <- dyn_metrics(
+graph_main <- metrics(
   dn,
   measure = c(
     "density", "efficiency", "connectedness", "reciprocity",
@@ -138,7 +138,7 @@ plot(graph_main, type = "ridge")
 ## Dyad census
 
 ```{r dyad-census}
-dyads <- dyn_metrics(
+dyads <- metrics(
   dn, measure = c("mutual", "asymmetric", "null"),
   step = 0.1, window = 0.1
 )
@@ -149,7 +149,7 @@ plot(dyads)
 ## Triad census
 
 ```{r triad-census, fig.height=8}
-triads <- dyn_metrics(dn, measure = "triads", step = 0.1, window = 0.1)
+triads <- metrics(dn, measure = "triads", step = 0.1, window = 0.1)
 triads
 plot(triads, type = "heatmap")
 ```
@@ -157,7 +157,7 @@ plot(triads, type = "heatmap")
 ## Lightweight ERGM-style descriptives
 
 ```{r ergm-descriptives}
-ergm_descriptives <- dyn_metrics(
+ergm_descriptives <- metrics(
   dn,
   measure = c(
     "indegree_1_5", "outdegree_1_5", "triangles",
@@ -233,7 +233,7 @@ plot(prestige_proximity, type = "heatmap")
 # Code-to-code mixing
 
 ```{r mixing-heatmap, fig.height=14}
-mixing <- dyn_mixing(dn, attribute = "name", step = 0.1, window = 0.1)
+mixing <- mixing(dn, attribute = "name", step = 0.1, window = 0.1)
 mixing
 plot(mixing, type = "heatmap")
 ```
@@ -254,15 +254,15 @@ plot(mixing, highlight = group_regulation_flows)
 ## Incident tie counts and durations by node
 
 ```{r node-tie-duration, fig.height=10}
-node_ties_all <- dyn_durations(
+node_ties_all <- durations(
   dn, unit = "node_ties", mode = "all",
   measure = c("events", "total", "union")
 )
-node_ties_in <- dyn_durations(
+node_ties_in <- durations(
   dn, unit = "node_ties", mode = "in",
   measure = c("events", "total", "union")
 )
-node_ties_out <- dyn_durations(
+node_ties_out <- durations(
   dn, unit = "node_ties", mode = "out",
   measure = c("events", "total", "union")
 )
@@ -274,7 +274,7 @@ plot(node_ties_out)
 ## Edge-pair duration
 
 ```{r pair-duration, fig.height=10}
-pair_duration <- dyn_durations(
+pair_duration <- durations(
   dn, unit = "pair",
   measure = c("events", "total", "union", "mean")
 )
@@ -285,7 +285,7 @@ plot(pair_duration)
 ## Vertex activity duration
 
 ```{r vertex-duration, fig.height=8}
-vertex_duration <- dyn_durations(dn, unit = "vertex_activity")
+vertex_duration <- durations(dn, unit = "vertex_activity")
 vertex_duration
 plot(vertex_duration)
 ```
@@ -321,7 +321,7 @@ number of optimal routes. The original scripts charged
 ```{r forward-path-atlas, results='asis', fig.height=8, fig.width=12}
 for (source_node in as.data.frame(dn, what = "nodes")$name) {
   cat("\n\n## ", source_node, "\n\n", sep = "")
-  forward_paths <- dyn_paths(
+  forward_paths <- paths(
     dn, from = source_node, direction = "forward", traversal_time = 0.1
   )
   print(plot_path_trajectories(
@@ -339,7 +339,7 @@ interval network has attained backward routes.
 ```{r backward-path-atlas, results='asis', fig.height=8, fig.width=12}
 for (target_node in as.data.frame(dn, what = "nodes")$name) {
   cat("\n\n## ", target_node, "\n\n", sep = "")
-  backward_paths <- dyn_paths(
+  backward_paths <- paths(
     dn, from = target_node, direction = "backward", start = 0, end = 4,
     traversal_time = 0.1
   )
@@ -386,7 +386,7 @@ plot(group_dn, type = "snapshots", panels = 9)
 ```
 
 ```{r group-subnetwork-metrics}
-plot(dyn_metrics(
+plot(metrics(
   group_dn,
   measure = c("density", "edges", "reciprocity", "connectedness"),
   step = 0.1, window = 0.1

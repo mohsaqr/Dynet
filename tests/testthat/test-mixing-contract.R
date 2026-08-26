@@ -21,7 +21,7 @@ mixing_fixture <- function() {
 
 test_that("directed mixing is the complete ordered binary-dyad table", {
   fixture <- mixing_fixture()
-  result <- dyn_mixing(
+  result <- mixing(
     quiet_dynet(fixture$spells, nodes = fixture$nodes), "group",
     start = 0, end = 0, window = 0
   )
@@ -38,7 +38,7 @@ test_that("directed mixing is the complete ordered binary-dyad table", {
 
 test_that("undirected mixing emits one unordered triangle with stub margins", {
   fixture <- mixing_fixture()
-  result <- dyn_mixing(
+  result <- mixing(
     quiet_dynet(fixture$spells, nodes = fixture$nodes, directed = FALSE),
     "group", start = 0, end = 0, window = 0
   )
@@ -73,7 +73,7 @@ test_that("the mixing kernel retains one loop and collapses parallel spells", {
 test_that("retained loops are one mixing edge, including for a singleton", {
   nodes <- data.frame(name = "a", group = "A")
   for (directed in c(TRUE, FALSE)) {
-    result <- dyn_mixing(
+    result <- mixing(
       quiet_dynet(data.frame(from = "a", to = "a", time = 0),
                   nodes = nodes, directed = directed, loops = TRUE),
       "group", start = 0, end = 0, window = 0
@@ -90,7 +90,7 @@ test_that("missing values have a collision-safe explicit group level", {
   spells <- data.frame(
     from = c("a", "b", "d", "c"), to = c("b", "d", "a", "a"), time = 0
   )
-  result <- dyn_mixing(
+  result <- mixing(
     quiet_dynet(spells, nodes = nodes), "group",
     start = 0, end = 0, window = 0
   )
@@ -108,7 +108,7 @@ test_that("group display delimiters are never parsed back into columns", {
   nodes <- data.frame(
     name = c("a", "b"), group = c("A -> inner", "B -- inner")
   )
-  result <- expect_no_warning(dyn_mixing(
+  result <- expect_no_warning(mixing(
     quiet_dynet(data.frame(from = "a", to = "b", time = 0), nodes = nodes),
     "group", start = 0, end = 0, window = 0
   ))
@@ -123,7 +123,7 @@ test_that("distinct structured cells always have distinct display labels", {
     group = c("A", "B -> C", "A -> B", "C")
   )
   spells <- data.frame(from = c("a", "c"), to = c("b", "d"), time = 0)
-  result <- dyn_mixing(
+  result <- mixing(
     quiet_dynet(spells, nodes = nodes), "group",
     start = 0, end = 0, window = 0
   )
@@ -147,10 +147,10 @@ test_that("mixing is binary across duplicates, overlaps, splits, and weights", {
   )
   nodes <- data.frame(name = c("a", "b"), group = c("A", "B"))
   args <- list(attribute = "group", start = 1, end = 1, window = 1)
-  one <- do.call(dyn_mixing, c(list(
+  one <- do.call(mixing, c(list(
     dn = quiet_dynet(base, nodes = nodes, weight = "weight")
   ), args))
-  many <- do.call(dyn_mixing, c(list(
+  many <- do.call(mixing, c(list(
     dn = quiet_dynet(represented, nodes = nodes, weight = "weight")
   ), args))
   expect_identical(mixing_cells(many), mixing_cells(one))
@@ -166,15 +166,15 @@ test_that("mixing uses interval overlap and exact point-event boundaries", {
     name = c("a", "b", "c", "d", "e"),
     group = c("A", "B", "B", "B", "B")
   )
-  window <- dyn_mixing(
+  window <- mixing(
     quiet_dynet(spells, nodes = nodes), "group",
     start = 1, end = 1, window = 1
   )
-  point <- dyn_mixing(
+  point <- mixing(
     quiet_dynet(spells, nodes = nodes), "group",
     start = 2, end = 2, window = 0
   )
-  terminus <- dyn_mixing(
+  terminus <- mixing(
     quiet_dynet(spells, nodes = nodes), "group",
     start = 3, end = 3, window = 0
   )
@@ -186,7 +186,7 @@ test_that("mixing uses interval overlap and exact point-event boundaries", {
 test_that("empty bins retain complete zero support", {
   fixture <- mixing_fixture()
   for (directed in c(TRUE, FALSE)) {
-    result <- dyn_mixing(
+    result <- mixing(
       quiet_dynet(fixture$spells, nodes = fixture$nodes,
                   directed = directed),
       "group", start = 10, end = 10, window = 0
@@ -203,11 +203,11 @@ test_that("bounded is a binary calendar union and separate is session local", {
   )
   nodes <- data.frame(name = c("a", "b"), group = c("A", "B"))
   dn <- quiet_dynet(spells, nodes = nodes, session = "session")
-  collapsed <- dyn_mixing(dn, "group", sessions = "collapse",
+  collapsed <- mixing(dn, "group", sessions = "collapse",
                           start = 0, end = 0, window = 0)
-  bounded <- dyn_mixing(dn, "group", sessions = "bounded",
+  bounded <- mixing(dn, "group", sessions = "bounded",
                         start = 0, end = 0, window = 0)
-  separate <- as.data.frame(dyn_mixing(
+  separate <- as.data.frame(mixing(
     dn, "group", sessions = "separate", start = 0, end = 0, window = 0
   ))
   expect_identical(mixing_cells(bounded), mixing_cells(collapsed))
@@ -219,7 +219,7 @@ test_that("bounded is a binary calendar union and separate is session local", {
   permuted <- spells[c(2, 1), ]
   permuted$session <- c("later", "earlier")
   expect_identical(
-    mixing_cells(dyn_mixing(
+    mixing_cells(mixing(
       quiet_dynet(permuted, nodes = nodes, session = "session"), "group",
       sessions = "bounded", start = 0, end = 0, window = 0
     )),
@@ -237,7 +237,7 @@ test_that("separate mixing keeps fixed support for session-absent groups", {
       c("A", "B", "C"), levels = c("C", "B", "A")
     )
   )
-  result <- as.data.frame(dyn_mixing(
+  result <- as.data.frame(mixing(
     quiet_dynet(spells, nodes = nodes, session = "session"), "group",
     sessions = "separate", start = 0, end = 0, window = 0
   ))
@@ -253,7 +253,7 @@ test_that("mixing transforms by its table units", {
   fixture <- mixing_fixture()
   value <- function(spells, nodes = fixture$nodes, directed = TRUE,
                     start = 0, end = 0) {
-    mixing_cells(dyn_mixing(
+    mixing_cells(mixing(
       quiet_dynet(spells, nodes = nodes, directed = directed), "group",
       start = start, end = end, window = 0
     ))
@@ -298,11 +298,11 @@ test_that("mixing transforms by its table units", {
 
 test_that("mixing publishes its mathematical conventions", {
   fixture <- mixing_fixture()
-  directed <- dyn_mixing(
+  directed <- mixing(
     quiet_dynet(fixture$spells, nodes = fixture$nodes), "group",
     start = 0, end = 0, window = 0
   )
-  undirected <- dyn_mixing(
+  undirected <- mixing(
     quiet_dynet(fixture$spells, nodes = fixture$nodes, directed = FALSE),
     "group", start = 0, end = 0, window = 0
   )

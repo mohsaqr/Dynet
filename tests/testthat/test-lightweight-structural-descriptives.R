@@ -36,10 +36,10 @@ test_that("undirected descriptives use distinct neighbours", {
 test_that("directed star selectors reject undirected input", {
   dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1),
               directed = FALSE)
-  expect_error(dyn_metrics(dn, "in_2stars"), class = "dynet_needs_directed")
-  expect_error(dyn_metrics(dn, "out_2stars"), class = "dynet_needs_directed")
-  expect_error(dyn_metrics(dn, "indegree_1_5"), class = "dynet_needs_directed")
-  expect_error(dyn_metrics(dn, "outdegree_1_5"), class = "dynet_needs_directed")
+  expect_error(metrics(dn, "in_2stars"), class = "dynet_needs_directed")
+  expect_error(metrics(dn, "out_2stars"), class = "dynet_needs_directed")
+  expect_error(metrics(dn, "indegree_1_5"), class = "dynet_needs_directed")
+  expect_error(metrics(dn, "outdegree_1_5"), class = "dynet_needs_directed")
 })
 
 test_that("new descriptives integrate with the tidy metric surface", {
@@ -54,7 +54,7 @@ test_that("new descriptives integrate with the tidy metric surface", {
     "concurrent_nodes", "concurrent_share", "in_2stars", "out_2stars",
     "two_paths"
   )
-  got <- as.data.frame(dyn_metrics(dn, measures, start = 0, end = 1,
+  got <- as.data.frame(metrics(dn, measures, start = 0, end = 1,
                                    step = 1, window = 1))
   first <- got[got$time == 0, ]
   expect_identical(first$measure, measures)

@@ -26,7 +26,7 @@
 #' vertex, its attained time and, when present, the session, so that routes
 #' are never merged across a distinction the path result draws.
 #'
-#' @param x A result from [dyn_paths()].
+#' @param x A result from [paths()].
 #' @return A list of character vectors, one per optimal route.
 #' @keywords internal
 .path_route_sequences <- function(x) {
@@ -233,7 +233,7 @@
 #' Optimal temporal routes as a counted trajectory tree
 #'
 #' @description
-#' Turns the optimal route family returned by [dyn_paths()] into a tidy
+#' Turns the optimal route family returned by [paths()] into a tidy
 #' prefix tree. Every row is one tree node: a route prefix reaching `vertex`
 #' at `time`, used by `count` optimal routes. A named vertex reached through
 #' a different temporal history is a separate row, so branches never create
@@ -244,7 +244,7 @@
 #' reversed, so the queried target is the root and possible senders branch
 #' away from it.
 #'
-#' @param x A result from [dyn_paths()].
+#' @param x A result from [paths()].
 #' @param min_count Keep only branches used by at least this many optimal
 #'   routes. The default of `1` keeps the complete family; a higher value is
 #'   the caller's explicit pruning.
@@ -256,14 +256,14 @@
 #'   placement across the tree.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- dyn_paths(dn, from = "Ana")
+#' paths <- paths(dn, from = "Ana")
 #' path_trajectories(paths)
 #' @seealso [plot_path_trajectories()] to draw the tree, [path_network()] for
 #'   the route union as a network.
 #' @export
 path_trajectories <- function(x, min_count = 1L) {
   if (!inherits(x, "dynet_paths")) {
-    stop(errorCondition("`x` must be a result from `dyn_paths()`.",
+    stop(errorCondition("`x` must be a result from `paths()`.",
                         class = "dynet_bad_input", call = NULL))
   }
   tree <- .path_prefix_tree(.path_route_sequences(x), min_count = min_count)
@@ -335,7 +335,7 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' Draw optimal temporal paths as a trajectory tree
 #'
 #' @description
-#' Draws the optimal route family returned by [dyn_paths()] using the
+#' Draws the optimal route family returned by [paths()] using the
 #' trajectory-tree grammar ported from the `transitiontrees` package: leaves
 #' stacked in depth-first order, parents centred on their children, branches
 #' carried by a cosine smoothstep, and capsule node glyphs. Branch width
@@ -348,7 +348,7 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' from it. A named vertex repeats whenever it is reached under a different
 #' temporal history.
 #'
-#' @param x A result from [dyn_paths()] or from [path_trajectories()].
+#' @param x A result from [paths()] or from [path_trajectories()].
 #' @param measure Node fill. `"frequency"` is the number of optimal routes
 #'   through the branch, `"time"` is the attained time at the node, and
 #'   `"predictability"` is the branching fraction of the parent's routes that
@@ -361,7 +361,7 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' @return A `ggplot` object.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- dyn_paths(dn, from = "Ana")
+#' paths <- paths(dn, from = "Ana")
 #' plot_path_trajectories(paths)
 #' plot_path_trajectories(paths, measure = "time", orientation = "vertical")
 #' @seealso [path_trajectories()] for the tidy tree behind the plot.

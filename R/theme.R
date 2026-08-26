@@ -69,7 +69,7 @@
   need <- c("arrival_time", "n_hops")
   if (!all(need %in% names(nodes))) {
     stop(errorCondition(
-      "The \"temporal\" layout needs `arrival_time` and `n_hops` vertex columns; it is meant for the result of dyn_paths().",
+      "The \"temporal\" layout needs `arrival_time` and `n_hops` vertex columns; it is meant for the result of paths().",
       class = "dynet_bad_input", call = NULL))
   }
   data.frame(

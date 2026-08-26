@@ -37,7 +37,7 @@ test_that("temporal centrality on a chain matches hand calculation", {
 
 test_that("graph measures on the same triangle match hand calculation", {
   dn <- quiet_dynet(triangle_edges())
-  m <- as.data.frame(dyn_metrics(
+  m <- as.data.frame(metrics(
     dn, measure = c("density", "reciprocity", "transitivity", "edges")))
   at3 <- m[m$time == 3, , drop = FALSE]
   # three of six possible directed edges; no edge is reciprocated; the three
@@ -55,19 +55,19 @@ test_that("a window keeps an event that point sampling misses", {
                       start = c(0, 1.3, 3), end = c(0.5, 1.6, 3.5),
                       stringsAsFactors = FALSE)
   dn <- quiet_dynet(brief, interval = 1)
-  win <- as.data.frame(dyn_metrics(dn, measure = "edges"))
-  ins <- as.data.frame(dyn_metrics(dn, measure = "edges", window = 0))
+  win <- as.data.frame(metrics(dn, measure = "edges"))
+  ins <- as.data.frame(metrics(dn, measure = "edges", window = 0))
   expect_equal(win$value[win$time == 1], 1)
   expect_equal(ins$value[ins$time == 1], 0)
 })
 
 test_that("density stays inside the unit interval and degrees sum to twice the edges", {
   dn <- quiet_dynet(random_edges(seed = 21L))
-  dens <- dyn_metrics(dn, measure = "density")
+  dens <- metrics(dn, measure = "density")
   expect_true(all(dens$value >= 0 & dens$value <= 1))
 
   deg <- as.data.frame(dyn_centrality(dn, measure = "degree"))
-  edges <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  edges <- as.data.frame(metrics(dn, measure = "edges"))
   per_time <- tapply(deg$value, deg$time, sum)
   expect_equal(as.numeric(per_time),
                2 * edges$value[match(names(per_time), edges$time)])
@@ -76,10 +76,10 @@ test_that("density stays inside the unit interval and degrees sum to twice the e
 test_that("censuses over time always account for every dyad and triple", {
   dn <- quiet_dynet(random_edges(n_v = 10L, seed = 22L))
   n <- nrow(as.data.frame(dn, what = "nodes"))
-  dyads <- as.data.frame(dyn_metrics(dn, measure = c("mutual", "asymmetric", "null")))
+  dyads <- as.data.frame(metrics(dn, measure = c("mutual", "asymmetric", "null")))
   expect_true(all(tapply(dyads$value, dyads$time, sum) == choose(n, 2)))
 
-  triads <- as.data.frame(dyn_metrics(dn, measure = "triads"))
+  triads <- as.data.frame(metrics(dn, measure = "triads"))
   expect_true(all(tapply(triads$value, triads$time, sum) == choose(n, 3)))
 })
 
@@ -96,21 +96,21 @@ test_that("measures are invariant to relabelling the vertices", {
   key <- function(d) d$value[order(d$time, d$node)]
   expect_equal(key(a), key(b))
 
-  ga <- dyn_metrics(quiet_dynet(e), measure = "transitivity")
-  gb <- dyn_metrics(quiet_dynet(e2), measure = "transitivity")
+  ga <- metrics(quiet_dynet(e), measure = "transitivity")
+  gb <- metrics(quiet_dynet(e2), measure = "transitivity")
   expect_equal(ga$value, gb$value)
 })
 
 test_that("burstiness is bounded and undefined where it must be", {
   dn <- quiet_dynet(random_edges(seed = 24L))
-  b <- as.data.frame(dyn_burstiness(dn))
+  b <- as.data.frame(burstiness(dn))
   vals <- b$value[b$measure == "burstiness"]
   expect_true(all(is.na(vals) | (vals >= -1 & vals <= 1)))
 
   # A vertex with a single event has no gap, so burstiness is not defined.
   sparse <- data.frame(from = c("A", "C"), to = c("B", "D"),
                        start = c(1, 2), end = c(2, 3), stringsAsFactors = FALSE)
-  sb <- as.data.frame(dyn_burstiness(quiet_dynet(sparse)))
+  sb <- as.data.frame(burstiness(quiet_dynet(sparse)))
   expect_true(all(is.na(sb$value[sb$measure == "burstiness"])))
 })
 
@@ -119,13 +119,13 @@ test_that("a perfectly regular sequence is minimally bursty", {
                           start = seq(0, 22, by = 2),
                           end = seq(0, 22, by = 2) + 0.5,
                           stringsAsFactors = FALSE)
-  b <- as.data.frame(dyn_burstiness(quiet_dynet(metronome)))
+  b <- as.data.frame(burstiness(quiet_dynet(metronome)))
   expect_equal(b$value[b$node == "A" & b$measure == "burstiness"], -1)
 })
 
 test_that("durations recover the spells that went in", {
   dn <- quiet_dynet(triangle_edges())
-  d <- as.data.frame(dyn_durations(dn, measure = c("events", "total", "mean")))
+  d <- as.data.frame(durations(dn, measure = c("events", "total", "mean")))
   expect_equal(sum(d$value[d$measure == "events"]), 3)
   expect_equal(sum(d$value[d$measure == "total"]), sum(c(3, 3, 3)))
   expect_true(all(d$value[d$measure == "mean"] == 3))
@@ -133,7 +133,7 @@ test_that("durations recover the spells that went in", {
 
 test_that("formation and dissolution each account for every spell once", {
   dn <- quiet_dynet(random_edges(seed = 25L))
-  ev <- as.data.frame(dyn_events(dn, measure = c("formation", "dissolution")))
+  ev <- as.data.frame(events(dn, measure = c("formation", "dissolution")))
   n_spells <- nrow(as.data.frame(dn))
   expect_equal(sum(ev$value[ev$measure == "formation"]), n_spells)
   expect_lte(sum(ev$value[ev$measure == "dissolution"]), n_spells)
@@ -141,8 +141,8 @@ test_that("formation and dissolution each account for every spell once", {
 
 test_that("mixing counts every active edge exactly once", {
   dn <- quiet_dynet(forum_posts, thread = "thread", nodes = forum_people)
-  mix <- as.data.frame(dyn_mixing(dn, attribute = "role"))
-  edges <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  mix <- as.data.frame(mixing(dn, attribute = "role"))
+  edges <- as.data.frame(metrics(dn, measure = "edges"))
   by_time <- tapply(mix$value, mix$time, sum)
   expect_equal(as.numeric(by_time),
                edges$value[match(as.numeric(names(by_time)), edges$time)])
@@ -150,8 +150,8 @@ test_that("mixing counts every active edge exactly once", {
 
 test_that("snapshots agree with the edge counts the metric verbs report", {
   dn <- quiet_dynet(random_edges(seed = 26L))
-  snaps <- dyn_snapshots(dn)
-  edges <- as.data.frame(dyn_metrics(dn, measure = "edges"))
+  snaps <- snapshots(dn)
+  edges <- as.data.frame(metrics(dn, measure = "edges"))
   counted <- tapply(rep(1, nrow(snaps)), snaps$time, sum)
   expect_equal(as.numeric(counted),
                edges$value[match(as.numeric(names(counted)), edges$time)])

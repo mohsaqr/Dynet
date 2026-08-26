@@ -403,19 +403,19 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_events(dn)
-#' plot(dyn_events(dn, measure = c("formation", "dissolution")))
-#' dyn_events(dn, measure = "formation_fraction", start = 1, end = 1,
+#' events(dn)
+#' plot(events(dn, measure = c("formation", "dissolution")))
+#' events(dn, measure = "formation_fraction", start = 1, end = 1,
 #'            window = 0)
-#' dyn_events(dn, measure = "dissolution_fraction", start = 1, end = 1,
+#' events(dn, measure = "dissolution_fraction", start = 1, end = 1,
 #'            window = 0)
-#' dyn_events(dn, measure = "formation_rate", start = 1, end = 2,
+#' events(dn, measure = "formation_rate", start = 1, end = 2,
 #'            window = 1)
-#' dyn_events(dn, measure = "dissolution_rate", start = 1, end = 2,
+#' events(dn, measure = "dissolution_rate", start = 1, end = 2,
 #'            window = 1)
 #'
 #' @export
-dyn_events <- function(dn,
+events <- function(dn,
                        measure = c("formation", "dissolution"),
                        sessions = c("bounded", "collapse", "separate"),
                        start = NULL, end = NULL,
@@ -490,7 +490,7 @@ dyn_events <- function(dn,
       first_seen[candidate[!duplicated(pair[candidate])]] <- TRUE
       # The final window of a defaulted grid is closed on the right, exactly as
       # it is for edge activity; without this a spell beginning on the last
-      # observed instant would be counted by dyn_metrics() and lost here.
+      # observed instant would be counted by metrics() and lost here.
       within <- function(t) {
         if (spec$window == 0) return(t == lo)
         if (isTRUE(bin$closed)) t >= lo & t <= hi else t >= lo & t < hi
@@ -684,7 +684,7 @@ dyn_events <- function(dn,
 
 
 # ===========================================================================
-# dyn_durations()
+# durations()
 # ===========================================================================
 
 #' Endpoint-valid fragments for duration subjects
@@ -1023,16 +1023,16 @@ dyn_events <- function(dn,
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_durations(dn)
-#' dyn_durations(dn, measure = "union")
-#' dyn_durations(dn, unit = "spell", measure = "duration")
-#' dyn_durations(dn, unit = "vertex_activity")
-#' dyn_durations(dn, unit = "vertex_spell")
-#' dyn_durations(dn, unit = "node_ties", mode = "all")
-#' summary(dyn_durations(dn), by = "measure")
+#' durations(dn)
+#' durations(dn, measure = "union")
+#' durations(dn, unit = "spell", measure = "duration")
+#' durations(dn, unit = "vertex_activity")
+#' durations(dn, unit = "vertex_spell")
+#' durations(dn, unit = "node_ties", mode = "all")
+#' summary(durations(dn), by = "measure")
 #'
 #' @export
-dyn_durations <- function(dn, measure = c("events", "total", "mean"),
+durations <- function(dn, measure = c("events", "total", "mean"),
                           sessions = c("bounded", "collapse", "separate"),
                           censored = c("include", "exclude"),
                           unit = c("pair", "spell", "vertex_activity",
@@ -1306,7 +1306,7 @@ dyn_durations <- function(dn, measure = c("events", "total", "mean"),
 
 
 # ===========================================================================
-# dyn_burstiness()
+# burstiness()
 # ===========================================================================
 
 #' Burstiness and memory of each vertex's activity
@@ -1363,10 +1363,10 @@ dyn_durations <- function(dn, measure = c("events", "total", "mean"),
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_burstiness(dn)
+#' burstiness(dn)
 #'
 #' @export
-dyn_burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
+burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
                            sessions = c("bounded", "collapse", "separate")) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)

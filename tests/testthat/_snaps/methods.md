@@ -38,7 +38,7 @@
 ---
 
     Code
-      print(dyn_paths(dn, from = "A"))
+      print(paths(dn, from = "A"))
     Output
       # Time-respecting paths from 'A', from t = 1
       # reaches 4 of 4 other vertices | time in step

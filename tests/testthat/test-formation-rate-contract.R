@@ -1,6 +1,6 @@
 .t03_value <- function(dn, sessions = "bounded", start = NULL, end = NULL,
                        step = 10, window = 10) {
-  dyn_events(
+  events(
     dn, measure = "formation_rate", sessions = sessions,
     start = start, end = end, step = step, window = window
   )$value
@@ -60,7 +60,7 @@ test_that("T03 literal ledger integrates keyed inactive exposure exactly", {
                  formation_rate = 3 / 11))
   expect_equal(unname(.t03_value(directed)), 2 / 19)
   expect_equal(unname(.t03_value(undirected)), 3 / 11)
-  expect_equal(dyn_events(
+  expect_equal(events(
     directed, measure = "formation", step = 10, window = 10
   )$value, 8)
 })
@@ -110,7 +110,7 @@ test_that("T03 unions duplicates, overlaps, adjacency, and points", {
   expect_equal(ledger,
                c(formations = 1, inactive_exposure = 3,
                  formation_rate = 1 / 3))
-  expect_equal(dyn_events(
+  expect_equal(events(
     dn, measure = "formation", step = 10, window = 10
   )$value, 5)
 
@@ -177,7 +177,7 @@ test_that("T03 observation components and vertex changes cut exposure exactly", 
     edges, vertex_spells = activity,
     observation_spells = data.frame(start = c(0, 5), end = c(3, 10))
   )
-  out <- dyn_events(
+  out <- events(
     dn, measure = "formation_rate", step = 10, window = 10
   )
   expect_identical(out$time, c(0, 5))
@@ -235,11 +235,11 @@ test_that("T03 window ownership and additive ledgers are exact", {
   expect_equal(whole[["inactive_exposure"]],
                first[["inactive_exposure"]] + second[["inactive_exposure"]])
 
-  first_public <- dyn_events(
+  first_public <- events(
     dn, measure = "formation_rate", start = 0, end = 0,
     step = 5, window = 5
   )
-  second_public <- dyn_events(
+  second_public <- events(
     dn, measure = "formation_rate", start = 5, end = 5,
     step = 5, window = 5
   )
@@ -257,7 +257,7 @@ test_that("T03 session policies integrate union risk without cross-authorization
   )
   expect_equal(.t03_value(dn, "collapse"), 0)
   expect_equal(.t03_value(dn, "bounded"), 0)
-  separate <- dyn_events(
+  separate <- events(
     dn, measure = "formation_rate", sessions = "separate",
     step = 10, window = 10
   )
@@ -273,7 +273,7 @@ test_that("T03 session policies integrate union risk without cross-authorization
                .t03_value(dn, "collapse"))
   expect_equal(.t03_value(permuted_dn, "bounded"),
                .t03_value(dn, "bounded"))
-  permuted_separate <- dyn_events(
+  permuted_separate <- events(
     permuted_dn, measure = "formation_rate", sessions = "separate",
     step = 10, window = 10
   )
@@ -292,7 +292,7 @@ test_that("T03 session policies integrate union risk without cross-authorization
   )
   expect_equal(.t03_value(cross, "collapse"), 1 / 17)
   expect_equal(.t03_value(cross, "bounded"), 0)
-  cross_separate <- dyn_events(
+  cross_separate <- events(
     cross, measure = "formation_rate", sessions = "separate",
     step = 10, window = 10
   )
@@ -386,7 +386,7 @@ test_that("T03 reports calendar inverse units", {
     ), directed = FALSE, time_unit = "days",
     observation_start = origin, observation_end = origin + 10
   )
-  out <- dyn_events(
+  out <- events(
     dn, measure = "formation_rate", step = 10, window = 10
   )
   expect_equal(out$value, 1 / 8)
@@ -400,7 +400,7 @@ test_that("T03 reports calendar inverse units", {
     ), directed = FALSE, time_unit = "hours",
     observation_start = clock, observation_end = clock + 10 * 3600
   )
-  hourly_out <- dyn_events(
+  hourly_out <- events(
     hourly, measure = "formation_rate", step = 10, window = 10
   )
   expect_equal(hourly_out$value, 1 / 8)
@@ -413,21 +413,21 @@ test_that("T03 enforces positive compatible windows and exposes metadata", {
     observation_start = 0, observation_end = 3
   )
   expect_error(
-    dyn_events(dn, measure = "formation_rate", window = 0),
+    events(dn, measure = "formation_rate", window = 0),
     class = "dynet_rate_requires_positive_window"
   )
   expect_error(
-    dyn_events(
+    events(
       dn, measure = c("formation_fraction", "formation_rate"), window = 0
     ), class = "dynet_incompatible_transition_windows"
   )
   expect_error(
-    dyn_events(
+    events(
       dn, measure = c("dissolution_fraction", "formation_rate"), window = 1
     ), class = "dynet_incompatible_transition_windows"
   )
 
-  single <- dyn_events(
+  single <- events(
     dn, measure = "formation_rate", start = 0, end = 0,
     step = 3, window = 3
   )
@@ -471,7 +471,7 @@ test_that("T03 enforces positive compatible windows and exposes metadata", {
   expect_identical(attr(single, "transition_session_aggregation"),
                    "labels_erased_calendar_union")
 
-  mixed <- dyn_events(
+  mixed <- events(
     dn, measure = c("formation", "formation_rate"), start = 0, end = 0,
     step = 3, window = 3
   )

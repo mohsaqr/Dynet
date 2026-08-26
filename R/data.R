@@ -48,7 +48,7 @@
 #' People in the discussion forum
 #'
 #' Vertex attributes for [forum_posts]. Passed to [dynet()] through its `nodes`
-#' argument, these become available to [dyn_mixing()].
+#' argument, these become available to [mixing()].
 #'
 #' @format A `data.frame` with 20 rows and 3 columns:
 #' \describe{
@@ -61,7 +61,7 @@
 #'
 #' @examples
 #' dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-#' dyn_mixing(dn, attribute = "role")
+#' mixing(dn, attribute = "role")
 "forum_people"
 
 #' Seminar attendance

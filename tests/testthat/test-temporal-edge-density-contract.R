@@ -4,7 +4,7 @@
 )
 
 .d04_values <- function(dn, ...) {
-  out <- dyn_metrics(dn, measure = .d04_measures, ...)
+  out <- metrics(dn, measure = .d04_measures, ...)
   stats::setNames(out$value, out$measure)
 }
 
@@ -139,7 +139,7 @@ test_that("D04 ever-observed cohort is global rather than reset by a query windo
     ),
     observation_start = 0, observation_end = 10
   )
-  out <- dyn_metrics(
+  out <- metrics(
     dn, measure = .d04_measures, start = 0, end = 5,
     step = 5, window = 5
   )
@@ -153,12 +153,12 @@ test_that("D04 exact windows remain distinct from snapshot-any density", {
     data.frame(from = "A", to = "B", start = 0, end = 1),
     observation_start = 0, observation_end = 5
   )
-  out <- dyn_metrics(
+  out <- metrics(
     dn, measure = c("density", .d04_measures), step = 5, window = 5
   )
   expect_equal(out$value, c(1 / 2, 1 / 10, 1 / 5, 1 / 10, 1 / 5))
 
-  instant <- dyn_metrics(dn, measure = .d04_measures, window = 0)
+  instant <- metrics(dn, measure = .d04_measures, window = 0)
   expect_true(all(is.na(instant$value)))
 })
 
@@ -169,7 +169,7 @@ test_that("D04 raw-onset bins preserve half-open and final-closed boundaries", {
     ),
     observation_start = 0, observation_end = 10
   )
-  out <- dyn_metrics(dn, measure = .d04_measures, step = 5, window = 5)
+  out <- metrics(dn, measure = .d04_measures, step = 5, window = 5)
   first <- stats::setNames(out$value[out$time == 0], out$measure[out$time == 0])
   last <- stats::setNames(out$value[out$time == 5], out$measure[out$time == 5])
   expect_equal(unname(first), c(1 / 2, 1, 1 / 10, 1 / 5))
@@ -192,7 +192,7 @@ test_that("D04 session policies union exposure but retain raw-onset identity", {
     dn, sessions = "bounded", step = 10, window = 10
   )), expected)
 
-  separate <- dyn_metrics(
+  separate <- metrics(
     dn, measure = .d04_measures, sessions = "separate",
     step = 10, window = 10
   )
@@ -299,7 +299,7 @@ test_that("D04 mixed results expose measure-specific scope and quantity metadata
     data.frame(from = "A", to = "B", start = 0, end = 2),
     observation_start = 0, observation_end = 2
   )
-  out <- dyn_metrics(
+  out <- metrics(
     dn, measure = c("density", .d04_measures), step = 2, window = 2
   )
   expect_identical(attr(out, "measure_scope"), stats::setNames(
@@ -370,7 +370,7 @@ test_that("D04 pools observation components without bridging or averaging ratios
     data.frame(from = "A", to = "B", start = 0, end = 6),
     observation_spells = data.frame(start = c(0, 4), end = c(2, 6))
   )
-  out <- dyn_metrics(dn, measure = .d04_measures, step = 2, window = 2)
+  out <- metrics(dn, measure = .d04_measures, step = 2, window = 2)
   expect_identical(out$time, rep(c(0, 4), each = 4))
   expect_equal(out$value[out$time == 0], c(1 / 2, 1, 1 / 4, 1 / 2))
   expect_equal(out$value[out$time == 4], c(1 / 2, 1, 0, 0))
@@ -397,7 +397,7 @@ test_that("D04 does not fabricate vertex eligibility at an observation touch", {
     vertex_spells = data.frame(node = "F", start = 5, end = 9),
     observation_spells = data.frame(start = c(0, 6), end = c(5, 10))
   )
-  out <- dyn_metrics(dn, measure = .d04_measures, step = 5, window = 5)
+  out <- metrics(dn, measure = .d04_measures, step = 5, window = 5)
   second <- stats::setNames(
     out$value[out$time == 6], out$measure[out$time == 6]
   )
@@ -423,7 +423,7 @@ test_that("D04 pooled summary divides additive ledgers across unequal components
     ), loops = TRUE,
     observation_spells = data.frame(start = c(0, 4), end = c(2, 8))
   )
-  out <- dyn_metrics(dn, measure = "temporal_density", step = 4, window = 4)
+  out <- metrics(dn, measure = "temporal_density", step = 4, window = 4)
   expect_equal(out$value, c(1 / 6, 1 / 24))
   ledger <- Dynet:::.temporal_risk_ledger(dn)
   expect_identical(unname(ledger), c(36, 3, 33))

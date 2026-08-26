@@ -7,7 +7,7 @@
 path_trajectories(x, min_count = 1L)
 }
 \arguments{
-\item{x}{A result from \code{\link[=dyn_paths]{dyn_paths()}}.}
+\item{x}{A result from \code{\link[=paths]{paths()}}.}
 
 \item{min_count}{Keep only branches used by at least this many optimal
 routes. The default of \code{1} keeps the complete family; a higher value is
@@ -22,7 +22,7 @@ routes that continue along this branch, and \code{branch} is the node's
 placement across the tree.
 }
 \description{
-Turns the optimal route family returned by \code{\link[=dyn_paths]{dyn_paths()}} into a tidy
+Turns the optimal route family returned by \code{\link[=paths]{paths()}} into a tidy
 prefix tree. Every row is one tree node: a route prefix reaching \code{vertex}
 at \code{time}, used by \code{count} optimal routes. A named vertex reached through
 a different temporal history is a separate row, so branches never create
@@ -35,7 +35,7 @@ away from it.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- dyn_paths(dn, from = "Ana")
+paths <- paths(dn, from = "Ana")
 path_trajectories(paths)
 }
 \seealso{

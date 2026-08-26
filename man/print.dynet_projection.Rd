@@ -7,7 +7,7 @@
 \method{print}{dynet_projection}(x, ...)
 }
 \arguments{
-\item{x}{A projection returned by \code{\link[=dyn_projection]{dyn_projection()}}.}
+\item{x}{A projection returned by \code{\link[=projection]{projection()}}.}
 
 \item{...}{Ignored.}
 }

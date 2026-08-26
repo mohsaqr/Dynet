@@ -1,5 +1,5 @@
 # ===========================================================================
-# dyn_metrics() — time-varying graph-level structure
+# metrics() — time-varying graph-level structure
 # ===========================================================================
 
 .graph_measures <- c(
@@ -153,13 +153,13 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_metrics(dn, measure = "density")
-#' dyn_metrics(dn, measure = c("density", "reciprocity", "transitivity"))
-#' dyn_metrics(dn, measure = "density", step = 1, window = 3)
-#' plot(dyn_metrics(dn, measure = c("mutual", "asymmetric")))
+#' metrics(dn, measure = "density")
+#' metrics(dn, measure = c("density", "reciprocity", "transitivity"))
+#' metrics(dn, measure = "density", step = 1, window = 3)
+#' plot(metrics(dn, measure = c("mutual", "asymmetric")))
 #'
 #' @export
-dyn_metrics <- function(dn, measure = "density",
+metrics <- function(dn, measure = "density",
                         sessions = c("bounded", "collapse", "separate"),
                         sample = NULL,
                         start = NULL, end = NULL,

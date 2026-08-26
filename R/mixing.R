@@ -1,5 +1,5 @@
 # ===========================================================================
-# dyn_mixing() — who interacts with whom, over time
+# mixing() — who interacts with whom, over time
 # ===========================================================================
 
 #' Mixing between vertex groups over time
@@ -68,11 +68,11 @@
 #'
 #' @examples
 #' dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-#' dyn_mixing(dn, attribute = "role")
-#' plot(dyn_mixing(dn, attribute = "role"))
+#' mixing(dn, attribute = "role")
+#' plot(mixing(dn, attribute = "role"))
 #'
 #' @export
-dyn_mixing <- function(dn, attribute,
+mixing <- function(dn, attribute,
                        sessions = c("bounded", "collapse", "separate"),
                        sample = NULL,
                        start = NULL, end = NULL,
@@ -201,7 +201,7 @@ dyn_mixing <- function(dn, attribute,
 }
 
 # ===========================================================================
-# dyn_snapshots() — the network as a sequence of tidy edge tables
+# snapshots() — the network as a sequence of tidy edge tables
 # ===========================================================================
 
 #' The network sliced into snapshots
@@ -229,16 +229,16 @@ dyn_mixing <- function(dn, attribute,
 #'   (when present), `time`, `from`, `to`, `weight` and `n_spells`. A pair
 #'   joined by more than one spell in the same bin is one edge, with
 #'   `n_spells` recording how many spells were collapsed -- so the edge counts
-#'   here agree with those from [dyn_metrics()]. Eligible isolates have no
-#'   synthetic edge row; use [dyn_centrality()] or [dyn_metrics()] when the
+#'   here agree with those from [metrics()]. Eligible isolates have no
+#'   synthetic edge row; use [dyn_centrality()] or [metrics()] when the
 #'   eligible population itself is required.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' dyn_snapshots(dn, at = 3)
+#' snapshots(dn, at = 3)
 #'
 #' @export
-dyn_snapshots <- function(dn, at = NULL,
+snapshots <- function(dn, at = NULL,
                           sessions = c("bounded", "collapse", "separate"),
                           sample = NULL,
                           start = NULL, end = NULL,

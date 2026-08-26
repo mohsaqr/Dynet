@@ -1,5 +1,5 @@
 .t02_value <- function(dn, time, sessions = "bounded") {
-  dyn_events(
+  events(
     dn, measure = "dissolution_fraction", sessions = sessions,
     start = time, end = time, step = 1, window = 0
   )$value
@@ -28,7 +28,7 @@ test_that("T02 literal batch counts confirmed pair dissolutions rather than term
 
   expect_equal(.t02_value(directed, 1), 1 / 5)
   expect_equal(.t02_value(undirected, 1), 1 / 3)
-  expect_equal(dyn_events(
+  expect_equal(events(
     directed, measure = "dissolution", start = 1, end = 1, window = 0
   )$value, 6)
 })
@@ -270,7 +270,7 @@ test_that("T02 session modes use frozen union-state and authorization rules", {
   )
   expect_equal(.t02_value(masked, 5, "collapse"), 0)
   expect_equal(.t02_value(masked, 5, "bounded"), 0)
-  separate <- dyn_events(
+  separate <- events(
     masked, measure = "dissolution_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -287,7 +287,7 @@ test_that("T02 session modes use frozen union-state and authorization rules", {
                .t02_value(masked, 5, "collapse"))
   expect_equal(.t02_value(permuted, 5, "bounded"),
                .t02_value(masked, 5, "bounded"))
-  permuted_separate <- dyn_events(
+  permuted_separate <- events(
     permuted, measure = "dissolution_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -299,7 +299,7 @@ test_that("T02 session modes use frozen union-state and authorization rules", {
   )
   expect_equal(.t02_value(both, 5, "collapse"), 1)
   expect_equal(.t02_value(both, 5, "bounded"), 1)
-  both_separate <- dyn_events(
+  both_separate <- events(
     both, measure = "dissolution_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -318,7 +318,7 @@ test_that("T02 session modes use frozen union-state and authorization rules", {
   )
   expect_equal(.t02_value(cross, 5, "collapse"), 1 / 2)
   expect_equal(.t02_value(cross, 5, "bounded"), 0)
-  cross_separate <- dyn_events(
+  cross_separate <- events(
     cross, measure = "dissolution_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -399,7 +399,7 @@ test_that("T02 reflection swaps confirmed dissolution and formation sets", {
   expect_identical(left$dissolutions, right$formations)
   expect_equal(.t02_value(original, 1), 1)
   expect_equal(
-    dyn_events(reflected, "formation_fraction", start = 1,
+    events(reflected, "formation_fraction", start = 1,
                end = 1, window = 0)$value, 1 / 2
   )
 })
@@ -432,16 +432,16 @@ test_that("T02 enforces exact-time use and exposes typed metadata", {
     observation_start = 0, observation_end = 3
   )
   expect_error(
-    dyn_events(dn, measure = "dissolution_fraction"),
+    events(dn, measure = "dissolution_fraction"),
     class = "dynet_transition_requires_instant"
   )
   expect_error(
-    dyn_events(
+    events(
       dn, measure = c("dissolution", "dissolution_fraction"), window = 1
     ), class = "dynet_transition_requires_instant"
   )
 
-  out <- dyn_events(
+  out <- events(
     dn, measure = c("dissolution", "dissolution_fraction"),
     start = 2, end = 2, window = 0
   )
@@ -480,7 +480,7 @@ test_that("T02 enforces exact-time use and exposes typed metadata", {
   expect_identical(attr(out, "transition_session_aggregation"),
                    "labels_erased_calendar_union")
 
-  mixed <- dyn_events(
+  mixed <- events(
     dn, measure = c("formation_fraction", "dissolution_fraction"),
     start = 2, end = 2, window = 0
   )
@@ -499,7 +499,7 @@ test_that("T02 enforces exact-time use and exposes typed metadata", {
     dissolution_fraction = "at_least_one_uncensored_positive_raw_terminus"
   ))
 
-  single <- dyn_events(
+  single <- events(
     dn, measure = "dissolution_fraction", start = 2, end = 2, window = 0
   )
   expect_identical(attr(single, "what"), "Dissolution transition fraction")

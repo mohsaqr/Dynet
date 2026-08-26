@@ -13,7 +13,7 @@ plot_path_trajectories(
 )
 }
 \arguments{
-\item{x}{A result from \code{\link[=dyn_paths]{dyn_paths()}} or from \code{\link[=path_trajectories]{path_trajectories()}}.}
+\item{x}{A result from \code{\link[=paths]{paths()}} or from \code{\link[=path_trajectories]{path_trajectories()}}.}
 
 \item{measure}{Node fill. \code{"frequency"} is the number of optimal routes
 through the branch, \code{"time"} is the attained time at the node, and
@@ -32,7 +32,7 @@ routes. Ignored when \code{x} is already a \code{\link[=path_trajectories]{path_
 A \code{ggplot} object.
 }
 \description{
-Draws the optimal route family returned by \code{\link[=dyn_paths]{dyn_paths()}} using the
+Draws the optimal route family returned by \code{\link[=paths]{paths()}} using the
 trajectory-tree grammar ported from the \code{transitiontrees} package: leaves
 stacked in depth-first order, parents centred on their children, branches
 carried by a cosine smoothstep, and capsule node glyphs. Branch width
@@ -47,7 +47,7 @@ temporal history.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- dyn_paths(dn, from = "Ana")
+paths <- paths(dn, from = "Ana")
 plot_path_trajectories(paths)
 plot_path_trajectories(paths, measure = "time", orientation = "vertical")
 }

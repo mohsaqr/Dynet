@@ -33,7 +33,7 @@ test_that("node-link views are drawn by cograph and return the network", {
   expect_identical(plot(dn, type = "network", at = 5), dn)
   expect_identical(suppressMessages(plot(dn, type = "snapshots", panels = 4L)), dn)
   expect_identical(plot(dn, type = "proximity", phases = 2L, slices = 30L), dn)
-  p <- dyn_paths(dn, from = "Ana")
+  p <- paths(dn, from = "Ana")
   expect_error(plot(p), class = "dynet_unsupported_plot")
 })
 
@@ -57,8 +57,8 @@ test_that("measures plot as lines, heatmaps and bars", {
   expect_no_error(ggplot2::ggplot_build(plot(deg, top = 5)))
   expect_no_error(ggplot2::ggplot_build(plot(deg, type = "heatmap")))
   expect_no_error(ggplot2::ggplot_build(plot(deg, highlight = c("Ana", "Ben"))))
-  expect_no_error(ggplot2::ggplot_build(plot(dyn_burstiness(dn))))
-  expect_no_error(ggplot2::ggplot_build(plot(dyn_durations(dn))))
+  expect_no_error(ggplot2::ggplot_build(plot(burstiness(dn))))
+  expect_no_error(ggplot2::ggplot_build(plot(durations(dn))))
 })
 
 test_that("infinite temporal closeness survives default bar selection", {
@@ -206,7 +206,7 @@ test_that("the palette is Okabe-Ito", {
 
 test_that("path-tree coordinates put time on one axis and hops on the other", {
   dn <- quiet_dynet(chain_edges())
-  p <- as.data.frame(dyn_paths(dn, from = "A"))
+  p <- as.data.frame(paths(dn, from = "A"))
   expect_equal(.rescale(c(1, 2, 3)), c(-1, 0, 1))
   expect_equal(.rescale(c(2, 2, 2)), c(0, 0, 0))
   # Vertices sharing a hop count are separated, and the offsets stay small.
@@ -287,7 +287,7 @@ test_that("the temporal layout puts arrival time across and hops down", {
 test_that("shortest-foremost path families reject a false tree rendering", {
   skip_if_not_installed("cograph")
   dn <- quiet_dynet(school_contacts)
-  p <- dyn_paths(dn, from = "Ana")
+  p <- paths(dn, from = "Ana")
   df <- as.data.frame(p)
   reached <- df[df$reachable, , drop = FALSE]
 

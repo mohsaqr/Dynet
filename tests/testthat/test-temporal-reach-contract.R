@@ -221,7 +221,7 @@ test_that("finite unattained backward suprema still count", {
     from = "A", to = "B", start = 0, end = 5,
     stringsAsFactors = FALSE
   ))
-  paths <- dyn_paths(
+  paths <- paths(
     dn, from = "B", direction = "backward", start = 0, end = 10
   )
   actor <- as.data.frame(paths)

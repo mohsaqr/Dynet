@@ -1,5 +1,5 @@
 burst_values <- function(dn, ...) {
-  result <- as.data.frame(dyn_burstiness(
+  result <- as.data.frame(burstiness(
     dn, measure = c("burstiness", "memory", "events", "mean_gap"), ...
   ))
   stats::setNames(result$value, paste(result$node, result$measure, sep = ":"))
@@ -118,7 +118,7 @@ test_that("bounded sessions pool primitive gaps without crossing walls", {
   dn <- quiet_dynet(spells, session = "session")
   bounded <- burst_values(dn, sessions = "bounded")
   collapsed <- burst_values(dn, sessions = "collapse")
-  separate <- as.data.frame(dyn_burstiness(
+  separate <- as.data.frame(burstiness(
     dn, measure = c("burstiness", "memory", "events", "mean_gap"),
     sessions = "separate"
   ))
@@ -221,7 +221,7 @@ test_that("burstiness publishes event and session semantics", {
   dn <- quiet_dynet(data.frame(
     from = rep("A", 3), to = rep("B", 3), time = 0:2
   ))
-  result <- dyn_burstiness(dn)
+  result <- burstiness(dn)
   expect_identical(attr(result, "event_identity"), "incident_spell_start")
   expect_identical(attr(result, "dispersion"), "population")
   expect_identical(attr(result, "memory"), "lag1_pearson")

@@ -1,5 +1,5 @@
 .t01_value <- function(dn, time, sessions = "bounded") {
-  dyn_events(
+  events(
     dn, measure = "formation_fraction", sessions = sessions,
     start = time, end = time, step = 1, window = 0
   )$value
@@ -24,7 +24,7 @@ test_that("T01 literal batch counts confirmed pair formations rather than starts
 
   expect_equal(.t01_value(directed, 1), 1 / 4)
   expect_equal(.t01_value(undirected, 1), 1)
-  expect_equal(dyn_events(
+  expect_equal(events(
     directed, measure = "formation", start = 1, end = 1, window = 0
   )$value, 4)
 })
@@ -257,7 +257,7 @@ test_that("T01 bounded union state masks local formation without cross-authoriza
   )
   expect_equal(.t01_value(dn, 5, "collapse"), 0)
   expect_equal(.t01_value(dn, 5, "bounded"), 0)
-  separate <- dyn_events(
+  separate <- events(
     dn, measure = "formation_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -274,7 +274,7 @@ test_that("T01 bounded union state masks local formation without cross-authoriza
                .t01_value(dn, 5, "collapse"))
   expect_equal(.t01_value(permuted, 5, "bounded"),
                .t01_value(dn, 5, "bounded"))
-  permuted_separate <- dyn_events(
+  permuted_separate <- events(
     permuted, measure = "formation_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -295,7 +295,7 @@ test_that("T01 bounded union state masks local formation without cross-authoriza
   )
   expect_equal(.t01_value(cross, 5, "collapse"), 1 / 2)
   expect_equal(.t01_value(cross, 5, "bounded"), 0)
-  cross_separate <- dyn_events(
+  cross_separate <- events(
     cross, measure = "formation_fraction", sessions = "separate",
     start = 5, end = 5, window = 0
   )
@@ -344,16 +344,16 @@ test_that("T01 enforces exact-time use and exposes typed metadata", {
     observation_start = 0, observation_end = 3
   )
   expect_error(
-    dyn_events(dn, measure = "formation_fraction"),
+    events(dn, measure = "formation_fraction"),
     class = "dynet_transition_requires_instant"
   )
   expect_error(
-    dyn_events(
+    events(
       dn, measure = c("formation", "formation_fraction"), window = 1
     ), class = "dynet_transition_requires_instant"
   )
 
-  out <- dyn_events(
+  out <- events(
     dn, measure = c("formation", "formation_fraction"),
     start = 1, end = 1, window = 0
   )
@@ -395,7 +395,7 @@ test_that("T01 enforces exact-time use and exposes typed metadata", {
     data.frame(from = "B", to = "A", start = 1, end = 2),
     directed = FALSE, observation_start = 0, observation_end = 3
   )
-  undirected_out <- dyn_events(
+  undirected_out <- events(
     undirected, measure = "formation_fraction",
     start = 1, end = 1, window = 0
   )
@@ -408,11 +408,11 @@ test_that("T01 enforces exact-time use and exposes typed metadata", {
       end = c(3, 2), wave = c("s1", "s2")
     ), session = "wave", observation_start = 0, observation_end = 3
   )
-  bounded <- dyn_events(
+  bounded <- events(
     sessioned, measure = "formation_fraction", sessions = "bounded",
     start = 1, end = 1, window = 0
   )
-  separate <- dyn_events(
+  separate <- events(
     sessioned, measure = "formation_fraction", sessions = "separate",
     start = 1, end = 1, window = 0
   )
@@ -422,7 +422,7 @@ test_that("T01 enforces exact-time use and exposes typed metadata", {
   )
   expect_identical(attr(separate, "transition_session_aggregation"),
                    "session_local")
-  single <- dyn_events(
+  single <- events(
     dn, measure = "formation_fraction", start = 1, end = 1, window = 0
   )
   expect_identical(attr(single, "what"), "Formation transition fraction")

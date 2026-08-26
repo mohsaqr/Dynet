@@ -27,7 +27,7 @@ test_that("bounded forward paths retain complete endpoint-specific sessions", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(dn, from = "S", at = 0, sessions = "bounded")
+  paths <- paths(dn, from = "S", at = 0, sessions = "bounded")
   primary <- path_rows(paths, c("S", "A", "B"))
 
   expect_equal(primary$arrival_time, c(0, 1, 6))
@@ -52,9 +52,9 @@ test_that("bounded paths exclude a journey assembled across sessions", {
     session = c("s1", "s2"), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  bounded <- dyn_paths(dn, from = "S", at = 0, sessions = "bounded")
-  collapsed <- dyn_paths(dn, from = "S", at = 0, sessions = "collapse")
-  separate <- dyn_paths(dn, from = "S", at = 0, sessions = "separate")
+  bounded <- paths(dn, from = "S", at = 0, sessions = "bounded")
+  collapsed <- paths(dn, from = "S", at = 0, sessions = "collapse")
+  separate <- paths(dn, from = "S", at = 0, sessions = "separate")
 
   expect_false(path_rows(bounded, "Y")$reachable)
   expect_equal(path_rows(collapsed, "Y")$arrival_time, 2)
@@ -108,7 +108,7 @@ test_that("separate paths return complete session blocks and local origins", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(dn, from = "S", sessions = "separate")
+  paths <- paths(dn, from = "S", sessions = "separate")
   out <- as.data.frame(paths)
 
   expect_equal(nrow(out), 3L * 5L)
@@ -137,7 +137,7 @@ test_that("bounded paths break arrival ties by hop count", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(dn, from = "S", at = 0, sessions = "bounded")
+  paths <- paths(dn, from = "S", at = 0, sessions = "bounded")
   target <- path_rows(paths, "T")
 
   expect_equal(target$arrival_time, 5)
@@ -153,7 +153,7 @@ test_that("bounded paths break arrival ties by hop count", {
 
   permuted <- quiet_dynet(spells[c(3, 1, 2), ], session = "session")
   again <- path_rows(
-    dyn_paths(permuted, from = "S", at = 0, sessions = "bounded"), "T"
+    paths(permuted, from = "S", at = 0, sessions = "bounded"), "T"
   )
   expect_equal(again$arrival_time, target$arrival_time)
   expect_equal(again$n_best_sessions, target$n_best_sessions)
@@ -166,7 +166,7 @@ test_that("equal-hop session ties keep an unambiguous hop count", {
     session = c("s1", "s2"), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(dn, from = "S", at = 0, sessions = "bounded")
+  paths <- paths(dn, from = "S", at = 0, sessions = "bounded")
   target <- path_rows(paths, "T")
 
   expect_equal(target$arrival_time, 5)
@@ -186,7 +186,7 @@ test_that("bounded backward routes do not merge predecessor sessions", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(
+  paths <- paths(
     dn, from = "T", direction = "backward", at = 9,
     sessions = "bounded"
   )
@@ -206,7 +206,7 @@ test_that("bounded backward routes do not merge predecessor sessions", {
   expect_equal(to_b$time, c(9, 9))
   expect_true(all(to_b$attained))
 
-  separate <- dyn_paths(
+  separate <- paths(
     dn, from = "T", direction = "backward", at = 9,
     sessions = "separate"
   )
@@ -221,7 +221,7 @@ test_that("attainment resolves a backward session tie before session identity", 
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(
+  paths <- paths(
     dn, from = "T", direction = "backward", at = 10,
     sessions = "bounded"
   )
@@ -242,7 +242,7 @@ test_that("unattained backward session ties have no maximizing family", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- dyn_paths(
+  paths <- paths(
     dn, from = "T", direction = "backward", at = 10,
     sessions = "bounded"
   )
@@ -265,20 +265,20 @@ test_that("session optima are selected after applying path bounds", {
   )
   dn <- quiet_dynet(spells, session = "session")
 
-  bounded <- dyn_paths(
+  bounded <- paths(
     dn, from = "S", sessions = "bounded", start = 2, end = 5
   )
   target <- path_rows(bounded, "T")
   expect_equal(target$arrival_time, 4)
   expect_identical(target$path_session, "s2")
 
-  separate <- dyn_paths(
+  separate <- paths(
     dn, from = "S", sessions = "separate", start = 2, end = 5
   )
   expect_false(session_path_rows(separate, "s1", "T")$reachable)
   expect_equal(session_path_rows(separate, "s2", "T")$arrival_time, 4)
 
-  untruncated <- dyn_paths(
+  untruncated <- paths(
     dn, from = "S", sessions = "bounded", start = 0, end = 5
   )
   expect_equal(path_rows(untruncated, "T")$arrival_time, 1)
@@ -294,11 +294,11 @@ test_that("undirected session paths ignore stored endpoint orientation", {
     from = c("S", "A"), to = c("A", "B"), time = c(1, 3),
     session = c("s1", "s1"), stringsAsFactors = FALSE
   )
-  first <- dyn_paths(
+  first <- paths(
     quiet_dynet(one, session = "session", directed = FALSE),
     from = "S", at = 0, sessions = "bounded"
   )
-  second <- dyn_paths(
+  second <- paths(
     quiet_dynet(two, session = "session", directed = FALSE),
     from = "S", at = 0, sessions = "bounded"
   )
@@ -319,11 +319,11 @@ test_that("non-collapsed path plots reject a false single-tree rendering", {
   dn <- quiet_dynet(spells, session = "session")
 
   expect_error(
-    plot(dyn_paths(dn, from = "S", sessions = "bounded")),
+    plot(paths(dn, from = "S", sessions = "bounded")),
     class = "dynet_unsupported_plot"
   )
   expect_error(
-    plot(dyn_paths(dn, from = "S", sessions = "separate")),
+    plot(paths(dn, from = "S", sessions = "separate")),
     class = "dynet_unsupported_plot"
   )
 })

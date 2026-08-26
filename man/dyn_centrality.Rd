@@ -238,7 +238,7 @@ with positive latencies. The measure therefore has inverse-time units, is
 invariant to translating the time axis, and scales inversely when time is
 rescaled.
 
-Temporal measures use \code{\link[=dyn_paths]{dyn_paths()}} traversal semantics: nondecreasing
+Temporal measures use \code{\link[=paths]{paths()}} traversal semantics: nondecreasing
 times, unlimited waiting, half-open interval spells, and a separate exact
 timestamp rule for point events. Positive \code{traversal_time} requires an
 interval traversal to finish within continuous pair activity; a point event

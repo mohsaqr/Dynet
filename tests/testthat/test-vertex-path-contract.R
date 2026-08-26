@@ -16,21 +16,21 @@ test_that("V03 requires an exact anchor then permits waiting through absence", {
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 5)
 
-  paths <- dyn_paths(dn, "S", start = 0, end = 5, sessions = "collapse")
+  paths <- paths(dn, "S", start = 0, end = 5, sessions = "collapse")
   target <- v03_row(paths, "T")
   expect_true(target$reachable)
   expect_equal(target$arrival_time, 5)
   expect_equal(target$n_hops, 2L)
   expect_equal(target$n_paths, 1)
 
-  invalid <- as.data.frame(dyn_paths(
+  invalid <- as.data.frame(paths(
     dn, "S", start = 2.5, end = 5, sessions = "collapse"
   ))
   expect_false(any(invalid$reachable))
   expect_true(all(!invalid$attained & invalid$n_paths == 0))
   expect_true(all(is.na(invalid$arrival_time) & is.na(invalid$n_hops)))
 
-  backward <- as.data.frame(dyn_paths(
+  backward <- as.data.frame(paths(
     dn, "T", direction = "backward", start = 0, end = 5,
     sessions = "collapse"
   ))
@@ -48,8 +48,8 @@ test_that("V03 zero-duration hops require both exact endpoint appearances", {
   restored <- quiet_dynet(edge, vertex_spells = rbind(
     base, data.frame(node = "T", start = 2, end = 2)
   ), observation_start = 0, observation_end = 2)
-  expect_false(v03_row(dyn_paths(blocked, "S", start = 0, end = 2), "T")$reachable)
-  expect_true(v03_row(dyn_paths(restored, "S", start = 0, end = 2), "T")$reachable)
+  expect_false(v03_row(paths(blocked, "S", start = 0, end = 2), "T")$reachable)
+  expect_true(v03_row(paths(restored, "S", start = 0, end = 2), "T")$reachable)
 })
 
 test_that("V03 positive interval traversal needs closed endpoint occupancy", {
@@ -68,14 +68,14 @@ test_that("V03 positive interval traversal needs closed endpoint occupancy", {
     quiet_dynet(edge, vertex_spells = activity,
                 observation_start = 0, observation_end = 3)
   }
-  ok <- v03_row(dyn_paths(make(), "S", start = 0, end = 2,
+  ok <- v03_row(paths(make(), "S", start = 0, end = 2,
                           traversal_time = 2), "T")
   expect_equal(ok$arrival_time, 2)
-  expect_false(v03_row(dyn_paths(make(tail_end = 2), "S", start = 0, end = 2,
+  expect_false(v03_row(paths(make(tail_end = 2), "S", start = 0, end = 2,
                                  traversal_time = 2), "T")$reachable)
-  expect_false(v03_row(dyn_paths(make(head_end = 2), "S", start = 0, end = 2,
+  expect_false(v03_row(paths(make(head_end = 2), "S", start = 0, end = 2,
                                  traversal_time = 2), "T")$reachable)
-  closed <- dyn_paths(make(tail_end = 2, head_end = 2, close_tail = TRUE,
+  closed <- paths(make(tail_end = 2, head_end = 2, close_tail = TRUE,
                            close_head = TRUE), "S", start = 0, end = 2,
                       traversal_time = 2)
   expect_true(v03_row(closed, "T")$reachable)
@@ -93,10 +93,10 @@ test_that("V03 delayed points gate trigger and receiver completion", {
     quiet_dynet(edge, vertex_spells = activity,
                 observation_start = 0, observation_end = 3)
   }
-  ok <- v03_row(dyn_paths(make(), "S", start = 1, end = 3,
+  ok <- v03_row(paths(make(), "S", start = 1, end = 3,
                           traversal_time = 2), "T")
   expect_equal(ok$arrival_time, 3)
-  expect_false(v03_row(dyn_paths(make(FALSE), "S", start = 1, end = 3,
+  expect_false(v03_row(paths(make(FALSE), "S", start = 1, end = 3,
                                  traversal_time = 2), "T")$reachable)
 })
 
@@ -111,7 +111,7 @@ test_that("V03 activity domains preserve parent contact path identity", {
   )
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 4)
-  paths <- dyn_paths(dn, "S", start = 0, end = 4)
+  paths <- paths(dn, "S", start = 0, end = 4)
   target <- v03_row(paths, "T")
   expect_equal(target$n_paths, 1)
   expect_equal(target$n_hops, 2L)
@@ -130,13 +130,13 @@ test_that("V03 collapse unions activity while bounded and separate stay local", 
   )
   dn <- quiet_dynet(edges, session = "wave", vertex_spells = activity,
                     observation_start = 0, observation_end = 5)
-  expect_true(v03_row(dyn_paths(
+  expect_true(v03_row(paths(
     dn, "S", start = 0, end = 5, sessions = "collapse"
   ), "T")$reachable)
-  expect_false(v03_row(dyn_paths(
+  expect_false(v03_row(paths(
     dn, "S", start = 0, end = 5, sessions = "bounded"
   ), "T")$reachable)
-  separate <- dyn_paths(dn, "S", start = 0, end = 5, sessions = "separate")
+  separate <- paths(dn, "S", start = 0, end = 5, sessions = "separate")
   expect_false(any(as.data.frame(separate)$reachable[
     as.data.frame(separate)$node == "T"
   ]))
@@ -154,7 +154,7 @@ test_that("V03 backward activity boundaries preserve supremum attainment", {
     quiet_dynet(edge, vertex_spells = activity,
                 observation_start = 0, observation_end = 5)
   }
-  open <- v03_row(dyn_paths(
+  open <- v03_row(paths(
     make(), "T", direction = "backward", start = 0, end = 5
   ), "A")
   expect_true(open$reachable)
@@ -163,7 +163,7 @@ test_that("V03 backward activity boundaries preserve supremum attainment", {
   expect_true(is.na(open$n_hops))
   expect_equal(open$n_paths, 0)
 
-  closed <- v03_row(dyn_paths(
+  closed <- v03_row(paths(
     make(TRUE), "T", direction = "backward", start = 0, end = 5
   ), "A")
   expect_true(closed$attained)
@@ -181,7 +181,7 @@ test_that("V03 paths reachability and temporal centrality share activity gates",
   )
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 3)
-  paths <- as.data.frame(dyn_paths(dn, "S", start = 0, end = 3))
+  paths <- as.data.frame(paths(dn, "S", start = 0, end = 3))
   expected <- sum(paths$reachable[paths$node != "S"])
   reach <- as.data.frame(dyn_reachability(
     dn, direction = "forward", start = 0, end = 3,
@@ -208,7 +208,7 @@ test_that("V03 paths reachability and temporal centrality share activity gates",
   expect_true(all(central$value[
     central$node == "T" & central$measure %in% c("reach_count", "closeness")
   ] == 0))
-  expect_identical(attr(dyn_paths(dn, "S", start = 0, end = 3),
+  expect_identical(attr(paths(dn, "S", start = 0, end = 3),
                         "vertex_path_rule"), "endpoint_activity_gated")
 })
 
@@ -223,14 +223,14 @@ test_that("V03 waiting crosses observation gaps but interval atoms do not", {
   )
   chain <- quiet_dynet(chain_edges, observation_spells = observations,
                        vertex_spells = activity)
-  expect_true(v03_row(dyn_paths(chain, "S", start = 0, end = 6), "T")$reachable)
+  expect_true(v03_row(paths(chain, "S", start = 0, end = 6), "T")$reachable)
 
   interval <- quiet_dynet(
     data.frame(from = "S", to = "T", start = 1, end = 5),
     observation_spells = observations,
     vertex_spells = data.frame(node = c("S", "T"), start = 0, end = 6)
   )
-  expect_false(v03_row(dyn_paths(
+  expect_false(v03_row(paths(
     interval, "S", start = 0, end = 6, traversal_time = 4
   ), "T")$reachable)
 
@@ -241,7 +241,7 @@ test_that("V03 waiting crosses observation gaps but interval atoms do not", {
       node = c("S", "T", "T"), start = c(0, 1, 5), end = c(2, 1, 5)
     )
   )
-  expect_equal(v03_row(dyn_paths(
+  expect_equal(v03_row(paths(
     delayed, "S", start = 0, end = 6, traversal_time = 4
   ), "T")$arrival_time, 5)
 })
@@ -257,7 +257,7 @@ test_that("V03 activity-gated tied families retain exact atom counts", {
   )
   dn <- quiet_dynet(edges, vertex_spells = activity,
                     observation_start = 0, observation_end = 3)
-  paths <- dyn_paths(dn, "S", start = 0, end = 3)
+  paths <- paths(dn, "S", start = 0, end = 3)
   expect_equal(v03_row(paths, "T")$n_paths, 2)
   routes <- as.data.frame(paths, what = "steps")
   routes <- routes[routes$endpoint == "T", ]
@@ -272,10 +272,10 @@ test_that("V03 preserves all-static output and time/order transformations", {
     start = c(1, 3, 5), end = c(1, 3, 5)
   )
   base <- quiet_dynet(edges, observation_start = 0, observation_end = 5)
-  original <- as.data.frame(dyn_paths(base, "S", start = 0, end = 5))
+  original <- as.data.frame(paths(base, "S", start = 0, end = 5))
   reordered <- quiet_dynet(edges[c(3, 1, 2), ],
                            observation_start = 0, observation_end = 5)
-  expect_equal(as.data.frame(dyn_paths(
+  expect_equal(as.data.frame(paths(
     reordered, "S", start = 0, end = 5
   )), original, ignore_attr = TRUE)
 
@@ -293,8 +293,8 @@ test_that("V03 preserves all-static output and time/order transformations", {
   shifted_activity$end <- shifted_activity$end + 10
   shifted <- quiet_dynet(shifted_edges, vertex_spells = shifted_activity,
                          observation_start = 10, observation_end = 15)
-  left <- as.data.frame(dyn_paths(explicit, "S", start = 0, end = 5))
-  right <- as.data.frame(dyn_paths(shifted, "S", start = 10, end = 15))
+  left <- as.data.frame(paths(explicit, "S", start = 0, end = 5))
+  right <- as.data.frame(paths(shifted, "S", start = 10, end = 15))
   right$arrival_time <- right$arrival_time - 10
   expect_equal(right[c("node", "reachable", "arrival_time", "attained",
                        "n_hops", "n_paths")],
@@ -311,7 +311,7 @@ test_that("V03 bounded atoms keep observation provenance aligned", {
     edges, session = "wave",
     observation_spells = data.frame(start = c(0, 3), end = c(1, 4))
   )
-  paths <- dyn_paths(dn, "A", start = 0, end = 4, sessions = "bounded")
+  paths <- paths(dn, "A", start = 0, end = 4, sessions = "bounded")
   search <- attr(paths, "optimal_search")$search$per_session$s2
   expect_identical(search$atoms$observation, c(1L, 2L))
 })

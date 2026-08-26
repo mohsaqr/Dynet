@@ -34,7 +34,7 @@ test_that("O03 preserves four explicit raw censor states", {
 
 test_that("O03 censored numeric limits are not endpoint events", {
   dn <- o03_states()
-  event_result <- dyn_events(
+  event_result <- events(
     dn, measure = c("formation", "dissolution", "active", "new_pairs"),
     start = 0, end = 10, step = 10, window = 0
   )
@@ -49,23 +49,23 @@ test_that("O03 censored numeric limits are not endpoint events", {
   expect_equal(at("new_pairs", 0), 2)
   expect_equal(at("active", 5), numeric())
 
-  active <- as.data.frame(dyn_events(
+  active <- as.data.frame(events(
     dn, measure = "active", start = 5, end = 5, window = 0
   ))
   expect_equal(active$value, 4)
   expect_identical(attr(event_result, "raw_censoring"),
                    "known_endpoints_only")
 
-  middle <- dyn_snapshots(dn, start = 5, end = 5, window = 0)
+  middle <- snapshots(dn, start = 5, end = 5, window = 0)
   expect_equal(nrow(middle), 4L)
   expect_equal(Dynet:::.temporal_density(dn), 1 / 14)
-  paths <- as.data.frame(dyn_paths(dn, from = "C", at = 0))
+  paths <- as.data.frame(paths(dn, from = "C", at = 0))
   expect_true(paths$reachable[paths$node == "D"])
 })
 
 test_that("O03 left-censored evidence vetoes pair novelty", {
   duplicate <- o03_states(duplicate = TRUE)
-  events <- as.data.frame(dyn_events(
+  events <- as.data.frame(events(
     duplicate, measure = c("formation", "dissolution", "new_pairs"),
     start = 0, end = 10, step = 10, window = 0
   ))
@@ -78,7 +78,7 @@ test_that("O03 left-censored evidence vetoes pair novelty", {
     start = c(2, 7), end = c(6, 8),
     left = c(TRUE, FALSE)
   ), onset_censored = "left")
-  later_events <- as.data.frame(dyn_events(
+  later_events <- as.data.frame(events(
     later, measure = c("formation", "new_pairs")
   ))
   expect_equal(sum(later_events$value[later_events$measure == "formation"]), 1)
@@ -89,7 +89,7 @@ test_that("O03 left-censored evidence vetoes pair novelty", {
     start = c(-5, 7), end = c(-2, 8),
     left = c(TRUE, FALSE)
   ), onset_censored = "left", observation_start = 0, observation_end = 10)
-  bounded_events <- as.data.frame(dyn_events(
+  bounded_events <- as.data.frame(events(
     bounded, measure = "new_pairs"
   ))
   expect_equal(sum(bounded_events$value), 1)
@@ -102,7 +102,7 @@ test_that("O03 observation cuts remain orthogonal administrative state", {
   expect_false(any(equal_fragments$right_observation_censored))
   expect_equal(equal_fragments$onset_censored,
                c(FALSE, TRUE, FALSE, TRUE))
-  equal_events <- as.data.frame(dyn_events(
+  equal_events <- as.data.frame(events(
     equal_bounds, measure = c("formation", "dissolution")
   ))
   expect_equal(sum(equal_events$value[equal_events$measure == "formation"]), 2)
@@ -119,7 +119,7 @@ test_that("O03 observation cuts remain orthogonal administrative state", {
   expect_true(all(observed$right_observation_censored))
   expect_equal(observed$onset_censored, raw$onset_censored)
   expect_equal(observed$terminus_censored, raw$terminus_censored)
-  expect_equal(sum(as.data.frame(dyn_events(
+  expect_equal(sum(as.data.frame(events(
     continuous, measure = c("formation", "dissolution")
   ))$value), 0)
 
@@ -143,12 +143,12 @@ test_that("O03 duration filtering happens after raw-spell recombination", {
     duplicate = TRUE,
     observation_spells = data.frame(start = c(0, 6), end = c(4, 10))
   )
-  included <- dyn_durations(
+  included <- durations(
     duplicate,
     measure = c("events", "total", "mean", "median", "first", "last"),
     censored = "include"
   )
-  excluded <- dyn_durations(
+  excluded <- durations(
     duplicate,
     measure = c("events", "total", "mean", "median", "first", "last"),
     censored = "exclude"
@@ -171,7 +171,7 @@ test_that("O03 burstiness uses only known observed onsets", {
     start = c(0, 1, 2, 5, 8), end = c(1, 2, 3, 6, 9),
     left = c(FALSE, TRUE, FALSE, TRUE, FALSE)
   ), onset_censored = "left")
-  burst_result <- dyn_burstiness(
+  burst_result <- burstiness(
     dn, measure = c("events", "mean_gap", "burstiness")
   )
   burst <- as.data.frame(burst_result)
@@ -232,15 +232,15 @@ test_that("O03 sessions, loops, and weights preserve row-local flags", {
     from = c("A", "A"), to = c("B", "B"), start = 0, end = 10,
     session = c("s1", "s2"), left = c(TRUE, FALSE), weight = c(5, 7)
   ), session = "session", weight = "weight", onset_censored = "left")
-  collapsed <- as.data.frame(dyn_events(
+  collapsed <- as.data.frame(events(
     sessioned, measure = c("formation", "new_pairs"), sessions = "collapse"
   ))
-  separate <- as.data.frame(dyn_events(
+  separate <- as.data.frame(events(
     sessioned, measure = c("formation", "new_pairs"), sessions = "separate"
   ))
   expect_equal(sum(collapsed$value[collapsed$measure == "formation"]), 1)
   expect_equal(sum(collapsed$value[collapsed$measure == "new_pairs"]), 0)
-  bounded <- as.data.frame(dyn_events(
+  bounded <- as.data.frame(events(
     sessioned, measure = c("formation", "new_pairs"), sessions = "bounded"
   ))
   expect_equal(sum(bounded$value[bounded$measure == "formation"]), 1)
@@ -261,7 +261,7 @@ test_that("O03 sessions, loops, and weights preserve row-local flags", {
   ), loops = TRUE, weight = "weight", terminus_censored = "right")
   expect_equal(as.data.frame(loop)$terminus_censored, TRUE)
   expect_equal(as.data.frame(loop)$weight, 4)
-  expect_equal(sum(as.data.frame(dyn_events(
+  expect_equal(sum(as.data.frame(events(
     loop, measure = "dissolution"
   ))$value), 0)
 
@@ -278,15 +278,15 @@ test_that("O03 accepts known points and keeps them under complete-case duration"
     from = "A", to = "B", start = 2, end = 2,
     left = FALSE, right = FALSE
   ), onset_censored = "left", terminus_censored = "right")
-  events <- as.data.frame(dyn_events(
+  events <- as.data.frame(events(
     point, measure = c("formation", "dissolution")
   ))
   expect_equal(sum(events$value[events$measure == "formation"]), 1)
   expect_equal(sum(events$value[events$measure == "dissolution"]), 1)
-  included <- as.data.frame(dyn_durations(
+  included <- as.data.frame(durations(
     point, measure = c("events", "total"), censored = "include"
   ))
-  excluded <- as.data.frame(dyn_durations(
+  excluded <- as.data.frame(durations(
     point, measure = c("events", "total"), censored = "exclude"
   ))
   expect_equal(included$value, c(1, 0))
@@ -318,8 +318,8 @@ test_that("O03 flags are invariant to row order, clocks, scaling, and transpose"
   scaled_dn <- quiet_dynet(scaled, onset_censored = "left",
                            terminus_censored = "right")
   expect_equal(keyed(scaled_dn), keyed(base), ignore_attr = TRUE)
-  expect_equal(o03_value(dyn_durations(scaled_dn, measure = "total"), "total"),
-               3 * o03_value(dyn_durations(base, measure = "total"), "total"))
+  expect_equal(o03_value(durations(scaled_dn, measure = "total"), "total"),
+               3 * o03_value(durations(base, measure = "total"), "total"))
 
   transposed <- transform(raw, from = to, to = from)
   transposed_dn <- quiet_dynet(transposed, onset_censored = "left",

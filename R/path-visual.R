@@ -39,18 +39,18 @@
 
 #' Build the union network of optimal temporal paths
 #'
-#' `dyn_paths()` uses an endpoint-local foremost-then-shortest criterion, so
+#' `paths()` uses an endpoint-local foremost-then-shortest criterion, so
 #' its routes need not form one predecessor tree. This function therefore
 #' returns the honest union of all expanded optimal route hops. Edge `weight`
 #' is the number of endpoint/path families using the hop; `first_time` and
 #' `last_time` retain its temporal range.
 #'
-#' @param x A result from [dyn_paths()].
+#' @param x A result from [paths()].
 #' @return A static `dynet_path_network` cograph netobject.
 #' @export
 path_network <- function(x) {
   if (!inherits(x, "dynet_paths")) {
-    stop(errorCondition("`x` must be a result from `dyn_paths()`.",
+    stop(errorCondition("`x` must be a result from `paths()`.",
                         class = "dynet_bad_input", call = NULL))
   }
   hops <- .path_hops(x)

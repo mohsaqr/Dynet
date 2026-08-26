@@ -115,12 +115,12 @@ test_that("canonical anchors preserve at and both-direction behavior", {
   )
   dn <- quiet_dynet(spells)
   expect_equal(
-    as.data.frame(dyn_paths(dn, "A", at = 1)),
-    as.data.frame(dyn_paths(dn, "A", start = 1))
+    as.data.frame(paths(dn, "A", at = 1)),
+    as.data.frame(paths(dn, "A", start = 1))
   )
   expect_equal(
-    as.data.frame(dyn_paths(dn, "C", at = 5, direction = "backward")),
-    as.data.frame(dyn_paths(dn, "C", end = 5, direction = "backward"))
+    as.data.frame(paths(dn, "C", at = 5, direction = "backward")),
+    as.data.frame(paths(dn, "C", end = 5, direction = "backward"))
   )
 
   both <- as.data.frame(dyn_reachability(
@@ -146,7 +146,7 @@ test_that("the closed upper horizon preserves spell boundary semantics", {
     start = c(5, 5, 5, 0, 0, 6), end = c(5, 5, 7, 7, 5, 6)
   )
   dn <- quiet_dynet(spells)
-  paths <- dyn_paths(dn, from = "Z", start = 0, end = 5,
+  paths <- paths(dn, from = "Z", start = 0, end = 5,
                      sessions = "collapse")
 
   expect_equal(.bound_times(paths, c("Z", "A", "B", "C", "D", "E", "F")),
@@ -166,7 +166,7 @@ test_that("a degenerate path window computes equal-time closure", {
     from = c("A", "B"), to = c("B", "C"), start = 1, end = 1
   )
   results <- lapply(list(chain, chain[2:1, , drop = FALSE]), function(spells) {
-    dyn_paths(quiet_dynet(spells), from = "A", start = 1, end = 1)
+    paths(quiet_dynet(spells), from = "A", start = 1, end = 1)
   })
 
   invisible(lapply(results, function(paths) {
@@ -180,7 +180,7 @@ test_that("the backward lower bound uses attainment, not only its number", {
     start = c(1, 2, 3, 0, 2, 0), end = c(1, 2, 3, 2, 4, 4)
   )
   dn <- quiet_dynet(spells)
-  paths <- as.data.frame(dyn_paths(
+  paths <- as.data.frame(paths(
     dn, from = "T", direction = "backward", start = 2, end = 5
   ))
   vertices <- c("T", "A", "B", "C", "D", "E", "F")
@@ -206,11 +206,11 @@ test_that("an unattained lower-bound chain is excluded at every hop", {
     start = c(0, 2), end = c(2, 4)
   )
   event_chain <- transform(interval_chain, start = c(2, 2), end = c(2, 4))
-  interval <- as.data.frame(dyn_paths(
+  interval <- as.data.frame(paths(
     quiet_dynet(interval_chain), from = "C", direction = "backward",
     start = 2, end = 5
   ))
-  event <- as.data.frame(dyn_paths(
+  event <- as.data.frame(paths(
     quiet_dynet(event_chain), from = "C", direction = "backward",
     start = 2, end = 5
   ))
@@ -229,9 +229,9 @@ test_that("path bounds are applied inside bounded session searches", {
     session = c("s1", "s2", "s1")
   )
   dn <- quiet_dynet(spells, session = "session")
-  bounded <- dyn_paths(dn, from = "A", start = 2, end = 5,
+  bounded <- paths(dn, from = "A", start = 2, end = 5,
                        sessions = "bounded")
-  collapsed <- dyn_paths(dn, from = "A", start = 2, end = 5,
+  collapsed <- paths(dn, from = "A", start = 2, end = 5,
                          sessions = "collapse")
 
   expect_equal(.bound_times(bounded, c("A", "B", "C", "D")),
@@ -246,7 +246,7 @@ test_that("backward lower bounds apply inside each bounded session", {
     start = c(0, 2), end = c(2, 2), session = c("s1", "s2")
   )
   dn <- quiet_dynet(spells, session = "session")
-  paths <- as.data.frame(dyn_paths(
+  paths <- as.data.frame(paths(
     dn, from = "B", direction = "backward", start = 2, end = 5,
     sessions = "bounded"
   ))
@@ -276,7 +276,7 @@ test_that("bounded paths, reachability, and temporal reach agree", {
     start = 0, end = 5, sessions = "collapse"
   ))
   path_share <- vapply(c("A", "B", "C", "D"), function(source) {
-    paths <- as.data.frame(dyn_paths(
+    paths <- as.data.frame(paths(
       dn, from = source, start = 0, end = 5, sessions = "collapse"
     ))
     (sum(paths$reachable) - 1) / 3
@@ -322,20 +322,20 @@ test_that("date path bounds equal their internal numeric offsets", {
     end = as.Date(c("2024-01-02", "2024-01-04"))
   )
   dn <- quiet_dynet(spells, time_unit = "days")
-  dated <- dyn_paths(
+  dated <- paths(
     dn, from = "A", start = as.Date("2024-01-01"),
     end = as.Date("2024-01-02")
   )
-  numeric <- dyn_paths(dn, from = "A", start = -1, end = 0)
+  numeric <- paths(dn, from = "A", start = -1, end = 0)
 
   expect_equal(as.data.frame(dated), as.data.frame(numeric))
   expect_equal(.bound_times(dated, c("A", "B", "C")), c(-1, 0, NA))
 
-  backward_dated <- dyn_paths(
+  backward_dated <- paths(
     dn, from = "B", direction = "backward",
     start = as.Date("2024-01-01"), end = as.Date("2024-01-02")
   )
-  backward_numeric <- dyn_paths(
+  backward_numeric <- paths(
     dn, from = "B", direction = "backward", start = -1, end = 0
   )
   expect_equal(as.data.frame(backward_dated),
@@ -362,7 +362,7 @@ test_that("date path bounds equal their internal numeric offsets", {
   )
   expect_equal(as.data.frame(centrality_dated),
                as.data.frame(centrality_numeric))
-  expect_error(dyn_paths(
+  expect_error(paths(
     dn, from = "A", start = as.Date("2024-01-04"),
     end = as.Date("2024-01-02")
   ), class = "dynet_bad_input")
@@ -399,22 +399,22 @@ test_that("invalid and conflicting path bounds are classed errors", {
     from = "A", to = "B", start = 0, end = 1
   ))
 
-  expect_error(dyn_paths(numeric, "A", start = 2, end = 1),
+  expect_error(paths(numeric, "A", start = 2, end = 1),
                class = "dynet_bad_input")
-  expect_error(dyn_paths(numeric, "A", end = -1),
+  expect_error(paths(numeric, "A", end = -1),
                class = "dynet_bad_input")
-  expect_error(dyn_paths(
+  expect_error(paths(
     numeric, "B", direction = "backward", start = 2
   ), class = "dynet_bad_input")
-  expect_error(dyn_paths(numeric, "A", at = 0, end = 1),
+  expect_error(paths(numeric, "A", at = 0, end = 1),
                class = "dynet_bad_input")
   expect_error(dyn_reachability(numeric, at = 0, start = 0),
                class = "dynet_bad_input")
-  expect_error(dyn_paths(numeric, "A", start = c(0, 1)),
+  expect_error(paths(numeric, "A", start = c(0, 1)),
                class = "dynet_bad_input")
-  expect_error(dyn_paths(numeric, "A", end = Inf),
+  expect_error(paths(numeric, "A", end = Inf),
                class = "dynet_bad_input")
-  expect_error(dyn_paths(numeric, "A", start = as.Date("2024-01-01")),
+  expect_error(paths(numeric, "A", start = as.Date("2024-01-01")),
                class = "dynet_bad_input")
 })
 
@@ -425,13 +425,13 @@ test_that("bounded path results translate and scale with their window", {
   )
   shifted <- transform(base, start = start + 10, end = end + 10)
   scaled <- transform(base, start = start * 2, end = end * 2)
-  original <- as.data.frame(dyn_paths(
+  original <- as.data.frame(paths(
     quiet_dynet(base), "A", start = 1, end = 5
   ))
-  translated <- as.data.frame(dyn_paths(
+  translated <- as.data.frame(paths(
     quiet_dynet(shifted), "A", start = 11, end = 15
   ))
-  stretched <- as.data.frame(dyn_paths(
+  stretched <- as.data.frame(paths(
     quiet_dynet(scaled), "A", start = 2, end = 10
   ))
 
@@ -509,14 +509,14 @@ test_that("interior bounded paths calibrate against tsna", {
     ),
     start = 0, end = 7, verbose = FALSE
   )
-  forward <- .bound_times(dyn_paths(
+  forward <- .bound_times(paths(
     dn, "A", start = 0, end = 5
   ), vertices)
   forward_tsna <- tsna::tPath(
     dynamic, v = 1L, direction = "fwd", type = "earliest.arrive",
     start = 0, end = 5.5
   )$tdist
-  backward <- .bound_times(dyn_paths(
+  backward <- .bound_times(paths(
     dn, "C", direction = "backward", start = 0, end = 5
   ), vertices)
   backward_tsna <- tsna::tPath(

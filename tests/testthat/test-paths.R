@@ -3,7 +3,7 @@ test_that("earliest arrival on a chain matches the value worked out by hand", {
   # Starting at A at t = 1 the walker can only ever board the next edge as it
   # opens, so arrivals are 1, 1, 2, 3, 4.
   dn <- quiet_dynet(chain_edges())
-  p <- dyn_paths(dn, from = "A")
+  p <- paths(dn, from = "A")
   expect_equal(p$arrival_time[match(c("A", "B", "C", "D", "E"), p$node)],
                c(1, 1, 2, 3, 4))
   expect_equal(p$n_hops[match(c("A", "B", "C", "D", "E"), p$node)],
@@ -20,7 +20,7 @@ test_that("a path cannot run backwards in time", {
                           start = c(5, 1), end = c(6, 2),
                           stringsAsFactors = FALSE)
   dn <- quiet_dynet(backwards)
-  p <- dyn_paths(dn, from = "C")
+  p <- paths(dn, from = "C")
   expect_false(p$reachable[p$node == "B"])
   expect_true(p$reachable[p$node == "A"])
 })
@@ -31,17 +31,17 @@ test_that("a spell can be boarded late, so one relaxation sweep is not enough", 
                      start = c(0, 50), end = c(100, 51),
                      stringsAsFactors = FALSE)
   dn <- quiet_dynet(late)
-  p <- dyn_paths(dn, from = "Z", at = 50)
+  p <- paths(dn, from = "Z", at = 50)
   expect_true(p$reachable[p$node == "B"])
   expect_equal(p$arrival_time[p$node == "B"], 50)
 })
 
 test_that("backward paths find who could have reached the vertex", {
   dn <- quiet_dynet(chain_edges())
-  back <- dyn_paths(dn, from = "E", direction = "backward")
+  back <- paths(dn, from = "E", direction = "backward")
   expect_true(all(back$reachable))
   expect_identical(attr(back, "direction"), "backward")
-  forward_from_A <- dyn_paths(dn, from = "A")
+  forward_from_A <- paths(dn, from = "A")
   expect_equal(sum(back$reachable), sum(forward_from_A$reachable))
 })
 
@@ -64,7 +64,7 @@ test_that("earliest arrival matches tsna::tPath", {
     verbose = FALSE)
 
   for (src in vnames[1:4]) {
-    ours <- dyn_paths(dn, from = src, at = 0)
+    ours <- paths(dn, from = src, at = 0)
     theirs <- tsna::tPath(nd, v = match(src, vnames), start = 0,
                           direction = "fwd")
     mine <- ours$arrival_time[match(vnames, ours$node)]
@@ -93,7 +93,7 @@ test_that("an unreachable vertex has no tree to draw", {
                          start = c(1, 5), end = c(2, 6),
                          stringsAsFactors = FALSE)
   dn <- quiet_dynet(isolated)
-  p <- dyn_paths(dn, from = "D")
+  p <- paths(dn, from = "D")
   expect_equal(sum(p$reachable), 1L)
   expect_error(plot(p), class = "dynet_unsupported_plot")
 })
