@@ -95,5 +95,6 @@ test_that("an unreachable vertex has no tree to draw", {
   dn <- quiet_dynet(isolated)
   p <- paths(dn, from = "D")
   expect_equal(sum(p$reachable), 1L)
-  expect_error(plot(p), class = "dynet_unsupported_plot")
+  # A source that reaches nobody still draws: the tree is the anchor alone.
+  expect_s3_class(plot(p), "ggplot")
 })

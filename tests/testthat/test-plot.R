@@ -34,7 +34,7 @@ test_that("node-link views are drawn by cograph and return the network", {
   expect_identical(suppressMessages(plot(dn, type = "snapshots", panels = 4L)), dn)
   expect_identical(plot(dn, type = "proximity", phases = 2L, slices = 30L), dn)
   p <- paths(dn, from = "Ana")
-  expect_error(plot(p), class = "dynet_unsupported_plot")
+  expect_s3_class(plot(p), "ggplot")
 })
 
 test_that("a bin with eligible isolates and no edge can be drawn", {
@@ -284,17 +284,18 @@ test_that("the temporal layout puts arrival time across and hops down", {
                class = "dynet_bad_input")
 })
 
-test_that("shortest-foremost path families reject a false tree rendering", {
+test_that("shortest-foremost path families draw as a trajectory tree", {
   skip_if_not_installed("cograph")
   dn <- quiet_dynet(school_contacts)
   p <- paths(dn, from = "Ana")
-  df <- as.data.frame(p)
-  reached <- df[df$reachable, , drop = FALSE]
-
-  # Rebuild what plot() builds, to check the object rather than the picture.
+  # An endpoint-local optimal family is drawn as a prefix tree that repeats a
+  # vertex reached under a different temporal history, never as one
+  # predecessor tree the criterion does not define.
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off(), add = TRUE)
-  expect_error(plot(p), class = "dynet_unsupported_plot")
+  expect_s3_class(plot(p), "ggplot")
+  expect_s3_class(plot(p, measure = "time", orientation = "vertical"),
+                  "ggplot")
 
   # A netobject with coordinates must have them forwarded, because
   # cograph::splot.netobject() passes on only $weights and drops $nodes.

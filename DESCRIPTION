@@ -27,12 +27,15 @@ Imports:
     graphics
 Suggests:
     igraph,
+    knitr,
     network,
     networkDynamic,
+    rmarkdown,
     sna,
     testthat (>= 3.0.0),
     transitiontrees,
     tsna
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3

@@ -159,7 +159,10 @@ print.dynet_metric <- function(x, n = 12L, ...) {
 #' @param ... Ignored.
 #'
 #' @return A `data.frame` with the grouping columns plus `n`, `mean`, `sd`,
-#'   `min`, `max` and, when time is available, `peak_time`.
+#'   `min`, `max` and, when time is available, `peak_time`. `n` counts the
+#'   measured values the statistics were computed from, so a vertex that was
+#'   inactive for part of the calendar reports fewer than the number of time
+#'   points.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -180,7 +183,11 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
       v <- df$value[i]
       ok <- v[!is.na(v)]
       out <- key_tbl[i[1L], , drop = FALSE]
-      out$n    <- length(v)
+      # Count what the statistics actually used. A vertex outside its
+      # activity spell contributes a missing value, not a measured zero, and
+      # reporting the row count here would advertise observations that no
+      # mean or sd was computed from.
+      out$n    <- length(ok)
       out$mean <- if (length(ok)) mean(ok) else NA_real_
       out$sd   <- if (length(ok) > 1L) stats::sd(ok) else NA_real_
       out$min  <- if (length(ok)) min(ok) else NA_real_

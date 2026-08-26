@@ -1705,10 +1705,17 @@ paths <- function(dn, from, at = NULL,
 #' empty journey at that boundary and no eligible hop.
 #'
 #' @examples
-#' dn <- dynet(school_contacts)
+#' # Reachability searches every ordered pair, so the example uses a small
+#' # inline network to stay fast. The verb takes any `dynet`.
+#' dn <- dynet(data.frame(
+#'   from  = c("A", "B", "C", "A"),
+#'   to    = c("B", "C", "D", "D"),
+#'   start = c(0, 1, 2, 3),
+#'   end   = c(1, 2, 3, 4)
+#' ))
 #' dyn_reachability(dn)
-#' dyn_reachability(dn, start = 0, end = 10)
-#' plot(dyn_reachability(dn))
+#' dyn_reachability(dn, direction = "forward")
+#' dyn_reachability(dn, start = 0, end = 2)
 #'
 #' @export
 dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),

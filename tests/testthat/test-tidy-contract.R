@@ -109,3 +109,26 @@ test_that("unknown measures and wrong directedness raise classed conditions", {
   expect_error(metrics(und, measure = "reciprocity"),
                class = "dynet_needs_directed")
 })
+
+test_that("summary n counts the values the statistics used", {
+  # A vertex outside its declared activity spell contributes a missing value,
+  # not a measured zero. Reporting the row count as `n` advertised
+  # observations that no mean or sd was ever computed from.
+  edges <- data.frame(from = c("A", "B"), to = c("B", "C"),
+                      start = c(0, 5), end = c(1, 6))
+  dn <- dynet(edges, vertex_spells = data.frame(node = "A", start = 3,
+                                                end = 6))
+  measured <- dyn_centrality(dn, measure = "degree")
+  long <- as.data.frame(measured)
+  stats <- summary(measured)
+
+  rows <- sum(long$node == "A")
+  present <- sum(!is.na(long$value[long$node == "A"]))
+  expect_lt(present, rows)
+  expect_identical(stats$n[stats$node == "A"], present)
+
+  # A fully active vertex is unaffected: every row is a measured value.
+  expect_identical(stats$n[stats$node == "B"],
+                   sum(!is.na(long$value[long$node == "B"])))
+  expect_identical(stats$n[stats$node == "B"], sum(long$node == "B"))
+})

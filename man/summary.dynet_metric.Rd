@@ -16,7 +16,10 @@ measures), \code{"time"}, or \code{"measure"}.}
 }
 \value{
 A \code{data.frame} with the grouping columns plus \code{n}, \code{mean}, \code{sd},
-\code{min}, \code{max} and, when time is available, \code{peak_time}.
+\code{min}, \code{max} and, when time is available, \code{peak_time}. \code{n} counts the
+measured values the statistics were computed from, so a vertex that was
+inactive for part of the calendar reports fewer than the number of time
+points.
 }
 \description{
 Collapses the time dimension. Node-level measures are summarised one row

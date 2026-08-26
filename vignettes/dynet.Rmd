@@ -1,0 +1,328 @@
+---
+title: "Getting started with Dynet"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with Dynet}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(Dynet)
+```
+
+## A network that knows what time it is
+
+A static network says that two people are connected. A temporal network says
+*when* they were connected, *for how long*, and — the part that matters most —
+*in which order*.
+
+That ordering is not decoration. If Ana talks to Jonas on Tuesday and Jonas
+talks to Eve on Wednesday, something can travel Ana → Jonas → Eve. If the same
+two conversations happen in the opposite order, nothing can. A flattened
+network scores both situations identically: two edges, one path of length two.
+Only one of them is real.
+
+The usual workaround is to cut time into slices and analyse each slice as a
+static network. That helps, but it throws away exactly the thing that makes the
+data temporal: a snapshot cannot contain a chain that spans snapshots. In the
+classroom data below, Ana and Eve never once make contact, so no slice will
+ever link them — yet a time-respecting path carries Ana to Eve in four hops.
+Aggregate instead and you make the opposite mistake: every ordering becomes
+legal, and connectivity is inflated.
+
+Dynet keeps time in the object and in every result. This vignette is the tour.
+
+## Building a network in one line
+
+The bundled `school_contacts` is an *interval log*: each row is one contact,
+with its own start and end time.
+
+```{r build}
+dn <- dynet(school_contacts)
+dn
+```
+
+`dynet()` inferred the format from the column names it found. `summary()`
+describes what it built.
+
+```{r summary}
+summary(dn)
+```
+
+Fourteen pupils, 240 contact spells over 110 distinct pairs, observed across
+about 21.5 time steps. Note the last two rows of that table: the *mean snapshot
+density* and the *temporal density* are not the same number, and the gap
+between them is the subject of this vignette.
+
+One constructor covers the four shapes relational logs actually arrive in —
+interval logs, contact logs of instantaneous events, threaded logs such as
+forum data, and co-presence logs where sharing a group creates a tie. The
+companion vignette on building networks works through all four; here we stay
+with the one line above.
+
+```{r activity, fig.width = 7, fig.height = 4.5}
+plot(dn, type = "activity")
+```
+
+## Two commitments
+
+Everything below rests on two promises the package makes.
+
+**Vertices are named, never numbered.** You ask for `"Ana"`, not for vertex 1.
+There is no index to look up first, and no result that hands you an integer
+where you expected a person.
+
+**Every verb returns a tidy data frame.** One row per observation, with the
+columns you would expect. No matrices, no nested lists, nothing that asks you
+to reach into an object with `$` or to subset a result before it is readable.
+
+Both are visible in a single call:
+
+```{r commitments}
+head(dyn_centrality(dn, measure = "degree"))
+```
+
+One row per node per time point, vertices named, a `value` column you can plot
+directly. The printed header is a courtesy; the object underneath is an
+ordinary data frame.
+
+```{r tidy}
+str(as.data.frame(metrics(dn, measure = "density")))
+```
+
+Because results are already tidy, the tidying rituals you would normally write
+by hand are arguments instead. `start`, `end`, `step`, `window`, `sessions`,
+`measure`, `mode` — you narrow a result by asking the verb for it, not by
+slicing what it returned.
+
+## What a snapshot cannot see
+
+Start with the graph-level view. `metrics()` computes a structural measure once
+per time bin.
+
+```{r density}
+head(metrics(dn, measure = "density"))
+```
+
+```{r density-summary}
+summary(metrics(dn, measure = "density"))
+```
+
+The busiest single instant links about one pair in six; on average it is closer
+to one in twelve. Plotted, the classroom breathes.
+
+```{r density-plot, fig.width = 7, fig.height = 4}
+plot(metrics(dn, measure = "density"), palette = "okabe")
+```
+
+If those snapshots were all you had, you would conclude that this classroom is
+sparse and fragmented. Now ask the temporal question instead.
+
+## Time-respecting paths
+
+A time-respecting path may only use edges whose timing runs forward. It can
+wait at a vertex, but it can never travel back in time. `paths()` follows every
+such path out of one named vertex.
+
+```{r paths}
+paths(dn, from = "Ana")
+```
+
+Four columns carry the temporal content:
+
+- **`arrival_time`** — the earliest clock time at which the journey can get
+  there. It is a point on the network's timeline, not a count of steps.
+- **`latency`** — how long the journey took: `arrival_time` minus the time the
+  source became available. Ana starts at 0 here, so the two coincide; start
+  later and they part company.
+- **`n_hops`** — how many edges the journey used. Dynet optimises *shortest
+  foremost*: it minimises arrival time first, then hop count among the
+  journeys that achieve it.
+- **`n_paths`** — how many distinct optimal journeys there are. Two vertices
+  can share an arrival time and hop count and still differ in how many ways
+  the network gets you there.
+
+`summary()` aggregates the whole reachable set.
+
+```{r paths-summary}
+summary(paths(dn, from = "Ana"))
+```
+
+So Ana reaches every one of the other thirteen pupils, in at most four hops —
+in a network where no single snapshot ever connected more than a sixth of the
+pairs. That is the information a snapshot-by-snapshot analysis destroys.
+
+The result is not a property of the network alone; it is a property of the
+network *and when you start*. Ask the same question from late in the window and
+most of those journeys no longer exist, because the contacts that carried them
+have already happened.
+
+```{r paths-late}
+paths(dn, from = "Ana", start = 18)
+```
+
+Reach also has a direction. `direction = "backward"` traces who could have
+reached Ana rather than whom Ana can reach — the question you want when you are
+tracing an exposure backwards rather than forwards.
+
+```{r paths-backward}
+summary(paths(dn, from = "Ana", direction = "backward"))
+```
+
+## Seeing the journeys
+
+`plot()` on a paths result draws the whole family of optimal journeys as a
+trajectory tree.
+
+```{r trajectory, fig.width = 7, fig.height = 5}
+journeys <- paths(dn, from = "Ana")
+plot(journeys)
+```
+
+Read it outward from the root. The source sits at hop 0 on the left; each step
+to the right is one more hop, so a vertex's horizontal position is the number
+of edges its journey used. Node size and branch width both encode the number of
+optimal routes running through that point, and each node is labelled with the
+vertex name and the time the hop fires, so nothing is carried by size or colour
+alone.
+
+The feature that has no static counterpart is this: **a vertex appears more than
+once when it was reached under a different temporal history.** `Jonas` shows up
+three times in this tree. Those are not three different pupils and not three
+different places in the graph — they are the same vertex entered at 2.12, at
+3.43 and at 6.68. Each entry time leaves a different set of onward contacts
+still in the future, so each one is genuinely a different starting point for
+the rest of the journey. That is why `paths()` reported `n_paths = 3` for Ben
+earlier: the three optimal routes to Ben share the vertex sequence
+Ana → Jonas → Kira → Ben and differ only in when the hops fire. A flattened
+network would collapse all three into one path and call the matter settled.
+
+`measure` re-encodes the same tree. `"time"` weights it by arrival time rather
+than route count, which turns the picture into a schedule of when the reachable
+set fills up.
+
+```{r trajectory-time, fig.width = 7, fig.height = 5}
+plot(journeys, measure = "time")
+```
+
+`orientation = "vertical"` turns the tree on its side for a tall, narrow layout,
+`min_count` prunes branches carrying fewer than that many routes, and
+`measure = "predictability"` shades each branch by how strongly its parent
+commits to it.
+
+The tree is data as well as a picture. `path_trajectories()` returns it tidily,
+one row per tree node, with the route as a readable string, its `parent`,
+`depth`, the `count` of routes through it, the branching `probability` given its
+parent, and the bare `vertex` and `time`.
+
+```{r trajectories}
+head(path_trajectories(journeys))
+```
+
+## A tour of the measurement verbs
+
+Every verb takes the network first and a `measure` (or an attribute) by name.
+Every one returns a tidy frame keyed by time, by vertex, or by both.
+
+### `dyn_centrality()` — who matters, and when
+
+At `scope = "snapshot"` a centrality is recomputed in every bin, so `summary()`
+gives you each pupil's trajectory in one table, including when they peaked.
+
+```{r centrality}
+summary(dyn_centrality(dn, measure = "degree"))
+```
+
+```{r centrality-plot, fig.width = 7, fig.height = 4.5}
+plot(dyn_centrality(dn, measure = "degree"), type = "heatmap", palette = "okabe")
+```
+
+At `scope = "temporal"` the measure is computed on time-respecting paths across
+the whole window instead — one value per vertex, not one per bin. Temporal
+closeness is the *inverse* of mean forward latency over the vertices a person
+reaches, so a high score means "gets to the rest of the class quickly" rather
+than "has many neighbours right now".
+
+```{r centrality-temporal}
+head(dyn_centrality(dn, measure = "closeness", scope = "temporal"))
+```
+
+### `metrics()` — graph-level structure over time
+
+Density is one of forty available measures. `temporal_density` is a
+useful contrast: it discounts pairs that are adjacent in a snapshot but never
+in a time-respecting order.
+
+```{r metrics-temporal}
+head(metrics(dn, measure = "temporal_density"))
+```
+
+### `events()` — ties appearing and disappearing
+
+Structure is a stock; formation and dissolution are the flows that produce it.
+
+```{r events}
+head(events(dn, measure = "formation"))
+```
+
+```{r events-dissolution}
+head(events(dn, measure = "dissolution"))
+```
+
+### `burstiness()` — is contact regular or clumped?
+
+Human contact is rarely Poisson. Burstiness compares the variability of the
+gaps between a vertex's events against the exponential reference: `1` is the
+bursty limit, `0` is Poisson, `-1` is perfectly regular.
+
+```{r burstiness}
+head(burstiness(dn))
+```
+
+### `durations()` — how long ties actually last
+
+By default `durations()` counts events per pair; `measure = "mean"` gives the
+average length of a spell, and `unit` moves the question from pairs to spells
+or to vertex activity.
+
+```{r durations}
+head(durations(dn, measure = "mean"))
+```
+
+### `mixing()` — who connects across which groups
+
+Mixing needs vertex attributes, so this one uses the forum data, where
+`forum_people` supplies a `role` for each participant. `forum_posts` is a
+*threaded* log: a post keeps its tie alive until the thread falls silent.
+
+```{r forum}
+fn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
+fn
+```
+
+```{r mixing}
+mixing(fn, attribute = "role", step = 60)
+```
+
+A `step` wider than the observation window collapses the counts into a single
+bin; leave it out and you get the same table once per bin, which is what you
+want when you are asking whether cross-role contact changes over the term.
+
+## Where to go next
+
+- `vignette("building-networks", package = "Dynet")` — the four log formats in
+  detail, node attributes, observation windows, sessions, and the editing verbs
+  (`add_ties()`, `set_observations()`, `induce_subgraph()` and friends).
+- **`?paths`** and **`?plot_path_trajectories`** — the full traversal
+  semantics: `traversal_time` for a cost charged per hop, session-bounded
+  search, `as.data.frame(x, what = "steps")` for the reconstructed routes
+  themselves, and the remaining trajectory-tree controls.
+- **`?dyn_centrality`** and **`?metrics`** — the complete measure catalogues.
+  Passing a measure that does not exist prints the list of ones that do.
+- `projection()`, `pshifts()`, `snapshots()` and `collapse_network()` cover
+  two-mode projection, participation shifts, per-bin edge lists and static
+  aggregation.
+
+`browseVignettes("Dynet")` lists everything installed alongside this one.

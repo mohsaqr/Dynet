@@ -15,9 +15,9 @@ coloured by how many hops they are from the source.}
 \item{...}{Passed to \code{cograph::splot()}.}
 }
 \value{
-For current shortest-foremost results, a classed
-\code{dynet_unsupported_plot} condition. The legacy tree renderer remains only
-for older serialized results without criterion metadata.
+A \code{ggplot} object for current shortest-foremost results. The legacy
+\code{cograph} tree renderer remains only for older serialized results without
+criterion metadata, and draws to the active device.
 }
 \description{
 Rendering endpoint-local shortest-foremost families is not currently
@@ -31,7 +31,7 @@ a prefix-compatible tree that the endpoint-local criterion does not define.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- paths(dn, from = "Ana")
-try(plot(paths), silent = TRUE)
+journeys <- paths(dn, from = "Ana")
+plot(journeys)
 
 }

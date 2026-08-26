@@ -318,12 +318,8 @@ test_that("non-collapsed path plots reject a false single-tree rendering", {
   )
   dn <- quiet_dynet(spells, session = "session")
 
-  expect_error(
-    plot(paths(dn, from = "S", sessions = "bounded")),
-    class = "dynet_unsupported_plot"
-  )
-  expect_error(
-    plot(paths(dn, from = "S", sessions = "separate")),
-    class = "dynet_unsupported_plot"
-  )
+  # Session identity is carried in the tree's node keys, so a bounded or
+  # separate family draws without merging routes across sessions.
+  expect_s3_class(plot(paths(dn, from = "S", sessions = "bounded")), "ggplot")
+  expect_s3_class(plot(paths(dn, from = "S", sessions = "separate")), "ggplot")
 })

@@ -405,23 +405,24 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #'   coloured by how many hops they are from the source.
 #' @param ... Passed to `cograph::splot()`.
 #'
-#' @return For current shortest-foremost results, a classed
-#'   `dynet_unsupported_plot` condition. The legacy tree renderer remains only
-#'   for older serialized results without criterion metadata.
+#' @return A `ggplot` object for current shortest-foremost results. The legacy
+#'   `cograph` tree renderer remains only for older serialized results without
+#'   criterion metadata, and draws to the active device.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- paths(dn, from = "Ana")
-#' try(plot(paths), silent = TRUE)
+#' journeys <- paths(dn, from = "Ana")
+#' plot(journeys)
 #'
 #' @export
 plot.dynet_paths <- function(x, palette = "okabe", ...) {
   mode <- attr(x, "path_mode") %||% "collapse"
+  # An endpoint-local optimal family is exactly what the trajectory tree
+  # draws: a prefix tree that repeats a vertex reached under a different
+  # temporal history, rather than one predecessor tree the criterion never
+  # promised.
   if (!is.null(attr(x, "criterion"))) {
-    stop(errorCondition(
-      "Shortest-foremost paths are endpoint-local and do not necessarily form one predecessor tree. Inspect `as.data.frame(x, what = \"steps\")` until optimal-family rendering is implemented.",
-      class = "dynet_unsupported_plot", call = NULL
-    ))
+    return(plot_path_trajectories(x, ...))
   }
   if (!identical(mode, "collapse")) {
     stop(errorCondition(
