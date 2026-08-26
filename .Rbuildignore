@@ -15,3 +15,4 @@
 ^data-raw$
 ^LICENSE\.md$
 ^inst/reproduction/.*\.html$
+^COMPARISON\.md$
