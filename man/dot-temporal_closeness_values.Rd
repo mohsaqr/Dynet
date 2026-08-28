@@ -4,7 +4,7 @@
 \alias{.temporal_closeness_values}
 \title{Reduce temporal search trees to inverse mean forward latency}
 \usage{
-.temporal_closeness_values(trees, n)
+.temporal_closeness_values(trees, n, criterion = "foremost_then_shortest")
 }
 \arguments{
 \item{trees}{List of temporal search results, one per source.}

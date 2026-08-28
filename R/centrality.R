@@ -168,6 +168,11 @@
 #'   inside every reported time/session block. Zero-total count/proximity
 #'   definitions return `NaN`; structurally undefined spectral definitions
 #'   return `NA`. This argument requires `measure = "prestige"`.
+#' @param criterion For `scope = "temporal"` only: which optimisation problem
+#'   the journeys solve. `"foremost_then_shortest"` is the default and what
+#'   every earlier release computed; `"min_hops"` counts fewest contacts, which
+#'   makes closeness dimensionless and comparable with its static counterpart.
+#'   Reach and reach count are identical under both.
 #' @param traversal_time Nonnegative duration charged for every temporal-path
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
@@ -395,8 +400,11 @@ dyn_centrality <- function(dn,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
                            lambda = 1, groups = NULL,
-                           beta = 0.1, decay = 0) {
+                           beta = 0.1, decay = 0,
+                           criterion = c("foremost_then_shortest",
+                                         "min_hops")) {
   sessions <- match.arg(sessions)
+  criterion <- match.arg(criterion)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
   mode  <- .resolve_modes(mode)
@@ -539,7 +547,8 @@ dyn_centrality <- function(dn,
         class = "dynet_bad_input", call = NULL))
     }
     return(.temporal_centrality(
-      dn, measure, sessions, start, end, traversal_time, beta, decay
+      dn, measure, sessions, start, end, traversal_time, beta, decay,
+      criterion
     ))
   }
 
@@ -1525,7 +1534,8 @@ dyn_centrality <- function(dn,
 .temporal_centrality <- function(dn, measure, sessions,
                                  start = NULL, end = NULL,
                                  traversal_time = 0,
-                                 beta = 0.1, decay = 0) {
+                                 beta = 0.1, decay = 0,
+                                 criterion = "foremost_then_shortest") {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   frames <- Map(function(enc, label) {
@@ -1551,11 +1561,12 @@ dyn_centrality <- function(dn,
         } else {
           "collapse"
         },
-        activity_session = if (identical(sessions, "separate")) label else NULL
+        activity_session = if (identical(sessions, "separate")) label else NULL,
+        criterion = criterion
       ))
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
-                        horizon$start, horizon$end)), measure)
+                        horizon$start, horizon$end, criterion)), measure)
     data.frame(session = label, node = enc$names,
                measure = rep(measure, each = enc$n),
                value = unlist(vals, use.names = FALSE),
@@ -1612,13 +1623,14 @@ dyn_centrality <- function(dn,
 #' @return A numeric vector, one value per vertex.
 #' @keywords internal
 .temporal_measure <- function(m, trees, enc, dn = NULL, beta = 0.1,
-                              decay = 0, lower = NULL, upper = NULL) {
+                              decay = 0, lower = NULL, upper = NULL,
+                              criterion = "foremost_then_shortest") {
   n <- enc$n
   switch(m,
     katz = .temporal_katz_values(enc, dn, beta, decay, lower, upper),
     reach = .temporal_reach_values(trees, n, m)[[1L]],
     reach_count = .temporal_reach_values(trees, n, m)[[1L]],
-    closeness = .temporal_closeness_values(trees, n),
+    closeness = .temporal_closeness_values(trees, n, criterion),
     betweenness = .temporal_betweenness_values(trees, n)
   )
 }
@@ -1784,16 +1796,24 @@ dyn_centrality <- function(dn,
 #' ))
 #' Dynet:::.temporal_closeness_values(trees, 3L)
 #' @keywords internal
-.temporal_closeness_values <- function(trees, n) {
+.temporal_closeness_values <- function(trees, n,
+                                       criterion = "foremost_then_shortest") {
   vapply(trees, function(tree) {
     target <- seq_len(n) != tree$source & is.finite(tree$arrival)
     if (!any(target)) return(0)
-    latency <- tree$arrival[target] - tree$origin
+    # The distance is whatever the criterion optimised, so closeness under
+    # min_hops is dimensionless and directly comparable with static closeness,
+    # while under foremost it carries inverse-time units.
+    distance <- if (identical(criterion, "min_hops")) {
+      as.numeric(tree$n_hops[target])
+    } else {
+      tree$arrival[target] - tree$origin
+    }
     .check(
-      "Internal temporal search returned an arrival before its origin." =
-        all(latency >= 0)
+      "Internal temporal search returned a negative distance." =
+        all(distance >= 0)
     )
-    1 / mean(latency)
+    1 / mean(distance)
   }, numeric(1L))
 }
 

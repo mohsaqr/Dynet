@@ -12,7 +12,8 @@
   beta = 0.1,
   decay = 0,
   lower = NULL,
-  upper = NULL
+  upper = NULL,
+  criterion = "foremost_then_shortest"
 )
 }
 \arguments{

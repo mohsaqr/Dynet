@@ -107,3 +107,60 @@ test_that("a backward search honours the criterion too", {
   # Backward maximises departure, so the min_hops journey departs no later.
   expect_true(all(b$arrival_time[both] <= a$arrival_time[both]))
 })
+
+test_that("temporal closeness uses the distance its criterion optimised", {
+  dn <- dynet(school_contacts, format = "contact")
+  enc <- Dynet:::.encode(dn)
+
+  # Under min_hops the distance is the hop count, so closeness is
+  # dimensionless and directly comparable with static closeness. Under
+  # foremost it is elapsed latency and carries inverse-time units.
+  tree <- Dynet:::.optimal_path_search(enc, 1L, 0, upper = 25,
+                                       criterion = "min_hops")
+  target <- seq_len(tree$n) != 1L & is.finite(tree$arrival)
+  hand <- 1 / mean(as.numeric(tree$n_hops[target]))
+  got <- as.data.frame(dyn_centrality(dn, measure = "closeness",
+                                      scope = "temporal",
+                                      criterion = "min_hops"))$value[[1L]]
+  expect_equal(got, hand)
+
+  # The two criteria must actually disagree, or the argument does nothing.
+  a <- as.data.frame(dyn_centrality(dn, measure = "closeness",
+                                    scope = "temporal"))$value
+  expect_false(isTRUE(all.equal(a, rep(got, length(a)))))
+})
+
+test_that("temporal betweenness follows the criterion's optimal family", {
+  # Betweenness distributes dependency over the selected optimal journeys, so
+  # changing which journeys are optimal must change the result.
+  dn <- dynet(school_contacts, format = "contact")
+  a <- as.data.frame(dyn_centrality(dn, measure = "betweenness",
+                                    scope = "temporal"))$value
+  b <- as.data.frame(dyn_centrality(dn, measure = "betweenness",
+                                    scope = "temporal",
+                                    criterion = "min_hops"))$value
+  expect_false(isTRUE(all.equal(a, b)))
+  expect_true(all(a >= 0))
+  expect_true(all(b >= 0))
+})
+
+test_that("reach is identical under every criterion, in centrality too", {
+  dn <- dynet(school_contacts, format = "contact")
+  for (m in c("reach", "reach_count")) {
+    a <- as.data.frame(dyn_centrality(dn, measure = m, scope = "temporal"))$value
+    b <- as.data.frame(dyn_centrality(dn, measure = m, scope = "temporal",
+                                      criterion = "min_hops"))$value
+    expect_identical(a, b, info = m)
+  }
+})
+
+test_that("the default temporal centrality is unchanged by the criterion work", {
+  # Frozen values from before criterion support existed.
+  dn <- dynet(school_contacts, format = "contact")
+  cl <- as.data.frame(dyn_centrality(dn, measure = "closeness",
+                                     scope = "temporal"))
+  expect_equal(cl$value[cl$node == "Ana"], 0.130784708249497, tolerance = 1e-12)
+  bt <- as.data.frame(dyn_centrality(dn, measure = "betweenness",
+                                     scope = "temporal"))
+  expect_equal(sum(bt$value), 238)
+})

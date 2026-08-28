@@ -12,7 +12,8 @@
   end = NULL,
   traversal_time = 0,
   beta = 0.1,
-  decay = 0
+  decay = 0,
+  criterion = "foremost_then_shortest"
 )
 }
 \arguments{

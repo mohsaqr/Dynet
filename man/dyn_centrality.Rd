@@ -23,7 +23,8 @@ dyn_centrality(
   lambda = 1,
   groups = NULL,
   beta = 0.1,
-  decay = 0
+  decay = 0,
+  criterion = c("foremost_then_shortest", "min_hops")
 )
 }
 \arguments{
@@ -119,6 +120,12 @@ Each additional hop multiplies a walk's contribution by \code{beta}.}
 
 \item{decay}{For \code{measure = "katz"} only: exponential time-decay rate. Zero
 weights every past walk equally.}
+
+\item{criterion}{For \code{scope = "temporal"} only: which optimisation problem
+the journeys solve. \code{"foremost_then_shortest"} is the default and what
+every earlier release computed; \code{"min_hops"} counts fewest contacts, which
+makes closeness dimensionless and comparable with its static counterpart.
+Reach and reach count are identical under both.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time
