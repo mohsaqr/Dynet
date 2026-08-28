@@ -83,6 +83,38 @@
   paste(pmin(spells$from, spells$to), pmax(spells$from, spells$to), sep = "\r")
 }
 
+#' Is every surrogate spell feasible for both endpoints and the observation?
+#' @param dn The source network.
+#' @param spells A candidate spell table.
+#' @param respect Which constraints to enforce.
+#' @return A logical vector, one per spell row.
+#' @keywords internal
+.spell_feasible <- function(dn, spells, respect) {
+  ok <- rep(TRUE, nrow(spells))
+  if ("observation" %in% respect) {
+    # Both ends of the spell must fall inside an observed component, or the
+    # snapshot machinery would induce the event away and bias the null down.
+    ok <- ok & .time_in_observation(dn, spells$start) &
+      .time_in_observation(dn, spells$end)
+  }
+  if ("activity" %in% respect && !is.null(dn$vertex_spells) &&
+      nrow(dn$vertex_spells) > 0L) {
+    vs <- dn$vertex_spells
+    covers <- function(node, from, to) {
+      vapply(seq_along(node), function(i) {
+        rows <- vs[vs$node == node[[i]], , drop = FALSE]
+        # dynet() records vertex_activity_default = "always_for_unlisted_nodes",
+        # so a vertex with no declared spell is eligible throughout, not never.
+        if (!nrow(rows)) return(TRUE)
+        any(rows$start <= from[[i]] & rows$end >= to[[i]])
+      }, logical(1L))
+    }
+    ok <- ok & covers(spells$from, spells$start, spells$end) &
+      covers(spells$to, spells$start, spells$end)
+  }
+  ok
+}
+
 #' Draw one surrogate spell table
 #' @param dn The source network.
 #' @param method Which null model.
@@ -232,6 +264,12 @@
 #' @param max_tries Iteration cap on the self-loop repair in `"targets"`.
 #' @param keep Retain the surrogate networks so [significance()] can reuse one
 #'   set of replicates for many statistics, or drop them to save memory.
+#' @param respect Constraints a surrogate must satisfy on a network that
+#'   declares them: `"activity"` requires both endpoints eligible for the whole
+#'   surrogate spell, `"observation"` requires the spell to lie inside an
+#'   observed component, and `"none"` shuffles unconstrained. Constrained draws
+#'   are feasible, not uniform over the feasible set, and `"none"` on such a
+#'   network gives a biased null.
 #' @param seed A single whole number for a reproducible draw, or `NULL`.
 #' @return A `dynet_null` data frame with one row per surrogate spell per
 #'   replicate and columns `replicate`, `from`, `to`, `start`, `end`,
@@ -258,10 +296,14 @@
 #'     structural measure is exactly invariant under it, which makes it a free
 #'     correctness test rather than a weak null.}
 #' }
-#' Networks built with explicit vertex activity or observation spells are
-#' refused, because an unconstrained shuffle can place an event while an
-#' endpoint is ineligible and the snapshot machinery would then induce it away,
-#' giving a quietly biased null.
+#' On a network that declares vertex activity or observation spells, an
+#' unconstrained shuffle can place an event while an endpoint is ineligible or
+#' inside an unobserved gap, and the snapshot machinery would then induce it
+#' away, biasing the null downward. `respect` enforces those constraints by
+#' rejecting and redrawing infeasible spells. The result is a feasible
+#' surrogate rather than a uniform draw from the feasible set; `summary()`
+#' reports how many proposals were rejected so the constraint's bite is
+#' visible.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' randomise(dn, method = "times", n = 9, seed = 1)
@@ -287,12 +329,23 @@ randomise <- function(dn,
                       swaps = 10,
                       max_tries = 100L,
                       keep = c("networks", "spells"),
+                      respect = c("activity", "observation"),
                       seed = NULL) {
   .check_dynet(dn)
   n_supplied <- !missing(n)
   method <- match.arg(method)
   within <- match.arg(within)
   keep <- match.arg(keep)
+  respect <- match.arg(respect, c("activity", "observation", "none"),
+                       several.ok = TRUE)
+  if ("none" %in% respect) {
+    if (length(respect) > 1L) {
+      stop(errorCondition(
+        "`respect = \"none\"` cannot be combined with a constraint.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    respect <- character(0)
+  }
   .check(
     "`n` must be a single positive whole number." =
       length(n) == 1L && is.numeric(n) && is.finite(n) && n >= 1 &&
@@ -327,18 +380,35 @@ randomise <- function(dn,
       "`within = \"session\"` needs a network built with sessions.",
       class = "dynet_no_sessions", call = NULL))
   }
-  if (isTRUE(dn$meta$vertex_activity_supplied) ||
-      (!is.null(dn$vertex_spells) && nrow(dn$vertex_spells) > 0L)) {
-    stop(errorCondition(
-      paste0("Randomising a network with declared vertex activity is not ",
-             "supported yet: a surrogate could place an event while an ",
-             "endpoint is ineligible, giving a quietly biased null."),
-      class = "dynet_randomise_unsupported", call = NULL))
-  }
+  constrained <- length(respect) > 0L &&
+    (isTRUE(dn$meta$vertex_activity_supplied) ||
+       (!is.null(dn$vertex_spells) && nrow(dn$vertex_spells) > 0L) ||
+       isTRUE(dn$meta$observation_spells_explicit))
   n <- as.integer(n)
+  rejected <- integer(n)
 
   draws <- .with_seed(seed, lapply(seq_len(n), function(i) {
-    .draw_surrogate(dn, method, within, transpose, swaps, max_tries)
+    got <- .draw_surrogate(dn, method, within, transpose, swaps, max_tries)
+    if (!constrained) return(got)
+    # Rejection then repair: propose, keep the feasible rows, redraw the rest.
+    # This yields a feasible surrogate, NOT a uniform draw from the feasible
+    # set, and the docs say so rather than overclaiming.
+    tries <- 0L
+    repeat {
+      feasible <- .spell_feasible(dn, got$spells, respect)
+      if (all(feasible) || tries >= max_tries) break
+      rejected[[i]] <<- rejected[[i]] + sum(!feasible)
+      retry <- .draw_surrogate(dn, method, within, transpose, swaps, max_tries)
+      got$spells[!feasible, ] <- retry$spells[!feasible, ]
+      tries <- tries + 1L
+    }
+    if (!all(.spell_feasible(dn, got$spells, respect))) {
+      stop(errorCondition(sprintf(
+        "Could not place %d surrogate spells inside the declared activity and observation windows in %d tries.",
+        sum(!.spell_feasible(dn, got$spells, respect)), max_tries),
+        class = "dynet_null_no_valid_draw", call = NULL))
+    }
+    got
   }))
   networks <- lapply(seq_len(n), function(i) {
     .rebuild_surrogate(dn, draws[[i]]$spells, method, i)
@@ -376,7 +446,7 @@ randomise <- function(dn,
     seed = seed,
     preserves = unname(.null_preserves[[method]]),
     destroys = unname(.null_destroys[[method]]),
-    acceptance = acceptance,
+    acceptance = acceptance, respect = respect, rejected = rejected,
     networks = if (identical(keep, "networks")) networks else NULL,
     source = dn
   )

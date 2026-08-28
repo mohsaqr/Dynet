@@ -13,6 +13,7 @@ randomise(
   swaps = 10,
   max_tries = 100L,
   keep = c("networks", "spells"),
+  respect = c("activity", "observation"),
   seed = NULL
 )
 }
@@ -39,6 +40,13 @@ sender, or within each session.}
 
 \item{keep}{Retain the surrogate networks so \code{\link[=significance]{significance()}} can reuse one
 set of replicates for many statistics, or drop them to save memory.}
+
+\item{respect}{Constraints a surrogate must satisfy on a network that
+declares them: \code{"activity"} requires both endpoints eligible for the whole
+surrogate spell, \code{"observation"} requires the spell to lie inside an
+observed component, and \code{"none"} shuffles unconstrained. Constrained draws
+are feasible, not uniform over the feasible set, and \code{"none"} on such a
+network gives a biased null.}
 
 \item{seed}{A single whole number for a reproducible draw, or \code{NULL}.}
 }
@@ -78,10 +86,14 @@ attribute-dependent quantities only, such as \code{\link[=mixing]{mixing()}}. Ev
 structural measure is exactly invariant under it, which makes it a free
 correctness test rather than a weak null.}
 }
-Networks built with explicit vertex activity or observation spells are
-refused, because an unconstrained shuffle can place an event while an
-endpoint is ineligible and the snapshot machinery would then induce it away,
-giving a quietly biased null.
+On a network that declares vertex activity or observation spells, an
+unconstrained shuffle can place an event while an endpoint is ineligible or
+inside an unobserved gap, and the snapshot machinery would then induce it
+away, biasing the null downward. \code{respect} enforces those constraints by
+rejecting and redrawing infeasible spells. The result is a feasible
+surrogate rather than a uniform draw from the feasible set; \code{summary()}
+reports how many proposals were rejected so the constraint's bite is
+visible.
 }
 \examples{
 dn <- dynet(school_contacts)

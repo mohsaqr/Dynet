@@ -254,20 +254,87 @@ as.data.frame.dynet_significance <- function(x, row.names = NULL,
   x
 }
 
-#' Plot the null distribution against the observed value
+#' Plot a permutation test
+#'
 #' @param x A `dynet_significance` from [significance()].
+#' @param type `"null"` draws the surrogate distribution with the observed
+#'   value marked, `"series"` draws the observed value over time inside the
+#'   null band, and `"z"` orders vertices or cells by standardised deviation.
 #' @param ... Ignored.
-#' @return A `ggplot` object: a histogram of the surrogate values with the
-#'   observed value drawn as a labelled rule, faceted by measure.
+#' @return A `ggplot` object.
 #' @export
-plot.dynet_significance <- function(x, ...) {
+plot.dynet_significance <- function(x, type = c("null", "series", "z"), ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(errorCondition("Plotting needs ggplot2.",
                         class = "dynet_missing_package", call = NULL))
   }
+  type <- match.arg(type)
   df <- as.data.frame(x)
   draws <- attr(x, "draws")
   measure <- if ("measure" %in% names(df)) df$measure else rep("value", nrow(df))
+  base <- ggplot2::theme_minimal(base_size = 12)
+
+  if (identical(type, "series")) {
+    if (!"time" %in% names(df)) {
+      stop(errorCondition(
+        "type = \"series\" needs a statistic measured over time; use type = \"null\" or \"z\".",
+        class = "dynet_bad_input", call = NULL))
+    }
+    df$flag <- ifelse(!is.na(df$p_adj) & df$p_adj < 0.05, "outside", "inside")
+    return(
+      ggplot2::ggplot(df, ggplot2::aes(x = df$time)) +
+        ggplot2::geom_ribbon(
+          ggplot2::aes(ymin = df$null_lo, ymax = df$null_hi),
+          fill = "#999999", alpha = 0.35) +
+        ggplot2::geom_line(ggplot2::aes(y = df$observed),
+                           colour = "#0072B2", linewidth = 0.8) +
+        ggplot2::geom_point(
+          ggplot2::aes(y = df$observed, shape = df$flag, colour = df$flag),
+          size = 2) +
+        ggplot2::scale_shape_manual(
+          values = c(inside = 1, outside = 17), name = NULL) +
+        ggplot2::scale_colour_manual(
+          values = c(inside = "#0072B2", outside = "#D55E00"), name = NULL) +
+        ggplot2::facet_wrap(~ measure, scales = "free_y") +
+        ggplot2::labs(x = "time", y = "observed",
+                      title = "Observed value inside the null band",
+                      subtitle = "band is the null interval; triangles fall outside it after correction") +
+        base
+    )
+  }
+
+  if (identical(type, "z")) {
+    keys <- setdiff(names(df), c("observed", "null_mean", "null_sd", "null_lo",
+                                 "null_hi", "z", "p", "p_adj", "p_mcse",
+                                 "n_ties", "n_null", "measure"))
+    df$label <- if (length(keys)) {
+      do.call(paste, c(df[keys], sep = " "))
+    } else as.character(seq_len(nrow(df)))
+    df <- df[is.finite(df$z), , drop = FALSE]
+    if (!nrow(df)) {
+      stop(errorCondition(
+        "Every z is undefined, so there is nothing to order; the null has no spread.",
+        class = "dynet_empty_result", call = NULL))
+    }
+    df$flag <- ifelse(!is.na(df$p_adj) & df$p_adj < 0.05, "outside", "inside")
+    df$label <- stats::reorder(df$label, df$z)
+    return(
+      ggplot2::ggplot(df, ggplot2::aes(x = df$z, y = df$label)) +
+        ggplot2::geom_vline(xintercept = 0, colour = "#999999",
+                            linetype = "22") +
+        ggplot2::geom_point(
+          ggplot2::aes(shape = df$flag, colour = df$flag), size = 2.4) +
+        ggplot2::scale_shape_manual(
+          values = c(inside = 1, outside = 17), name = NULL) +
+        ggplot2::scale_colour_manual(
+          values = c(inside = "#0072B2", outside = "#D55E00"), name = NULL) +
+        ggplot2::labs(x = "z against the null", y = NULL,
+                      title = "Standardised deviation from the null",
+                      subtitle = "triangles fall outside the null after correction") +
+        base
+    )
+  }
+
   pooled <- data.frame(
     value = as.numeric(draws),
     measure = rep(measure, times = ncol(draws)),
@@ -287,5 +354,5 @@ plot.dynet_significance <- function(x, ...) {
       title = sprintf("Null distribution against the observed value (%s)",
                       attr(x, "method")),
       subtitle = "vermillion rule marks the observed value") +
-    ggplot2::theme_minimal(base_size = 12)
+    base
 }

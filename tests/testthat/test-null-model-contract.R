@@ -33,16 +33,16 @@ test_that("randomise rejects arguments that belong to another method", {
                class = "dynet_no_sessions")
 })
 
-test_that("randomise refuses a network whose vertex activity was declared", {
-  # An unconstrained shuffle could place an event while an endpoint is
-  # ineligible, and the snapshot machinery would then induce it away, giving a
-  # quietly biased null. Refusing loudly is correct.
+test_that("a network with declared vertex activity is randomised, not refused", {
+  # This used to raise dynet_randomise_unsupported. It now draws a constrained
+  # surrogate instead; the feasibility guarantee is tested below.
   dn <- dynet(
     data.frame(from = "A", to = "B", start = 0, end = 1),
     vertex_spells = data.frame(node = "A", start = 0, end = 1)
   )
-  expect_error(randomise(dn, method = "times"),
-               class = "dynet_randomise_unsupported")
+  out <- randomise(dn, method = "times", n = 3, seed = 1)
+  expect_s3_class(out, "dynet_null")
+  expect_identical(attr(out, "respect"), c("activity", "observation"))
 })
 
 test_that("every method conserves exactly what its table claims", {
@@ -135,4 +135,45 @@ test_that("randomise ships the four result methods", {
   expect_output(print(null), "holds fixed")
   skip_if_not_installed("ggplot2")
   expect_s3_class(plot(null), "ggplot")
+})
+
+test_that("declared vertex activity constrains the surrogates instead of refusing", {
+  # A is eligible only on [0, 3] while events run out to 9, so an
+  # unconstrained time permutation can place an A-event outside its window.
+  dn <- dynet(
+    data.frame(from = c("A", "A", "B", "B", "C"), to = c("B", "C", "C", "A", "B"),
+               start = c(0, 1, 6, 7, 8), end = c(1, 2, 7, 8, 9)),
+    vertex_spells = data.frame(node = c("A", "B", "C"), start = c(0, 0, 0),
+                               end = c(3, 10, 10)),
+    observation_start = 0, observation_end = 10)
+  feasible <- function(df) {
+    Dynet:::.spell_feasible(
+      dn, data.frame(from = df$from, to = df$to, start = df$start,
+                     end = df$end),
+      c("activity", "observation"))
+  }
+
+  constrained <- randomise(dn, method = "times", n = 40, seed = 1)
+  expect_true(all(feasible(as.data.frame(constrained))))
+  expect_gt(sum(attr(constrained, "rejected")), 0L)
+
+  # The unconstrained draw is what the refusal used to protect against, and it
+  # is available on request with the bias documented.
+  loose <- randomise(dn, method = "times", n = 40, seed = 1, respect = "none")
+  expect_gt(sum(!feasible(as.data.frame(loose))), 0L)
+  expect_identical(sum(attr(loose, "rejected")), 0L)
+})
+
+test_that("respect = none cannot be combined with a constraint", {
+  dn <- dynet(school_contacts, format = "contact")
+  expect_error(randomise(dn, method = "times", respect = c("none", "activity")),
+               class = "dynet_bad_input")
+})
+
+test_that("a network with no declared activity is unaffected by respect", {
+  dn <- dynet(school_contacts, format = "contact")
+  a <- as.data.frame(randomise(dn, method = "times", n = 3, seed = 1))
+  b <- as.data.frame(randomise(dn, method = "times", n = 3, seed = 1,
+                               respect = "none"))
+  expect_identical(a, b)
 })

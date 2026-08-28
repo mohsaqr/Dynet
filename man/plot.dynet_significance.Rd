@@ -2,19 +2,22 @@
 % Please edit documentation in R/significance.R
 \name{plot.dynet_significance}
 \alias{plot.dynet_significance}
-\title{Plot the null distribution against the observed value}
+\title{Plot a permutation test}
 \usage{
-\method{plot}{dynet_significance}(x, ...)
+\method{plot}{dynet_significance}(x, type = c("null", "series", "z"), ...)
 }
 \arguments{
 \item{x}{A \code{dynet_significance} from \code{\link[=significance]{significance()}}.}
 
+\item{type}{\code{"null"} draws the surrogate distribution with the observed
+value marked, \code{"series"} draws the observed value over time inside the
+null band, and \code{"z"} orders vertices or cells by standardised deviation.}
+
 \item{...}{Ignored.}
 }
 \value{
-A \code{ggplot} object: a histogram of the surrogate values with the
-observed value drawn as a labelled rule, faceted by measure.
+A \code{ggplot} object.
 }
 \description{
-Plot the null distribution against the observed value
+Plot a permutation test
 }
