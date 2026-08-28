@@ -13,7 +13,8 @@
   exponent = 1,
   prestige = "indegree",
   rescale = FALSE,
-  lambda = 1
+  lambda = 1,
+  groups = NULL
 )
 }
 \arguments{
@@ -34,6 +35,8 @@
 \item{rescale}{Whether to normalize prestige by its block total.}
 
 \item{lambda}{Diffusion-degree multiplier.}
+
+\item{groups}{Group labels for \code{"participation"}, one per vertex.}
 }
 \value{
 A numeric vector, one value per vertex.

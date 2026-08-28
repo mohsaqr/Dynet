@@ -20,7 +20,8 @@ dyn_centrality(
   traversal_time = 0,
   prestige = "indegree",
   rescale = FALSE,
-  lambda = 1
+  lambda = 1,
+  groups = NULL
 )
 }
 \arguments{
@@ -106,6 +107,10 @@ return \code{NA}. This argument requires \code{measure = "prestige"}.}
 \item{lambda}{Nonnegative multiplier for \code{"diffusion"}. Diffusion degree is
 the sum of the selected degree of a vertex and all of its one-step
 neighbours, multiplied by \code{lambda}.}
+
+\item{groups}{For \code{measure = "participation"} only: the name of a node
+attribute, or one group label per vertex. Required for that measure and
+rejected for every other.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time

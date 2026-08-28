@@ -6,13 +6,14 @@
                     "closeness", "betweenness",
                     "eigenvector", "pagerank", "hub", "authority",
                     "coreness", "constraint", "power", "harary",
-                    "information", "load", "flow_betweenness", "diffusion")
+                    "information", "load", "flow_betweenness", "diffusion",
+                    "participation")
 
 # The measures for which "out" and "in" mean something. Every other measure
 # has a single directional definition and ignores `mode`, as in igraph.
 .mode_aware_measures <- c("degree", "indegree", "outdegree", "strength",
                           "closeness", "coreness", "harary", "eigenvector",
-                          "diffusion")
+                          "diffusion", "participation")
 
 .temporal_measures <- c("closeness", "betweenness", "reach", "reach_count")
 
@@ -165,6 +166,9 @@
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
 #'
+#' @param groups For `measure = "participation"` only: the name of a node
+#'   attribute, or one group label per vertex. Required for that measure and
+#'   rejected for every other.
 #' @return A `dynet_metric`: a tidy data frame with one row per vertex, time
 #'   point and measure. Columns are `session` (only when the network has
 #'   sessions), `time` (snapshot scope only), `node`, `measure` and `value`.
@@ -380,7 +384,7 @@ dyn_centrality <- function(dn,
                            step = NULL, window = NULL,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
-                           lambda = 1) {
+                           lambda = 1, groups = NULL) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
@@ -424,6 +428,49 @@ dyn_centrality <- function(dn,
               paste(sQuote(bad), collapse = ", "), scope,
               paste(allowed, collapse = ", ")),
       class = "dynet_unknown_measure", call = NULL))
+  }
+  # `groups` belongs to participation and to nothing else; supplying it
+  # elsewhere is an error rather than a silently ignored argument.
+  wants_groups <- "participation" %in% measure
+  if (!is.null(groups) && !wants_groups) {
+    stop(errorCondition(
+      "`groups` applies only to measure = \"participation\".",
+      class = "dynet_bad_input", call = NULL))
+  }
+  group_labels <- NULL
+  if (wants_groups) {
+    if (is.null(groups)) {
+      stop(errorCondition(
+        "measure = \"participation\" needs `groups`: a node attribute name, or one label per vertex.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    if (length(groups) == 1L && is.character(groups) &&
+        groups %in% names(dn$nodes)) {
+      group_labels <- as.character(dn$nodes[[groups]])
+    } else if (length(groups) == nrow(dn$nodes)) {
+      group_labels <- as.character(groups)
+      if (!is.null(names(groups))) {
+        idx <- match(dn$nodes$name, names(groups))
+        if (anyNA(idx)) {
+          stop(errorCondition(
+            "`groups` is named but does not cover every vertex.",
+            class = "dynet_bad_input", call = NULL))
+        }
+        group_labels <- as.character(groups)[idx]
+      }
+    } else {
+      have <- setdiff(names(dn$nodes), c("id", "label", "name", "x", "y"))
+      stop(errorCondition(sprintf(
+        "No vertex attribute %s, and `groups` is not one label per vertex. This network has %s.",
+        sQuote(as.character(groups)[[1L]]),
+        if (length(have)) paste(have, collapse = ", ") else "no attributes"),
+        class = "dynet_unknown_attribute", call = NULL))
+    }
+    if (anyNA(group_labels)) {
+      stop(errorCondition(
+        "`groups` leaves some vertices unassigned; every vertex needs a label.",
+        class = "dynet_bad_input", call = NULL))
+    }
   }
   retired <- intersect(measure, c("indegree", "outdegree"))
   if (length(retired) > 0L) {
@@ -493,7 +540,7 @@ dyn_centrality <- function(dn,
           .snapshot_measure(
             m, if (identical(m, "strength")) valued_a else binary_a,
             dn$directed, damping, jobs$mode[[job]], exponent, prestige,
-            rescale, lambda
+            rescale, lambda, group_labels[state$index]
           )
         } else numeric()
         diagnostic <- attr(value, "prestige_diagnostic")
@@ -795,6 +842,44 @@ dyn_centrality <- function(dn,
   out
 }
 
+#' Participation coefficient of every vertex in one snapshot
+#'
+#' Guimera and Amaral's coefficient: one minus the sum of squared shares of a
+#' vertex's contacts falling in each group. Zero when every contact is inside a
+#' single group, approaching `1 - 1/g` when they are spread evenly over `g`.
+#'
+#' @param b Binary adjacency for the bin.
+#' @param directed Whether the network is directed.
+#' @param mode Which margin counts as a contact.
+#' @param groups Character vector of group labels, one per vertex, in the
+#'   adjacency's own order.
+#' @return A numeric vector, one value per vertex. `NaN` for an eligible
+#'   vertex of degree zero, whose shares are 0/0.
+#' @keywords internal
+.participation <- function(b, directed, mode, groups) {
+  n <- nrow(b)
+  if (is.null(groups) || !n) return(rep(NaN, n))
+  k <- .margin(b, directed, mode)
+  indicator <- outer(groups, sort(unique(groups)), "==") * 1
+  # The per-group counts must use the SAME margin as k, or the shares do not
+  # sum to one and the coefficient breaks its own 1 - 1/g bound.
+  contacts <- if (!directed) {
+    b
+  } else {
+    switch(mode, out = b, `in` = t(b), all = b + t(b), b)
+  }
+  # Contacts of i falling in each group: one matrix product, no loop.
+  per_group <- contacts %*% indicator
+  share <- per_group / k
+  out <- 1 - rowSums(share^2)
+  # A degree-zero vertex has no shares, so the coefficient is undefined. teneto
+  # returns 0 there; Dynet returns NaN, matching its own convention that an
+  # undefined ratio is NaN and never a fabricated zero. Note NA (not eligible)
+  # and NaN (eligible, degree zero) are different statements.
+  out[!is.finite(k) | k == 0] <- NaN
+  unname(out)
+}
+
 #' Compute one snapshot centrality measure
 #' @param m Measure name.
 #' @param a Adjacency matrix for the bin.
@@ -805,11 +890,12 @@ dyn_centrality <- function(dn,
 #' @param prestige Prestige definition.
 #' @param rescale Whether to normalize prestige by its block total.
 #' @param lambda Diffusion-degree multiplier.
+#' @param groups Group labels for `"participation"`, one per vertex.
 #' @return A numeric vector, one value per vertex.
 #' @keywords internal
 .snapshot_measure <- function(m, a, directed, damping, mode = "all",
                               exponent = 1, prestige = "indegree",
-                              rescale = FALSE, lambda = 1) {
+                              rescale = FALSE, lambda = 1, groups = NULL) {
   b <- .binary(a, directed)
   degree_b <- (a > 0) * 1
   if (!directed) {
@@ -818,6 +904,7 @@ dyn_centrality <- function(dn,
     diag(degree_b) <- 2 * (diag(a) > 0)
   }
   switch(m,
+    participation = .participation(degree_b, directed, mode, groups),
     degree      = .margin(degree_b, directed, mode),
     indegree    = .margin(degree_b, directed, "in"),
     outdegree   = .margin(degree_b, directed, "out"),
