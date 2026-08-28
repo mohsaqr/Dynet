@@ -4,7 +4,16 @@
 \alias{.temporal_measure}
 \title{Reduce a set of optimal forward searches to one temporal measure}
 \usage{
-.temporal_measure(m, trees, enc)
+.temporal_measure(
+  m,
+  trees,
+  enc,
+  dn = NULL,
+  beta = 0.1,
+  decay = 0,
+  lower = NULL,
+  upper = NULL
+)
 }
 \arguments{
 \item{m}{Measure name.}

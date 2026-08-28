@@ -10,7 +10,9 @@
   sessions,
   start = NULL,
   end = NULL,
-  traversal_time = 0
+  traversal_time = 0,
+  beta = 0.1,
+  decay = 0
 )
 }
 \arguments{

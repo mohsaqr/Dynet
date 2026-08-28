@@ -15,7 +15,13 @@
                           "closeness", "coreness", "harary", "eigenvector",
                           "diffusion", "participation")
 
-.temporal_measures <- c("closeness", "betweenness", "reach", "reach_count")
+.temporal_measures <- c("closeness", "betweenness", "reach", "reach_count",
+                        "katz")
+
+# Temporal measures computed by streaming the contact sequence rather than by
+# searching for paths. They need no per-source tree, so the trees are built
+# only when a path-based measure is actually requested.
+.stream_measures <- c("katz")
 
 #' Resolve the `mode` argument, which may name several directions at once
 #'
@@ -166,6 +172,10 @@
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
 #'
+#' @param beta For `measure = "katz"` only: walk attenuation in `(0, 1]`.
+#'   Each additional hop multiplies a walk's contribution by `beta`.
+#' @param decay For `measure = "katz"` only: exponential time-decay rate. Zero
+#'   weights every past walk equally.
 #' @param groups For `measure = "participation"` only: the name of a node
 #'   attribute, or one group label per vertex. Required for that measure and
 #'   rejected for every other.
@@ -384,7 +394,8 @@ dyn_centrality <- function(dn,
                            step = NULL, window = NULL,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
-                           lambda = 1, groups = NULL) {
+                           lambda = 1, groups = NULL,
+                           beta = 0.1, decay = 0) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
@@ -436,6 +447,24 @@ dyn_centrality <- function(dn,
     stop(errorCondition(
       "`groups` applies only to measure = \"participation\".",
       class = "dynet_bad_input", call = NULL))
+  }
+  if ("katz" %in% measure) {
+    # A stream measure walks no journeys, so a per-hop traversal cost has no
+    # meaning for it. Reject only when every requested measure is a stream
+    # measure; a mixed call still needs it for the path-based ones.
+    if (traversal_time > 0 && !length(setdiff(measure, .stream_measures))) {
+      stop(errorCondition(
+        "`traversal_time` has no meaning for a stream measure such as \"katz\", which walks no journeys.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    .check(
+      "`beta` must be a single number in (0, 1]." =
+        length(beta) == 1L && is.numeric(beta) && is.finite(beta) &&
+          beta > 0 && beta <= 1,
+      "`decay` must be a single non-negative number." =
+        length(decay) == 1L && is.numeric(decay) && is.finite(decay) &&
+          decay >= 0
+    )
   }
   group_labels <- NULL
   if (wants_groups) {
@@ -510,7 +539,7 @@ dyn_centrality <- function(dn,
         class = "dynet_bad_input", call = NULL))
     }
     return(.temporal_centrality(
-      dn, measure, sessions, start, end, traversal_time
+      dn, measure, sessions, start, end, traversal_time, beta, decay
     ))
   }
 
@@ -1495,7 +1524,8 @@ dyn_centrality <- function(dn,
 #' @keywords internal
 .temporal_centrality <- function(dn, measure, sessions,
                                  start = NULL, end = NULL,
-                                 traversal_time = 0) {
+                                 traversal_time = 0,
+                                 beta = 0.1, decay = 0) {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   frames <- Map(function(enc, label) {
@@ -1508,7 +1538,10 @@ dyn_centrality <- function(dn,
       clamp_missing = identical(sessions, "separate")
     )
     t0 <- horizon$start
-    trees <- lapply(seq_len(enc$n), function(s)
+    # Stream measures need no per-source search, so the trees are built only
+    # when a path-based measure was actually asked for.
+    needs_trees <- length(setdiff(measure, .stream_measures)) > 0L
+    trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), function(s)
       .optimal_bounded_search(
         dn, walk, s, t0, "forward", bounded,
         lower = horizon$start, upper = horizon$end,
@@ -1521,7 +1554,8 @@ dyn_centrality <- function(dn,
         activity_session = if (identical(sessions, "separate")) label else NULL
       ))
     vals <- stats::setNames(lapply(measure, function(m)
-      .temporal_measure(m, trees, enc)), measure)
+      .temporal_measure(m, trees, enc, dn, beta, decay,
+                        horizon$start, horizon$end)), measure)
     data.frame(session = label, node = enc$names,
                measure = rep(measure, each = enc$n),
                value = unlist(vals, use.names = FALSE),
@@ -1577,9 +1611,11 @@ dyn_centrality <- function(dn,
 #' @param enc Encoded edge list.
 #' @return A numeric vector, one value per vertex.
 #' @keywords internal
-.temporal_measure <- function(m, trees, enc) {
+.temporal_measure <- function(m, trees, enc, dn = NULL, beta = 0.1,
+                              decay = 0, lower = NULL, upper = NULL) {
   n <- enc$n
   switch(m,
+    katz = .temporal_katz_values(enc, dn, beta, decay, lower, upper),
     reach = .temporal_reach_values(trees, n, m)[[1L]],
     reach_count = .temporal_reach_values(trees, n, m)[[1L]],
     closeness = .temporal_closeness_values(trees, n),
@@ -1665,6 +1701,72 @@ dyn_centrality <- function(dn,
     Reduce(`+`, fractions)
   })
   Reduce(`+`, per_source)
+}
+
+#' Temporal Katz centrality by one pass over the contact stream
+#'
+#' The attenuated, time-decayed count of temporal walks ending at each vertex,
+#' following Beres et al. (2018). Each contact `(u, v, t)` passes `beta` times
+#' whatever had reached `u`, plus one for the length-one walk consisting of that
+#' contact alone.
+#'
+#' Simultaneous contacts are handled strictly: every contact sharing a timestamp
+#' forms one batch and reads the pre-batch scores. This is a deliberate
+#' divergence from [paths()], which composes equal-time contacts at
+#' `traversal_time = 0`. Applying that rule here would make the result depend on
+#' the arbitrary order of contacts inside one instant.
+#'
+#' @param enc An encoding from [.encode()].
+#' @param dn The temporal network, for the observation test.
+#' @param beta Walk attenuation, in `(0, 1]`.
+#' @param decay Exponential time-decay rate; zero means no decay.
+#' @param lower,upper The measurement window.
+#' @return A numeric vector, one score per vertex.
+#' @keywords internal
+.temporal_katz_values <- function(enc, dn, beta, decay, lower, upper) {
+  n <- enc$n
+  x <- numeric(n)
+  last <- rep(lower, n)
+  eligible <- !enc$raw_event_onset_censored &
+    .time_in_observation(dn, enc$raw_event_start) &
+    enc$raw_event_start >= lower & enc$raw_event_start <= upper
+  if (!any(eligible)) return(x)
+  from <- enc$raw_from[eligible]
+  to <- enc$raw_to[eligible]
+  when <- enc$raw_event_start[eligible]
+  # Deterministic order, so a row permutation of the input cannot change the
+  # answer; the batch rule then makes the within-instant order irrelevant too.
+  ord <- order(when, from, to)
+  from <- from[ord]; to <- to[ord]; when <- when[ord]
+  phi <- function(gap) if (decay == 0) 1 else exp(-decay * gap)
+  starts <- c(TRUE, when[-1L] != when[-length(when)])
+  batch <- cumsum(starts)
+  cap <- .Machine$double.xmax / 2
+  # A stream is sequential by definition: each batch reads scores that the
+  # previous batch wrote, so there is nothing to vectorise across batches.
+  for (b in unique(batch)) {
+    idx <- which(batch == b)
+    t <- when[[idx[[1L]]]]
+    touched <- unique(c(from[idx], to[idx]))
+    gap <- t - last[touched]
+    .check("Internal contact stream is out of order." = all(gap >= 0))
+    x[touched] <- x[touched] * phi(gap)
+    last[touched] <- t
+    pre <- x
+    add <- beta * (pre[from[idx]] + 1)
+    # Several contacts in one batch can share a receiver, so their arrivals are
+    # summed rather than assigned; a bare x[recv] <- would keep only the last.
+    recv <- to[idx]
+    agg <- tapply(add, recv, sum)
+    target <- as.integer(names(agg))
+    x[target] <- x[target] + as.numeric(agg)
+    if (any(x > cap)) {
+      stop(errorCondition(sprintf(
+        "Temporal Katz overflowed at beta = %g; lower `beta` or raise `decay`.",
+        beta), class = "dynet_katz_overflow", call = NULL))
+    }
+  }
+  x * phi(upper - last)
 }
 
 #' Reduce temporal search trees to inverse mean forward latency

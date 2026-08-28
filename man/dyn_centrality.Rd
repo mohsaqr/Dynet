@@ -21,7 +21,9 @@ dyn_centrality(
   prestige = "indegree",
   rescale = FALSE,
   lambda = 1,
-  groups = NULL
+  groups = NULL,
+  beta = 0.1,
+  decay = 0
 )
 }
 \arguments{
@@ -111,6 +113,12 @@ neighbours, multiplied by \code{lambda}.}
 \item{groups}{For \code{measure = "participation"} only: the name of a node
 attribute, or one group label per vertex. Required for that measure and
 rejected for every other.}
+
+\item{beta}{For \code{measure = "katz"} only: walk attenuation in \verb{(0, 1]}.
+Each additional hop multiplies a walk's contribution by \code{beta}.}
+
+\item{decay}{For \code{measure = "katz"} only: exponential time-decay rate. Zero
+weights every past walk equally.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time
