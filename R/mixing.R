@@ -50,6 +50,10 @@
 #' @param window How much time each measurement covers. Defaults to `step`,
 #'   which tiles the period into disjoint bins. A larger value slides an
 #'   overlapping window; `0` samples the network at each point in time.
+#'   `"all"` measures the whole observed period as one window, closed on the
+#'   right so an event at the final instant is inside it; it cannot be combined
+#'   with `step`, and under `sessions = "separate"` or discontinuous
+#'   observation it gives one window per session or observed component.
 #'
 #' @return A `dynet_metric` at graph level with one row per time point and
 #'   group pair. Directed `measure` labels use `"A -> B"`; undirected labels
@@ -224,9 +228,16 @@ mixing <- function(dn, attribute,
 #' @param window How much time each measurement covers. Defaults to `step`,
 #'   which tiles the period into disjoint bins. A larger value slides an
 #'   overlapping window; `0` samples the network at each point in time.
+#'   `"all"` measures the whole observed period as one window, closed on the
+#'   right so an event at the final instant is inside it; it cannot be combined
+#'   with `step`, and under `sessions = "separate"` or discontinuous
+#'   observation it gives one window per session or observed component.
 #'
-#' @return A `data.frame` with one row per active edge per bin: `session`
-#'   (when present), `time`, `from`, `to`, `weight` and `n_spells`. A pair
+#' @return A `dynet_snapshot` data frame with one row per active edge per bin:
+#'   `session` (when present), `time`, `from`, `to`, `weight` and `n_spells`.
+#'   [print()] shows a header and the first rows, [summary()] collapses to one
+#'   row per bin, [plot()] draws how many ties each bin holds, and
+#'   [as.data.frame()] returns the plain table. A pair
 #'   joined by more than one spell in the same bin is one edge, with
 #'   `n_spells` recording how many spells were collapsed -- so the edge counts
 #'   here agree with those from [metrics()]. Eligible isolates have no
@@ -303,5 +314,112 @@ snapshots <- function(dn, at = NULL,
     sessions, collapse = "calendar_union", bounded = "session_induced_union",
     separate = "session_local"
   )
+  attr(out, "time_unit") <- dn$meta$time_unit
+  attr(out, "directed") <- dn$directed
+  class(out) <- c("dynet_snapshot", "data.frame")
   out
+}
+
+#' Tidy table of snapshot edges
+#'
+#' @param x A `dynet_snapshot` from [snapshots()].
+#' @param row.names Ignored; present for compatibility with the generic.
+#' @param optional Ignored; present for compatibility with the generic.
+#' @param ... Ignored.
+#' @return A plain `data.frame` with the same rows and columns.
+#' @examples
+#' head(as.data.frame(snapshots(dynet(school_contacts))))
+#' @export
+as.data.frame.dynet_snapshot <- function(x, row.names = NULL,
+                                         optional = FALSE, ...) {
+  out <- x
+  attributes(out) <- attributes(out)[c("names", "row.names")]
+  class(out) <- "data.frame"
+  out
+}
+
+#' Print snapshot edges
+#'
+#' @param x A `dynet_snapshot` from [snapshots()].
+#' @param n Number of rows to show.
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @examples
+#' snapshots(dynet(school_contacts), at = 3)
+#' @export
+print.dynet_snapshot <- function(x, n = 10L, ...) {
+  flat <- as.data.frame(x)
+  bins <- length(unique(flat$time))
+  cat(sprintf("# Snapshot edges | %s bin%s | %s tie row%s | time in %s\n",
+              bins, if (bins == 1L) "" else "s",
+              nrow(flat), if (nrow(flat) == 1L) "" else "s",
+              attr(x, "time_unit") %||% "step"))
+  if (!nrow(flat)) {
+    cat("# No tie is active in the requested window.\n")
+    return(invisible(x))
+  }
+  print(utils::head(flat, n))
+  if (nrow(flat) > n) {
+    cat(sprintf("# %s more rows. summary() counts them by bin.\n",
+                nrow(flat) - n))
+  }
+  invisible(x)
+}
+
+#' Summarise snapshot edges by time bin
+#'
+#' @param object A `dynet_snapshot` from [snapshots()].
+#' @param ... Ignored.
+#' @return A plain `data.frame` with one row per bin and columns `session`
+#'   (when present), `time`, `ties`, `nodes` and `weight`.
+#' @examples
+#' summary(snapshots(dynet(school_contacts)))
+#' @export
+summary.dynet_snapshot <- function(object, ...) {
+  flat <- as.data.frame(object)
+  keys <- intersect(c("session", "time"), names(flat))
+  if (!nrow(flat)) {
+    return(data.frame(time = numeric(), ties = integer(), nodes = integer(),
+                      weight = numeric()))
+  }
+  key <- interaction(flat[keys], drop = TRUE, lex.order = TRUE)
+  parts <- split(seq_len(nrow(flat)), key)
+  out <- do.call(rbind, lapply(parts, function(i) {
+    head_row <- flat[i[[1L]], keys, drop = FALSE]
+    cbind(head_row,
+          data.frame(ties = length(i),
+                     nodes = length(unique(c(flat$from[i], flat$to[i]))),
+                     weight = sum(flat$weight[i])))
+  }))
+  out <- out[order(out$time), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+#' Plot how many ties each snapshot holds
+#'
+#' @param x A `dynet_snapshot` from [snapshots()].
+#' @param base_size Base font size.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param ... Ignored.
+#' @return A `ggplot` object.
+#' @examples
+#' plot(snapshots(dynet(school_contacts)))
+#' @export
+plot.dynet_snapshot <- function(x, base_size = 12, palette = "okabe", ...) {
+  counts <- summary(x)
+  if (!nrow(counts)) {
+    stop(errorCondition(
+      "There is nothing to draw: no tie is active in any requested window.",
+      class = "dynet_empty_result", call = NULL))
+  }
+  unit <- attr(x, "time_unit") %||% "step"
+  p <- ggplot2::ggplot(counts, ggplot2::aes(x = time, y = ties)) +
+    ggplot2::geom_step(colour = .dyn_palette(palette, 1L), linewidth = 0.7) +
+    ggplot2::labs(x = sprintf("time (%s)", unit), y = "ties in bin") +
+    ggplot2::theme_minimal(base_size = base_size)
+  if ("session" %in% names(counts)) {
+    p <- p + ggplot2::facet_wrap(~session, scales = "free_x")
+  }
+  p
 }

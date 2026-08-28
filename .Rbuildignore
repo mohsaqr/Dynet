@@ -16,3 +16,6 @@
 ^LICENSE\.md$
 ^inst/reproduction/.*\.html$
 ^COMPARISON\.md$
+^Rplots\.pdf$
+^Dynet\.Rcheck$
+^Dynet_.*\.tar\.gz$

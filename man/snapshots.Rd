@@ -34,11 +34,18 @@ built with.}
 
 \item{window}{How much time each measurement covers. Defaults to \code{step},
 which tiles the period into disjoint bins. A larger value slides an
-overlapping window; \code{0} samples the network at each point in time.}
+overlapping window; \code{0} samples the network at each point in time.
+\code{"all"} measures the whole observed period as one window, closed on the
+right so an event at the final instant is inside it; it cannot be combined
+with \code{step}, and under \code{sessions = "separate"} or discontinuous
+observation it gives one window per session or observed component.}
 }
 \value{
-A \code{data.frame} with one row per active edge per bin: \code{session}
-(when present), \code{time}, \code{from}, \code{to}, \code{weight} and \code{n_spells}. A pair
+A \code{dynet_snapshot} data frame with one row per active edge per bin:
+\code{session} (when present), \code{time}, \code{from}, \code{to}, \code{weight} and \code{n_spells}.
+\code{\link[=print]{print()}} shows a header and the first rows, \code{\link[=summary]{summary()}} collapses to one
+row per bin, \code{\link[=plot]{plot()}} draws how many ties each bin holds, and
+\code{\link[=as.data.frame]{as.data.frame()}} returns the plain table. A pair
 joined by more than one spell in the same bin is one edge, with
 \code{n_spells} recording how many spells were collapsed -- so the edge counts
 here agree with those from \code{\link[=metrics]{metrics()}}. Eligible isolates have no

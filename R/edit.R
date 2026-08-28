@@ -227,21 +227,111 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   .rebuild_ties(dn, rebuilt, explicit, match.call(), format = "interval")
 }
 
+#' Turn whatever the caller wrote for `nodes` into vertex names
+#'
+#' A vertex selection is nearly always a condition on the vertices -- the busy
+#' ones, the ones in a room, the ones that broker. Making the caller compute a
+#' table, filter it and unpack a column first is three steps for one thought,
+#' so a condition is evaluated here against the vertex table, exactly as
+#' [subset()] evaluates its own. Any centrality the condition names is computed
+#' over the whole observed period and dropped in as a column before the
+#' condition is evaluated.
+#'
+#' Anything else the caller might hold -- a character vector, a factor, a
+#' logical mask, a filtered result frame -- resolves from the calling frame,
+#' which is consulted after the vertex table. A variable named after a measure
+#' is therefore shadowed by the measure, exactly as a variable named after a
+#' column is shadowed inside [subset()].
+#'
+#' @param dn A `dynet` object.
+#' @param expr The unevaluated `nodes` argument.
+#' @param env The calling frame.
+#' @return A character vector of node names, or `NULL`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.select_nodes(dn, quote(degree > 16), parent.frame())
+#' @keywords internal
+.select_nodes <- function(dn, expr, env) {
+  if (is.null(expr)) return(NULL)
+  table <- as.data.frame(dn, what = "nodes")
+  # A measure named in the condition becomes a column, and the table is the
+  # first environment the condition sees -- the same precedence `subset()`
+  # gives a data frame's own columns over anything in the calling frame.
+  wanted <- intersect(all.vars(expr), .node_measures)
+  if (length(wanted) > 0L) {
+    table <- as.data.frame(dn, what = "nodes", measure = wanted)
+  }
+  value <- eval(expr, table, env)
+  if (is.null(value)) return(NULL)
+  if (is.logical(value)) {
+    if (length(value) != nrow(table)) {
+      stop(errorCondition(sprintf(
+        "A logical `nodes` selection must have one value per vertex; got %d for %d vertices.",
+        length(value), nrow(table)),
+        class = "dynet_bad_input", call = NULL))
+    }
+    return(table$name[!is.na(value) & value])
+  }
+  .node_names(value, "nodes")
+}
+
+#' Read vertex names out of whatever the caller had to hand
+#'
+#' A vertex selection usually arrives as the result of a measurement that has
+#' been filtered, not as a bare character vector. Accepting that frame directly
+#' is what keeps the caller from reaching into it with `$` to extract the one
+#' column this function was going to read anyway.
+#'
+#' @param value A character vector, factor, or data frame with a `name` or
+#'   `node` column.
+#' @param arg The argument name, for the error message.
+#' @return A character vector of node names.
+#' @examples
+#' Dynet:::.node_names(data.frame(node = c("A", "B"), value = 1:2), "nodes")
+#' @keywords internal
+.node_names <- function(value, arg) {
+  if (is.null(value) || is.character(value)) return(value)
+  if (is.factor(value)) return(as.character(value))
+  if (is.data.frame(value)) {
+    column <- intersect(c("name", "node"), names(value))
+    if (!length(column)) {
+      stop(errorCondition(sprintf(
+        "`%s` is a data frame with no `name` or `node` column to read vertices from.",
+        arg), class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL))
+    }
+    return(as.character(value[[column[[1L]]]]))
+  }
+  value
+}
+
 #' Extract an induced temporal subgraph
 #'
 #' @param dn A temporal network.
-#' @param nodes Optional character node names. Only ties whose two endpoints
-#'   are in this set are eligible.
+#' @param nodes Which vertices to keep. Either a condition on the vertex
+#'   table, evaluated the way [subset()] evaluates one -- `degree > 20`,
+#'   `room == "A" & betweenness > 0` -- with any centrality it names computed
+#'   over the whole observed period; or a character vector of names, a factor,
+#'   a logical mask, or any data frame carrying a `name` or `node` column. Only
+#'   ties whose two endpoints are in this set are eligible.
 #' @param ties Optional integer row positions or logical mask over the raw
 #'   spell table. This supports legacy edge-attribute filtering, for example
 #'   `ties = as.data.frame(dn)$course_group == "course_1"`.
 #' @param keep_isolates Whether named nodes without a selected tie remain.
 #' @return A new `dynet` object with selected ties, nodes, vertex activity, and
 #'   all static attributes retained.
+#' @examples
+#' dn <- dynet(school_contacts)
+#'
+#' # A condition on the vertex table, in one call.
+#' induce_subgraph(dn, degree > 16)
+#'
+#' # Names still work, as does anything carrying them.
+#' induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara"))
 #' @export
 induce_subgraph <- function(dn, nodes = NULL, ties = NULL,
                             keep_isolates = FALSE) {
   .check_dynet(dn, "bounded")
+  nodes <- .select_nodes(dn, substitute(nodes), parent.frame())
   .check("`keep_isolates` must be one non-missing logical value." =
            is.logical(keep_isolates) && length(keep_isolates) == 1L &&
              !is.na(keep_isolates))
@@ -252,6 +342,11 @@ induce_subgraph <- function(dn, nodes = NULL, ties = NULL,
   keep <- rep(TRUE, nrow(dn$spells))
   requested_nodes <- dn$nodes$name
   if (!is.null(nodes)) {
+    if (is.character(nodes) && length(nodes) == 0L) {
+      stop(errorCondition(
+        "No vertex satisfies the `nodes` selection.",
+        class = c("dynet_empty_network", "dynet_bad_input"), call = NULL))
+    }
     if (!is.character(nodes) || !length(nodes) || anyNA(nodes)) {
       stop(errorCondition("`nodes` must contain complete node names.",
                           class = "dynet_bad_input", call = NULL))

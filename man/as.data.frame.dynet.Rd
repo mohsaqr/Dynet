@@ -10,6 +10,10 @@
   optional = FALSE,
   what = c("edges", "nodes", "bins", "network", "observations", "observed_edges",
     "vertex_spells"),
+  measure = NULL,
+  sessions = c("bounded", "collapse", "separate"),
+  start = NULL,
+  end = NULL,
   ...
 )
 }
@@ -25,6 +29,15 @@ observation fragments, \code{"observations"} for canonical observed support,
 \code{"vertex_spells"} for canonical declared vertex activity, \code{"nodes"} for
 the vertex table, \code{"bins"} for the measurement grid, or \code{"network"} for
 the aggregate edge list cograph renders.}
+
+\item{measure}{Optional centrality measures to annotate the vertex table
+with, valid only for \code{what = "nodes"}. Each becomes one column holding the
+value over the whole observed period, so the vertex table can be filtered
+or ranked without a second call. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts at
+snapshot scope is allowed, plus \code{"indegree"} and \code{"outdegree"}.}
+
+\item{sessions, start, end}{Passed to \code{\link[=dyn_centrality]{dyn_centrality()}} when \code{measure} is
+given, and ignored otherwise.}
 
 \item{...}{Ignored.}
 }
@@ -52,5 +65,10 @@ dn <- dynet(school_contacts)
 head(as.data.frame(dn))
 as.data.frame(dn, what = "nodes")
 as.data.frame(dn, what = "vertex_spells")
+
+# Annotate the vertex table so it can be filtered without a second call.
+busy <- as.data.frame(dn, what = "nodes",
+                      measure = c("degree", "indegree", "outdegree"))
+subset(busy, degree > 15)
 
 }

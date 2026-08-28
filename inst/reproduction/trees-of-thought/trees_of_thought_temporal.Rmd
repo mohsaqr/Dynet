@@ -10,15 +10,21 @@ params:
   data_dir: "/Users/mohammedsaqr/Library/CloudStorage/GoogleDrive-saqr@saqr.me/Other computers/My MacBook Pro (2)/My_Data/Zips/Trees_of_thought 2"
 ---
 
-```{r setup, include=FALSE}
+```{r setup}
+# Messages and warnings are left on: anything the package says while building
+# or drawing belongs in the record, not suppressed out of it.
 knitr::opts_chunk$set(
-  message = FALSE, warning = FALSE, echo = TRUE,
+  message = TRUE, warning = TRUE, echo = TRUE,
   fig.width = 10, fig.height = 6, dpi = 120
 )
 input_file <- knitr::current_input(dir = TRUE)
 repo_dir <- normalizePath(file.path(dirname(input_file), "../../.."),
                           mustWork = TRUE)
-devtools::load_all(repo_dir, quiet = TRUE)
+devtools::load_all(repo_dir)
+# The multilayer views below need cograph's repaired plane spacing, layer and
+# node labelling, and slice handling, which live in its working tree.
+devtools::load_all(normalizePath(file.path(repo_dir, "../cograph"),
+                                 mustWork = TRUE))
 data_dir <- normalizePath(params$data_dir, mustWork = TRUE)
 ```
 
@@ -215,6 +221,76 @@ phase networks.
 ```{r proximity-lines, fig.height=7, fig.width=12}
 plot(dn, type = "proximity", measure = "betweenness",
      networks = FALSE, slices = 80)
+```
+
+# Multilayer views of the sliced network
+
+The original pipeline had no multilayer view: `ndtv` drew the process as a
+proximity timeline and as animated snapshots, and the code-by-code structure
+was read off aggregate matrices. Cutting the window into slices and treating
+each slice as a layer of one multilayer network shows both at once — who was
+talking to whom, and when.
+
+Each slice carries the full code set, so a code keeps its identity across the
+stack. The slicing, the supra-adjacency, the layer membership and the display
+labels are assembled by the package.
+
+## Node-link layers
+
+Half-window slices, each a plane of the same ten codes.
+
+```{r ml-layers, fig.height=9, fig.width=13}
+plot(dn, type = "layers", step = 0.5, layout = "circle", node_size = 2)
+```
+
+`omega` weights the identity arcs carrying a code from one slice to the next —
+the interlayer coupling. Zero leaves the slices independent.
+
+```{r ml-layers-uncoupled, fig.height=9, fig.width=13}
+plot(dn, type = "layers", step = 0.5, omega = 0, layout = "circle",
+     node_size = 2)
+```
+
+## Heatmap planes
+
+The same slices as matrices rather than diagrams. Row and column names are
+drawn once against the front plane, so a cell reads as a code pair rather than
+an anonymous square.
+
+```{r ml-heatmap, fig.height=9, fig.width=13}
+plot(dn, type = "heatmap", step = 0.5, node_label_size = 3)
+```
+
+Thresholded, so only substantial transitions carry ink:
+
+```{r ml-heatmap-threshold, fig.height=9, fig.width=13}
+plot(dn, type = "heatmap", step = 0.5, threshold = 50, na_color = "#F4F4F4")
+```
+
+At the `step = 0.1` used for the centrality trajectories above, the window
+splits into 59 slices. That is the right resolution for a grid or a line, and
+too many planes to read as a stack — shown here so the limit is visible rather
+than asserted.
+
+```{r ml-heatmap-fine, fig.height=12, fig.width=13}
+plot(dn, type = "heatmap", step = 0.1, show_node_labels = FALSE)
+```
+
+## Projected stack
+
+`cograph::plot_temporal()`'s oblique projection, with one colour per code held
+across every plane. Empty windows are drawn rather than skipped, so a gap in
+the process is visible as a gap.
+
+```{r ml-stack, fig.height=10, fig.width=13}
+plot(dn, type = "stack", step = 0.5, edge_color = "#666666", edge_alpha = 0.5)
+```
+
+Cumulative, so each plane carries everything that has happened up to it:
+
+```{r ml-stack-cumulative, fig.height=10, fig.width=13}
+plot(dn, type = "stack", step = 0.5, slices = 10, cumulative = TRUE,
+     edge_color = "#666666")
 ```
 
 # Graph-level trajectories

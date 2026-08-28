@@ -9,8 +9,12 @@ induce_subgraph(dn, nodes = NULL, ties = NULL, keep_isolates = FALSE)
 \arguments{
 \item{dn}{A temporal network.}
 
-\item{nodes}{Optional character node names. Only ties whose two endpoints
-are in this set are eligible.}
+\item{nodes}{Which vertices to keep. Either a condition on the vertex
+table, evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{degree > 20},
+\code{room == "A" & betweenness > 0} -- with any centrality it names computed
+over the whole observed period; or a character vector of names, a factor,
+a logical mask, or any data frame carrying a \code{name} or \code{node} column. Only
+ties whose two endpoints are in this set are eligible.}
 
 \item{ties}{Optional integer row positions or logical mask over the raw
 spell table. This supports legacy edge-attribute filtering, for example
@@ -24,4 +28,13 @@ all static attributes retained.
 }
 \description{
 Extract an induced temporal subgraph
+}
+\examples{
+dn <- dynet(school_contacts)
+
+# A condition on the vertex table, in one call.
+induce_subgraph(dn, degree > 16)
+
+# Names still work, as does anything carrying them.
+induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara"))
 }

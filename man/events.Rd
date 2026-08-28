@@ -38,7 +38,11 @@ built with.}
 
 \item{window}{How much time each measurement covers. Defaults to \code{step},
 which tiles the period into disjoint bins. A larger value slides an
-overlapping window; \code{0} samples the network at each point in time.}
+overlapping window; \code{0} samples the network at each point in time.
+\code{"all"} measures the whole observed period as one window, closed on the
+right so an event at the final instant is inside it; it cannot be combined
+with \code{step}, and under \code{sessions = "separate"} or discontinuous
+observation it gives one window per session or observed component.}
 }
 \value{
 A \code{dynet_metric} at graph level, one row per time point and

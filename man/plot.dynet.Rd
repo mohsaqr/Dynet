@@ -6,9 +6,38 @@
 \usage{
 \method{plot}{dynet}(
   x,
-  type = c("timeline", "activity", "network", "snapshots", "proximity"),
+  type = c("timeline", "events", "activity", "network", "snapshots", "proximity",
+    "layers", "heatmap", "stack"),
   at = NULL,
+  start = NULL,
+  end = NULL,
   top = 40L,
+  step = NULL,
+  omega = 1,
+  bins = NULL,
+  link = c("hook", "arc", "chevron", "wave", "bracket"),
+  time = c("bin", "event", "clock"),
+  aggregate = TRUE,
+  nest = c("pair", "column"),
+  split = 0.8,
+  blend = FALSE,
+  weight = TRUE,
+  node_size = NULL,
+  node_shape = NULL,
+  node_fill = NULL,
+  node_border_color = NULL,
+  node_border_width = NULL,
+  node_alpha = NULL,
+  edge_color = NULL,
+  edge_alpha = NULL,
+  edge_width = NULL,
+  edge_width_range = NULL,
+  edge_style = NULL,
+  curvature = NULL,
+  curve_pivot = NULL,
+  label_size = NULL,
+  label_color = NULL,
+  label_fontface = NULL,
   panels = 9L,
   measure = "degree",
   phases = NULL,
@@ -29,13 +58,67 @@
 \arguments{
 \item{x}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{type}{One of \code{"timeline"}, \code{"activity"}, \code{"network"}, \code{"snapshots"},
+\item{type}{One of \code{"timeline"}, \code{"events"}, \code{"activity"}, \code{"network"},
+\code{"snapshots"},
 \code{"proximity"}.}
 
 \item{at}{For \code{"network"}, the time to draw. \code{NULL} draws the whole window
 flattened.}
 
+\item{start, end}{Window the plot to \verb{[start, end]} before drawing. Either
+may be \code{NULL}, which keeps that side of the observed range. Every view is
+windowed, and an empty window is an error rather than an empty panel.}
+
 \item{top}{For the timeline, draw only the \code{top} busiest vertex pairs.}
+
+\item{step}{For \code{"layers"}, the width of each time slice. \code{NULL} uses the
+construction interval.}
+
+\item{omega}{For \code{"layers"}, the weight on the identity arcs carrying a
+vertex between adjacent slices, that is, the interlayer coupling.}
+
+\item{bins}{Number of equal time bins for \code{"timeline"} and \code{"events"}.
+\code{NULL} uses the network's own interval.}
+
+\item{link}{Link glyph for \code{"events"}: \code{"hook"} (default), \code{"arc"},
+\code{"chevron"}, \code{"wave"} or \code{"bracket"}.}
+
+\item{time}{Time axis for \code{"events"}. \code{"bin"} groups onsets into equal
+windows and keeps duration honest, \code{"event"} gives one evenly spaced
+column per distinct onset, \code{"clock"} uses true positions.}
+
+\item{aggregate}{For \code{"events"}, fold repeat firings of one pair inside one
+column into a single link. Binning merges distinct onsets, and without
+this they stack as parallel bows carrying no extra reading.}
+
+\item{nest}{For \code{"events"}, which links are fanned apart. \code{"pair"} fans
+only links joining the same two rows in the same column; \code{"column"} fans
+every link sharing a column.}
+
+\item{split}{For \code{"events"}, the share of each link that keeps its source
+colour before switching to its target's, so direction reads without
+arrowheads.}
+
+\item{blend}{For \code{"events"}, fade between the two endpoint colours instead
+of switching at a boundary.}
+
+\item{weight}{For \code{"events"}, scale alpha and width by how often the pair
+occurs across the network, so one-off links recede and habitual ones
+stand out.}
+
+\item{node_size, node_shape, node_fill, node_border_color, node_border_width, node_alpha}{Node aesthetics, named as in \code{cograph::splot()}. \code{NULL} uses the view's
+own default. For the node-link views these are forwarded to splot.}
+
+\item{edge_color, edge_alpha, edge_width, edge_width_range, edge_style}{Link
+aesthetics, named as in \code{cograph::splot()}. An \code{edge_color} overrides the
+source-to-target colour run with one colour.}
+
+\item{curvature, curve_pivot}{Bow geometry, as in \code{cograph::splot()}.
+\code{curvature} is the base bow as a fraction of the column gap and \code{0} draws
+straight links; \code{curve_pivot} slides where the bow peaks.}
+
+\item{label_size, label_color, label_fontface}{Axis label aesthetics, named as
+in \code{cograph::splot()}.}
 
 \item{panels}{For snapshots, the maximum number of panels to draw. Bins are
 sampled evenly across the window and the choice is reported.}
@@ -96,7 +179,11 @@ current device and \code{x} is returned invisibly.
 Five views, each answering a different question.
 
 \describe{
-\item{\code{"timeline"}}{Every edge spell as a horizontal bar. This is the
+\item{\code{"events"}}{Every contact as a link drawn at the moment it fires,
+with actors on the vertical axis. A link leaves its source in the
+source's colour and arrives in the target's.}
+\item{\code{"timeline"}}{Edge activity as an intensity heatmap, one row per
+pair. This is the
 view a static network cannot give you: it shows at a glance whether the
 network was busy throughout or concentrated in a few bursts.}
 \item{\code{"activity"}}{Edges forming and dissolving over time.}

@@ -98,11 +98,17 @@ print.dynet_metric <- function(x, n = 12L, ...) {
   lvl  <- attr(x, "level")
   unit <- attr(x, "time_unit")
   meas <- unique(x$measure)
+  # A fragment left by head()/tail() still describes the series it came from,
+  # so the header counts come from the record rather than the retained rows.
+  frag <- attr(x, "fragment")
+  n_distinct <- function(column) {
+    if (is.null(frag)) length(unique(x[[column]])) else frag$counts[[column]]
+  }
 
   cat(sprintf("# %s (%s-level)\n", what, lvl))
   bits <- character()
   if ("node" %in% names(x)) {
-    bits <- c(bits, sprintf("%d vertices", length(unique(x$node))))
+    bits <- c(bits, sprintf("%d vertices", n_distinct("node")))
   }
   if ("time" %in% names(x)) {
     step   <- attr(x, "step")   %||% attr(x, "interval")
@@ -117,7 +123,7 @@ print.dynet_metric <- function(x, n = 12L, ...) {
       sprintf("step %s, window %s (rolling)", format(step), format(window))
     }
     bits <- c(bits, sprintf("%d time points, %s",
-                            length(unique(x$time)), shape))
+                            n_distinct("time"), shape))
   }
   if (!is.null(attr(x, "mode"))) {
     bits <- c(bits, sprintf("mode %s", attr(x, "mode")))
@@ -128,12 +134,15 @@ print.dynet_metric <- function(x, n = 12L, ...) {
                             format(traversal_time), unit))
   }
   if ("session" %in% names(x)) {
-    bits <- c(bits, sprintf("%d sessions", length(unique(x$session))))
+    bits <- c(bits, sprintf("%d sessions", n_distinct("session")))
   }
   bits <- c(bits, sprintf("time in %s", unit))
   cat("# ", paste(bits, collapse = " | "), "\n", sep = "")
   if (length(meas) > 1L) {
     cat("# measures: ", paste(meas, collapse = ", "), "\n", sep = "")
+  }
+  if (!is.null(frag)) {
+    cat(sprintf("# %s %d of %d rows\n", frag$side, nrow(x), frag$counts$rows))
   }
   if (!is.null(attr(x, "note"))) cat("# ", attr(x, "note"), "\n", sep = "")
 
@@ -144,6 +153,62 @@ print.dynet_metric <- function(x, n = 12L, ...) {
                 nrow(body) - n))
   }
   invisible(x)
+}
+
+#' Record that a measure has been truncated
+#'
+#' `head()` and `tail()` keep the measure's class, so the print method would
+#' otherwise recompute its header from the retained rows and report a fragment
+#' as if it were the whole series. This stores the source counts once, and
+#' keeps the first record when a fragment is truncated again.
+#'
+#' @param x The source `dynet_metric`.
+#' @param out The truncated object.
+#' @param side `"first"` or `"last"`.
+#' @return `out`, carrying a `fragment` attribute.
+#' @keywords internal
+.metric_fragment <- function(x, out, side) {
+  attr(out, "fragment") <- attr(x, "fragment") %||% list(
+    side = side,
+    counts = list(
+      rows = nrow(x),
+      time = length(unique(x$time)),
+      node = length(unique(x$node)),
+      session = length(unique(x$session))
+    )
+  )
+  out
+}
+
+#' First rows of a temporal measure
+#'
+#' Truncates the rows without rewriting what the measure is. The printed
+#' header still describes the series the rows came from, and a `first n of N
+#' rows` line records the truncation.
+#'
+#' @param x A `dynet_metric`.
+#' @param n Number of rows to keep.
+#' @param ... Passed to the default method.
+#' @return A `dynet_metric` with at most `n` rows, carrying the source counts
+#'   so its header stays true to the series.
+#' @export
+head.dynet_metric <- function(x, n = 6L, ...) {
+  .metric_fragment(x, NextMethod(), "first")
+}
+
+#' Last rows of a temporal measure
+#'
+#' The counterpart of [head.dynet_metric()]; the header still describes the
+#' series and a `last n of N rows` line records the truncation.
+#'
+#' @param x A `dynet_metric`.
+#' @param n Number of rows to keep.
+#' @param ... Passed to the default method.
+#' @return A `dynet_metric` with at most `n` rows, carrying the source counts
+#'   so its header stays true to the series.
+#' @export
+tail.dynet_metric <- function(x, n = 6L, ...) {
+  .metric_fragment(x, NextMethod(), "last")
 }
 
 #' Summarise a temporal measure
@@ -324,6 +389,23 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
   if (length(v) == 0L) 0 else stats::median(v)
 }
 
+#' Label a vertex pair for a plot
+#'
+#' Deliberately ASCII. The arrow and en dash this replaced render as
+#' `mbcsToSbcs` warnings and substituted glyphs on the `pdf()` and
+#' `postscript()` devices, which is the path `R CMD check` takes to build the
+#' manual, and they fail outright under a non-UTF-8 locale. The device is only
+#' known when a plot is drawn, not when it is built, so there is no honest
+#' place to choose the prettier glyph.
+#'
+#' @param from,to Endpoint labels.
+#' @param directed Whether the pair is ordered.
+#' @return A character vector of pair labels.
+#' @keywords internal
+.pair_label <- function(from, to, directed) {
+  paste(from, if (isTRUE(directed)) "->" else "-", to)
+}
+
 #' Bar panel for a measure with no time dimension
 #' @param df Long data frame.
 #' @param x The originating metric, for labels.
@@ -336,7 +418,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
   df$.row <- if ("node" %in% names(df)) {
     df$node
   } else if (all(c("from", "to") %in% names(df))) {
-    paste(df$from, if (isTRUE(attr(x, "directed"))) "\u2192" else "\u2013", df$to)
+    .pair_label(df$from, df$to, isTRUE(attr(x, "directed")))
   } else {
     df$measure
   }

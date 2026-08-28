@@ -16,6 +16,71 @@
 
 .temporal_measures <- c("closeness", "betweenness", "reach", "reach_count")
 
+#' Resolve the `mode` argument, which may name several directions at once
+#'
+#' The signature carries every direction as its default, so an untouched `mode`
+#' has to be read as `"all"` rather than as a request for all three.
+#'
+#' @param mode The `mode` argument as supplied.
+#' @return A character vector of unique modes.
+#' @examples
+#' Dynet:::.resolve_modes(c("all", "out", "in"))
+#' Dynet:::.resolve_modes("in")
+#' @keywords internal
+.resolve_modes <- function(mode) {
+  choices <- c("all", "out", "in")
+  if (identical(mode, choices)) return("all")
+  .check("`mode` must be a character vector naming one or more directions." =
+           is.character(mode) && length(mode) > 0L && !anyNA(mode))
+  # `match.arg(several.ok = TRUE)` drops names it cannot match and only errors
+  # when none match at all, so an unknown direction would pass unnoticed.
+  unknown <- setdiff(mode, choices)
+  if (length(unknown) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown `mode` %s; use %s.",
+              paste(sQuote(unknown), collapse = ", "),
+              paste(sQuote(choices), collapse = ", ")),
+      class = "dynet_bad_input", call = NULL))
+  }
+  unique(mode)
+}
+
+#' Expand measures across directions into one job per output column
+#'
+#' Asking for in- and out-degree in one call must not silently return two
+#' identically named stacks, and asking a direction-blind measure for three
+#' directions must not compute it three times. Directions are therefore
+#' dropped where they mean nothing, and the surviving ones are suffixed only
+#' when more than one direction was requested -- so a single-`mode` call keeps
+#' the plain measure name it has always had.
+#'
+#' @param measure Character vector of measures.
+#' @param mode Character vector of resolved directions.
+#' @param directed Whether the network is directed.
+#' @return A data frame with `measure`, `mode` and `label`, one row per column
+#'   the result will carry.
+#' @examples
+#' Dynet:::.measure_modes("degree", c("in", "out"), TRUE)
+#' Dynet:::.measure_modes(c("degree", "betweenness"), c("all", "in"), TRUE)
+#' @keywords internal
+.measure_modes <- function(measure, mode, directed) {
+  many <- length(mode) > 1L
+  rows <- lapply(measure, function(m) {
+    aware <- directed && m %in% .mode_aware_measures
+    modes <- if (aware) mode else mode[[1L]]
+    data.frame(
+      measure = m, mode = modes,
+      label = if (many && aware) {
+        ifelse(modes == "all", m, paste0(m, "_", modes))
+      } else m,
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}
+
 #' Time-varying vertex centrality
 #'
 #' @description
@@ -41,7 +106,11 @@
 #' @param scope `"snapshot"` for a value per time bin, `"temporal"` for one
 #'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
-#'   directions, `"out"` outgoing only, `"in"` incoming only. Applies to
+#'   directions, `"out"` outgoing only, `"in"` incoming only. Name several at
+#'   once -- `mode = c("all", "in", "out")` -- to get degree, in-degree and
+#'   out-degree from a single call; the extra directions are then labelled
+#'   `degree_in` and `degree_out` in the `measure` column, while a call naming
+#'   one direction keeps the plain measure name. Applies to
 #'   `"degree"`, `"strength"`, `"closeness"`, `"coreness"`, `"harary"` and
 #'   `"eigenvector"`; the remaining measures have a single directional
 #'   definition and ignore it. Ignored
@@ -61,6 +130,10 @@
 #' @param window How much time each measurement covers. Defaults to `step`,
 #'   which tiles the period into disjoint bins. A larger value slides an
 #'   overlapping window; `0` samples the network at each point in time.
+#'   `"all"` measures the whole observed period as one window, closed on the
+#'   right so an event at the final instant is inside it; it cannot be combined
+#'   with `step`, and under `sessions = "separate"` or discontinuous
+#'   observation it gives one window per session or observed component.
 #' @param damping Damping factor for PageRank.
 #' @param exponent Attenuation factor for Bonacich `"power"`. Positive rewards
 #'   being connected to well-connected others; negative rewards the opposite,
@@ -269,8 +342,13 @@
 #'                prestige = "eigenvector.colnorm")
 #' dyn_centrality(dn, measure = "prestige",
 #'                prestige = "eigenvector.rowcolnorm")
-#' dyn_centrality(dn, measure = "closeness", scope = "temporal")
-#' dyn_centrality(dn, measure = "reach", scope = "temporal",
+#' # Temporal scope walks journeys between every ordered pair, so it costs far
+#' # more than a snapshot and grows steeply with the vertex count. Shown on a
+#' # subgraph so the example stays quick.
+#' few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
+#'                                      "Finn", "Gita", "Hugo"))
+#' dyn_centrality(few, measure = "closeness", scope = "temporal")
+#' dyn_centrality(few, measure = "reach", scope = "temporal",
 #'                start = 0, end = 10)
 #'
 #' # A seven-day window, stepped one day at a time.
@@ -306,7 +384,7 @@ dyn_centrality <- function(dn,
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
-  mode  <- match.arg(mode)
+  mode  <- .resolve_modes(mode)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   window <- .legacy_sample(window, sample)
   .check(
@@ -396,6 +474,7 @@ dyn_centrality <- function(dn,
     ))
   }
 
+  jobs <- .measure_modes(measure, mode, dn$directed)
   spec <- .window_spec(dn, start, end, step, window)
   prestige_diagnostics <- list()
   df <- .over_bins(dn, sessions, node_level = TRUE, spec = spec,
@@ -408,11 +487,13 @@ dyn_centrality <- function(dn,
       } else {
         binary_a
       }
-      values <- lapply(measure, function(m) {
+      values <- lapply(seq_len(nrow(jobs)), function(job) {
+        m <- jobs$measure[[job]]
         value <- if (length(state$index)) {
           .snapshot_measure(
             m, if (identical(m, "strength")) valued_a else binary_a,
-            dn$directed, damping, mode, exponent, prestige, rescale, lambda
+            dn$directed, damping, jobs$mode[[job]], exponent, prestige,
+            rescale, lambda
           )
         } else numeric()
         diagnostic <- attr(value, "prestige_diagnostic")
@@ -464,18 +545,18 @@ dyn_centrality <- function(dn,
         expanded[state$index] <- as.numeric(value)
         expanded
       })
-      stats::setNames(values, measure)
+      stats::setNames(values, jobs$label)
     })
 
   out <- .metric(
     df, level = "node",
-    what = if (length(measure) == 1L) {
+    what = if (nrow(jobs) == 1L) {
       .measure_label(measure, prestige)
     } else {
       "Centrality"
     },
     dn = dn, spec = spec,
-    mode = if (!identical(mode, "all") && dn$directed &&
+    mode = if (length(mode) == 1L && !identical(mode, "all") && dn$directed &&
               any(measure %in% .mode_aware_measures)) mode else NULL
   )
   attr(out, "vertex_population") <- "eligible_window_any_induced"

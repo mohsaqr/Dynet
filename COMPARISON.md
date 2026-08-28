@@ -87,10 +87,23 @@ couplings. Only three sub-features are genuinely absent: the `delta`
 cross-time-edge variant, `node_copies = 'fill'/'persist'`, and an inverse
 `from_unrolled()`.
 
-The one confirmed representational gap is
-`temporal_node_similarity()` / `temporal_edge_similarity()`: a T-by-T matrix of
-set overlap between every pair of snapshots under five coefficients. Dynet's
-`events()` compares only adjacent bins, and only directionally.
+An earlier draft of this document called
+`temporal_node_similarity()` / `temporal_edge_similarity()` -- a T-by-T matrix
+of set overlap between snapshots -- "the one confirmed representational gap".
+That was wrong, and the error is instructive: the comparison enumerated
+Dynet's own 34 exports, but Dynet `Imports: cograph`, whose 340 exports are
+part of what it already ships. `cograph::layer_similarity_matrix()` computes
+exactly that matrix under `jaccard`, `overlap`, `hamming`, `cosine` and
+`pearson`, and `cograph::supra_adjacency()` builds the supra-adjacency matrix
+with interlayer coupling `omega` and `diagonal` / `full` / `custom` coupling.
+Both were verified live.
+
+Dynet now exposes the edge-set form directly as `similarity()`, returning one
+row per ordered pair of bins, and `projection(omega = )` sets the weight on
+the identity arcs that carry a node between slices -- the interlayer coupling
+of the time-expanded network. What remains genuinely absent is node-set
+similarity and the community-detection layer built on the supra-adjacency
+matrix (multislice modularity, Leiden, spectral clustering).
 
 ---
 
@@ -1043,7 +1056,9 @@ inverses; (b) a bridge into one of 14 other graph ecosystems via `convert()`; or
 ordinary static NetworkX measure applied per slice and returned as a list. Where it adds
 genuine algorithmic value beyond that, it does so in **community detection on the
 supra-adjacency matrix** (multislice modularity, Leiden, spectral clustering, with a GPU
-path), in **snapshot-set similarity**, and in **drawing**.
+path) and in **drawing**. Snapshot-set similarity and the supra-adjacency
+matrix itself are *not* gaps: see the correction above -- `similarity()` and
+`projection(omega = )` cover them, on top of cograph.
 
 `Dynet` is a **temporal-mathematics** library. Its core object is a spell/contact table
 with an observation window, censoring flags, vertex activity spells, and sessions.

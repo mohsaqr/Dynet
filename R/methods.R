@@ -12,6 +12,13 @@
 #'   `"vertex_spells"` for canonical declared vertex activity, `"nodes"` for
 #'   the vertex table, `"bins"` for the measurement grid, or `"network"` for
 #'   the aggregate edge list cograph renders.
+#' @param measure Optional centrality measures to annotate the vertex table
+#'   with, valid only for `what = "nodes"`. Each becomes one column holding the
+#'   value over the whole observed period, so the vertex table can be filtered
+#'   or ranked without a second call. Any measure [dyn_centrality()] accepts at
+#'   snapshot scope is allowed, plus `"indegree"` and `"outdegree"`.
+#' @param sessions,start,end Passed to [dyn_centrality()] when `measure` is
+#'   given, and ignored otherwise.
 #' @param ... Ignored.
 #'
 #' @return A plain `data.frame`. `"edges"` returns one unchanged raw spell.
@@ -35,13 +42,28 @@
 #' as.data.frame(dn, what = "nodes")
 #' as.data.frame(dn, what = "vertex_spells")
 #'
+#' # Annotate the vertex table so it can be filtered without a second call.
+#' busy <- as.data.frame(dn, what = "nodes",
+#'                       measure = c("degree", "indegree", "outdegree"))
+#' subset(busy, degree > 15)
+#'
 #' @export
 as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
                                 what = c("edges", "nodes", "bins",
                                          "network", "observations",
                                          "observed_edges",
-                                         "vertex_spells"), ...) {
+                                         "vertex_spells"),
+                                measure = NULL,
+                                sessions = c("bounded", "collapse",
+                                             "separate"),
+                                start = NULL, end = NULL, ...) {
   what <- match.arg(what)
+  if (!is.null(measure) && !identical(what, "nodes")) {
+    stop(errorCondition(
+      sprintf("`measure` annotates the vertex table; it has no meaning for `what = \"%s\"`.",
+              what),
+      class = "dynet_bad_input", call = NULL))
+  }
   out <- switch(what,
     edges = {
       e <- x$spells
@@ -81,7 +103,9 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
     vertex_spells = x$vertex_spells %||% .empty_vertex_spells(),
     nodes = {
       n <- x$nodes
-      n[, setdiff(names(n), c("id", "label", "x", "y")), drop = FALSE]
+      n <- n[, setdiff(names(n), c("id", "label", "x", "y")), drop = FALSE]
+      if (is.null(measure)) n else
+        .annotate_nodes(x, n, measure, match.arg(sessions), start, end)
     },
     bins  = .grid_for(.encode(x), x, .window_spec(x)),
     network = {
@@ -90,6 +114,57 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
                  weight = x$edges$weight, stringsAsFactors = FALSE)
     }
   )
+  rownames(out) <- NULL
+  out
+}
+
+#' Widen whole-period centrality onto the vertex table
+#'
+#' One column per measure, valued over a single window covering the observed
+#' period, so a caller can rank or filter vertices with `subset()` instead of
+#' reshaping a long measure frame by hand. `"indegree"` and `"outdegree"` are
+#' spellings of `degree` under `mode`, which the measure vocabulary does not
+#' otherwise expose at node level.
+#'
+#' @param dn A `dynet` object.
+#' @param nodes The plain vertex table to annotate.
+#' @param measure Character vector of measures.
+#' @param sessions Session mode.
+#' @param start,end Optional measurement bounds.
+#' @return `nodes` with one added column per measure, and a leading `session`
+#'   column when sessions are reported separately.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' Dynet:::.annotate_nodes(dn, as.data.frame(dn, what = "nodes"),
+#'                         "degree", "bounded", NULL, NULL)
+#' @keywords internal
+.annotate_nodes <- function(dn, nodes, measure, sessions, start, end) {
+  .check("`measure` must be a character vector of measure names." =
+           is.character(measure) && length(measure) && !anyNA(measure))
+  measure <- unique(measure)
+  modes <- c(indegree = "in", outdegree = "out")
+  columns <- lapply(measure, function(m) {
+    directed_degree <- m %in% names(modes)
+    long <- as.data.frame(dyn_centrality(
+      dn, measure = if (directed_degree) "degree" else m,
+      mode = if (directed_degree) modes[[m]] else "all",
+      sessions = sessions, start = start, end = end, window = "all"
+    ))
+    keys <- intersect(c("session", "node"), names(long))
+    out <- long[, c(keys, "value"), drop = FALSE]
+    names(out)[match("value", names(out))] <- m
+    out
+  })
+  wide <- Reduce(function(a, b)
+    merge(a, b, by = intersect(names(a), names(b)), all = TRUE, sort = FALSE),
+    columns)
+  out <- merge(nodes, wide, by.x = "name", by.y = "node", all.x = TRUE,
+               sort = FALSE)
+  front <- intersect(c("session", "name"), names(out))
+  out <- out[, c(front, setdiff(names(out), front)), drop = FALSE]
+  key <- if ("session" %in% names(out)) order(out$session, out$name) else
+    order(match(out$name, nodes$name))
+  out <- out[key, , drop = FALSE]
   rownames(out) <- NULL
   out
 }

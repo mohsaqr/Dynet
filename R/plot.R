@@ -8,7 +8,11 @@
 #' Five views, each answering a different question.
 #'
 #' \describe{
-#'   \item{`"timeline"`}{Every edge spell as a horizontal bar. This is the
+#'   \item{`"events"`}{Every contact as a link drawn at the moment it fires,
+#'     with actors on the vertical axis. A link leaves its source in the
+#'     source's colour and arrives in the target's.}
+#'   \item{`"timeline"`}{Edge activity as an intensity heatmap, one row per
+#'     pair. This is the
 #'     view a static network cannot give you: it shows at a glance whether the
 #'     network was busy throughout or concentrated in a few bursts.}
 #'   \item{`"activity"`}{Edges forming and dissolving over time.}
@@ -30,10 +34,50 @@
 #' rendering arguments is available here through `...`.
 #'
 #' @param x A temporal network from [dynet()].
-#' @param type One of `"timeline"`, `"activity"`, `"network"`, `"snapshots"`,
+#' @param node_size,node_shape,node_fill,node_border_color,node_border_width,node_alpha
+#'   Node aesthetics, named as in `cograph::splot()`. `NULL` uses the view's
+#'   own default. For the node-link views these are forwarded to splot.
+#' @param edge_color,edge_alpha,edge_width,edge_width_range,edge_style Link
+#'   aesthetics, named as in `cograph::splot()`. An `edge_color` overrides the
+#'   source-to-target colour run with one colour.
+#' @param curvature,curve_pivot Bow geometry, as in `cograph::splot()`.
+#'   `curvature` is the base bow as a fraction of the column gap and `0` draws
+#'   straight links; `curve_pivot` slides where the bow peaks.
+#' @param label_size,label_color,label_fontface Axis label aesthetics, named as
+#'   in `cograph::splot()`.
+#' @param bins Number of equal time bins for `"timeline"` and `"events"`.
+#'   `NULL` uses the network's own interval.
+#' @param link Link glyph for `"events"`: `"hook"` (default), `"arc"`,
+#'   `"chevron"`, `"wave"` or `"bracket"`.
+#' @param time Time axis for `"events"`. `"bin"` groups onsets into equal
+#'   windows and keeps duration honest, `"event"` gives one evenly spaced
+#'   column per distinct onset, `"clock"` uses true positions.
+#' @param aggregate For `"events"`, fold repeat firings of one pair inside one
+#'   column into a single link. Binning merges distinct onsets, and without
+#'   this they stack as parallel bows carrying no extra reading.
+#' @param nest For `"events"`, which links are fanned apart. `"pair"` fans
+#'   only links joining the same two rows in the same column; `"column"` fans
+#'   every link sharing a column.
+#' @param split For `"events"`, the share of each link that keeps its source
+#'   colour before switching to its target's, so direction reads without
+#'   arrowheads.
+#' @param blend For `"events"`, fade between the two endpoint colours instead
+#'   of switching at a boundary.
+#' @param weight For `"events"`, scale alpha and width by how often the pair
+#'   occurs across the network, so one-off links recede and habitual ones
+#'   stand out.
+#' @param type One of `"timeline"`, `"events"`, `"activity"`, `"network"`,
+#'   `"snapshots"`,
 #'   `"proximity"`.
 #' @param at For `"network"`, the time to draw. `NULL` draws the whole window
 #'   flattened.
+#' @param step For `"layers"`, the width of each time slice. `NULL` uses the
+#'   construction interval.
+#' @param omega For `"layers"`, the weight on the identity arcs carrying a
+#'   vertex between adjacent slices, that is, the interlayer coupling.
+#' @param start,end Window the plot to `[start, end]` before drawing. Either
+#'   may be `NULL`, which keeps that side of the observed range. Every view is
+#'   windowed, and an empty window is an error rather than an empty panel.
 #' @param top For the timeline, draw only the `top` busiest vertex pairs.
 #' @param panels For snapshots, the maximum number of panels to draw. Bins are
 #'   sampled evenly across the window and the choice is reported.
@@ -83,9 +127,24 @@
 #' plot(dn, type = "network", node_fill = "#56B4E9")
 #'
 #' @export
-plot.dynet <- function(x, type = c("timeline", "activity", "network",
-                                   "snapshots", "proximity"),
-                       at = NULL, top = 40L, panels = 9L,
+plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
+                                   "snapshots", "proximity", "layers",
+                                   "heatmap", "stack"),
+                       at = NULL, start = NULL, end = NULL, top = 40L,
+                       step = NULL, omega = 1,
+                       bins = NULL, link = c("hook", "arc", "chevron", "wave",
+                                             "bracket"),
+                       time = c("bin", "event", "clock"),
+                       aggregate = TRUE, nest = c("pair", "column"),
+                       split = 0.8, blend = FALSE, weight = TRUE,
+                       node_size = NULL, node_shape = NULL, node_fill = NULL,
+                       node_border_color = NULL, node_border_width = NULL,
+                       node_alpha = NULL, edge_color = NULL, edge_alpha = NULL,
+                       edge_width = NULL, edge_width_range = NULL,
+                       edge_style = NULL, curvature = NULL, curve_pivot = NULL,
+                       label_size = NULL, label_color = NULL,
+                       label_fontface = NULL,
+                       panels = 9L,
                        measure = "degree", phases = NULL, networks = TRUE,
                        events = TRUE, labels = TRUE, highlight = NULL,
                        slices = 120L, window = NULL, flow = 2L,
@@ -93,14 +152,45 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
                        style = .dyn_style(), ...) {
   .check_dynet(x)
   type <- match.arg(type)
+  .check_plot_dots(list(...), type)
+  link <- match.arg(link)
+  time <- match.arg(time)
+  nest <- match.arg(nest)
   # Resolved once here so that an unusable palette is reported immediately,
   # rather than only when a view happens to need a colour from it.
   .dyn_palette(palette, 1L)
+  x <- .clip_plot_range(x, start, end)
+  # These names are `cograph::splot()`'s own. For the views that delegate they
+  # must keep reaching splot, so anything the caller actually set is spliced
+  # back into the forwarded dots rather than being swallowed here.
+  aes_args <- Filter(Negate(is.null), list(
+    node_size = node_size, node_shape = node_shape, node_fill = node_fill,
+    node_border_color = node_border_color,
+    node_border_width = node_border_width, node_alpha = node_alpha,
+    edge_color = edge_color, edge_alpha = edge_alpha, edge_width = edge_width,
+    edge_width_range = edge_width_range, edge_style = edge_style,
+    curvature = curvature, curve_pivot = curve_pivot,
+    label_size = label_size, label_color = label_color,
+    label_fontface = label_fontface))
   switch(type,
-    timeline   = .plot_timeline(x, top, base_size),
+    timeline   = .plot_timeline(x, top, bins, base_size),
+    events     = .plot_events(x, link = link, time = time, bins = bins,
+                              aggregate = aggregate, nest = nest,
+                              split = split, blend = blend, weight = weight,
+                              palette = palette, base_size = base_size,
+                              aes = aes_args),
     activity   = .plot_activity(x, base_size),
-    network    = .splot_network(x, at, palette = palette, ...),
-    snapshots  = .splot_snapshots(x, panels, palette = palette, ...),
+    network    = do.call(.splot_network,
+                         c(list(x, at, palette = palette), aes_args,
+                           list(...))),
+    snapshots  = do.call(.splot_snapshots,
+                         c(list(x, panels, palette = palette), aes_args,
+                           list(...))),
+    layers     = .plot_layers(x, step = step, omega = omega,
+                              palette = palette, labels = labels, ...),
+    heatmap    = .plot_layer_heatmap(x, step = step, palette = palette, ...),
+    stack      = .plot_layer_stack(x, step = step, palette = palette,
+                                   labels = labels, ...),
     proximity  = .plot_proximity(x, measure = measure, phases = phases,
                                  networks = networks, events = events,
                                  labels = labels, default_dist = default_dist,
@@ -108,6 +198,526 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
                                  flow = flow, highlight = highlight,
                                  palette = palette, style = style, ...)
   )
+}
+
+
+#' One weight matrix per time slice
+#'
+#' The three layer views all need the same thing: the network cut into slices,
+#' every slice carrying the full vertex set so a vertex keeps its identity
+#' across the stack. Built once here so the views cannot disagree about what a
+#' slice is.
+#'
+#' @param x A `dynet` object.
+#' @param step Width of each slice, or `NULL` for the construction interval.
+#' @param prefix Prefix for the slice names.
+#' @return A named list of square weight matrices, one per slice, sharing
+#'   dimnames.
+#' @keywords internal
+.dyn_layer_matrices <- function(x, step, prefix = "t") {
+  .check(
+    "`step` must be one positive number or NULL." =
+      is.null(step) || (length(step) == 1L && is.numeric(step) &&
+                          is.finite(step) && step > 0)
+  )
+  long <- snapshots(x, step = step %||% x$meta$interval)
+  vertices <- sort(unique(c(long$from, long$to)))
+  blocks <- split(long, long$time)
+  if (length(blocks) < 2L) {
+    stop(errorCondition(
+      "A layer view needs at least two time slices; reduce `step`.",
+      class = "dynet_empty_result", call = NULL))
+  }
+  stats::setNames(lapply(blocks, function(block) {
+    m <- matrix(0, length(vertices), length(vertices),
+                dimnames = list(vertices, vertices))
+    m[cbind(match(block$from, vertices), match(block$to, vertices))] <-
+      block$weight
+    m
+  }), sprintf("%s%s", prefix, names(blocks)))
+}
+
+#' Draw the time slices as heatmap planes
+#'
+#' The matrix counterpart of [.plot_layers()]: each slice is a tilted heatmap
+#' plane rather than a node-link diagram. Unlike the other two layer views
+#' this returns a `ggplot`, because `cograph::plot_ml_heatmap()` does; the
+#' caller prints it like any other ggplot view in this method.
+#'
+#' @param x A `dynet` object.
+#' @param step Width of each slice, or `NULL` for the construction interval.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param ... Passed to `cograph::plot_ml_heatmap()`.
+#' @return A `ggplot` object.
+#' @keywords internal
+.plot_layer_heatmap <- function(x, step, palette, ...) {
+  if (!requireNamespace("cograph", quietly = TRUE)) {
+    stop(errorCondition("The heatmap view needs the cograph package.",
+                        class = "dynet_missing_package", call = NULL))
+  }
+  layers <- .dyn_layer_matrices(x, step, prefix = "Slice ")
+  # The ramp and legend title are defaults, not decisions: anything the caller
+  # named reaches `plot_ml_heatmap()` unchanged instead of colliding with them.
+  dots <- list(...)
+  defaults <- list(colors = .dyn_heat_ramp(palette), legend_title = "Weight")
+  do.call(cograph::plot_ml_heatmap,
+          c(list(layers), utils::modifyList(defaults, dots)))
+}
+
+#' Draw the time slices as a projected node-link stack
+#'
+#' Delegates to `cograph::plot_temporal()`, which takes the tidy per-slice
+#' edge list [snapshots()] already returns. Vertex colours are supplied as a
+#' named vector so a vertex keeps one colour through the whole stack, which is
+#' what makes it followable between planes.
+#'
+#' @param x A `dynet` object.
+#' @param step Width of each slice, or `NULL` for the construction interval.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param labels Whether to draw vertex labels.
+#' @param ... Passed to `cograph::plot_temporal()`.
+#' @return The `dynet` object, invisibly. Drawn to the current device.
+#' @keywords internal
+.plot_layer_stack <- function(x, step, palette, labels, ...) {
+  if (!requireNamespace("cograph", quietly = TRUE)) {
+    stop(errorCondition("The stack view needs the cograph package.",
+                        class = "dynet_missing_package", call = NULL))
+  }
+  long <- snapshots(x, step = step %||% x$meta$interval)
+  vertices <- sort(unique(c(long$from, long$to)))
+  dots <- list(...)
+  defaults <- list(
+    time = "time",
+    node_color = stats::setNames(.dyn_palette(palette, length(vertices)),
+                                 vertices),
+    show_labels = isTRUE(labels))
+  do.call(cograph::plot_temporal,
+          c(list(long), utils::modifyList(defaults, dots)))
+  invisible(x)
+}
+
+#' A sequential ramp for the heatmap planes
+#'
+#' Okabe-Ito is a categorical palette; a matrix plane needs a continuous one.
+#' White to the palette's blue keeps the family recognisable while staying
+#' monotone in lightness.
+#'
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @return A character vector of colours defining the ramp.
+#' @keywords internal
+.dyn_heat_ramp <- function(palette) {
+  c("#FFFFFF", .dyn_palette(palette, 2L))
+}
+
+#' Draw the time-sliced network as a multilayer stack
+#'
+#' Each time slice becomes a layer of one multilayer network, and a vertex
+#' appears once per slice. `cograph::plot_mlna()` needs every row and column of
+#' the supra-adjacency to carry a unique name, so the keys are
+#' `slice_vertex`; the display labels are the bare vertex names, passed
+#' separately, so no internal key reaches the page. Assembling that pairing is
+#' the package's job, not the caller's.
+#'
+#' @param x A `dynet` object.
+#' @param step Width of each slice, or `NULL` for the construction interval.
+#' @param omega Interlayer coupling weight on the identity arcs.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param labels Whether to draw vertex labels.
+#' @param ... Passed to `cograph::plot_mlna()`.
+#' @return The `dynet` object, invisibly. Drawn to the current device.
+#' @keywords internal
+.plot_layers <- function(x, step, omega, palette, labels, ...) {
+  if (!requireNamespace("cograph", quietly = TRUE)) {
+    stop(errorCondition("The layer view needs the cograph package.",
+                        class = "dynet_missing_package", call = NULL))
+  }
+  .check(
+    "`omega` must be one non-negative number." =
+      length(omega) == 1L && is.numeric(omega) && is.finite(omega) && omega >= 0
+  )
+  layers <- .dyn_layer_matrices(x, step)
+  slice_names <- names(layers)
+
+  supra <- unclass(cograph::supra_adjacency(layers, omega = omega,
+                                            coupling = "diagonal"))
+  keys <- rownames(supra)
+  # The key layout is `<slice>_<vertex>`: a slice's members are recovered by
+  # prefix and the display label by stripping it. Both sides are built here
+  # from the same construction, never matched by the caller.
+  members <- stats::setNames(
+    lapply(slice_names, function(nm) keys[startsWith(keys, paste0(nm, "_"))]),
+    slice_names)
+  display <- data.frame(
+    label = keys,
+    labels = sub("^[^_]+_", "", keys),
+    stringsAsFactors = FALSE
+  )
+  dots <- list(...)
+  defaults <- list(layer_list = members, nodes = display,
+                   show_labels = isTRUE(labels))
+  do.call(cograph::plot_mlna,
+          c(list(supra), utils::modifyList(defaults, dots)))
+  invisible(x)
+}
+
+#' Reject plot arguments that no view will ever read
+#'
+#' Everything in `...` reaches `cograph::splot()` for the node-link views and
+#' nothing at all for the ggplot views, so a misspelled name would otherwise
+#' be accepted in silence and the caller would be handed a picture that
+#' ignored it. Names are checked against this method's own arguments plus, for
+#' the views that delegate, `splot()`'s.
+#'
+#' @param dots The captured `...`.
+#' @param type The plot type being drawn.
+#' @return `TRUE`, invisibly.
+#' @keywords internal
+.check_plot_dots <- function(dots, type) {
+  if (!length(dots)) return(invisible(TRUE))
+  nm <- names(dots)
+  if (is.null(nm) || any(!nzchar(nm))) {
+    stop(errorCondition(
+      "Every argument passed through `...` to plot() must be named.",
+      class = "dynet_unknown_plot_arg", call = NULL))
+  }
+  known <- names(formals(plot.dynet))
+  delegate <- switch(type, layers = "plot_mlna", heatmap = "plot_ml_heatmap",
+                     stack = "plot_temporal", network = , snapshots = ,
+                     proximity = "splot", NULL)
+  delegates <- !is.null(delegate)
+  if (delegates && requireNamespace("cograph", quietly = TRUE)) {
+    known <- c(known, names(formals(getExportedValue("cograph", delegate))))
+  }
+  unknown <- setdiff(nm, setdiff(known, "..."))
+  if (length(unknown)) {
+    stop(errorCondition(
+      sprintf(
+        "%s %s %s not accepted by plot(type = \"%s\").%s",
+        if (length(unknown) > 1L) "Arguments" else "Argument",
+        paste(sQuote(unknown), collapse = ", "),
+        if (length(unknown) > 1L) "are" else "is", type,
+        if (delegates)
+          " Drawing arguments are passed to cograph::splot()."
+        else " This view takes no further drawing arguments."),
+      class = "dynet_unknown_plot_arg", call = NULL))
+  }
+  invisible(TRUE)
+}
+
+#' Restrict a network to the window a plot was asked for
+#'
+#' @param x A `dynet` object.
+#' @param start,end Optional bounds; `NULL` keeps the observed edge.
+#' @return A `dynet` object covering the requested window.
+#' @keywords internal
+.clip_plot_range <- function(x, start, end) {
+  if (is.null(start) && is.null(end)) return(x)
+  span <- x$meta$time_range
+  from <- if (is.null(start)) span[[1L]] else start
+  to <- if (is.null(end)) span[[2L]] else end
+  .check(
+    "`start` must be one finite number." =
+      is.null(start) || (length(start) == 1L && is.numeric(start) &&
+                           is.finite(start)),
+    "`end` must be one finite number." =
+      is.null(end) || (length(end) == 1L && is.numeric(end) && is.finite(end)),
+    "`start` must be earlier than `end`." = from < to
+  )
+  clipped <- .range_netobject(x, from, to)
+  if (is.null(clipped)) {
+    stop(errorCondition(
+      sprintf("No edge or vertex is active between %s and %s.", from, to),
+      class = "dynet_empty_result", call = NULL))
+  }
+  clipped
+}
+
+
+#' Trace one link glyph between two actors at one event column
+#'
+#' Every style is a polyline from `(x, y1)` to `(x, y2)` that bulges by `d`
+#' into the gutter left of its own event column, so simultaneous links can be
+#' nested rather than drawn on top of one another.
+#'
+#' @param style One of `"hook"`, `"arc"`, `"chevron"`, `"wave"`, `"bracket"`.
+#' @param x Event position on the time axis.
+#' @param y1,y2 Actor positions of the two endpoints.
+#' @param d How far the glyph may bulge into the gutter.
+#' @param n Vertices in the polyline.
+#' @return A data frame of `x` and `y` polyline vertices.
+#' @keywords internal
+.link_path <- function(style, x, y1, y2, d, n = 60L, pivot = 0.5) {
+  t <- seq(0, 1, length.out = n)
+  y <- y1 + t * (y2 - y1)
+  # `pivot` slides where the bow peaks, as splot's curve_pivot does. Only the
+  # bulge is re-parameterised: shifting `t` for the y values as well would
+  # merely re-space the vertices and leave the drawn curve identical.
+  b <- if (isTRUE(all.equal(pivot, 0.5))) t else {
+    pv <- min(max(pivot, 0.02), 0.98)
+    ifelse(t < pv, 0.5 * t / pv, 0.5 + 0.5 * (t - pv) / (1 - pv))
+  }
+  mid <- y1 + pivot * (y2 - y1)
+  out <- switch(style,
+    # Flattened ends meet the node almost square-on, so an endpoint stays
+    # readable where a circular arc would leave it at a slant.
+    hook    = list(x = x - d * sin(pi * b)^2.2, y = y),
+    arc     = list(x = x - d * sin(pi * b), y = y),
+    chevron = list(x = c(x, x - d, x), y = c(y1, mid, y2)),
+    wave    = list(x = x - d * sin(pi * b) * (0.55 + 0.45 * cos(3 * pi * b)),
+                   y = y),
+    bracket = list(x = c(x, x - d, x - d, x), y = c(y1, y1, y2, y2))
+  )
+  data.frame(x = out$x, y = out$y)
+}
+
+#' Union length of intervals clipped to one bin
+#'
+#' Overlapping spells for one pair count once, the same pairwise-union
+#' convention `"temporal_density"` uses, so a bin can never report more
+#' activity than its own width.
+#'
+#' @param s,e Spell starts and ends.
+#' @param lo,hi Bin bounds.
+#' @return The length of the clipped union.
+#' @keywords internal
+.union_len <- function(s, e, lo, hi) {
+  s <- pmax(s, lo); e <- pmin(e, hi)
+  ok <- e > s
+  if (!any(ok)) return(0)
+  s <- s[ok]; e <- e[ok]
+  o <- order(s); s <- s[o]; e <- e[o]
+  reach <- cummax(c(-Inf, utils::head(e, -1L)))
+  block <- cumsum(s > reach)
+  sum(tapply(e, block, max) - tapply(s, block, min))
+}
+
+
+#' Colour one link's polyline from its source into its target
+#'
+#' @param from_col,to_col Endpoint colours.
+#' @param n Vertices in the polyline.
+#' @param split Share of the run that keeps the source colour.
+#' @param blend Fade between the two rather than switching at a boundary.
+#' @return A character vector of `n` colours.
+#' @keywords internal
+.link_cols <- function(from_col, to_col, n, split = 0.8, blend = FALSE) {
+  if (isTRUE(blend)) {
+    ramp <- grDevices::colorRamp(c(from_col, to_col))
+    at <- pmin(1, pmax(0, (seq(0, 1, length.out = n) - (1 - split)) / split))
+    rgb <- ramp(at)
+    return(grDevices::rgb(rgb[, 1L], rgb[, 2L], rgb[, 3L],
+                          maxColorValue = 255))
+  }
+  cut <- max(1L, round(split * n))
+  c(rep(from_col, cut), rep(to_col, n - cut))
+}
+
+#' Place event columns on the time axis
+#' @param v Times to place.
+#' @param time Axis rule.
+#' @param span Observed range.
+#' @param interval Bin width for `"bin"`.
+#' @param stamps Distinct onsets for `"event"`.
+#' @return Numeric positions.
+#' @keywords internal
+.event_place <- function(v, time, span, interval, stamps) {
+  switch(time,
+    clock = v,
+    event = match(v, stamps),
+    bin = span[[1L]] + (pmin(floor((v - span[[1L]]) / interval),
+                             ceiling(diff(span) / interval) - 1L) + 0.5) *
+            interval)
+}
+
+#' Draw contacts as links at the moment they fire
+#'
+#' @param x A `dynet` object.
+#' @param link Glyph style.
+#' @param time Axis rule.
+#' @param bins Number of equal bins, or `NULL` for the network's interval.
+#' @param aggregate Fold repeat firings of one pair inside one column.
+#' @param nest Which links are fanned apart.
+#' @param split,blend Source-to-target colour run.
+#' @param weight Scale alpha and width by how usual the pair is.
+#' @param palette Palette specification.
+#' @param base_size Base text size.
+#' @return A `ggplot` object.
+#' @keywords internal
+.plot_events <- function(x, link, time, bins, aggregate, nest, split, blend,
+                         weight, palette, base_size, aes = list()) {
+  .check(
+    "`split` must be one number between 0 and 1." =
+      length(split) == 1L && is.numeric(split) && is.finite(split) &&
+        split >= 0 && split <= 1,
+    "`bins` must be one positive whole number." =
+      is.null(bins) || (length(bins) == 1L && is.finite(bins) && bins >= 1 &&
+                          bins == as.integer(bins)),
+    "`aggregate` must be TRUE or FALSE." =
+      length(aggregate) == 1L && is.logical(aggregate) && !is.na(aggregate),
+    "`blend` must be TRUE or FALSE." =
+      length(blend) == 1L && is.logical(blend) && !is.na(blend),
+    "`weight` must be TRUE or FALSE." =
+      length(weight) == 1L && is.logical(weight) && !is.na(weight)
+  )
+  e <- as.data.frame(x)
+  if (!nrow(e)) {
+    stop(errorCondition("The network has no edge spell to draw.",
+                        class = "dynet_empty_result", call = NULL))
+  }
+  nodes <- x$nodes$name
+  lev <- rev(nodes)
+  pal <- stats::setNames(.dyn_palette(palette, length(lev)), lev)
+  e$yf <- match(e$from, lev)
+  e$yt <- match(e$to, lev)
+  loops <- e[e$from == e$to, , drop = FALSE]
+  e <- e[e$from != e$to, , drop = FALSE]
+
+  span <- x$meta$time_range
+  interval <- if (is.null(bins)) x$meta$interval else diff(span) / bins
+  stamps <- sort(unique(c(e$start, loops$start)))
+  e$ev <- .event_place(e$start, time, span, interval, stamps)
+  if (nrow(loops)) {
+    loops$ev <- .event_place(loops$start, time, span, interval, stamps)
+  }
+  cols <- switch(time,
+    event = seq_along(stamps),
+    clock = stamps,
+    bin = span[[1L]] + (seq_len(ceiling(diff(span) / interval)) - 0.5) *
+            interval)
+  gap <- if (length(cols) > 1L) min(diff(cols)) else 1
+
+  # Usualness is a property of the ordered pair across the whole network, so
+  # it is measured before any folding and reads the same in both modes.
+  pair <- paste(e$from, e$to)
+  e$freq <- as.integer(table(pair)[pair])
+  drawn <- nrow(e)
+  if (isTRUE(aggregate)) {
+    e <- e[!duplicated(paste(e$from, e$to, e$ev)), , drop = FALSE]
+  }
+  folded <- drawn - nrow(e)
+  e$id <- seq_len(nrow(e))
+
+  # Only links joining the same two rows in the same column can overlap;
+  # fanning every link in a column separates ties never in danger of it.
+  slot <- if (identical(nest, "pair")) {
+    paste(e$ev, pmin(e$yf, e$yt), pmax(e$yf, e$yt))
+  } else as.character(e$ev)
+  k <- ave(e$id, slot, FUN = seq_along)
+  kmax <- ave(k, slot, FUN = max)
+  # `curvature` is the base bow as a fraction of the column gap, following
+  # splot where 0 draws a straight link.
+  curvature <- aes$curvature %||% 0.18
+  .check("`curvature` must be one non-negative number." =
+           length(curvature) == 1L && is.numeric(curvature) &&
+           is.finite(curvature) && curvature >= 0)
+  e$d <- gap * if (identical(nest, "pair")) {
+    curvature + (k - 1L) * 0.14     # small step: groups are size 1 or 2
+  } else {
+    curvature + (k - 1L) / pmax(kmax - 1L, 1L) * 0.62
+  }
+
+  width_range <- aes$edge_width_range %||% c(0.35, 1.4)
+  style <- aes$edge_style %||% 1
+  solid <- isTRUE(all.equal(style, 1)) || identical(style, "solid")
+
+  n_pt <- 60L
+  paths <- do.call(rbind, lapply(e$id, function(i) {
+    r <- e[e$id == i, , drop = FALSE]
+    hi <- max(r$yf, r$yt); lo <- min(r$yf, r$yt)
+    pth <- .link_path(link, r$ev, hi, lo, r$d, n = n_pt,
+                      pivot = aes$curve_pivot %||% 0.5)
+    m <- nrow(pth)
+    # The path always runs high to low so bows nest consistently. When the
+    # source sits at the low end that traversal is target-first, so the run
+    # is built target-first too and still arrives source-coloured.
+    cl <- if (!is.null(aes$edge_color)) {
+      rep(aes$edge_color[[1L]], m)
+    } else if (!solid) {
+      # ggplot cannot vary colour along a non-solid line, so a dashed link
+      # takes its source's colour whole rather than the source-to-target run.
+      rep(pal[[r$from]], m)
+    } else if (r$yf >= r$yt) {
+      .link_cols(pal[[r$from]], pal[[r$to]], m, split, blend)
+    } else {
+      .link_cols(pal[[r$to]], pal[[r$from]], m, 1 - split, blend)
+    }
+    data.frame(id = i, freq = r$freq, x = pth$x, y = pth$y, col = cl,
+               stringsAsFactors = FALSE)
+  }))
+
+  grid <- expand.grid(ev = cols, y = seq_along(lev))
+  plot <- ggplot2::ggplot() +
+    ggplot2::geom_vline(data = data.frame(ev = cols),
+                        ggplot2::aes(xintercept = ev), colour = "grey93",
+                        linewidth = 0.2)
+  plot <- plot + if (isTRUE(weight) && is.null(aes$edge_width)) {
+    ggplot2::geom_path(
+      data = paths,
+      ggplot2::aes(x = x, y = y, group = id, colour = col, alpha = freq,
+                   linewidth = freq), lineend = "butt", linetype = style)
+  } else {
+    ggplot2::geom_path(
+      data = paths, ggplot2::aes(x = x, y = y, group = id, colour = col),
+      linewidth = aes$edge_width %||% 0.7,
+      alpha = aes$edge_alpha %||% 1, lineend = "butt", linetype = style)
+  }
+  plot <- plot +
+    ggplot2::geom_point(
+      data = grid, ggplot2::aes(x = ev, y = y),
+      colour = aes$node_border_color %||% unname(pal)[grid$y],
+      fill = aes$node_fill %||% unname(pal)[grid$y],
+      shape = .node_shape(aes$node_shape %||% "circle"),
+      stroke = aes$node_border_width %||% 0.5,
+      alpha = aes$node_alpha %||% 1,
+      size = aes$node_size %||% 2.2)
+  if (nrow(loops)) {
+    plot <- plot + ggplot2::geom_point(
+      data = loops, ggplot2::aes(x = ev, y = yf), shape = 21, size = 3.1,
+      stroke = 0.5, colour = "grey20", fill = NA)
+  }
+  breaks <- cols[unique(round(seq(1, length(cols),
+                                  length.out = min(length(cols), 10L))))]
+  plot +
+    ggplot2::scale_colour_identity() +
+    ggplot2::scale_alpha_continuous(range = c(0.2, 0.95), guide = "none") +
+    ggplot2::scale_linewidth_continuous(range = c(0.35, 1.4), guide = "none") +
+    ggplot2::scale_y_continuous(breaks = seq_along(lev), labels = lev) +
+    # Pad only as far as a link can bulge, and label real columns only, so
+    # the gutter never becomes axis territory with times that do not exist.
+    ggplot2::scale_x_continuous(
+      breaks = breaks,
+      expand = ggplot2::expansion(add = c(1.05 * gap, 0.35 * gap))) +
+    ggplot2::labs(
+      x = switch(time, event = "Time (event)",
+                 clock = sprintf("Time (%s)", x$meta$time_unit),
+                 bin = sprintf("Time (%s)", x$meta$time_unit)),
+      y = NULL, title = "Contacts as they fire",
+      subtitle = sprintf(
+        "%d links over %d columns; source colour runs %d%% of each link%s",
+        nrow(e), length(cols), round(100 * split),
+        if (folded > 0L) sprintf("; %d repeat firings folded", folded) else
+          "")) +
+    ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      plot.title = ggplot2::element_text(face = "bold"),
+      plot.subtitle = ggplot2::element_text(colour = "grey45", size = 9),
+      axis.text.y = ggplot2::element_text(
+        size = aes$label_size %||% ggplot2::rel(1),
+        colour = aes$label_color %||% "grey20",
+        face = aes$label_fontface %||% "plain"))
+}
+
+#' Translate a splot shape name to a ggplot shape code
+#' @param shape A splot shape name or a ggplot shape number.
+#' @return An integer ggplot shape code.
+#' @keywords internal
+.node_shape <- function(shape) {
+  if (is.numeric(shape)) return(as.integer(shape[[1L]]))
+  codes <- c(circle = 21L, square = 22L, diamond = 23L, triangle = 24L,
+             triangle_down = 25L)
+  code <- codes[[match.arg(as.character(shape[[1L]]), names(codes))]]
+  code
 }
 
 #' Require cograph, the renderer for every node-link view
@@ -349,32 +959,72 @@ plot.dynet <- function(x, type = c("timeline", "activity", "network",
 #' @param x A `dynet` object.
 #' @param top Number of busiest pairs to draw.
 #' @param base_size Base font size.
+#' Edge activity over time as an intensity heatmap
+#'
+#' One row per vertex pair, time on the x axis, fill showing how much of each
+#' bin the pair was active. Zero-duration contact data has no share to report,
+#' so those fall back to a count of contacts in the bin.
+#'
+#' @param x A `dynet` object.
+#' @param top Draw only the `top` busiest pairs.
+#' @param bins Number of equal bins, or `NULL` for the network's own interval.
+#' @param base_size Base text size.
 #' @return A `ggplot` object.
 #' @keywords internal
-.plot_timeline <- function(x, top, base_size) {
+.plot_timeline <- function(x, top, bins, base_size) {
   e <- as.data.frame(x)
-  e$pair <- paste(e$from, if (x$directed) "\u2192" else "\u2013", e$to)
+  if (!nrow(e)) {
+    stop(errorCondition("The network has no edge spell to draw.",
+                        class = "dynet_empty_result", call = NULL))
+  }
+  e$pair <- .pair_label(e$from, e$to, x$directed)
   busiest <- names(sort(table(e$pair), decreasing = TRUE))
   keep <- utils::head(busiest, top)
   dropped <- length(busiest) - length(keep)
   e <- e[e$pair %in% keep, , drop = FALSE]
-  e$pair <- factor(e$pair, levels = rev(keep))
-  # Zero-length spells would be invisible as segments, so give them a tick.
-  tick <- diff(range(c(e$start, e$end))) / 300
-  e$end_draw <- ifelse(e$end - e$start < tick, e$start + tick, e$end)
 
-  sub <- if (dropped > 0L) {
-    sprintf("%d busiest pairs shown; %d further pairs not drawn", length(keep), dropped)
-  } else NULL
+  span <- range(c(e$start, e$end))
+  width <- if (is.null(bins)) x$meta$interval else diff(span) / bins
+  n_bin <- max(1L, ceiling(diff(span) / width))
+  edges <- span[[1L]] + seq.int(0L, n_bin) * width
+  mid <- utils::head(edges, -1L) + width / 2
+  pointy <- all(e$end <= e$start)
 
-  ggplot2::ggplot(e) +
-    ggplot2::geom_segment(
-      ggplot2::aes(x = start, xend = end_draw, y = pair, yend = pair),
-      linewidth = 2.2, colour = .okabe_ito(5L)[5L], alpha = 0.85) +
-    ggplot2::labs(x = sprintf("Time (%s)", x$meta$time_unit), y = NULL,
-                  title = "Edge spells over time", subtitle = sub) +
+  cell <- do.call(rbind, lapply(keep, function(p) {
+    s <- e[e$pair == p, , drop = FALSE]
+    value <- vapply(seq_len(n_bin), function(i) {
+      lo <- edges[[i]]; hi <- edges[[i + 1L]]
+      if (pointy) sum(s$start >= lo & s$start < hi)
+      # The union cannot exceed the bin width; the division can leave a value
+      # a rounding step above 1, which would fall outside the scale limits
+      # and render as missing.
+      else min(1, .union_len(s$start, s$end, lo, hi) / width)
+    }, numeric(1L))
+    data.frame(pair = p, time = mid, value = value, stringsAsFactors = FALSE)
+  }))
+  cell$pair <- factor(cell$pair, levels = rev(keep))
+  cell <- cell[cell$value > 0, , drop = FALSE]
+
+  ggplot2::ggplot(cell) +
+    ggplot2::geom_tile(ggplot2::aes(x = time, y = pair, fill = value),
+                       height = 0.8) +
+    ggplot2::scale_fill_gradient(
+      low = "#DCE9F5", high = "#0072B2",
+      limits = if (pointy) NULL else c(0, 1),
+      name = if (pointy) "Contacts in bin" else "Share of bin active") +
+    ggplot2::labs(
+      x = sprintf("Time (%s)", x$meta$time_unit), y = NULL,
+      title = "Edge activity over time",
+      subtitle = sprintf(
+        "%d bins of %s%s", n_bin, format(width, digits = 3),
+        if (dropped > 0L) sprintf("; %d busiest pairs shown, %d not drawn",
+                                  length(keep), dropped) else "")) +
     ggplot2::theme_minimal(base_size = base_size) +
-    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      plot.title = ggplot2::element_text(face = "bold"),
+      plot.subtitle = ggplot2::element_text(colour = "grey45", size = 9),
+      axis.text.y = ggplot2::element_text(size = ggplot2::rel(0.72)))
 }
 
 #' Formation and dissolution over time

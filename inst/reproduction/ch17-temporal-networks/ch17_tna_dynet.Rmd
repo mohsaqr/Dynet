@@ -1,0 +1,322 @@
+---
+title: "Temporal network analysis (LA Methods, ch. 17) with Dynet"
+author: "After Saqr, M. — *Temporal network analysis: Introduction, methods and analysis with R*"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", warning = FALSE,
+                      message = FALSE, fig.align = "center",
+                      fig.width = 7, fig.height = 4.5, dpi = 120)
+```
+
+## What this is
+
+Chapter 17 of *Learning Analytics Methods and Tutorials* builds a temporal
+network from a MOOC discussion forum using `networkDynamic`, `tsna` and `ndtv`.
+This is the same analysis in **Dynet**.
+
+It is not a line-by-line transcription. Two things in the chapter's code are
+defects, and reproducing them would mean writing worse code to get worse
+numbers; both are named and measured in [what differs](#what-differs).
+
+```{r libs}
+library(Dynet)
+library(dplyr)
+library(rio)
+```
+
+## 1. Data
+
+```{r import}
+net_edges <- import("https://raw.githubusercontent.com/lamethods/data/main/6_snaMOOC/DLT1%20Edgelist.csv") |>
+  janitor::clean_names()
+net_nodes <- import("https://raw.githubusercontent.com/lamethods/data/main/6_snaMOOC/DLT1%20Nodes.csv")
+```
+
+Recode expertise and name the vertex key.
+
+```{r nodes}
+net_nodes <- net_nodes |>
+  rename(name = UID) |>
+  mutate(name = as.character(name),
+         expert_level = case_match(experience,
+                                   1 ~ "Expert", 2 ~ "Student", 3 ~ "Teacher"))
+```
+
+Drop self-loops and keep only discussions that had an exchange. Timestamps stay
+as they are: `dynet()` converts them.
+
+```{r prep}
+posts <- net_edges |>
+  filter(sender != receiver) |>
+  mutate(sender = as.character(sender), receiver = as.character(receiver)) |>
+  group_by(discussion_title) |>
+  filter(n() > 1) |>
+  ungroup()
+
+nrow(posts)
+n_distinct(posts$discussion_title)
+```
+
+## 2. The temporal network
+
+Forum data is threaded: a tie is live from its own post until the thread falls
+silent (Saqr & Nouri, 2020). Naming `thread` selects that.
+
+```{r build}
+dn_full <- dynet(posts, from = "sender", to = "receiver", time = "timestamp",
+                 thread = "discussion_title", nodes = net_nodes,
+                 time_unit = "days", directed = TRUE, loops = FALSE)
+
+summary(dn_full)
+```
+
+## 3. The active subnetwork
+
+The chapter keeps vertices with more than 20 ties.
+
+```{r active}
+dn <- induce_subgraph(dn_full, degree > 20)
+dn
+```
+
+## 4. Visualisation
+
+```{r net-plot, fig.width = 7, fig.height = 6}
+plot(dn, type = "network")
+```
+
+Weeks 1 to 4 — the chapter's four `network.extract()` panels.
+
+```{r snapshots, fig.width = 12, fig.height = 3.6}
+plot(dn, type = "snapshots", panels = 4)
+```
+
+What those panels hold:
+
+```{r snapshot-counts}
+summary(snapshots(dn, start = 1, end = 22, step = 7, window = 7))
+```
+
+Activity over time.
+
+```{r timeline, fig.height = 5}
+plot(dn, type = "timeline", top = 25)
+```
+
+Tie formation and dissolution.
+
+```{r turnover}
+plot(events(dn, measure = c("formation", "dissolution"),
+            start = 0, end = 72, step = 1, window = 1))
+```
+
+Proximity timeline.
+
+```{r proximity, fig.width = 9, fig.height = 7}
+plot(dn, type = "proximity", slices = 20)
+```
+
+## 5. Graph-level measures
+
+A seven-day rolling density.
+
+```{r density}
+plot(metrics(dn, measure = "density", start = 14, end = 60, step = 1, window = 7))
+```
+
+Density over the whole period, and the time-integrated density.
+
+```{r density-scalars}
+metrics(dn, measure = c("density", "temporal_density", "edges"), window = "all")
+```
+
+Reciprocity, on the full network as in the chapter.
+
+```{r recip}
+plot(metrics(dn_full, measure = "reciprocity",
+             start = 1, end = 73, step = 1, window = 1))
+```
+
+The dyad census. `window = 0` samples at each instant, which is what
+`tSnaStats()` does by default.
+
+```{r dyads}
+plot(metrics(dn, measure = c("mutual", "asymmetric", "null"),
+             start = 0, end = 72, step = 1, window = 0))
+```
+
+Degree centralization.
+
+```{r centralization}
+plot(metrics(dn, measure = "centralization_degree",
+             start = 1, end = 73, step = 1, window = 1))
+```
+
+## 6. Node-level measures
+
+Degree, in-degree and out-degree in one call.
+
+```{r degree}
+degree_series <- dyn_centrality(dn, measure = "degree",
+                                mode = c("all", "in", "out"),
+                                start = 1, end = 73, step = 1, window = 1)
+summary(degree_series)
+```
+
+```{r degree-plot, fig.height = 4.5}
+plot(dyn_centrality(dn, measure = "degree", start = 1, end = 73,
+                    step = 1, window = 1))
+```
+
+Closeness, betweenness and eigenvector.
+
+```{r other-centrality}
+summary(dyn_centrality(dn, measure = c("closeness", "betweenness", "eigenvector"),
+                       start = 1, end = 73, step = 1, window = 1))
+```
+
+```{r betweenness-plot, fig.height = 4.5}
+plot(dyn_centrality(dn, measure = "betweenness",
+                    start = 1, end = 73, step = 1, window = 1))
+```
+
+Aggregate centrality sits on the vertex table, so it can be read or filtered
+without a second call.
+
+```{r node-table}
+head(as.data.frame(dn, what = "nodes",
+                   measure = c("degree", "betweenness", "eigenvector")))
+```
+
+## 7. Reachability
+
+The chapter seeds on the 44th vertex of its induced subgraph, which is
+participant 444. Dynet addresses vertices by name.
+
+```{r paths}
+fwd <- paths(dn, from = "444", direction = "forward")
+fwd
+```
+
+```{r path-plot, fig.width = 9, fig.height = 6}
+plot(fwd)
+```
+
+The chapter's `transmissionTimeline()` becomes a trajectory tree, which carries
+route counts and branching probabilities the original does not.
+
+```{r trajectories, fig.width = 10, fig.height = 6}
+plot_path_trajectories(path_trajectories(fwd), measure = "time")
+```
+
+## 8. Mixing between expertise levels
+
+```{r mixing}
+mix <- mixing(dn, attribute = "expert_level",
+              start = 1, end = 73, step = 1, window = 1)
+summary(mix)
+```
+
+```{r mixing-plot, fig.height = 4.5}
+plot(mix)
+```
+
+`nodemix` drops one cell as the `ergm` base category, so the chapter plots eight
+of the nine group pairs. `mixing()` reports all nine.
+
+## What differs {#what-differs}
+
+Two differences from the published figures, both deliberate.
+
+**The spell rule.** The chapter sets every tie in a discussion to start at the
+discussion's *first* post. Saqr and Nouri (2020), which `thread =` implements,
+starts each tie at *its own* post. Only 302 of the surviving posts are opening
+posts, so the chapter's spells are about a quarter longer on average, and its
+time-integrated density is correspondingly higher.
+
+**29 ties that never happened.** The chapter builds its static edge list before
+dropping single-post discussions, so 29 pairs enter the network with no
+activity at all. `networkDynamic()` then gives each of them activity across the
+entire observation window, flagged censored at both ends — permanently-on ties
+that no message ever created. Five of them fall inside the active subnetwork,
+which is why the chapter reports 433 ties where this reports 428, and why its
+day-73 statistics are non-empty for a day past the end of observation.
+
+```{r differences}
+metrics(dn, measure = c("edges", "temporal_density"), window = "all")
+```
+
+## What Dynet does not do
+
+Four chapter outputs have no counterpart, all animation or 3-D rendering:
+`compute.animation()`, `timePrism()`, `render.d3movie()`, and the Graphviz
+layout used to redraw the path tree. Dynet draws static figures only.
+
+## Do the two implementations agree?
+
+The differences above are definitional, not numerical. Given the *same*
+network, Dynet and `tsna`/`sna` return the same values. The check below rebuilds
+the chapter's own construction and compares; the bracket indexing is there
+because `tsna` returns `mts` matrices.
+
+```{r agree, eval = requireNamespace("tsna", quietly = TRUE)}
+library(tsna); library(networkDynamic); library(sna)
+
+chapter_spells <- posts |>
+  mutate(day = round(as.numeric(difftime(
+    lubridate::parse_date_time(timestamp, "mdy HM"),
+    min(lubridate::parse_date_time(timestamp, "mdy HM")), units = "days")), 2)) |>
+  group_by(discussion_title) |>
+  mutate(onset = min(day), terminus = max(day)) |>
+  ungroup()
+
+nd <- networkDynamic(edge.spells = data.frame(
+  onset = chapter_spells$onset, terminus = chapter_spells$terminus,
+  tail = as.integer(chapter_spells$sender),
+  head = as.integer(chapter_spells$receiver)))
+same <- dynet(data.frame(from = chapter_spells$sender, to = chapter_spells$receiver,
+                         start = chapter_spells$onset, end = chapter_spells$terminus),
+              directed = TRUE, loops = FALSE)
+
+active_nd <- get.inducedSubgraph(nd, v = which(sna::degree(nd) > 20))
+active_dn <- induce_subgraph(same, degree > 20)
+
+data.frame(
+  quantity = c("aggregate density", "mutual dyads per day",
+               "degree per node per day", "earliest arrival time"),
+  max_abs_diff = c(
+    abs(as.data.frame(metrics(active_dn, "density", window = "all"))$value -
+        gden(active_nd)),
+    max(abs(as.data.frame(metrics(active_dn, "mutual", start = 1, end = 73,
+                                  step = 1, window = 1))$value -
+            as.numeric(tSnaStats(active_nd, "mutuality", start = 1, end = 73,
+                                 time.interval = 1, aggregate.dur = 1)))),
+    {
+      ref <- tSnaStats(active_nd, "degree", start = 1, end = 73,
+                       time.interval = 1, aggregate.dur = 1, cmode = "freeman")
+      got <- as.data.frame(dyn_centrality(active_dn, "degree", start = 1,
+                                          end = 73, step = 1, window = 1))
+      m <- matrix(NA_real_, 73, ncol(ref), dimnames = list(NULL, colnames(ref)))
+      m[cbind(match(got$time, sort(unique(got$time))),
+              match(got$node, colnames(ref)))] <- got$value
+      max(abs(m[seq_len(72), ] - as.matrix(ref)[seq_len(72), ]))
+    },
+    {
+      tp <- tPath(active_nd, v = 44, direction = "fwd")
+      dp <- as.data.frame(paths(active_dn, from = "444"))
+      a <- setNames(tp$tdist, as.character(network.vertex.names(active_nd)))
+      b <- setNames(dp$latency, dp$node)[names(a)]
+      ok <- is.finite(a) & is.finite(b)
+      max(abs(a[ok] - b[ok]))
+    }))
+```
+
+```{r session}
+sessionInfo()
+```

@@ -462,6 +462,15 @@
 #' @keywords internal
 .window_spec <- function(dn, start = NULL, end = NULL, step = NULL,
                          window = NULL) {
+  whole <- .is_whole_window(window)
+  if (whole) {
+    if (!is.null(step)) {
+      stop(errorCondition(
+        "`step` has no meaning with `window = \"all\"`, which measures one window.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    window <- NULL
+  }
   start <- .as_time(start, dn, "start")
   end   <- .as_time(end,   dn, "end")
   phase_start <- start
@@ -469,7 +478,7 @@
   .check(
     "`step` must be a single positive number." =
       is.numeric(step) && length(step) == 1L && is.finite(step) && step > 0,
-    "`window` must be a single non-negative number." =
+    "`window` must be a single non-negative number, or the string \"all\"." =
       is.null(window) || (is.numeric(window) && length(window) == 1L &&
                           is.finite(window) && window >= 0)
   )
@@ -495,8 +504,43 @@
     if (!is.null(start)) start <- max(start, hull[["start"]])
     if (!is.null(end)) end <- min(end, hull[["end"]])
   }
+  if (whole) {
+    hull <- .network_span(dn)
+    span <- max(0, (end %||% hull[["end"]]) - (start %||% hull[["start"]]))
+    window <- span
+    step <- if (span > 0) span else as.numeric(dn$meta$interval)
+  }
   list(start = start, end = end, phase_start = phase_start,
-       step = as.numeric(step), window = window)
+       step = as.numeric(step), window = window, whole = whole)
+}
+
+#' Whether a `window` argument asked for one window over the whole period
+#'
+#' `window = "all"` is the only non-numeric spelling the measurement grid
+#' accepts. Anything else that is not a number is a caller error, reported
+#' where the width itself is validated rather than here.
+#'
+#' @param window The `window` argument as supplied.
+#' @return A single logical.
+#' @keywords internal
+.is_whole_window <- function(window) {
+  is.character(window) && length(window) == 1L && !is.na(window) &&
+    identical(window, "all")
+}
+
+#' The outer time range of a network, ignoring the measurement grid
+#'
+#' Explicit observation bounds win when declared, because they are the limit of
+#' what was measured; otherwise the raw spell extrema stand in.
+#'
+#' @param dn A `dynet` object.
+#' @return A named numeric vector with `start` and `end`.
+#' @examples
+#' Dynet:::.network_span(dynet(school_contacts))
+#' @keywords internal
+.network_span <- function(dn) {
+  if (isTRUE(dn$meta$observation_explicit)) return(dn$meta$observation)
+  c(start = min(dn$spells$start), end = max(dn$spells$end))
 }
 
 #' Translate the retired sampling argument to a window width
@@ -568,6 +612,11 @@
 #' @keywords internal
 .bins <- function(t_min, t_max, spec) {
   start <- spec$start %||% t_min
+  if (isTRUE(spec$whole)) {
+    hi <- max(spec$end %||% t_max, start)
+    return(data.frame(bin = 1L, lo = start, hi = hi, time = start,
+                      closed = TRUE, stringsAsFactors = FALSE))
+  }
   end   <- spec$end   %||% .default_end(t_min, t_max, spec$step)
   # A grid whose end precedes its start still yields the single measurement
   # at `start`, so that a verb never returns zero rows for a valid network.
@@ -601,6 +650,13 @@
         (component_start - spec$phase_start) / spec$step - 1e-12
       )
       first <- spec$phase_start + max(0, phase) * spec$step
+    }
+    if (isTRUE(spec$whole)) {
+      return(data.frame(
+        observation = component$observation, bin = 1L,
+        lo = component_start, hi = max(component_end, component_start),
+        time = component_start, closed = TRUE, stringsAsFactors = FALSE
+      ))
     }
     last <- if (is.null(spec$end)) {
       .default_end(first, component_end, spec$step)

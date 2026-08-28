@@ -10,7 +10,8 @@ projection(
   start = NULL,
   end = NULL,
   step = NULL,
-  window = NULL
+  window = NULL,
+  omega = 1
 )
 }
 \arguments{
@@ -26,7 +27,13 @@ session-local projection blocks so identity arcs never cross a wall.}
 interval.}
 
 \item{window}{Width represented by each slice. \code{NULL} uses \code{step}; zero
-samples an exact point.}
+samples an exact point; \code{"all"} represents the whole observed period as a
+single slice, closed on the right.}
+
+\item{omega}{Weight on the identity arcs that carry a vertex from one slice
+to the next, that is, the interlayer coupling of the time-expanded
+network. One keeps an identity arc as heavy as a unit contact; zero
+leaves the slices uncoupled. Must be a single non-negative number.}
 }
 \value{
 An object of class \code{dynet_projection}. Use

@@ -4,14 +4,16 @@
 \alias{.plot_timeline}
 \title{Timeline of edge spells}
 \usage{
-.plot_timeline(x, top, base_size)
+.plot_timeline(x, top, bins, base_size)
 }
 \arguments{
 \item{x}{A \code{dynet} object.}
 
-\item{top}{Number of busiest pairs to draw.}
+\item{top}{Draw only the \code{top} busiest pairs.}
 
-\item{base_size}{Base font size.}
+\item{bins}{Number of equal bins, or \code{NULL} for the network's own interval.}
+
+\item{base_size}{Base text size.}
 }
 \value{
 A \code{ggplot} object.

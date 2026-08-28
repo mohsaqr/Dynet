@@ -58,6 +58,10 @@
 #' @param window How much time each measurement covers. Defaults to `step`,
 #'   which tiles the period into disjoint bins. A larger value slides an
 #'   overlapping window; `0` samples the network at each point in time.
+#'   `"all"` measures the whole observed period as one window, closed on the
+#'   right so an event at the final instant is inside it; it cannot be combined
+#'   with `step`, and under `sessions = "separate"` or discontinuous
+#'   observation it gives one window per session or observed component.
 #'
 #' @return A `dynet_metric` at graph level: one row per time point and
 #'   measure, with columns `session` (when present), `time`, `measure` and

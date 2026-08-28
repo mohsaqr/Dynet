@@ -46,7 +46,11 @@ on its own rows.}
 \item{damping}{Damping factor for PageRank.}
 
 \item{mode}{Which edges count on a directed network: \code{"all"} both
-directions, \code{"out"} outgoing only, \code{"in"} incoming only. Applies to
+directions, \code{"out"} outgoing only, \code{"in"} incoming only. Name several at
+once -- \code{mode = c("all", "in", "out")} -- to get degree, in-degree and
+out-degree from a single call; the extra directions are then labelled
+\code{degree_in} and \code{degree_out} in the \code{measure} column, while a call naming
+one direction keeps the plain measure name. Applies to
 \code{"degree"}, \code{"strength"}, \code{"closeness"}, \code{"coreness"}, \code{"harary"} and
 \code{"eigenvector"}; the remaining measures have a single directional
 definition and ignore it. Ignored
@@ -63,7 +67,11 @@ built with.}
 
 \item{window}{How much time each measurement covers. Defaults to \code{step},
 which tiles the period into disjoint bins. A larger value slides an
-overlapping window; \code{0} samples the network at each point in time.}
+overlapping window; \code{0} samples the network at each point in time.
+\code{"all"} measures the whole observed period as one window, closed on the
+right so an event at the final instant is inside it; it cannot be combined
+with \code{step}, and under \code{sessions = "separate"} or discontinuous
+observation it gives one window per session or observed component.}
 
 \item{exponent}{Attenuation factor for Bonacich \code{"power"}. Positive rewards
 being connected to well-connected others; negative rewards the opposite,
@@ -278,8 +286,13 @@ dyn_centrality(dn, measure = "prestige",
                prestige = "eigenvector.colnorm")
 dyn_centrality(dn, measure = "prestige",
                prestige = "eigenvector.rowcolnorm")
-dyn_centrality(dn, measure = "closeness", scope = "temporal")
-dyn_centrality(dn, measure = "reach", scope = "temporal",
+# Temporal scope walks journeys between every ordered pair, so it costs far
+# more than a snapshot and grows steeply with the vertex count. Shown on a
+# subgraph so the example stays quick.
+few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
+                                     "Finn", "Gita", "Hugo"))
+dyn_centrality(few, measure = "closeness", scope = "temporal")
+dyn_centrality(few, measure = "reach", scope = "temporal",
                start = 0, end = 10)
 
 # A seven-day window, stepped one day at a time.

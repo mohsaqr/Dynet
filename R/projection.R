@@ -112,7 +112,12 @@
 #' @param step Spacing between slice starts. `NULL` uses the construction
 #'   interval.
 #' @param window Width represented by each slice. `NULL` uses `step`; zero
-#'   samples an exact point.
+#'   samples an exact point; `"all"` represents the whole observed period as a
+#'   single slice, closed on the right.
+#' @param omega Weight on the identity arcs that carry a vertex from one slice
+#'   to the next, that is, the interlayer coupling of the time-expanded
+#'   network. One keeps an identity arc as heavy as a unit contact; zero
+#'   leaves the slices uncoupled. Must be a single non-negative number.
 #'
 #' @return An object of class `dynet_projection`. Use
 #'   `as.data.frame(x, what = "vertices")` for vertex states and
@@ -138,9 +143,12 @@
 #' @export
 projection <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
-    start = NULL, end = NULL, step = NULL, window = NULL) {
+    start = NULL, end = NULL, step = NULL, window = NULL, omega = 1) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
+  .check("`omega` must be one non-negative number." =
+           length(omega) == 1L && is.numeric(omega) && is.finite(omega) &&
+           omega >= 0)
   spec <- .window_spec(dn, start, end, step, window)
   has_sessions <- !is.null(dn$meta$sessions)
   effective_sessions <- if (!has_sessions && identical(sessions, "bounded")) {
@@ -245,7 +253,8 @@ projection <- function(
           identity_rows[[identity_index]] <- .projection_edge_row(
             from_ids[[node]], to_ids[[node]], enc$names[[node]], enc$names[[node]],
             label, slice, slice + 1L, grid$time[[slice]],
-            grid$time[[slice + 1L]], "identity_arc", 1, 0L, session_blocks
+            grid$time[[slice + 1L]], "identity_arc", omega, 0L,
+            session_blocks
           )
         }
       }
