@@ -290,7 +290,8 @@ projection <- function(
       "snapshot_exact_induced"
     } else "snapshot_any_union_induced",
     identity_rule = "forward_unconditional_waiting_consecutive_slices",
-    identity_weight = 1,
+    omega = omega,
+    identity_weight = omega,
     undirected_rule = if (dn$directed) {
       "one_directed_arc_per_pair"
     } else "reciprocal_nonloop_arcs_loop_once",

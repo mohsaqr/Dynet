@@ -21,3 +21,7 @@ inst/reproduction/**/*.html
 *.Rcheck/
 .Rproj.user/
 .DS_Store
+
+# Stray plotting artifacts from running examples and tests
+Rplots.pdf
+tests/testthat/Rplots.pdf

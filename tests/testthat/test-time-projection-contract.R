@@ -70,7 +70,7 @@ test_that("E02 metadata and fixed accessor schemas are public", {
   expect_identical(names(projection$meta), c(
     "source_directed", "directed", "time_unit", "origin", "step", "window",
     "sessions", "n_nodes", "n_slices", "n_blocks", "vertex_rule",
-    "within_slice_rule", "identity_rule", "identity_weight",
+    "within_slice_rule", "identity_rule", "omega", "identity_weight",
     "undirected_rule", "observation_gap_waiting", "session_aggregation",
     "node_attribute_names", "node_attribute_renames"
   ))
@@ -323,4 +323,34 @@ test_that("E02 validates grids and preserves affine-time structure", {
                class = "dynet_outside_observation")
   expect_error(projection(base, sessions = "separate"),
                class = "dynet_no_sessions")
+})
+
+test_that("projection metadata reports the interlayer coupling it actually used", {
+  dn <- dynet(school_contacts, format = "contact")
+
+  # Regression: identity_weight was hard-coded to 1 while the arcs carried
+  # omega, so the metadata contradicted the data for every omega != 1. The
+  # earlier test could not catch it because it only ever used the default.
+  for (omega in c(1, 0.5, 0.37, 0)) {
+    p <- projection(dn, omega = omega)
+    arcs <- as.data.frame(p, what = "edges")
+    weights <- unique(arcs$weight[arcs$edge_type == "identity_arc"])
+
+    expect_identical(p$meta$omega, omega)
+    expect_identical(p$meta$identity_weight, omega)
+    expect_identical(weights, omega)
+  }
+})
+
+test_that("projection identity arcs join consecutive slices only", {
+  # Ordinal (chain) coupling, not categorical. cograph::supra_adjacency()
+  # couples every pair of layers, which is wrong for time; this is the
+  # property that makes projection() the right substrate for multislice work.
+  dn <- dynet(school_contacts, format = "contact")
+  arcs <- as.data.frame(projection(dn), what = "edges")
+  identity <- arcs[arcs$edge_type == "identity_arc", ]
+
+  expect_true(nrow(identity) > 0)
+  expect_identical(unique(identity$to_slice - identity$from_slice), 1L)
+  expect_true(all(identity$from_node == identity$to_node))
 })

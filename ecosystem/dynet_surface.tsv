@@ -1,0 +1,160 @@
+kind	item
+export	add_arcs
+export	add_nodes
+export	add_ties
+export	add_vertex_spells
+export	as_dynet
+export	burstiness
+export	clear_observations
+export	collapse_network
+export	durations
+export	dyn_centrality
+export	dyn_reachability
+export	dynet
+export	events
+export	induce_subgraph
+export	metrics
+export	mixing
+export	path_network
+export	path_trajectories
+export	paths
+export	plot_path_trajectories
+export	projection
+export	pshifts
+export	remove_arcs
+export	remove_nodes
+export	remove_ties
+export	remove_vertex_spells
+export	rename_nodes
+export	rename_sessions
+export	set_observations
+export	set_tie_sessions
+export	set_vertex_spells
+export	similarity
+export	snapshots
+export	update_nodes
+export	update_ties
+export	update_vertex_spells
+centrality (snapshot)	degree
+centrality (snapshot)	indegree
+centrality (snapshot)	outdegree
+centrality (snapshot)	strength
+centrality (snapshot)	prestige
+centrality (snapshot)	closeness
+centrality (snapshot)	betweenness
+centrality (snapshot)	eigenvector
+centrality (snapshot)	pagerank
+centrality (snapshot)	hub
+centrality (snapshot)	authority
+centrality (snapshot)	coreness
+centrality (snapshot)	constraint
+centrality (snapshot)	power
+centrality (snapshot)	harary
+centrality (snapshot)	information
+centrality (snapshot)	load
+centrality (snapshot)	flow_betweenness
+centrality (snapshot)	diffusion
+centrality (temporal)	closeness
+centrality (temporal)	betweenness
+centrality (temporal)	reach
+centrality (temporal)	reach_count
+prestige variant	indegree
+prestige variant	indegree.rownorm
+prestige variant	indegree.rowcolnorm
+prestige variant	domain
+prestige variant	domain.proximity
+prestige variant	eigenvector
+prestige variant	eigenvector.rownorm
+prestige variant	eigenvector.colnorm
+prestige variant	eigenvector.rowcolnorm
+graph metric	density
+graph metric	edges
+graph metric	active_nodes
+graph metric	isolates
+graph metric	transitivity
+graph metric	reciprocity
+graph metric	components
+graph metric	components_strong
+graph metric	largest_component
+graph metric	mean_distance
+graph metric	diameter
+graph metric	mutual
+graph metric	asymmetric
+graph metric	null
+graph metric	assortativity
+graph metric	centralization_degree
+graph metric	centralization_betweenness
+graph metric	centralization_closeness
+graph metric	triads
+graph metric	connectedness
+graph metric	efficiency
+graph metric	hierarchy
+graph metric	lubness
+graph metric	degree_mean
+graph metric	degree_variance
+graph metric	degree_min
+graph metric	degree_max
+graph metric	mean_degree
+graph metric	indegree_1_5
+graph metric	outdegree_1_5
+graph metric	triangles
+graph metric	concurrent_nodes
+graph metric	concurrent_share
+graph metric	in_2stars
+graph metric	out_2stars
+graph metric	two_paths
+graph metric	temporal_density
+graph metric	observed_pair_density
+graph metric	onset_intensity
+graph metric	observed_pair_onset_intensity
+input format	auto
+input format	interval
+input format	contact
+input format	threaded
+input format	copresence
+collapse weight	binary
+collapse weight	union_duration
+collapse weight	total_duration
+collapse weight	duration_fraction
+collapse weight	spell_count
+collapse weight	weight_sum
+collapse weight	weighted_duration
+collapse weight	latest_weight
+similarity method	jaccard
+similarity method	overlap
+similarity method	hamming
+similarity method	cosine
+similarity method	pearson
+plot type	timeline
+plot type	events
+plot type	activity
+plot type	network
+plot type	snapshots
+plot type	proximity
+plot type	layers
+plot type	heatmap
+plot type	stack
+duration unit	pair
+duration unit	spell
+duration unit	vertex_activity
+duration unit	vertex_spell
+duration unit	node_ties
+duration measure	events
+duration measure	total
+duration measure	mean
+burstiness measure	burstiness
+burstiness measure	memory
+burstiness measure	events
+events measure	formation
+events measure	dissolution
+session mode	bounded
+session mode	collapse
+session mode	separate
+path direction	forward
+path direction	backward
+path direction	both
+plot link style	hook
+plot link style	arc
+plot link style	chevron
+plot link style	wave
+plot link style	bracket

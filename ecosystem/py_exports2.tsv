@@ -1,0 +1,371 @@
+pkg	version	sub	fn	kind
+networkx_temporal	1.4.4		TemporalABC	class
+networkx_temporal	1.4.4		TemporalDiGraph	class
+networkx_temporal	1.4.4		TemporalGraph	class
+networkx_temporal	1.4.4		TemporalMultiDiGraph	class
+networkx_temporal	1.4.4		TemporalMultiGraph	class
+networkx_temporal	1.4.4		all_neighbors	function
+networkx_temporal	1.4.4		bridging_centrality	function
+networkx_temporal	1.4.4		brokering_centrality	function
+networkx_temporal	1.4.4		centralization	function
+networkx_temporal	1.4.4		collegemsg_graph	function
+networkx_temporal	1.4.4		combine_snapshots	function
+networkx_temporal	1.4.4		community_matrix_from_vector	function
+networkx_temporal	1.4.4		compose	function
+networkx_temporal	1.4.4		compose_all	function
+networkx_temporal	1.4.4		conductance	function
+networkx_temporal	1.4.4		convert	function
+networkx_temporal	1.4.4		create_empty_copy	function
+networkx_temporal	1.4.4		degree	function
+networkx_temporal	1.4.4		degree_centrality	function
+networkx_temporal	1.4.4		degree_centralization	function
+networkx_temporal	1.4.4		draw	function
+networkx_temporal	1.4.4		draw_networkx	function
+networkx_temporal	1.4.4		draw_networkx_edge_labels	function
+networkx_temporal	1.4.4		draw_networkx_edges	function
+networkx_temporal	1.4.4		draw_networkx_labels	function
+networkx_temporal	1.4.4		draw_networkx_nodes	function
+networkx_temporal	1.4.4		dynamic_sbm	function
+networkx_temporal	1.4.4		dynamic_stochastic_block_model	function
+networkx_temporal	1.4.4		edge_subgraph	function
+networkx_temporal	1.4.4		empty_graph	function
+networkx_temporal	1.4.4		example_sbm_graph	function
+networkx_temporal	1.4.4		fediverse_graph	function
+networkx_temporal	1.4.4		from_events	function
+networkx_temporal	1.4.4		from_multigraph	function
+networkx_temporal	1.4.4		from_numpy	function
+networkx_temporal	1.4.4		from_pandas	function
+networkx_temporal	1.4.4		from_scipy	function
+networkx_temporal	1.4.4		from_snapshots	function
+networkx_temporal	1.4.4		from_static	function
+networkx_temporal	1.4.4		from_unrolled	function
+networkx_temporal	1.4.4		generate_block_matrix	function
+networkx_temporal	1.4.4		generate_community_matrix	function
+networkx_temporal	1.4.4		generate_community_vector	function
+networkx_temporal	1.4.4		generate_degree_vector	function
+networkx_temporal	1.4.4		generate_transition_matrix	function
+networkx_temporal	1.4.4		get_edge_attributes	function
+networkx_temporal	1.4.4		get_node_attributes	function
+networkx_temporal	1.4.4		get_unique_edge_attributes	function
+networkx_temporal	1.4.4		get_unique_node_attributes	function
+networkx_temporal	1.4.4		in_degree	function
+networkx_temporal	1.4.4		in_degree_centrality	function
+networkx_temporal	1.4.4		in_degree_centralization	function
+networkx_temporal	1.4.4		is_events_graph	function
+networkx_temporal	1.4.4		is_events_multigraph	function
+networkx_temporal	1.4.4		is_frozen	function
+networkx_temporal	1.4.4		is_gpu_enabled	function
+networkx_temporal	1.4.4		is_static_graph	function
+networkx_temporal	1.4.4		is_temporal_graph	function
+networkx_temporal	1.4.4		is_unrolled_graph	function
+networkx_temporal	1.4.4		isolates	function
+networkx_temporal	1.4.4		layout	function
+networkx_temporal	1.4.4		leiden_communities	function
+networkx_temporal	1.4.4		leiden_multislice_gpu	function
+networkx_temporal	1.4.4		map_attr_to_edges	function
+networkx_temporal	1.4.4		map_attr_to_nodes	function
+networkx_temporal	1.4.4		map_edge_attr_to_nodes	function
+networkx_temporal	1.4.4		map_node_attr_to_edges	function
+networkx_temporal	1.4.4		map_partitions_to_edges	function
+networkx_temporal	1.4.4		map_partitions_to_nodes	function
+networkx_temporal	1.4.4		modularity	function
+networkx_temporal	1.4.4		modularity_multislice	function
+networkx_temporal	1.4.4		modularity_spectral	function
+networkx_temporal	1.4.4		neighbors	function
+networkx_temporal	1.4.4		out_degree	function
+networkx_temporal	1.4.4		out_degree_centrality	function
+networkx_temporal	1.4.4		out_degree_centralization	function
+networkx_temporal	1.4.4		partition_edges	function
+networkx_temporal	1.4.4		partition_nodes	function
+networkx_temporal	1.4.4		propagate_snapshots	function
+networkx_temporal	1.4.4		pubmed_graph	function
+networkx_temporal	1.4.4		read_graph	function
+networkx_temporal	1.4.4		relabel_nodes	function
+networkx_temporal	1.4.4		set_edge_attributes	function
+networkx_temporal	1.4.4		set_node_attributes	function
+networkx_temporal	1.4.4		spectral_clustering	function
+networkx_temporal	1.4.4		spectral_clustering_bethe_hessian	function
+networkx_temporal	1.4.4		spectral_clustering_laplacian	function
+networkx_temporal	1.4.4		spectral_clustering_modularity	function
+networkx_temporal	1.4.4		stochastic_block_model	function
+networkx_temporal	1.4.4		subgraph	function
+networkx_temporal	1.4.4		temporal_edge_similarity	function
+networkx_temporal	1.4.4		temporal_graph	function
+networkx_temporal	1.4.4		temporal_node_similarity	function
+networkx_temporal	1.4.4		to_adjacency_matrix	function
+networkx_temporal	1.4.4		to_cugraph	function
+networkx_temporal	1.4.4		to_cupy	function
+networkx_temporal	1.4.4		to_dgl	function
+networkx_temporal	1.4.4		to_dynetx	function
+networkx_temporal	1.4.4		to_events	function
+networkx_temporal	1.4.4		to_graph_tool	function
+networkx_temporal	1.4.4		to_igraph	function
+networkx_temporal	1.4.4		to_multigraph	function
+networkx_temporal	1.4.4		to_networkit	function
+networkx_temporal	1.4.4		to_numpy	function
+networkx_temporal	1.4.4		to_pandas	function
+networkx_temporal	1.4.4		to_scipy	function
+networkx_temporal	1.4.4		to_snap	function
+networkx_temporal	1.4.4		to_snapshots	function
+networkx_temporal	1.4.4		to_static	function
+networkx_temporal	1.4.4		to_stellargraph	function
+networkx_temporal	1.4.4		to_supra_adjacency_matrix	function
+networkx_temporal	1.4.4		to_teneto	function
+networkx_temporal	1.4.4		to_torch_geometric	function
+networkx_temporal	1.4.4		to_unrolled	function
+networkx_temporal	1.4.4		transition_node_memberships	function
+networkx_temporal	1.4.4		travian_graph	function
+networkx_temporal	1.4.4		unrolled_layout	function
+networkx_temporal	1.4.4		write_graph	function
+networkx_temporal	1.4.4	algorithms	NX_GPU_AUTOCONFIG	function
+networkx_temporal	1.4.4	algorithms	bridging_centrality	function
+networkx_temporal	1.4.4	algorithms	brokering_centrality	function
+networkx_temporal	1.4.4	algorithms	centralization	function
+networkx_temporal	1.4.4	algorithms	conductance	function
+networkx_temporal	1.4.4	algorithms	degree	function
+networkx_temporal	1.4.4	algorithms	degree_centrality	function
+networkx_temporal	1.4.4	algorithms	degree_centralization	function
+networkx_temporal	1.4.4	algorithms	in_degree	function
+networkx_temporal	1.4.4	algorithms	in_degree_centrality	function
+networkx_temporal	1.4.4	algorithms	in_degree_centralization	function
+networkx_temporal	1.4.4	algorithms	is_gpu_enabled	function
+networkx_temporal	1.4.4	algorithms	leiden_communities	function
+networkx_temporal	1.4.4	algorithms	leiden_multislice_gpu	function
+networkx_temporal	1.4.4	algorithms	modularity	function
+networkx_temporal	1.4.4	algorithms	modularity_multislice	function
+networkx_temporal	1.4.4	algorithms	modularity_spectral	function
+networkx_temporal	1.4.4	algorithms	out_degree	function
+networkx_temporal	1.4.4	algorithms	out_degree_centrality	function
+networkx_temporal	1.4.4	algorithms	out_degree_centralization	function
+networkx_temporal	1.4.4	algorithms	spectral_clustering	function
+networkx_temporal	1.4.4	algorithms	spectral_clustering_bethe_hessian	function
+networkx_temporal	1.4.4	algorithms	spectral_clustering_laplacian	function
+networkx_temporal	1.4.4	algorithms	spectral_clustering_modularity	function
+networkx_temporal	1.4.4	transform	from_events	function
+networkx_temporal	1.4.4	transform	from_snapshots	function
+networkx_temporal	1.4.4	transform	from_static	function
+networkx_temporal	1.4.4	transform	from_unrolled	function
+networkx_temporal	1.4.4	transform	to_events	function
+networkx_temporal	1.4.4	transform	to_snapshots	function
+networkx_temporal	1.4.4	transform	to_static	function
+networkx_temporal	1.4.4	transform	to_unrolled	function
+networkx_temporal	1.4.4	drawing	draw	function
+networkx_temporal	1.4.4	drawing	draw_networkx	function
+networkx_temporal	1.4.4	drawing	draw_networkx_edge_labels	function
+networkx_temporal	1.4.4	drawing	draw_networkx_edges	function
+networkx_temporal	1.4.4	drawing	draw_networkx_labels	function
+networkx_temporal	1.4.4	drawing	draw_networkx_nodes	function
+networkx_temporal	1.4.4	drawing	layout	function
+networkx_temporal	1.4.4	drawing	unrolled_layout	function
+networkx_temporal	1.4.4	generators	collegemsg_graph	function
+networkx_temporal	1.4.4	generators	community_matrix_from_vector	function
+networkx_temporal	1.4.4	generators	dynamic_sbm	function
+networkx_temporal	1.4.4	generators	dynamic_stochastic_block_model	function
+networkx_temporal	1.4.4	generators	example_sbm_graph	function
+networkx_temporal	1.4.4	generators	fediverse_graph	function
+networkx_temporal	1.4.4	generators	generate_block_matrix	function
+networkx_temporal	1.4.4	generators	generate_community_matrix	function
+networkx_temporal	1.4.4	generators	generate_community_vector	function
+networkx_temporal	1.4.4	generators	generate_degree_vector	function
+networkx_temporal	1.4.4	generators	generate_transition_matrix	function
+networkx_temporal	1.4.4	generators	pubmed_graph	function
+networkx_temporal	1.4.4	generators	stochastic_block_model	function
+networkx_temporal	1.4.4	generators	transition_node_memberships	function
+networkx_temporal	1.4.4	generators	travian_graph	function
+networkx_temporal	1.4.4	readwrite	read_graph	function
+networkx_temporal	1.4.4	readwrite	write_graph	function
+dynetworkx	?		ImpulseDiGraph	class
+dynetworkx	?		ImpulseGraph	class
+dynetworkx	?		IntervalDiGraph	class
+dynetworkx	?		IntervalGraph	class
+dynetworkx	?		SnapshotDiGraph	class
+dynetworkx	?		SnapshotGraph	class
+dynetworkx	?		count_temporal_motif	function
+dynetworkx	?	algorithms	count_temporal_motif	function
+tnetwork	?		ComScenario	class
+tnetwork	?		DCD_benchmark	function
+tnetwork	?		DynCommunitiesIG	class
+tnetwork	?		DynCommunitiesSN	class
+tnetwork	?		DynGraphIG	class
+tnetwork	?		DynGraphLS	class
+tnetwork	?		DynGraphSN	class
+tnetwork	?		Intervals	class
+tnetwork	?		MSSCD	function
+tnetwork	?		SM_L	function
+tnetwork	?		SM_N	function
+tnetwork	?		SM_P	function
+tnetwork	?		code_length_IG	function
+tnetwork	?		code_length_LS	function
+tnetwork	?		code_length_SN_E	function
+tnetwork	?		code_length_SN_M	function
+tnetwork	?		consecutive_sn_similarity	function
+tnetwork	?		entropy_by_node	function
+tnetwork	?		from_pandas_interaction_list	function
+tnetwork	?		generate_multi_temporal_scale	function
+tnetwork	?		generate_simple_random_graph	function
+tnetwork	?		generate_toy_random_network	function
+tnetwork	?		graph_GOT	function
+tnetwork	?		graph_socioPatterns2012	function
+tnetwork	?		graph_socioPatterns_Hospital	function
+tnetwork	?		graph_socioPatterns_Primary_School	function
+tnetwork	?		iterative_match	function
+tnetwork	?		label_smoothing	function
+tnetwork	?		longitudinal_similarity	function
+tnetwork	?		nb_node_change	function
+tnetwork	?		plot_as_graph	function
+tnetwork	?		plot_longitudinal	function
+tnetwork	?		quality_at_each_step	function
+tnetwork	?		read_LS	function
+tnetwork	?		read_SN_by_com	function
+tnetwork	?		read_interactions	function
+tnetwork	?		read_period_lists	function
+tnetwork	?		read_snapshots	function
+tnetwork	?		rollingCPM	function
+tnetwork	?		run_algos_on_graph	function
+tnetwork	?		similarity_at_each_step	function
+tnetwork	?		smoothed_graph	function
+tnetwork	?		smoothed_louvain	function
+tnetwork	?		write_IGC	function
+tnetwork	?		write_as_IG	function
+tnetwork	?		write_as_LS	function
+tnetwork	?		write_as_SN_E	function
+tnetwork	?		write_com_SN	function
+tnetwork	?		write_ordered_changes	function
+tnetwork	?		write_period_lists	function
+tnetwork	?		write_snapshots	function
+tnetwork	?		write_snapshots_single_file	function
+tnetwork	?	analytics	SM_L	function
+tnetwork	?	analytics	SM_N	function
+tnetwork	?	analytics	SM_P	function
+tnetwork	?	analytics	consecutive_sn_similarity	function
+tnetwork	?	analytics	entropy_by_node	function
+tnetwork	?	analytics	longitudinal_similarity	function
+tnetwork	?	analytics	nb_node_change	function
+tnetwork	?	analytics	quality_at_each_step	function
+tnetwork	?	analytics	similarity_at_each_step	function
+tnetwork	?	community	Community	class
+tnetwork	?	readwrite	from_pandas_interaction_list	function
+tnetwork	?	readwrite	read_LS	function
+tnetwork	?	readwrite	read_SN_by_com	function
+tnetwork	?	readwrite	read_interactions	function
+tnetwork	?	readwrite	read_period_lists	function
+tnetwork	?	readwrite	read_snapshots	function
+tnetwork	?	readwrite	write_IGC	function
+tnetwork	?	readwrite	write_as_IG	function
+tnetwork	?	readwrite	write_as_LS	function
+tnetwork	?	readwrite	write_as_SN_E	function
+tnetwork	?	readwrite	write_com_SN	function
+tnetwork	?	readwrite	write_ordered_changes	function
+tnetwork	?	readwrite	write_period_lists	function
+tnetwork	?	readwrite	write_snapshots	function
+tnetwork	?	readwrite	write_snapshots_single_file	function
+tnetwork	?	DCD	ComScenario	class
+tnetwork	?	DCD	DCD_benchmark	function
+tnetwork	?	DCD	MSSCD	function
+tnetwork	?	DCD	SM_L	function
+tnetwork	?	DCD	SM_N	function
+tnetwork	?	DCD	SM_P	function
+tnetwork	?	DCD	consecutive_sn_similarity	function
+tnetwork	?	DCD	entropy_by_node	function
+tnetwork	?	DCD	generate_multi_temporal_scale	function
+tnetwork	?	DCD	generate_simple_random_graph	function
+tnetwork	?	DCD	generate_toy_random_network	function
+tnetwork	?	DCD	iterative_match	function
+tnetwork	?	DCD	label_smoothing	function
+tnetwork	?	DCD	longitudinal_similarity	function
+tnetwork	?	DCD	nb_node_change	function
+tnetwork	?	DCD	quality_at_each_step	function
+tnetwork	?	DCD	rollingCPM	function
+tnetwork	?	DCD	run_algos_on_graph	function
+tnetwork	?	DCD	similarity_at_each_step	function
+tnetwork	?	DCD	smoothed_graph	function
+tnetwork	?	DCD	smoothed_louvain	function
+phasik	1.3.4		ClusterSet	class
+phasik	1.3.4		ClusterSets	class
+phasik	1.3.4		DistanceMatrix	class
+phasik	1.3.4		PartiallyTemporalNetwork	class
+phasik	1.3.4		TemporalData	class
+phasik	1.3.4		TemporalNetwork	class
+phasik	1.3.4		adjust_margin	function
+phasik	1.3.4		aggregate_network_by_cluster	function
+phasik	1.3.4		animate_temporal_network	function
+phasik	1.3.4		cluster_sort	function
+phasik	1.3.4		configure_sch_color_map	function
+phasik	1.3.4		convert_cluster_labels_to_dict	function
+phasik	1.3.4		convert_edge_timeseries_to_tedges	function
+phasik	1.3.4		convert_node_to_edge_timeseries	function
+phasik	1.3.4		display_name	function
+phasik	1.3.4		draw_graph	function
+phasik	1.3.4		get_extrema_of_binary_series	function
+phasik	1.3.4		graph_size_info	function
+phasik	1.3.4		highlight_subgraphs	function
+phasik	1.3.4		label_subplot_grid_with_shared_axes	function
+phasik	1.3.4		palette_20_ordered	function
+phasik	1.3.4		plot_average_silhouettes	function
+phasik	1.3.4		plot_cluster_set	function
+phasik	1.3.4		plot_cluster_sets	function
+phasik	1.3.4		plot_dendrogram	function
+phasik	1.3.4		plot_edge_series	function
+phasik	1.3.4		plot_events	function
+phasik	1.3.4		plot_interval	function
+phasik	1.3.4		plot_ns_clusters	function
+phasik	1.3.4		plot_phases	function
+phasik	1.3.4		plot_randindex_bars_over_methods_and_sizes	function
+phasik	1.3.4		rand_index_over_methods_and_sizes	function
+phasik	1.3.4		relabel_clusters_sorted	function
+phasik	1.3.4		relabel_clustersets	function
+phasik	1.3.4		relabel_clustersets_from_dict	function
+phasik	1.3.4		relabel_next_clusterset_sorted	function
+phasik	1.3.4		slugify	function
+phasik	1.3.4		standard_edge_params	function
+phasik	1.3.4		standard_label_params	function
+phasik	1.3.4		standard_node_params	function
+phasik	1.3.4		standard_params	function
+phasik	1.3.4		threshold_plot	function
+phasik	1.3.4		weighted_edges_as_df	function
+phasik	1.3.4	clustering	ClusterSet	class
+phasik	1.3.4	clustering	ClusterSets	class
+phasik	1.3.4	drawing	BoundaryNorm	class
+phasik	1.3.4	drawing	LineCollection	class
+phasik	1.3.4	drawing	ListedColormap	class
+phasik	1.3.4	drawing	get_extrema_of_binary_series	function
+phasik	1.3.4	drawing	plot_edge_series	function
+phasik	1.3.4	drawing	plot_events	function
+phasik	1.3.4	drawing	plot_interval	function
+phasik	1.3.4	drawing	plot_phases	function
+phasik	1.3.4	drawing	threshold_plot	function
+phasik	1.3.4	classes	ClusterSet	class
+phasik	1.3.4	classes	ClusterSets	class
+phasik	1.3.4	classes	DistanceMatrix	class
+phasik	1.3.4	classes	PartiallyTemporalNetwork	class
+phasik	1.3.4	classes	TemporalData	class
+phasik	1.3.4	classes	TemporalNetwork	class
+tgx	?		Graph	class
+tgx	?		TEA	function
+tgx	?		TET	function
+tgx	?		builtin	class
+tgx	?		connected_components_per_ts	function
+tgx	?		degree_density	function
+tgx	?		degree_over_time	function
+tgx	?		discretize_edges	function
+tgx	?		edges_over_time	function
+tgx	?		frequency_count	function
+tgx	?		get_avg_degree	function
+tgx	?		get_avg_e_per_ts	function
+tgx	?		get_avg_node_activity	function
+tgx	?		get_avg_node_engagement	function
+tgx	?		get_novelty	function
+tgx	?		get_num_timestamps	function
+tgx	?		get_num_unique_edges	function
+tgx	?		get_reoccurrence	function
+tgx	?		get_surprise	function
+tgx	?		is_discretized	function
+tgx	?		node_list	function
+tgx	?		nodes_and_edges_over_time	function
+tgx	?		nodes_over_time	function
+tgx	?		read_csv	function
+tgx	?		size_connected_components	function
+tgx	?		subsampling	function
+tgx	?		tgb_data	class
+tgx	?		train_test_split	function
+tgx	?		write_csv	function

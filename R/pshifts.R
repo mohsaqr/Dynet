@@ -139,7 +139,13 @@
 #'   sequence and never uses a predecessor outside the range.
 #' @param group_events Infer one group-directed turn from simultaneous distinct
 #'   recipients, or retain every dyadic row.
-#' @return A `dynet_pshifts` data frame with the thirteen fixed classes.
+#' @return A `dynet_pshifts` data frame with the thirteen fixed classes,
+#'   carrying columns `shift`, `family`, `measure` and `value` — the same
+#'   `measure`/`value` pair every other measurement verb returns, so a
+#'   participation-shift census composes with the verbs that consume one.
+#'   `measure` is the constant `"count"`; `value` is the integer count.
+#'   `output = "cumulative"` prepends the turn columns; `sessions =
+#'   "separate"` prepends `session`.
 #' @details Only uncensored raw spell onsets inside the observed query and
 #' observation components are turns; duration, weights, fragments and
 #' terminus censoring are ignored. Consecutive turns are classified using
@@ -186,13 +192,13 @@ pshifts <- function(
   if (identical(output, "final")) {
     out <- data.frame(
       shift = .pshift_labels, family = .pshift_families,
-      count = as.integer(counts), stringsAsFactors = FALSE
+      measure = "count", value = as.integer(counts), stringsAsFactors = FALSE
     )
     if (identical(sessions, "separate")) {
       rows <- lapply(names(sequences), function(label) {
         data.frame(session = label, shift = .pshift_labels,
-                   family = .pshift_families,
-                   count = as.integer(sequences[[label]]$counts),
+                   family = .pshift_families, measure = "count",
+                   value = as.integer(sequences[[label]]$counts),
                    stringsAsFactors = FALSE)
       })
       out <- do.call(rbind, rows)
@@ -217,8 +223,8 @@ pshifts <- function(
             dn$nodes$name[[state$turn$target]]
           },
           group = state$turn$group, shift = .pshift_labels,
-          family = .pshift_families, count = as.integer(shown_counts),
-          stringsAsFactors = FALSE
+          family = .pshift_families, measure = "count",
+          value = as.integer(shown_counts), stringsAsFactors = FALSE
         )
       }))
       if (!identical(sessions, "separate")) {
@@ -234,7 +240,7 @@ pshifts <- function(
         session = character(), sequence = integer(), event = integer(),
         time = numeric(), speaker = character(), target = character(),
         group = logical(), shift = character(), family = character(),
-        count = integer(), stringsAsFactors = FALSE
+        measure = character(), value = integer(), stringsAsFactors = FALSE
       )
       if (!identical(sessions, "separate")) out$session <- NULL
     }

@@ -95,15 +95,15 @@ test_that("E01 literal session ledger yields one of every class", {
   )
   separate <- pshifts(dn, sessions = "separate")
   expect_s3_class(separate, "dynet_pshifts")
-  expect_identical(names(separate), c("session", "shift", "family", "count"))
+  expect_identical(names(separate), c("session", "shift", "family", "measure", "value"))
   expect_identical(separate$shift, rep(.ps_labels, 13L))
   expect_identical(separate$family, rep(.ps_families, 13L))
   for (i in seq_len(13L)) {
     block <- separate[separate$session == sprintf("s%02d", i), ]
-    expect_identical(block$count, as.integer(seq_len(13L) == i))
+    expect_identical(block$value, as.integer(seq_len(13L) == i))
   }
   bounded <- pshifts(dn, sessions = "bounded")
-  expect_identical(bounded$count, rep(1L, 13L))
+  expect_identical(bounded$value, rep(1L, 13L))
 })
 
 test_that("E01 cumulative output uses public labels and terminal class state", {
@@ -117,17 +117,17 @@ test_that("E01 cumulative output uses public labels and terminal class state", {
   expect_identical(
     names(cumulative),
     c("sequence", "event", "time", "speaker", "target", "group",
-      "shift", "family", "count")
+      "shift", "family", "measure", "value")
   )
   expect_identical(nrow(cumulative), 26L)
   expect_identical(cumulative$speaker, rep(c("A", "B"), each = 13L))
   expect_identical(cumulative$target, rep(c("B", "A"), each = 13L))
   expect_type(cumulative$speaker, "character")
   expect_type(cumulative$target, "character")
-  expect_identical(cumulative$count[1:13], integer(13L))
-  expect_identical(cumulative$count[14:26], c(1L, integer(12L)))
+  expect_identical(cumulative$value[1:13], integer(13L))
+  expect_identical(cumulative$value[14:26], c(1L, integer(12L)))
   terminal <- cumulative[cumulative$event == max(cumulative$event), ]
-  expect_identical(terminal$count, pshifts(dn)$count)
+  expect_identical(terminal$value, pshifts(dn)$value)
 
   group <- quiet_dynet(
     data.frame(
@@ -151,22 +151,22 @@ test_that("E01 simultaneous inference differs from repeated dyads and opt-out", 
     group_edges, observation_start = 0, observation_end = 3
   )
   inferred <- pshifts(group_dn)
-  expect_identical(inferred$count, as.integer(seq_len(13L) == 2L))
+  expect_identical(inferred$value, as.integer(seq_len(13L) == 2L))
   opt_out <- pshifts(group_dn, group_events = "none")
   expected <- integer(13L)
   expected[c(3L, 13L)] <- 1L
-  expect_identical(opt_out$count, expected)
+  expect_identical(opt_out$value, expected)
 
   duplicate <- transform(group_edges, to = c("B", "C", "C"))
   repeated <- pshifts(quiet_dynet(
     duplicate, observation_start = 0, observation_end = 3
   ))
-  expect_identical(repeated$count, as.integer(seq_len(13L) == 3L))
+  expect_identical(repeated$value, as.integer(seq_len(13L) == 3L))
 
   permuted <- quiet_dynet(
     group_edges[c(3, 1, 2), ], observation_start = 0, observation_end = 3
   )
-  expect_identical(pshifts(permuted)$count, inferred$count)
+  expect_identical(pshifts(permuted)$value, inferred$value)
 
   tied <- data.frame(
     from = c("C", "A"), to = c("D", "B"),
@@ -174,11 +174,11 @@ test_that("E01 simultaneous inference differs from repeated dyads and opt-out", 
   )
   tied_dn <- quiet_dynet(tied, observation_start = 0, observation_end = 2)
   tied_expected <- as.integer(seq_len(13L) == 10L)
-  expect_identical(pshifts(tied_dn)$count, tied_expected)
+  expect_identical(pshifts(tied_dn)$value, tied_expected)
   expect_identical(
     pshifts(quiet_dynet(
       tied[2:1, ], observation_start = 0, observation_end = 2
-    ))$count,
+    ))$value,
     tied_expected
   )
 })
@@ -190,7 +190,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 6), end = c(1, 6)
     ), observation_spells = data.frame(start = c(0, 5), end = c(2, 7))
   )
-  expect_identical(pshifts(gap)$count, integer(13L))
+  expect_identical(pshifts(gap)$value, integer(13L))
   gap_cumulative <- pshifts(gap, output = "cumulative")
   expect_identical(unique(gap_cumulative$sequence), 1:2)
 
@@ -201,12 +201,12 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
     ), observation_spells = data.frame(start = c(0, 5), end = c(3, 8))
   )
   within_final <- pshifts(within_components)
-  expect_identical(within_final$count, c(2L, integer(12L)))
+  expect_identical(within_final$value, c(2L, integer(12L)))
   within_cumulative <- pshifts(within_components, output = "cumulative")
   expect_identical(unique(within_cumulative$sequence), 1:2)
   terminal <- within_cumulative[
     within_cumulative$sequence == 2L & within_cumulative$event == 2L, ]
-  expect_identical(terminal$count, within_final$count)
+  expect_identical(terminal$value, within_final$value)
 
   point_components <- quiet_dynet(
     data.frame(
@@ -214,7 +214,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 3), end = c(1, 3)
     ), observation_spells = data.frame(start = c(1, 3), end = c(1, 3))
   )
-  expect_identical(pshifts(point_components)$count, integer(13L))
+  expect_identical(pshifts(point_components)$value, integer(13L))
 
   closed_endpoint <- quiet_dynet(
     data.frame(
@@ -224,7 +224,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
   )
   endpoint_expected <- integer(13L)
   endpoint_expected[c(3L, 8L)] <- 1L
-  expect_identical(pshifts(closed_endpoint)$count, endpoint_expected)
+  expect_identical(pshifts(closed_endpoint)$value, endpoint_expected)
 
   range_dn <- quiet_dynet(
     data.frame(
@@ -232,8 +232,8 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 2), end = c(1, 2)
     ), observation_start = 0, observation_end = 3
   )
-  expect_identical(pshifts(range_dn)$count, c(1L, integer(12L)))
-  expect_identical(pshifts(range_dn, start = 2)$count, integer(13L))
+  expect_identical(pshifts(range_dn)$value, c(1L, integer(12L)))
+  expect_identical(pshifts(range_dn, start = 2)$value, integer(13L))
 
   loop <- quiet_dynet(
     data.frame(
@@ -241,7 +241,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = 1:3, end = 1:3
     ), loops = TRUE, observation_start = 0, observation_end = 4
   )
-  expect_identical(pshifts(loop)$count, integer(13L))
+  expect_identical(pshifts(loop)$value, integer(13L))
 
   loop_with_group <- quiet_dynet(
     data.frame(
@@ -249,7 +249,7 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
       start = c(1, 2, 2, 2), end = c(1, 2, 2, 2)
     ), loops = TRUE, observation_start = 0, observation_end = 3
   )
-  expect_identical(pshifts(loop_with_group)$count, integer(13L))
+  expect_identical(pshifts(loop_with_group)$value, integer(13L))
 
   session_edges <- data.frame(
     from = c("A", "B"), to = c("B", "A"),
@@ -259,12 +259,12 @@ test_that("E01 observation components, queries, loops, and sessions are walls", 
     session_edges, session = "session",
     observation_start = 0, observation_end = 3
   )
-  expect_identical(pshifts(session_dn, sessions = "collapse")$count,
+  expect_identical(pshifts(session_dn, sessions = "collapse")$value,
                    c(1L, integer(12L)))
-  expect_identical(pshifts(session_dn, sessions = "bounded")$count,
+  expect_identical(pshifts(session_dn, sessions = "bounded")$value,
                    integer(13L))
   separate <- pshifts(session_dn, sessions = "separate")
-  expect_true(all(separate$count == 0L))
+  expect_true(all(separate$value == 0L))
 })
 
 test_that("E01 raw-onset identity honors censoring but ignores other spell fields", {
@@ -278,13 +278,13 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
     edges, weight = "weight", onset_censored = "left",
     terminus_censored = "right", observation_start = 0, observation_end = 10
   )
-  expect_identical(pshifts(dn)$count, c(1L, integer(12L)))
+  expect_identical(pshifts(dn)$value, c(1L, integer(12L)))
   changed <- transform(edges, end = start + 1, weight = c(1, 1, 1))
   changed_dn <- quiet_dynet(
     changed, weight = "weight", onset_censored = "left",
     terminus_censored = "right", observation_start = 0, observation_end = 10
   )
-  expect_identical(pshifts(changed_dn)$count, pshifts(dn)$count)
+  expect_identical(pshifts(changed_dn)$value, pshifts(dn)$value)
 
   translated <- transform(edges, start = start + 20, end = end + 20)
   translated_dn <- quiet_dynet(
@@ -298,8 +298,8 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
     terminus_censored = "right", observation_start = 0,
     observation_end = 50
   )
-  expect_identical(pshifts(translated_dn)$count, pshifts(dn)$count)
-  expect_identical(pshifts(scaled_dn)$count, pshifts(dn)$count)
+  expect_identical(pshifts(translated_dn)$value, pshifts(dn)$value)
+  expect_identical(pshifts(scaled_dn)$value, pshifts(dn)$value)
 
   contacts <- quiet_dynet(
     data.frame(from = c("A", "B"), to = c("B", "A"), time = c(1, 2)),
@@ -317,9 +317,9 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
       thread = c("x", "x")
     ), thread = "thread", observation_start = 0, observation_end = 3
   )
-  expect_identical(pshifts(contacts)$count, c(1L, integer(12L)))
-  expect_identical(pshifts(intervals)$count, pshifts(contacts)$count)
-  expect_identical(pshifts(threaded)$count, pshifts(contacts)$count)
+  expect_identical(pshifts(contacts)$value, c(1L, integer(12L)))
+  expect_identical(pshifts(intervals)$value, pshifts(contacts)$value)
+  expect_identical(pshifts(threaded)$value, pshifts(contacts)$value)
 })
 
 test_that("E01 empty and singleton outputs preserve fixed public schemas", {
@@ -330,18 +330,18 @@ test_that("E01 empty and singleton outputs preserve fixed public schemas", {
   final <- pshifts(one)
   expect_identical(final$shift, .ps_labels)
   expect_identical(final$family, .ps_families)
-  expect_identical(final$count, integer(13L))
+  expect_identical(final$value, integer(13L))
 
   empty <- pshifts(one, output = "cumulative", start = 2, end = 2)
   expect_identical(
     names(empty),
     c("sequence", "event", "time", "speaker", "target", "group",
-      "shift", "family", "count")
+      "shift", "family", "measure", "value")
   )
   expect_identical(nrow(empty), 0L)
   expect_type(empty$speaker, "character")
   expect_type(empty$target, "character")
-  expect_type(empty$count, "integer")
+  expect_type(empty$value, "integer")
 })
 
 test_that("E01 metadata, errors, and fixed output labels are explicit", {
@@ -369,4 +369,46 @@ test_that("E01 metadata, errors, and fixed output labels are explicit", {
   expect_error(pshifts(undirected), class = "dynet_bad_input")
   expect_error(pshifts(dn, output = "bad"))
   expect_error(pshifts(dn, group_events = "bad"))
+})
+
+test_that("pshifts returns the measure/value pair every measurement verb shares", {
+  dn <- dynet(school_contacts, format = "contact")
+  out <- pshifts(dn)
+
+  # Contract: pshifts() was the only measurement verb returning `count`
+  # instead of `measure`/`value`, which excluded it from any verb that
+  # consumes a measure generically.
+  expect_true(all(c("measure", "value") %in% names(out)))
+  expect_false("count" %in% names(out))
+  expect_identical(unique(out$measure), "count")
+  expect_type(out$value, "integer")
+  expect_identical(nrow(out), 13L)
+
+  # The rename changed no number: verified total on school_contacts.
+  expect_identical(sum(out$value), 235L)
+})
+
+test_that("every measurement verb agrees on the measure/value column pair", {
+  dn <- dynet(school_contacts, format = "contact")
+  # school_contacts carries no node attributes, so mixing() needs its own
+  # network rather than a guessed column name.
+  grouped <- dynet(
+    data.frame(from = c("A", "B", "C"), to = c("B", "C", "A"), time = c(0, 1, 2)),
+    format = "contact",
+    nodes = data.frame(name = c("A", "B", "C"), team = c("x", "x", "y"))
+  )
+  results <- list(
+    metrics        = metrics(dn),
+    dyn_centrality = dyn_centrality(dn),
+    events         = events(dn),
+    burstiness     = burstiness(dn),
+    durations      = durations(dn),
+    mixing         = mixing(grouped, attribute = "team"),
+    similarity     = similarity(dn),
+    pshifts        = pshifts(dn)
+  )
+  for (nm in names(results)) {
+    expect_true(all(c("measure", "value") %in% names(as.data.frame(results[[nm]]))),
+                info = nm)
+  }
 })

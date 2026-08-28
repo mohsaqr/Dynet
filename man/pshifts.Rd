@@ -27,7 +27,12 @@ sequence and never uses a predecessor outside the range.}
 recipients, or retain every dyadic row.}
 }
 \value{
-A \code{dynet_pshifts} data frame with the thirteen fixed classes.
+A \code{dynet_pshifts} data frame with the thirteen fixed classes,
+carrying columns \code{shift}, \code{family}, \code{measure} and \code{value} — the same
+\code{measure}/\code{value} pair every other measurement verb returns, so a
+participation-shift census composes with the verbs that consume one.
+\code{measure} is the constant \code{"count"}; \code{value} is the integer count.
+\code{output = "cumulative"} prepends the turn columns; \code{sessions = "separate"} prepends \code{session}.
 }
 \description{
 Gibson participation shifts from raw temporal turns
