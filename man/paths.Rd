@@ -9,6 +9,7 @@ paths(
   from,
   at = NULL,
   direction = c("forward", "backward"),
+  criterion = c("foremost_then_shortest", "min_hops"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
@@ -27,6 +28,13 @@ scale. It cannot be combined with \code{start} or \code{end}.}
 
 \item{direction}{\code{"forward"} traces where the vertex can reach;
 \code{"backward"} traces who could have reached it.}
+
+\item{criterion}{Which optimisation problem to solve.
+\code{"foremost_then_shortest"} (the default, and what every earlier release
+computed) takes the earliest arrival and, among journeys attaining it, the
+fewest hops. \code{"min_hops"} takes the fewest time-respecting contacts and,
+among those, the earliest arrival. These are different problems and can
+select different journeys; only reachability is identical under both.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 

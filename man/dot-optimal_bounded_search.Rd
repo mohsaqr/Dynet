@@ -15,7 +15,8 @@
   upper = Inf,
   traversal_time = 0,
   activity_mode = c("collapse", "separate"),
-  activity_session = NULL
+  activity_session = NULL,
+  criterion = "foremost_then_shortest"
 )
 }
 \arguments{

@@ -436,7 +436,8 @@
 .optimal_path_search <- function(enc, source, origin,
                                  direction = c("forward", "backward"),
                                  lower = -Inf, upper = Inf,
-                                 traversal_time = 0) {
+                                 traversal_time = 0,
+                                 criterion = "foremost_then_shortest") {
   direction <- match.arg(direction)
   atoms <- .canonical_path_atoms(enc)
   domains <- .path_entry_domains(atoms, traversal_time)
@@ -547,7 +548,7 @@
                  hops = hops, count = count,
                  pred_state = pred_state, pred_atom = pred_atom)
   )
-  .finalize_optimal_search(search)
+  .finalize_optimal_search(search, criterion)
 }
 
 #' Select each endpoint's shortest-foremost state family
@@ -559,21 +560,31 @@
 #' raw <- Dynet:::.optimal_path_search(enc, 1L, 0, upper = 10)
 #' Dynet:::.finalize_optimal_search(raw)
 #' @keywords internal
-.finalize_optimal_search <- function(search) {
+
+.finalize_optimal_search <- function(search,
+                                     criterion = "foremost_then_shortest") {
+  rule <- .criterion_select(criterion)
   state <- search$state
   n <- search$n
   forward <- identical(search$direction, "forward")
   arrival <- rep(if (forward) Inf else -Inf, n)
   attained <- rep(FALSE, n)
   n_hops <- rep(NA_integer_, n)
+  path_cost <- rep(NA_real_, n)
   n_paths <- rep(0, n)
   selected_states <- vector("list", n)
   for (endpoint in seq_len(n)) {
     ids <- which(state$vertex == endpoint)
     if (length(ids) == 0L) next
-    best <- if (forward) min(state$time[ids]) else max(state$time[ids])
-    ids <- ids[state$time[ids] == best]
-    arrival[[endpoint]] <- best
+    # The primary key is whatever this criterion optimises. Only `time` is
+    # direction-sensitive: a backward search maximises departure.
+    primary <- state[[rule$primary]][ids]
+    take_max <- forward == FALSE && identical(rule$primary, "time")
+    best <- if (take_max) max(primary) else min(primary)
+    ids <- ids[primary == best]
+    arrival[[endpoint]] <- if (identical(rule$primary, "time")) {
+      best
+    } else if (forward) min(state$time[ids]) else max(state$time[ids])
     if (!forward) {
       has_optimum <- any(state$attained[ids])
       attained[[endpoint]] <- has_optimum
@@ -582,9 +593,14 @@
     } else {
       attained[[endpoint]] <- TRUE
     }
-    best_hops <- min(state$hops[ids])
-    ids <- ids[state$hops[ids] == best_hops]
-    n_hops[[endpoint]] <- best_hops
+    secondary <- state[[rule$secondary]][ids]
+    take_max2 <- forward == FALSE && identical(rule$secondary, "time")
+    best2 <- if (take_max2) max(secondary) else min(secondary)
+    ids <- ids[secondary == best2]
+    n_hops[[endpoint]] <- min(state$hops[ids])
+    path_cost[[endpoint]] <- if (identical(rule$cost, "hops")) {
+      n_hops[[endpoint]]
+    } else arrival[[endpoint]]
     n_paths[[endpoint]] <- Reduce(
       .path_count_add, state$count[ids], init = 0
     )
@@ -593,9 +609,33 @@
   search$arrival <- arrival
   search$attained <- attained
   search$n_hops <- n_hops
+  search$path_cost <- path_cost
   search$n_paths <- n_paths
+  search$criterion <- criterion
   search$selected_states <- selected_states
   search
+}
+
+#' The optimal-family selection rule for one criterion
+#'
+#' Each criterion is a different optimisation problem over the same feasible
+#' journey set, so it selects a different family of optimal journeys and can
+#' report a different answer. This returns the primary key to optimise and the
+#' tie-break applied within it.
+#'
+#' @param criterion One of `"foremost_then_shortest"` or `"min_hops"`.
+#' @return A list with `primary` and `secondary`, each naming a state field and
+#'   a direction, plus `cost` naming the field the criterion optimised.
+#' @keywords internal
+.criterion_select <- function(criterion) {
+  switch(criterion,
+    foremost_then_shortest = list(primary = "time", secondary = "hops",
+                                  cost = "time"),
+    min_hops = list(primary = "hops", secondary = "time", cost = "hops"),
+    stop(errorCondition(sprintf("Unknown path criterion %s.",
+                                sQuote(criterion)),
+                        class = "dynet_bad_input", call = NULL))
+  )
 }
 
 #' Run an optimal path search with optional session walls
@@ -619,7 +659,8 @@
                                     bounded, lower = -Inf, upper = Inf,
                                     traversal_time = 0,
                                     activity_mode = c("collapse", "separate"),
-                                    activity_session = NULL) {
+                                    activity_session = NULL,
+                                    criterion = "foremost_then_shortest") {
   activity_mode <- match.arg(activity_mode)
   run <- function(sub, session = activity_session,
                   erase_sessions = identical(activity_mode, "collapse")) {
@@ -627,7 +668,7 @@
       dn, sub, session = session, erase_sessions = erase_sessions
     )
     .optimal_path_search(
-    sub, source, origin, direction, lower, upper, traversal_time
+    sub, source, origin, direction, lower, upper, traversal_time, criterion
     )
   }
   if (!bounded || is.null(dn$meta$sessions)) return(run(enc))
@@ -1424,6 +1465,12 @@
 #'   Defaults to the start of the observation window for forward paths and its
 #'   end for backward paths. Date and date-time values use the network's time
 #'   scale. It cannot be combined with `start` or `end`.
+#' @param criterion Which optimisation problem to solve.
+#'   `"foremost_then_shortest"` (the default, and what every earlier release
+#'   computed) takes the earliest arrival and, among journeys attaining it, the
+#'   fewest hops. `"min_hops"` takes the fewest time-respecting contacts and,
+#'   among those, the earliest arrival. These are different problems and can
+#'   select different journeys; only reachability is identical under both.
 #' @param direction `"forward"` traces where the vertex can reach;
 #'   `"backward"` traces who could have reached it.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
@@ -1522,11 +1569,13 @@
 #' @export
 paths <- function(dn, from, at = NULL,
                       direction = c("forward", "backward"),
+                      criterion = c("foremost_then_shortest", "min_hops"),
                       sessions = c("bounded", "collapse", "separate"),
                       start = NULL, end = NULL, traversal_time = 0) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
+  criterion <- match.arg(criterion)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   .check("`from` must be a single vertex name." =
               length(from) == 1L && !is.na(from))
@@ -1561,7 +1610,7 @@ paths <- function(dn, from, at = NULL,
         dn, enc, src, origin, direction, FALSE,
         lower = window$start, upper = window$end,
         traversal_time = traversal_time, activity_mode = "separate",
-        activity_session = label
+        activity_session = label, criterion = criterion
       )
       list(
         paths = .optimal_paths_table(search, "separate", label),
@@ -1592,7 +1641,8 @@ paths <- function(dn, from, at = NULL,
     search <- .optimal_bounded_search(
       dn, enc, src, origin, direction, bounded,
       lower = window$start, upper = window$end,
-      traversal_time = traversal_time, activity_mode = "collapse"
+      traversal_time = traversal_time, activity_mode = "collapse",
+      criterion = criterion
     )
     path_mode <- if (bounded) "bounded" else "collapse"
     out <- .optimal_paths_table(search, path_mode)
@@ -1605,7 +1655,7 @@ paths <- function(dn, from, at = NULL,
                       source = base_enc$names[src], direction = direction,
                       origin = origins, time_unit = dn$meta$time_unit,
                       traversal_time = traversal_time,
-                      criterion = "foremost_then_shortest",
+                      criterion = criterion,
                       path_mode = path_mode, optimal_search = search_descriptor,
                       tree_previous = tree_previous)
   .vertex_path_metadata(result, path_mode)

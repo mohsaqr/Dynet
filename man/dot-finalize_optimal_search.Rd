@@ -4,7 +4,7 @@
 \alias{.finalize_optimal_search}
 \title{Select each endpoint's shortest-foremost state family}
 \usage{
-.finalize_optimal_search(search)
+.finalize_optimal_search(search, criterion = "foremost_then_shortest")
 }
 \arguments{
 \item{search}{Raw state-DAG search.}

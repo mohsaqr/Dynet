@@ -11,7 +11,8 @@
   direction = c("forward", "backward"),
   lower = -Inf,
   upper = Inf,
-  traversal_time = 0
+  traversal_time = 0,
+  criterion = "foremost_then_shortest"
 )
 }
 \arguments{
