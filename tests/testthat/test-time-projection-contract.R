@@ -100,6 +100,33 @@ test_that("E02 metadata and fixed accessor schemas are public", {
   expect_error(as.data.frame(projection, what = "bad"))
 })
 
+test_that("E02 reported identity weight equals the weight actually carried", {
+  # Invariant: the metadata is a description of the object, so meta$identity_weight
+  # must agree with the weight on every identity arc, at every omega -- not only
+  # at the default. Regression: it was hardcoded to 1 while the arcs took omega.
+  dn <- quiet_dynet(
+    data.frame(from = c("A", "B"), to = c("B", "C"), start = c(0, 1),
+               end = c(1, 2)),
+    observation_start = 0, observation_end = 2
+  )
+  reported_vs_carried <- function(omega) {
+    p <- projection(dn, step = 1, window = 1, omega = omega)
+    edges <- as.data.frame(p, what = "edges")
+    carried <- unique(edges$weight[edges$edge_type == "identity_arc"])
+    list(reported = p$meta$identity_weight, carried = carried)
+  }
+  # omega = 0 is the boundary the multislice literature actually uses: it must
+  # report 0, not silently claim the default coupling.
+  lapply(c(0, 1, 2.5, 7), function(omega) {
+    seen <- reported_vs_carried(omega)
+    expect_identical(seen$reported, omega)
+    expect_identical(seen$carried, omega)
+  })
+
+  expect_error(projection(dn, step = 1, window = 1, omega = -1),
+               class = "dynet_bad_input")
+})
+
 test_that("E02 point membership uses later interior and closed final slices", {
   dn <- quiet_dynet(
     data.frame(
