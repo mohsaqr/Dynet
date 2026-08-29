@@ -34,10 +34,26 @@ and \code{"separate"} returns one collapsed cograph network per session.}
 censor flag are included.}
 }
 \value{
-A \code{dynet_collapsed} cograph netobject. With
-\code{sessions = "separate"}, a named \code{dynet_collapsed_list} of such objects.
-Edge data include \code{activity.duration} and \code{activity.count} aliases for
-compatibility with \code{networkDynamic::network.collapse()}.
+A \code{dynet_collapsed} cograph netobject, whose two tidy tables are
+reached with \code{as.data.frame(x, what = "edges")} and
+\code{as.data.frame(x, what = "nodes")}. With \code{sessions = "separate"}, a named
+\code{dynet_collapsed_list} of such objects, one per session.
+
+The edge table carries one row per collapsed pair and every weighting at
+once, so choosing one does not discard the others: \code{from}, \code{to},
+\code{binary} (1 for a pair that was ever active), \code{union_duration} (time the
+pair was active, overlaps counted once), \code{total_duration} (summed spell
+lengths, overlaps counted twice), \code{duration_fraction} (\code{union_duration}
+over the pair's joint activity opportunity, \code{NA} when that opportunity is
+zero), \code{spell_count}, \code{weight_sum}, \code{weighted_duration} (weight times
+duration, summed), \code{latest_weight} (the weight of the last spell to end),
+\code{first} and \code{last} (the pair's earliest onset and latest terminus), and
+the \code{activity.duration} and \code{activity.count} aliases for compatibility
+with \code{networkDynamic::network.collapse()}.
+
+The node table carries one row per vertex, with \code{name},
+\code{activity_duration} (time the vertex was active, overlaps counted once)
+and its \code{activity.duration} alias.
 }
 \description{
 Creates a static cograph network from the exact observed, endpoint-valid

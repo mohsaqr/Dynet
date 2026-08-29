@@ -29,8 +29,10 @@
 #'   itself says nothing.
 #' @return A `dynet_similarity` data frame with one row per ordered pair of
 #'   time bins and columns `time`, `other`, `measure` and `value`. The
-#'   diagonal is included and equals one for every coefficient except
+#'   diagonal is included and is one for every coefficient except
 #'   `"hamming"`, where identical layers differ in nothing and score zero.
+#'   `"pearson"` reaches one only to floating-point accuracy, so compare it
+#'   with a tolerance rather than with `==`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' similarity(dn)

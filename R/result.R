@@ -6,16 +6,18 @@
 #'
 #' @param df Long data frame with `measure` and `value` and, depending on
 #'   `level`, `time`, `node`, `session` or edge endpoints.
-#' @param level One of `"node"`, `"graph"`, `"edge"` or `"path"`.
+#' @param level One of `"node"`, `"graph"` or `"edge"`, naming what a row is
+#'   about. Only these three are produced; the value is carried on the result
+#'   and read back by the print, summary and plot methods.
 #' @param what Short human name of the quantity, used in printing.
 #' @param dn The network the measure came from.
 #' @param note Optional single line shown under the header.
-#' @param spec The resolved measurement grid from [.window_spec()], when the
+#' @param spec The resolved measurement grid from `.window_spec()`, when the
 #'   measure was taken on one.
 #' @param mode The direction convention used, when it applied.
 #' @param traversal_time Per-hop traversal duration for temporal paths.
 #' @return An object of class `c("dynet_metric", "data.frame")`.
-#' @keywords internal
+#' @noRd
 .metric <- function(df, level, what, dn, note = NULL, spec = NULL,
                     mode = NULL, traversal_time = NULL) {
   # A session column that is entirely absent of sessions is noise; drop it.
@@ -55,11 +57,15 @@
 #'   quantities), which is convenient for exporting a table.
 #' @param ... Ignored.
 #'
-#' @return A plain `data.frame`. In long layout the columns are `session`
-#'   (only when the network has sessions), `time`, `node` (node-level
-#'   measures only), `measure` and `value`, one row per observation. In wide
-#'   layout the first columns identify the row and the remaining columns are
-#'   time points.
+#' @return A plain `data.frame`. Long layout carries `measure` and `value`
+#'   with one row per observation, alongside whichever columns say what was
+#'   measured: `session` when the network has sessions, `time` for anything
+#'   measured on a grid of bins, `node` for a vertex-level quantity, `from`
+#'   and `to` for a pair-level one, `vertex_spell` and `implicit` for
+#'   per-spell vertex durations from [durations()], and `from_group` and
+#'   `to_group` for [mixing()]. A graph-level series carries `time`,
+#'   `measure` and `value` alone. In wide layout the identifying columns come
+#'   first and the remaining columns are the time points, one per bin.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -166,7 +172,7 @@ print.dynet_metric <- function(x, n = 12L, ...) {
 #' @param out The truncated object.
 #' @param side `"first"` or `"last"`.
 #' @return `out`, carrying a `fragment` attribute.
-#' @keywords internal
+#' @noRd
 .metric_fragment <- function(x, out, side) {
   attr(out, "fragment") <- attr(x, "fragment") %||% list(
     side = side,
@@ -365,7 +371,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param has_node Whether the measure is node-level.
 #' @param base_size Base font size.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_heatmap <- function(df, x, has_node, base_size) {
   df$.row <- if (has_node) df$node else df$measure
   ggplot2::ggplot(df, ggplot2::aes(x = time, y = stats::reorder(.row, value),
@@ -383,7 +389,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' Median of the finite values, or zero when there are none
 #' @param v Numeric vector.
 #' @return A single numeric value.
-#' @keywords internal
+#' @noRd
 .finite_median <- function(v) {
   v <- v[is.finite(v)]
   if (length(v) == 0L) 0 else stats::median(v)
@@ -401,7 +407,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param from,to Endpoint labels.
 #' @param directed Whether the pair is ordered.
 #' @return A character vector of pair labels.
-#' @keywords internal
+#' @noRd
 .pair_label <- function(from, to, directed) {
   paste(from, if (isTRUE(directed)) "->" else "-", to)
 }
@@ -413,7 +419,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param top Largest number of rows to draw.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_no_time <- function(df, x, base_size, top = 30L, palette = "okabe") {
   df$.row <- if ("node" %in% names(df)) {
     df$node

@@ -9,6 +9,7 @@ legacy/
 local_testing_and_equivalence/
 
 # Session artifacts
+CLAUDE.md
 HANDOFF.md
 LEARNINGS.md
 CHANGES.md

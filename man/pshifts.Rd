@@ -27,7 +27,15 @@ sequence and never uses a predecessor outside the range.}
 recipients, or retain every dyadic row.}
 }
 \value{
-A \code{dynet_pshifts} data frame with the thirteen fixed classes.
+A \code{dynet_pshifts} data frame whose shape follows \code{output}.
+\code{"final"} gives one row per shift class -- thirteen rows, always all
+thirteen even when a class never occurred -- with columns \code{shift} (the
+Gibson label), \code{family} (the label's group) and \code{count}.
+\code{"cumulative"} gives one row per turn and class, that is thirteen rows
+per classified turn, with \code{sequence} and \code{event} locating the turn in its
+sequence, \code{time}, \code{speaker}, \code{target} and \code{group} describing the turn,
+and \code{shift}, \code{family} and \code{count} carrying the running total of that
+class up to and including the turn.
 }
 \description{
 Gibson participation shifts from raw temporal turns

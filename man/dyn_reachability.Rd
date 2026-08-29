@@ -18,7 +18,8 @@ dyn_reachability(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{direction}{\code{"forward"}, \code{"backward"} or \code{"both"}.}
+\item{direction}{\code{"both"} (the default, reporting each vertex's forward and
+backward reach side by side), \code{"forward"} or \code{"backward"}.}
 
 \item{at}{Forward source-availability time or backward arrival deadline.
 Defaults to the beginning or end of each observed period, respectively.

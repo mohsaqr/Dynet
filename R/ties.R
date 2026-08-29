@@ -8,7 +8,7 @@
 #' @param loops Whether new self-loops are permitted.
 #' @return A canonical spell table. Attribute `censor_explicit` records whether
 #'   either censor column was supplied.
-#' @keywords internal
+#' @noRd
 .normalize_added_ties <- function(dn, data, loops) {
   .check("`data` must be a nonempty data frame." =
            is.data.frame(data) && nrow(data) > 0L)
@@ -158,7 +158,7 @@
 #'   operations preserve the existing label.
 #' @param call Mutation call stored in metadata.
 #' @return A new internally consistent `dynet` object.
-#' @keywords internal
+#' @noRd
 .rebuild_ties <- function(dn, spells, censor_explicit, call,
                           nodes = NULL, vertex_spells = NULL, format = NULL) {
   if (!nrow(spells)) {
@@ -262,7 +262,7 @@
 #' @param existing Existing public node table.
 #' @param added New node rows.
 #' @return The combined node table.
-#' @keywords internal
+#' @noRd
 .bind_added_nodes <- function(existing, added) {
   columns <- union(names(existing), names(added))
   fill <- function(x, prototype, n) {
@@ -567,8 +567,16 @@ remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
 }
 
 #' Add directed temporal arcs
+#'
+#' The same operation as [add_ties()], with one extra guarantee: the network
+#' must already be directed, so `from` and `to` keep the direction the caller
+#' means. Adding an arc to an undirected network raises a condition of class
+#' `dynet_needs_directed` rather than silently recording a symmetric tie.
+#'
 #' @inheritParams add_ties
-#' @return A new directed `dynet` object.
+#' @return A new directed `dynet` object carrying the added spells, with the
+#'   same structure as the input.
+#' @seealso [add_ties()], which does not require a directed network.
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
 #' dn <- add_nodes(dn, "C")
@@ -585,8 +593,16 @@ add_arcs <- function(dn, data, loops = FALSE) {
 }
 
 #' Remove directed temporal arcs
+#'
+#' The same operation as [remove_ties()], with one extra guarantee: the
+#' network must already be directed, so a `from`/`to` pair names one arc and
+#' not both orientations. Removing an arc from an undirected network raises a
+#' condition of class `dynet_needs_directed`.
+#'
 #' @inheritParams remove_ties
-#' @return A new directed `dynet` object.
+#' @return A new directed `dynet` object without the matched spells, with the
+#'   same structure as the input.
+#' @seealso [remove_ties()], which does not require a directed network.
 #' @examples
 #' dn <- dynet(data.frame(
 #'   from = c("A", "B"), to = c("B", "C"),

@@ -27,11 +27,15 @@ quantities), which is convenient for exporting a table.}
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}. In long layout the columns are \code{session}
-(only when the network has sessions), \code{time}, \code{node} (node-level
-measures only), \code{measure} and \code{value}, one row per observation. In wide
-layout the first columns identify the row and the remaining columns are
-time points.
+A plain \code{data.frame}. Long layout carries \code{measure} and \code{value}
+with one row per observation, alongside whichever columns say what was
+measured: \code{session} when the network has sessions, \code{time} for anything
+measured on a grid of bins, \code{node} for a vertex-level quantity, \code{from}
+and \code{to} for a pair-level one, \code{vertex_spell} and \code{implicit} for
+per-spell vertex durations from \code{\link[=durations]{durations()}}, and \code{from_group} and
+\code{to_group} for \code{\link[=mixing]{mixing()}}. A graph-level series carries \code{time},
+\code{measure} and \code{value} alone. In wide layout the identifying columns come
+first and the remaining columns are the time points, one per bin.
 }
 \description{
 Tidy data frame of a temporal measure

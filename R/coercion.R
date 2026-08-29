@@ -6,12 +6,16 @@
 #'
 #' @param x An object representing a temporal network.
 #' @param ... Passed to a class-specific method.
-#' @return A [dynet()] temporal network.
+#' @return A [dynet()] temporal network: an object of class `dynet` carrying
+#'   the tie ledger, the node table and the construction metadata. The `dynet`
+#'   method is the identity, returning `x` unchanged, so `as_dynet()` is safe
+#'   to call on an object that is already a temporal network.
 #' @export
 as_dynet <- function(x, ...) {
   UseMethod("as_dynet")
 }
 
+#' @rdname as_dynet
 #' @export
 as_dynet.dynet <- function(x, ...) {
   x

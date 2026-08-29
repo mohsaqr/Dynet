@@ -21,20 +21,42 @@
 #'   given, and ignored otherwise.
 #' @param ... Ignored.
 #'
-#' @return A plain `data.frame`. `"edges"` returns one unchanged raw spell.
-#'   Explicit interval censor columns are retained as `onset_censored` and
-#'   `terminus_censored` on raw edges and copied unchanged to fragments.
-#'   `"observations"` returns canonical `observation`, `start`, `end`,
-#'   `duration`, and `instant` components. `"observed_edges"` returns derived
-#'   fragments with `raw_spell`, `observation`, `fragment`, raw and observed
-#'   endpoints, and strict left/right administrative censor flags in addition
-#'   to edge identity, weight, and session. `"vertex_spells"` returns maximal
-#'   declared activity components with stable IDs, half-open positive spells,
-#'   exact points, sessions, and explicit raw censor state. Undeclared vertices
-#'   are implicit static and do not receive synthetic rows. `"nodes"` returns
-#'   names and supplied attributes; `"bins"` returns measurement windows
-#'   (component-qualified for discontinuous observation); and `"network"`
-#'   returns aggregate named pairs with summed weight.
+#' @return A plain `data.frame`, one row per whatever `what` names.
+#'
+#'   `"edges"`: one row per unchanged raw spell, with `from`, `to`, `start`,
+#'   `end`, `duration` and `weight`. A `session` column is present when the
+#'   network was built with sessions, `onset_censored` and `terminus_censored`
+#'   when interval censoring was declared explicitly, and any column the
+#'   construction carried through -- `thread` for a threaded log, `group` for
+#'   a co-presence log.
+#'
+#'   `"observations"`: one row per canonical observation component, with
+#'   `observation`, `start`, `end`, `duration` and `instant`.
+#'
+#'   `"observed_edges"`: one row per derived observation fragment, with
+#'   `raw_spell`, `observation` and `fragment` locating it, `from`, `to`,
+#'   `start`, `end` (clipped to the observation), `raw_start`, `raw_end` (as
+#'   supplied), `weight`, `instant`, `duration`, and the strict
+#'   `left_observation_censored` and `right_observation_censored` flags.
+#'   `session` and the explicit `onset_censored`/`terminus_censored` flags are
+#'   copied unchanged from the raw spell when the network carries them.
+#'
+#'   `"vertex_spells"`: one row per maximal declared activity component, with
+#'   `vertex_spell`, `node`, `start`, `end`, `duration`, `instant`, `session`,
+#'   `onset_censored` and `terminus_censored`. Half-open positive spells and
+#'   exact points are both representable. Undeclared vertices are implicitly
+#'   always active and receive no synthetic rows, so this table is empty for a
+#'   network with no declared vertex activity.
+#'
+#'   `"nodes"`: one row per vertex, with `name`, any static attributes
+#'   supplied at construction, and one column per measure named in `measure`.
+#'
+#'   `"bins"`: one row per measurement window, with `bin`, `lo`, `hi`, `time`
+#'   (the bin's representative time) and `closed` (whether the upper bound is
+#'   included). Bins are component-qualified under discontinuous observation.
+#'
+#'   `"network"`: one row per aggregate vertex pair, with `from`, `to` and the
+#'   summed `weight` cograph renders.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -137,7 +159,7 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
 #' dn <- dynet(school_contacts)
 #' Dynet:::.annotate_nodes(dn, as.data.frame(dn, what = "nodes"),
 #'                         "degree", "bounded", NULL, NULL)
-#' @keywords internal
+#' @noRd
 .annotate_nodes <- function(dn, nodes, measure, sessions, start, end) {
   .check("`measure` must be a character vector of measure names." =
            is.character(measure) && length(measure) && !anyNA(measure))
@@ -303,7 +325,7 @@ summary.dynet <- function(object, ...) {
 #' @return The total length covered by at least one positive-duration interval.
 #' @examples
 #' Dynet:::.union_duration(c(0, 2, 6), c(4, 7, 10))
-#' @keywords internal
+#' @noRd
 .union_duration <- function(start, end) {
   .check(
     "`start` and `end` must be numeric vectors." =
@@ -338,7 +360,7 @@ summary.dynet <- function(object, ...) {
 #' @return A data frame with integer `from`, `to`, and collision-free `key`.
 #' @examples
 #' Dynet:::.relational_opportunities(3, directed = TRUE)
-#' @keywords internal
+#' @noRd
 .relational_opportunities <- function(n, directed) {
   if (n < 2L) {
     return(data.frame(from = integer(), to = integer(), key = integer()))
@@ -358,10 +380,10 @@ summary.dynet <- function(object, ...) {
 #' @param from,to Integer endpoint vectors.
 #' @param n Fixed vertex count.
 #' @param directed Whether endpoint order is meaningful.
-#' @return Integer pair keys matching [.relational_opportunities()].
+#' @return Integer pair keys matching `.relational_opportunities()`.
 #' @examples
 #' Dynet:::.relational_pair_key(c(1L, 2L), c(2L, 1L), 2L, FALSE)
-#' @keywords internal
+#' @noRd
 .relational_pair_key <- function(from, to, n, directed) {
   if (!directed) {
     left <- pmin(from, to)
@@ -382,7 +404,7 @@ summary.dynet <- function(object, ...) {
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.temporal_pair_state(dn, Dynet:::.encode(dn), 1, "collapse")
-#' @keywords internal
+#' @noRd
 .temporal_pair_state <- function(dn, enc, time,
                                  sessions = c("bounded", "collapse", "separate"),
                                  label = "all",
@@ -444,7 +466,7 @@ summary.dynet <- function(object, ...) {
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.raw_endpoint_eligible(dn, Dynet:::.encode(dn), 1L, 0,
 #'                                "collapse")
-#' @keywords internal
+#' @noRd
 .raw_endpoint_eligible <- function(dn, enc, rows, time,
                                    sessions = c("bounded", "collapse", "separate"),
                                    label = "all") {
@@ -482,7 +504,7 @@ summary.dynet <- function(object, ...) {
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.temporal_exposure_changes(dn, Dynet:::.encode(dn), 0, 2)
-#' @keywords internal
+#' @noRd
 .temporal_exposure_changes <- function(dn, enc, lo, hi) {
   activity <- .encode_vertex_activity(dn, enc$names)
   observations <- .observation_table(dn)
@@ -503,7 +525,7 @@ summary.dynet <- function(object, ...) {
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.ever_observed_pairs(dn, Dynet:::.encode(dn), "collapse")
-#' @keywords internal
+#' @noRd
 .ever_observed_pairs <- function(dn, enc,
                                  sessions = c("bounded", "collapse", "separate"),
                                  label = "all") {
@@ -549,7 +571,7 @@ summary.dynet <- function(object, ...) {
 #'   dn, Dynet:::.encode(dn), data.frame(lo = 0, hi = 2, closed = TRUE),
 #'   "collapse"
 #' )
-#' @keywords internal
+#' @noRd
 .temporal_edge_ledger <- function(dn, enc, bin,
                                   sessions = c("bounded", "collapse", "separate"),
                                   label = "all", cohort = NULL) {
@@ -594,13 +616,13 @@ summary.dynet <- function(object, ...) {
 }
 
 #' Convert a temporal edge ledger to named public quantities
-#' @param ledger Named output from [.temporal_edge_ledger()].
+#' @param ledger Named output from `.temporal_edge_ledger()`.
 #' @return The four D04 graph measures, with `NA` for a zero denominator.
 #' @examples
 #' Dynet:::.temporal_edge_values(c(
 #'   risk = 2, occupied = 1, observed_risk = 1, onsets = 1
 #' ))
-#' @keywords internal
+#' @noRd
 .temporal_edge_values <- function(ledger) {
   ratio <- function(numerator, denominator) {
     if (denominator <= 0) NA_real_ else unname(numerator / denominator)
@@ -620,7 +642,7 @@ summary.dynet <- function(object, ...) {
 #' Integrate eligible relational risk and occupancy
 #' @param dn A temporal network from [dynet()].
 #' @return Named `risk`, `occupied`, and `empty` pair-time values.
-#' @keywords internal
+#' @noRd
 .temporal_risk_ledger <- function(dn) {
   .check_dynet(dn, sessions = "collapse")
   enc <- .encode(dn)
@@ -643,7 +665,7 @@ summary.dynet <- function(object, ...) {
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.temporal_density(dn)
-#' @keywords internal
+#' @noRd
 .temporal_density <- function(dn) {
   ledger <- .temporal_risk_ledger(dn)
   if (ledger[["risk"]] <= 0) return(NA_real_)
@@ -703,8 +725,17 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #'   reconstructed optimal routes. The latter includes endpoint-local
 #'   `path_id` values for tied contact sequences.
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per endpoint for `"paths"` or one row
-#'   per route step for `"steps"`.
+#' @return A plain `data.frame`. For `"paths"`, one row per endpoint vertex,
+#'   the source included, with the columns [paths()] documents: `node`,
+#'   `reachable`, `arrival_time`, `attained`, `latency`, `n_hops` and
+#'   `n_paths`, plus `path_session` and `n_best_sessions` under
+#'   `sessions = "bounded"`, and `session` and `origin` under
+#'   `sessions = "separate"`. For `"steps"`, one row per step of every
+#'   reconstructed optimal route, with `endpoint` (the vertex the route ends
+#'   at), `path_id` (which of the tied optimal routes to that endpoint),
+#'   `path_session`, `step` (position along the route, starting at the
+#'   source), `node` (the vertex occupied at that step), `time` (when it was
+#'   reached) and `attained`.
 #' @export
 as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
                                       what = c("paths", "steps"), ...) {
@@ -725,9 +756,13 @@ as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
 #'
 #' @param object A `dynet_paths`.
 #' @param ... Ignored.
-#' @return A one-row-per-property `data.frame` with the reachable count, the
-#'   reachable share, and the median and maximum latency and hop count.
-#'   Separate mode adds `session` and reports each session independently.
+#' @return A `data.frame` with columns `property` and `value`, one row per
+#'   property, both character so the table prints as one block. The eight
+#'   properties are `source`, `direction`, `reachable`, `reachable share`,
+#'   `median latency`, `max latency`, `median hops` and `max hops`; the source
+#'   is excluded from every count and share. Under `sessions = "separate"` a
+#'   leading `session` column is added and the eight properties are repeated
+#'   for each session.
 #' @export
 summary.dynet_paths <- function(object, ...) {
   summarize_block <- function(block) {

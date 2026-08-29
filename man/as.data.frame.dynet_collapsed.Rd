@@ -22,7 +22,14 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain data frame.
+A plain \code{data.frame}. For \code{"edges"}, one row per collapsed vertex
+pair carrying every weighting side by side: \code{from}, \code{to}, \code{binary},
+\code{union_duration}, \code{total_duration}, \code{duration_fraction}, \code{spell_count},
+\code{weight_sum}, \code{weighted_duration}, \code{latest_weight}, \code{first}, \code{last}, and
+the \code{activity.duration} and \code{activity.count} aliases. For \code{"nodes"}, one
+row per vertex with \code{name}, \code{activity_duration} and its
+\code{activity.duration} alias, plus any static vertex attributes the network
+carries. See \code{\link[=collapse_network]{collapse_network()}} for what each weighting means.
 }
 \description{
 Tidy tables from a collapsed temporal network

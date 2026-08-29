@@ -59,8 +59,7 @@
 \item{x}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
 \item{type}{One of \code{"timeline"}, \code{"events"}, \code{"activity"}, \code{"network"},
-\code{"snapshots"},
-\code{"proximity"}.}
+\code{"snapshots"}, \code{"layers"}, \code{"heatmap"}, \code{"stack"} or \code{"proximity"}.}
 
 \item{at}{For \code{"network"}, the time to draw. \code{NULL} draws the whole window
 flattened.}
@@ -71,8 +70,9 @@ windowed, and an empty window is an error rather than an empty panel.}
 
 \item{top}{For the timeline, draw only the \code{top} busiest vertex pairs.}
 
-\item{step}{For \code{"layers"}, the width of each time slice. \code{NULL} uses the
-construction interval.}
+\item{step}{For \code{"layers"}, \code{"heatmap"} and \code{"stack"}, the width of each
+time slice. \code{NULL} uses the construction interval. At least two slices
+are needed, so too wide a \code{step} is an error rather than a single panel.}
 
 \item{omega}{For \code{"layers"}, the weight on the identity arcs carrying a
 vertex between adjacent slices, that is, the interlayer coupling.}
@@ -124,7 +124,10 @@ in \code{cograph::splot()}.}
 sampled evenly across the window and the choice is reported.}
 
 \item{measure}{For the proximity view, the node-level measure that line
-thickness follows. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts.}
+thickness follows. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts at snapshot
+scope; the temporal-scope-only measures \code{"reach"} and \code{"reach_count"}
+are not available here, because the view redraws the measure over many
+short slices.}
 
 \item{phases}{For the proximity view, how many phases to split the window
 into for the network panels. \code{NULL} uses the network's sessions when it
@@ -134,8 +137,9 @@ has them and three phases otherwise.}
 
 \item{events}{Whether the proximity view marks the times edges formed.}
 
-\item{labels}{Whether the proximity view names each line at its right-hand
-end, in place of a legend.}
+\item{labels}{Whether vertices are named in place of a legend: at the
+right-hand end of each line in the proximity view, and beside each node
+in the \code{"layers"} and \code{"stack"} views.}
 
 \item{highlight}{Vertex names to draw in colour in the proximity view, with
 the rest in grey.}
@@ -164,19 +168,20 @@ them, in the proximity view.}
 
 \item{base_size}{Base font size for the ggplot views.}
 
-\item{style}{A base-graphics style list from \code{\link[=.dyn_style]{.dyn_style()}}, used by the
+\item{style}{A base-graphics style list from \code{.dyn_style()}, used by the
 proximity view.}
 
 \item{...}{Passed to \code{cograph::splot()} for the network, snapshot and
 proximity views.}
 }
 \value{
-For \code{"timeline"} and \code{"activity"}, a \code{ggplot} object. For
-\code{"network"}, \code{"snapshots"} and \code{"proximity"}, the figure is drawn on the
-current device and \code{x} is returned invisibly.
+For \code{"timeline"}, \code{"events"}, \code{"activity"} and \code{"heatmap"}, a
+\code{ggplot} object, which prints itself when the call is not assigned. For
+\code{"network"}, \code{"snapshots"}, \code{"layers"}, \code{"stack"} and \code{"proximity"}, the
+figure is drawn on the current device and \code{x} is returned invisibly.
 }
 \description{
-Five views, each answering a different question.
+Nine views, each answering a different question.
 
 \describe{
 \item{\code{"events"}}{Every contact as a link drawn at the moment it fires,
@@ -195,6 +200,15 @@ time bin is drawn.}
 \item{\code{"snapshots"}}{Small multiples, one \code{cograph::splot()} per time
 bin, laid out on shared coordinates so positions are comparable across
 panels.}
+\item{\code{"layers"}}{The multilayer view: one network per time slice, drawn
+as a stack of layers in which each vertex appears once per slice and is
+joined to its own copy in the next by an identity arc of weight
+\code{omega}.}
+\item{\code{"heatmap"}}{The matrix counterpart of \code{"layers"}: each slice is a
+tilted heatmap plane rather than a node-link diagram.}
+\item{\code{"stack"}}{The same slices projected as a node-link stack, each
+vertex keeping one colour through the whole stack so it can be followed
+between planes.}
 \item{\code{"proximity"}}{Vertices placed on a vertical line at each time
 point according to how close they are in the network, and joined
 through time. Clusters appear as bands of lines travelling together.}
@@ -211,4 +225,11 @@ plot(dn, type = "proximity")
 plot(dn, type = "proximity", measure = "betweenness", phases = 4)
 plot(dn, type = "network", node_fill = "#56B4E9")
 
+}
+\references{
+Okabe, M., & Ito, K. (2008). Color universal design: how to make figures
+and presentations that are friendly to colorblind people.
+
+Chaikin, G. M. (1974). An algorithm for high-speed curve generation.
+\emph{Computer Graphics and Image Processing}, 3(4), 346-349.
 }

@@ -160,4 +160,8 @@ Mining}, 8, 61. \doi{10.1007/s13278-018-0537-7}
 Andersen, P. K., & Gill, R. D. (1982). Cox's regression model for counting
 processes: a large sample study. \emph{Annals of Statistics}, 10, 1100-1120.
 \doi{10.1214/aos/1176345976}
+
+Krackhardt, D. (1994). Graph theoretical dimensions of informal
+organizations. In \emph{Computational Organization Theory} (pp. 89-111).
+Lawrence Erlbaum.
 }

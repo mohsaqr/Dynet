@@ -376,7 +376,7 @@ dynet <- function(data,
 #' @param n Number of canonical rows.
 #' @param arg Public selector name.
 #' @return A strict logical vector.
-#' @keywords internal
+#' @noRd
 .resolve_censor_flag <- function(data, column, row_index, n, arg) {
   if (is.null(column)) return(rep(FALSE, n))
   resolved <- .resolve_column(data, column, role = "", arg = arg)
@@ -399,7 +399,7 @@ dynet <- function(data,
 
 #' Typed canonical vertex-spell table
 #' @return A zero-row data frame with the public vertex-spell schema.
-#' @keywords internal
+#' @noRd
 .empty_vertex_spells <- function() {
   data.frame(
     vertex_spell = integer(), node = character(), start = numeric(),
@@ -415,7 +415,7 @@ dynet <- function(data,
 #' @param origin,time_unit The already resolved edge clock.
 #' @param edge_sessions Existing canonical edge-session labels, or `NULL`.
 #' @return A list containing canonical spells and construction metadata.
-#' @keywords internal
+#' @noRd
 .normalize_vertex_spells <- function(vertex_spells, origin, time_unit,
                                      edge_sessions = NULL) {
   fail <- function(message, subclass = "dynet_bad_vertex_spells") {
@@ -649,7 +649,7 @@ dynet <- function(data,
 #' @param spells Data frame with `start` and `end`.
 #' @param origin,time_unit Network clock description.
 #' @return Canonical observation components.
-#' @keywords internal
+#' @noRd
 .normalize_observation_spells <- function(spells, origin, time_unit) {
   .check(
     "`observation_spells` must be a nonempty data frame." =
@@ -721,7 +721,7 @@ dynet <- function(data,
 #' @return A named numeric vector with `start` and `end`.
 #' @examples
 #' Dynet:::.observation_bounds(c(start = 0, end = 10), 0, "step", 2, 8)
-#' @keywords internal
+#' @noRd
 .observation_bounds <- function(raw_range, origin, time_unit,
                                 observation_start = NULL,
                                 observation_end = NULL) {
@@ -767,7 +767,7 @@ dynet <- function(data,
 #' @param meta Metadata list.
 #' @param vertex_spells Canonical declared vertex-activity components.
 #' @return An object of class `c("dynet", "netobject", "cograph_network")`.
-#' @keywords internal
+#' @noRd
 .as_netobject <- function(spells, nodes, directed, groups, meta,
                           vertex_spells = NULL) {
   nm <- nodes$name
@@ -830,7 +830,7 @@ dynet <- function(data,
 #' @param format User-supplied format, possibly `"auto"`.
 #' @param thread,actor,group,end,duration User-supplied column names.
 #' @return A single character format name.
-#' @keywords internal
+#' @noRd
 .infer_format <- function(data, format, thread, actor, group, end, duration) {
   if (!identical(format, "auto")) return(format)
   if (!is.null(actor) && !is.null(group)) return("copresence")
@@ -852,7 +852,7 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to User-supplied column names or `NULL`.
 #' @return A list with `from` and `to` character vectors.
-#' @keywords internal
+#' @noRd
 .resolve_dyad <- function(data, from, to) {
   f <- .resolve_column(data, from, "from", arg = "from")
   if (is.null(f)) {
@@ -880,7 +880,7 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param session User-supplied column name or `NULL`.
 #' @return A character vector of length `nrow(data)`.
-#' @keywords internal
+#' @noRd
 .resolve_session <- function(data, session) {
   s <- .resolve_column(data, session, "session", arg = "session")
   if (is.null(s)) return(rep(NA_character_, nrow(data)))
@@ -899,7 +899,7 @@ dynet <- function(data,
 #' @param from,to,start,end,duration,session User-supplied column names.
 #' @param time_unit Requested time unit.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
-#' @keywords internal
+#' @noRd
 .build_interval <- function(data, from, to, start, end, duration, session,
                             time_unit) {
   dyad <- .resolve_dyad(data, from, to)
@@ -955,7 +955,7 @@ dynet <- function(data,
 #' @param from,to,time,session User-supplied column names.
 #' @param time_unit Requested time unit.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
-#' @keywords internal
+#' @noRd
 .build_contact <- function(data, from, to, time, session, time_unit) {
   dyad <- .resolve_dyad(data, from, to)
   t_col <- .resolve_column(data, time, "time", arg = "time")
@@ -989,7 +989,7 @@ dynet <- function(data,
 #' @param from,to,time,thread,session User-supplied column names.
 #' @param time_unit Requested time unit.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
-#' @keywords internal
+#' @noRd
 .build_threaded <- function(data, from, to, time, thread, session, time_unit) {
   base <- .build_contact(data, from, to, time, session, time_unit)
   th_col <- .resolve_column(data, thread, "thread", arg = "thread")
@@ -1019,7 +1019,7 @@ dynet <- function(data,
 #' @param actor,group,time,start,end,session User-supplied column names.
 #' @param time_unit Requested time unit.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
-#' @keywords internal
+#' @noRd
 .build_copresence <- function(data, actor, group, time, start, end, session,
                               time_unit) {
   a_col <- .resolve_column(data, actor, "actor", arg = "actor")
@@ -1114,7 +1114,7 @@ dynet <- function(data,
 #' @param row_index Mapping from built rows back to `data`, or `NULL`.
 #' @param n Number of built rows.
 #' @return A numeric vector of length `n`.
-#' @keywords internal
+#' @noRd
 .resolve_weight <- function(data, weight, row_index, n) {
   if (is.null(weight)) return(rep(1, n))
   if (is.null(row_index)) {
@@ -1135,7 +1135,7 @@ dynet <- function(data,
 #' @param nodes Optional data frame of vertex attributes.
 #' @param pool Extra vertex names that must appear even without an edge.
 #' @return A data frame with `name` first, one row per vertex.
-#' @keywords internal
+#' @noRd
 .build_nodes <- function(edges, nodes, pool = character()) {
   observed <- unique(c(edges$from, edges$to, pool))
   # Vertices named with numbers sort numerically, so v10 does not land before

@@ -7,7 +7,7 @@
 #' @param a Numeric adjacency matrix.
 #' @param directed Whether to keep direction.
 #' @return A binary numeric matrix.
-#' @keywords internal
+#' @noRd
 .binary <- function(a, directed = TRUE) {
   b <- (a > 0) * 1
   if (!directed) b <- pmax(b, t(b))
@@ -26,7 +26,7 @@
 #' @param directed Whether the network is directed.
 #' @param mode One of `"all"`, `"out"`, `"in"`.
 #' @return A numeric vector, one value per vertex.
-#' @keywords internal
+#' @noRd
 .margin <- function(m, directed, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
   if (!directed) return(rowSums(m))
@@ -44,7 +44,7 @@
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A numeric matrix of distances; `Inf` where no path exists.
-#' @keywords internal
+#' @noRd
 .geodesic <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -82,7 +82,7 @@
 #' @param mode `"out"` counts distance from the vertex, `"in"` distance to it,
 #'   `"all"` ignores direction.
 #' @return A named numeric vector.
-#' @keywords internal
+#' @noRd
 .closeness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
   # "in" on `a` is "out" on its transpose, and "all" is the undirected graph,
@@ -105,7 +105,7 @@
 #' @return A named numeric vector.
 #' @references Brandes, U. (2001). A faster algorithm for betweenness
 #'   centrality. *Journal of Mathematical Sociology*, 25(2), 163-177.
-#' @keywords internal
+#' @noRd
 .betweenness <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -120,7 +120,7 @@
 #' @param s Source vertex index.
 #' @param n Vertex count.
 #' @return A numeric vector of length `n`.
-#' @keywords internal
+#' @noRd
 .brandes_source <- function(b, s, n) {
   sigma <- numeric(n); sigma[s] <- 1
   dist  <- rep(-1L, n); dist[s] <- 0L
@@ -158,13 +158,17 @@
 #' Principal eigenvector centrality
 #'
 #' @param a Adjacency matrix.
-#' @param directed Whether to respect direction. Directed networks use the
-#'   left eigenvector, so that a vertex is central when central vertices point
-#'   at it.
+#' @param directed Whether to respect direction. `FALSE` symmetrises with
+#'   `pmax(a, t(a))`. `TRUE` respects direction only when `mode` asks it to.
+#' @param mode Which direction the score is read along. `"in"` uses the left
+#'   eigenvector, so a vertex is central when central vertices point at it
+#'   (igraph's convention); `"out"` uses the right eigenvector
+#'   (`sna::evcent`'s); `"all"`, the default, symmetrises and so gives the
+#'   undirected answer even when `directed = TRUE`.
 #' @param tol,max_iter Retained for compatibility with the former power-
 #'   iteration implementation; the stable eigensolver does not use them.
 #' @return A named numeric vector scaled to a maximum of one.
-#' @keywords internal
+#' @noRd
 .eigen_centrality <- function(a, directed = TRUE, mode = c("all", "out", "in"),
                               tol = 1e-12, max_iter = 1000L) {
   mode <- match.arg(mode)
@@ -195,7 +199,7 @@
 #' @param damping Damping factor.
 #' @param tol,max_iter Convergence tolerance and iteration cap.
 #' @return A named numeric vector summing to one.
-#' @keywords internal
+#' @noRd
 .pagerank <- function(a, damping = 0.85, tol = 1e-12, max_iter = 1000L) {
   n <- nrow(a)
   if (n == 0L) return(numeric(0))
@@ -219,7 +223,7 @@
 #' @param a Adjacency matrix.
 #' @param which Either `"hub"` or `"authority"`.
 #' @return A named numeric vector scaled to a maximum of one.
-#' @keywords internal
+#' @noRd
 .hits <- function(a, which = c("hub", "authority")) {
   which <- match.arg(which)
   m <- if (identical(which, "hub")) a %*% t(a) else t(a) %*% a
@@ -231,7 +235,7 @@
 #' @param directed Whether to respect direction.
 #' @param mode Which degree the peeling uses: `"all"`, `"out"` or `"in"`.
 #' @return A named numeric vector.
-#' @keywords internal
+#' @noRd
 .coreness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
   b <- .binary(a, directed = TRUE)
@@ -266,7 +270,7 @@
 #' Burt's constraint
 #' @param a Adjacency matrix.
 #' @return A named numeric vector; `NA` for isolates.
-#' @keywords internal
+#' @noRd
 .constraint <- function(a) {
   m <- a + t(a)
   diag(m) <- 0
@@ -286,7 +290,7 @@
 #' @param a Adjacency matrix.
 #' @param mode `"weak"` ignores direction, `"strong"` requires mutual reach.
 #' @return A list with `membership` (named integer vector) and `count`.
-#' @keywords internal
+#' @noRd
 .components <- function(a, mode = c("weak", "strong")) {
   mode <- match.arg(mode)
   reach <- is.finite(.geodesic(a, directed = identical(mode, "strong")))
@@ -305,7 +309,7 @@
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A single numeric value.
-#' @keywords internal
+#' @noRd
 .transitivity <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
   two <- b %*% b
@@ -318,7 +322,7 @@
 #' Dyad census
 #' @param a Adjacency matrix.
 #' @return A named numeric vector with `mutual`, `asymmetric` and `null`.
-#' @keywords internal
+#' @noRd
 .dyad_census <- function(a) {
   b <- .binary(a, directed = TRUE)
   n <- nrow(b)
@@ -334,7 +338,7 @@
 #'
 #' @param a Adjacency matrix.
 #' @return A single numeric value.
-#' @keywords internal
+#' @noRd
 .reciprocity <- function(a) {
   b <- .binary(a, directed = TRUE)
   m <- sum(b)
@@ -347,7 +351,7 @@
 #' @param directed Whether to respect direction.
 #' @param values Optional numeric vertex values; degree is used when absent.
 #' @return A single numeric value, `NA` when undefined.
-#' @keywords internal
+#' @noRd
 .assortativity <- function(a, directed = TRUE, values = NULL) {
   b <- .binary(a, directed)
   idx <- which(b > 0, arr.ind = TRUE)
@@ -364,7 +368,7 @@
 #' @param scores Numeric vector of vertex scores.
 #' @param max_score Theoretical maximum sum of differences for this graph size.
 #' @return A single numeric value in `[0, 1]`, `NA` when the maximum is zero.
-#' @keywords internal
+#' @noRd
 .centralisation <- function(scores, max_score) {
   if (!is.finite(max_score) || max_score <= 0) return(NA_real_)
   sum(max(scores) - scores) / max_score
@@ -377,7 +381,7 @@
 #'
 #' @param a Adjacency matrix.
 #' @return A named numeric vector of length 16 using the standard MAN labels.
-#' @keywords internal
+#' @noRd
 .triad_census <- function(a) {
   b <- .binary(a, directed = TRUE)
   n <- nrow(b)
@@ -402,7 +406,7 @@
 #' @param b Binary adjacency matrix.
 #' @param i,j,k Equal-length integer vectors of vertex indices.
 #' @return An integer vector in `[0, 63]`.
-#' @keywords internal
+#' @noRd
 .triad_code <- function(b, i, j, k) {
   n <- nrow(b)
   g <- function(x, y) b[(y - 1L) * n + x]

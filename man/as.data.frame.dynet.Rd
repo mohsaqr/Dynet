@@ -42,20 +42,42 @@ given, and ignored otherwise.}
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}. \code{"edges"} returns one unchanged raw spell.
-Explicit interval censor columns are retained as \code{onset_censored} and
-\code{terminus_censored} on raw edges and copied unchanged to fragments.
-\code{"observations"} returns canonical \code{observation}, \code{start}, \code{end},
-\code{duration}, and \code{instant} components. \code{"observed_edges"} returns derived
-fragments with \code{raw_spell}, \code{observation}, \code{fragment}, raw and observed
-endpoints, and strict left/right administrative censor flags in addition
-to edge identity, weight, and session. \code{"vertex_spells"} returns maximal
-declared activity components with stable IDs, half-open positive spells,
-exact points, sessions, and explicit raw censor state. Undeclared vertices
-are implicit static and do not receive synthetic rows. \code{"nodes"} returns
-names and supplied attributes; \code{"bins"} returns measurement windows
-(component-qualified for discontinuous observation); and \code{"network"}
-returns aggregate named pairs with summed weight.
+A plain \code{data.frame}, one row per whatever \code{what} names.
+
+\code{"edges"}: one row per unchanged raw spell, with \code{from}, \code{to}, \code{start},
+\code{end}, \code{duration} and \code{weight}. A \code{session} column is present when the
+network was built with sessions, \code{onset_censored} and \code{terminus_censored}
+when interval censoring was declared explicitly, and any column the
+construction carried through -- \code{thread} for a threaded log, \code{group} for
+a co-presence log.
+
+\code{"observations"}: one row per canonical observation component, with
+\code{observation}, \code{start}, \code{end}, \code{duration} and \code{instant}.
+
+\code{"observed_edges"}: one row per derived observation fragment, with
+\code{raw_spell}, \code{observation} and \code{fragment} locating it, \code{from}, \code{to},
+\code{start}, \code{end} (clipped to the observation), \code{raw_start}, \code{raw_end} (as
+supplied), \code{weight}, \code{instant}, \code{duration}, and the strict
+\code{left_observation_censored} and \code{right_observation_censored} flags.
+\code{session} and the explicit \code{onset_censored}/\code{terminus_censored} flags are
+copied unchanged from the raw spell when the network carries them.
+
+\code{"vertex_spells"}: one row per maximal declared activity component, with
+\code{vertex_spell}, \code{node}, \code{start}, \code{end}, \code{duration}, \code{instant}, \code{session},
+\code{onset_censored} and \code{terminus_censored}. Half-open positive spells and
+exact points are both representable. Undeclared vertices are implicitly
+always active and receive no synthetic rows, so this table is empty for a
+network with no declared vertex activity.
+
+\code{"nodes"}: one row per vertex, with \code{name}, any static attributes
+supplied at construction, and one column per measure named in \code{measure}.
+
+\code{"bins"}: one row per measurement window, with \code{bin}, \code{lo}, \code{hi}, \code{time}
+(the bin's representative time) and \code{closed} (whether the upper bound is
+included). Bins are component-qualified under discontinuous observation.
+
+\code{"network"}: one row per aggregate vertex pair, with \code{from}, \code{to} and the
+summed \code{weight} cograph renders.
 }
 \description{
 Tidy tables from a temporal network

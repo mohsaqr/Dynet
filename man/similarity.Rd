@@ -32,8 +32,10 @@ itself says nothing.}
 \value{
 A \code{dynet_similarity} data frame with one row per ordered pair of
 time bins and columns \code{time}, \code{other}, \code{measure} and \code{value}. The
-diagonal is included and equals one for every coefficient except
+diagonal is included and is one for every coefficient except
 \code{"hamming"}, where identical layers differ in nothing and score zero.
+\code{"pearson"} reaches one only to floating-point accuracy, so compare it
+with a tolerance rather than with \code{==}.
 }
 \description{
 Compares the edge set at every time bin with the edge set at every other,

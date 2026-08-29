@@ -155,6 +155,10 @@
 #' processes: a large sample study. *Annals of Statistics*, 10, 1100-1120.
 #' \doi{10.1214/aos/1176345976}
 #'
+#' Krackhardt, D. (1994). Graph theoretical dimensions of informal
+#' organizations. In *Computational Organization Theory* (pp. 89-111).
+#' Lawrence Erlbaum.
+#'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' metrics(dn, measure = "density")
@@ -336,7 +340,7 @@ metrics <- function(dn, measure = "density",
 #' @examples
 #' a <- matrix(c(0, 1, 0, 0), 2, 2)
 #' Dynet:::.graph_measure("density", a, directed = TRUE)
-#' @keywords internal
+#' @noRd
 .graph_measure <- function(m, a, directed) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -449,7 +453,7 @@ metrics <- function(dn, measure = "density",
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A numeric vector of the finite distances between distinct vertices.
-#' @keywords internal
+#' @noRd
 .offdiag_distances <- function(a, directed) {
   d <- .geodesic(a, directed)
   off <- d[row(d) != col(d)]
@@ -466,7 +470,7 @@ metrics <- function(dn, measure = "density",
 #' @param directed Whether the network is directed.
 #' @return A single numeric value; `NA` below three vertices, where the most
 #'   centralised graph is not defined.
-#' @keywords internal
+#' @noRd
 .max_centralisation <- function(what, n, directed) {
   if (n < 3L) return(NA_real_)
   # Degree and betweenness use the standard Freeman maxima. Closeness uses
@@ -482,7 +486,7 @@ metrics <- function(dn, measure = "density",
 #' Human-readable label for a graph measure
 #' @param m Measure name.
 #' @return A single character string.
-#' @keywords internal
+#' @noRd
 .graph_label <- function(m) {
   lookup <- c(density = "Density", edges = "Active edges",
               active_nodes = "Active vertices", isolates = "Isolates",

@@ -28,7 +28,7 @@
 #'
 #' @param x A result from [paths()].
 #' @return A list of character vectors, one per optimal route.
-#' @keywords internal
+#' @noRd
 .path_route_sequences <- function(x) {
   steps <- as.data.frame(x, what = "steps")
   if (!nrow(steps)) {
@@ -62,7 +62,7 @@
 #' Format an attained time as a stable token component
 #' @param time Numeric vector of attained times.
 #' @return A character vector.
-#' @keywords internal
+#' @noRd
 .path_time_token <- function(time) {
   out <- sprintf("%.12g", time)
   out[is.na(time)] <- "NA"
@@ -77,7 +77,7 @@
 #'
 #' @param node Character vector of prefix keys.
 #' @return A character vector of readable pathways.
-#' @keywords internal
+#' @noRd
 .path_display_path <- function(node) {
   vapply(node, \(one) {
     if (is.na(one)) return(NA_character_)
@@ -96,7 +96,7 @@
 #' Split a route token back into vertex, time and session
 #' @param token Character vector of route tokens.
 #' @return A data frame with `vertex`, `time` and `session` columns.
-#' @keywords internal
+#' @noRd
 .path_token_parts <- function(token) {
   parts <- strsplit(token, .PATH_UNIT, fixed = TRUE)
   pick <- function(index) vapply(parts, \(one) {
@@ -120,7 +120,7 @@
 #' @param sequences A list of character vectors of tokens.
 #' @param min_count Minimum prefix frequency to retain.
 #' @return A data frame with `node`, `parent`, `depth`, `count` and `last`.
-#' @keywords internal
+#' @noRd
 .path_prefix_tree <- function(sequences, min_count = 1L) {
   .check(
     "`sequences` must be a list of character vectors." =
@@ -175,9 +175,9 @@
 #' horizontal phylogram. The stack is reversed so the first route reads at
 #' the top of the canvas.
 #'
-#' @param tree A data frame from [.path_prefix_tree()].
+#' @param tree A data frame from `.path_prefix_tree()`.
 #' @return `tree` with an added numeric `branch` column.
-#' @keywords internal
+#' @noRd
 .path_tree_branches <- function(tree) {
   children <- split(tree$node[tree$node != .PATH_ROOT],
                     tree$parent[tree$node != .PATH_ROOT])
@@ -209,7 +209,7 @@
 #' @param layout A placed tree with `node`, `x`, `y` and `count` columns.
 #' @param n_pt Number of vertices per branch polyline.
 #' @return A data frame with `edge`, `x`, `y` and `count` columns.
-#' @keywords internal
+#' @noRd
 .path_tree_edges <- function(layout, n_pt = 40L) {
   child <- layout[!is.na(layout$parent), , drop = FALSE]
   if (!nrow(child)) {
@@ -337,8 +337,10 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' @description
 #' Draws the optimal route family returned by [paths()] using the
 #' trajectory-tree grammar ported from the `transitiontrees` package: leaves
-#' stacked in depth-first order, parents centred on their children, branches
-#' carried by a cosine smoothstep, and capsule node glyphs. Branch width
+#' stacked in depth-first order, parents centred on their children, and
+#' branches carried by a cosine smoothstep. Nodes follow that package's
+#' horizontal phylogram rather than its capsule style -- a count-sized filled
+#' circle with its label set below it. Branch width
 #' always shows how many optimal routes use a branch; node fill shows the
 #' chosen `measure`, and every node also prints its value, so nothing is
 #' encoded by colour alone.

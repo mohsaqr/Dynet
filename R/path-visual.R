@@ -46,7 +46,16 @@
 #' `last_time` retain its temporal range.
 #'
 #' @param x A result from [paths()].
-#' @return A static `dynet_path_network` cograph netobject.
+#' @return A static `dynet_path_network` cograph netobject, whose two tidy
+#'   tables are reached with `as.data.frame(x, what = "edges")` and
+#'   `as.data.frame(x, what = "nodes")`. The edge table has one row per hop
+#'   used by at least one optimal route, with `from`, `to`, `weight` (how many
+#'   endpoint/path families use the hop), `first_time` and `last_time` (the
+#'   hop's temporal range) and `n_endpoints` (how many distinct endpoints it
+#'   serves). The node table has one row per vertex the source actually
+#'   reaches, the source included, with `name`, `arrival_time`, `latency`,
+#'   `n_hops`, `n_paths` and `groups` (hop count as a grouping label for
+#'   plotting). Unreachable vertices are absent, not present with `NA`.
 #' @export
 path_network <- function(x) {
   if (!inherits(x, "dynet_paths")) {
@@ -117,7 +126,11 @@ path_network <- function(x) {
 #' @param row.names,optional Ignored.
 #' @param what `"edges"` or `"nodes"`.
 #' @param ... Ignored.
-#' @return A plain data frame.
+#' @return A plain `data.frame`. For `"edges"`, one row per hop used by an
+#'   optimal route, with `from`, `to`, `weight`, `first_time`, `last_time` and
+#'   `n_endpoints`. For `"nodes"`, one row per reached vertex, with `name`,
+#'   `arrival_time`, `latency`, `n_hops`, `n_paths` and `groups`. See
+#'   [path_network()] for what each column means.
 #' @export
 as.data.frame.dynet_path_network <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {

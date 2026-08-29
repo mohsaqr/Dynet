@@ -51,9 +51,9 @@ once -- \code{mode = c("all", "in", "out")} -- to get degree, in-degree and
 out-degree from a single call; the extra directions are then labelled
 \code{degree_in} and \code{degree_out} in the \code{measure} column, while a call naming
 one direction keeps the plain measure name. Applies to
-\code{"degree"}, \code{"strength"}, \code{"closeness"}, \code{"coreness"}, \code{"harary"} and
-\code{"eigenvector"}; the remaining measures have a single directional
-definition and ignore it. Ignored
+\code{"degree"}, \code{"strength"}, \code{"closeness"}, \code{"coreness"}, \code{"harary"},
+\code{"eigenvector"} and \code{"diffusion"}; the remaining measures have a single
+directional definition and ignore it. Ignored
 entirely on an undirected network. In-degree is therefore
 \code{mode = "in"}. The old \code{"indegree"} and \code{"outdegree"} measure names
 remain as deprecated aliases.}
@@ -115,7 +115,11 @@ Print it, \code{\link[=summary]{summary()}} it, \code{\link[=plot]{plot()}} it, 
 \code{\link[=as.data.frame]{as.data.frame()}}. A closeness- or betweenness-only temporal result stores
 its mathematical choices as direct attributes; a mixed temporal result
 stores named records under \code{measure_metadata}. Snapshot prestige follows
-the same direct-versus-scoped metadata convention.
+the same direct-versus-scoped metadata convention. When a prestige
+variant is structurally undefined or fails to converge, the affected
+values are \code{NA}, a warning says how many reporting blocks were affected,
+and a \code{prestige_diagnostics} record naming the stage and reason for each
+is attached to the result.
 }
 \description{
 Centrality for every vertex at every time point. Ask for several measures
@@ -323,4 +327,42 @@ Butts, C. T. (2024). \emph{sna: Tools for Social Network Analysis}, version 2.8.
 doi:10.32614/CRAN.package.sna.
 
 Lin, N. (1976). \emph{Foundations of Social Research}. McGraw-Hill.
+
+Brandes, U. (2001). A faster algorithm for betweenness centrality.
+\emph{Journal of Mathematical Sociology}, 25(2), 163-177.
+
+Bonacich, P. (1987). Power and centrality: a family of measures.
+\emph{American Journal of Sociology}, 92(5), 1170-1182.
+
+Hage, P., & Harary, F. (1995). Eccentricity and centrality in networks.
+\emph{Social Networks}, 17(1), 57-63.
+
+Stephenson, K., & Zelen, M. (1989). Rethinking centrality. \emph{Social
+Networks}, 11(1), 1-37.
+
+Goh, K.-I., Kahng, B., & Kim, D. (2001). Universal behavior of load
+distribution in scale-free networks. \emph{Physical Review Letters}, 87(27),
+278701.
+
+Freeman, L. C., Borgatti, S. P., & White, D. R. (1991). Centrality in
+valued graphs. \emph{Social Networks}, 13(2), 141-154.
+
+Bonacich, P. (1972). Factoring and weighting approaches to status scores
+and clique identification. \emph{Journal of Mathematical Sociology}, 2, 113-120.
+doi:10.1080/0022250X.1972.9989806.
+
+Berman, A., & Plemmons, R. J. (1994). \emph{Nonnegative Matrices in the
+Mathematical Sciences}. SIAM. doi:10.1137/1.9781611971262.
+
+Sinkhorn, R. (1964). A relationship between arbitrary positive matrices
+and doubly stochastic matrices. \emph{Annals of Mathematical Statistics}, 35,
+876-879. doi:10.1214/aoms/1177703591.
+
+Sinkhorn, R., & Knopp, P. (1967). Concerning nonnegative matrices and
+doubly stochastic matrices. \emph{Pacific Journal of Mathematics}, 21, 343-348.
+doi:10.2140/pjm.1967.21.343.
+
+Knight, P. A. (2008). The Sinkhorn-Knopp algorithm: convergence and
+applications. \emph{SIAM Journal on Matrix Analysis and Applications}, 30,
+261-275. doi:10.1137/060659624.
 }

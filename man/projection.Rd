@@ -44,8 +44,9 @@ An object of class \code{dynet_projection}. Use
 \code{projection()} discretizes a temporal network into snapshot slices and
 connects each vertex state to its realization in the next slice. Within a
 slice it uses the same independently aggregated, endpoint-induced snapshot
-as \code{\link[=snapshots]{snapshots()}}. Identity arcs always point forward and have weight
-one. The result is a tidy projection object rather than a bare matrix.
+as \code{\link[=snapshots]{snapshots()}}. Identity arcs always point forward and carry the coupling
+weight \code{omega}. The result is a tidy projection object rather than a bare
+matrix.
 }
 \details{
 Every fixed-universe vertex receives one state in every emitted slice.
@@ -60,7 +61,8 @@ Directed source edges produce one within-slice arc. An undirected nonloop
 edge produces reciprocal arcs, while an undirected loop is emitted once.
 Parallel active spells are one within-slice pair whose \code{weight} is their
 summed weight and whose \code{n_spells} records their count. Identity arcs have
-\code{weight = 1} and \code{n_spells = 0}.
+\code{weight = omega} and \code{n_spells = 0}, and \code{meta$identity_weight} reports the
+same value.
 }
 \examples{
 dn <- dynet(data.frame(

@@ -139,7 +139,15 @@
 #'   sequence and never uses a predecessor outside the range.
 #' @param group_events Infer one group-directed turn from simultaneous distinct
 #'   recipients, or retain every dyadic row.
-#' @return A `dynet_pshifts` data frame with the thirteen fixed classes.
+#' @return A `dynet_pshifts` data frame whose shape follows `output`.
+#'   `"final"` gives one row per shift class -- thirteen rows, always all
+#'   thirteen even when a class never occurred -- with columns `shift` (the
+#'   Gibson label), `family` (the label's group) and `count`.
+#'   `"cumulative"` gives one row per turn and class, that is thirteen rows
+#'   per classified turn, with `sequence` and `event` locating the turn in its
+#'   sequence, `time`, `speaker`, `target` and `group` describing the turn,
+#'   and `shift`, `family` and `count` carrying the running total of that
+#'   class up to and including the turn.
 #' @details Only uncensored raw spell onsets inside the observed query and
 #' observation components are turns; duration, weights, fragments and
 #' terminus censoring are ignored. Consecutive turns are classified using

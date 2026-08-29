@@ -250,7 +250,7 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.select_nodes(dn, quote(degree > 16), parent.frame())
-#' @keywords internal
+#' @noRd
 .select_nodes <- function(dn, expr, env) {
   if (is.null(expr)) return(NULL)
   table <- as.data.frame(dn, what = "nodes")
@@ -288,7 +288,7 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #' @return A character vector of node names.
 #' @examples
 #' Dynet:::.node_names(data.frame(node = c("A", "B"), value = 1:2), "nodes")
-#' @keywords internal
+#' @noRd
 .node_names <- function(value, arg) {
   if (is.null(value) || is.character(value)) return(value)
   if (is.factor(value)) return(as.character(value))
@@ -314,8 +314,10 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #'   a logical mask, or any data frame carrying a `name` or `node` column. Only
 #'   ties whose two endpoints are in this set are eligible.
 #' @param ties Optional integer row positions or logical mask over the raw
-#'   spell table. This supports legacy edge-attribute filtering, for example
-#'   `ties = as.data.frame(dn)$course_group == "course_1"`.
+#'   spell table, in the order `as.data.frame(dn)` returns it. A mask must
+#'   have exactly that many elements. Unlike `nodes`, this argument is not a
+#'   condition: it is evaluated normally, so a selection by edge attribute has
+#'   to be computed before the call.
 #' @param keep_isolates Whether named nodes without a selected tie remain.
 #' @return A new `dynet` object with selected ties, nodes, vertex activity, and
 #'   all static attributes retained.

@@ -13,7 +13,7 @@
 #' @param n Number of colours needed.
 #' @return A character vector of hex colours.
 #' @references Okabe, M., & Ito, K. (2008). Color universal design.
-#' @keywords internal
+#' @noRd
 .okabe_ito <- function(n = 9L) rep(.okabe, length.out = max(1L, n))
 
 #' Resolve a palette specification to colours
@@ -48,7 +48,7 @@
 #' Every option is deterministic; none draws a random sample, so the same
 #' network gets the same colours on every run.
 #'
-#' @keywords internal
+#' @noRd
 .dyn_palette <- function(palette = "okabe", n = 9L) {
   n <- max(1L, as.integer(n))
   if (is.function(palette)) {
@@ -79,7 +79,7 @@
 #' Reject anything R cannot render as a colour
 #' @param x Character vector.
 #' @return `x`, unchanged.
-#' @keywords internal
+#' @noRd
 .check_colours <- function(x) {
   ok <- vapply(x, function(v) {
     !inherits(try(grDevices::col2rgb(v), silent = TRUE), "try-error")
@@ -95,7 +95,7 @@
 #' Qualitative palette varying hue together with lightness
 #' @param n Number of colours needed.
 #' @return A character vector of `n` colours.
-#' @keywords internal
+#' @noRd
 .palette_extended <- function(n) {
   if (n <= length(.okabe)) return(.okabe[seq_len(n)])
   levels <- c(40, 58, 76, 90)
@@ -118,7 +118,7 @@
 #' @param n Number of colours needed.
 #' @param grid Points per sRGB axis in the candidate lattice.
 #' @return A character vector of `n` colours.
-#' @keywords internal
+#' @noRd
 .palette_many <- function(n, grid = 16L) {
   if (n <= length(.okabe)) return(.okabe[seq_len(n)])
   steps <- seq(0.06, 0.94, length.out = grid)
@@ -148,7 +148,7 @@
 #' Convert sRGB to CIE Lab
 #' @param rgb Matrix of sRGB values in `[0, 1]`, one colour per row.
 #' @return A matrix with columns `L`, `a`, `b`.
-#' @keywords internal
+#' @noRd
 .srgb_to_lab <- function(rgb) {
   lin <- ifelse(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055)^2.4)
   m <- matrix(c(0.4124, 0.3576, 0.1805,
@@ -166,7 +166,7 @@
 #' Smallest distance between any two colours in a palette
 #' @param colours Character vector of colours.
 #' @return A single numeric; `NA` for fewer than two colours.
-#' @keywords internal
+#' @noRd
 .min_separation <- function(colours) {
   if (length(colours) < 2L) return(NA_real_)
   min(stats::dist(.srgb_to_lab(t(grDevices::col2rgb(colours)) / 255)))
@@ -179,7 +179,7 @@
 #' @references Vienot, F., Brettel, H., & Mollon, J. D. (1999). Digital video
 #'   colourmaps for checking the legibility of displays by dichromats.
 #'   *Color Research and Application*, 24(4), 243-252.
-#' @keywords internal
+#' @noRd
 .simulate_cvd <- function(colours, type = c("deutan", "protan")) {
   type <- match.arg(type)
   rgb_in <- t(grDevices::col2rgb(colours)) / 255
@@ -207,7 +207,7 @@
 #' @return A character vector of `"black"` or `"white"`, one per fill.
 #' @references W3C (2018). Web Content Accessibility Guidelines 2.1,
 #'   relative luminance and contrast ratio.
-#' @keywords internal
+#' @noRd
 .label_colour <- function(fills) {
   rgb_in <- t(grDevices::col2rgb(fills)) / 255
   lin <- ifelse(rgb_in <= 0.03928, rgb_in / 12.92,

@@ -17,8 +17,10 @@ a logical mask, or any data frame carrying a \code{name} or \code{node} column. 
 ties whose two endpoints are in this set are eligible.}
 
 \item{ties}{Optional integer row positions or logical mask over the raw
-spell table. This supports legacy edge-attribute filtering, for example
-\code{ties = as.data.frame(dn)$course_group == "course_1"}.}
+spell table, in the order \code{as.data.frame(dn)} returns it. A mask must
+have exactly that many elements. Unlike \code{nodes}, this argument is not a
+condition: it is evaluated normally, so a selection by edge attribute has
+to be computed before the call.}
 
 \item{keep_isolates}{Whether named nodes without a selected tie remain.}
 }

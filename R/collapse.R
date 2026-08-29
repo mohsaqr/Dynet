@@ -166,10 +166,26 @@
 #'   and `"separate"` returns one collapsed cograph network per session.
 #' @param censored Whether raw edge and vertex identities carrying an explicit
 #'   censor flag are included.
-#' @return A `dynet_collapsed` cograph netobject. With
-#'   `sessions = "separate"`, a named `dynet_collapsed_list` of such objects.
-#'   Edge data include `activity.duration` and `activity.count` aliases for
-#'   compatibility with `networkDynamic::network.collapse()`.
+#' @return A `dynet_collapsed` cograph netobject, whose two tidy tables are
+#'   reached with `as.data.frame(x, what = "edges")` and
+#'   `as.data.frame(x, what = "nodes")`. With `sessions = "separate"`, a named
+#'   `dynet_collapsed_list` of such objects, one per session.
+#'
+#'   The edge table carries one row per collapsed pair and every weighting at
+#'   once, so choosing one does not discard the others: `from`, `to`,
+#'   `binary` (1 for a pair that was ever active), `union_duration` (time the
+#'   pair was active, overlaps counted once), `total_duration` (summed spell
+#'   lengths, overlaps counted twice), `duration_fraction` (`union_duration`
+#'   over the pair's joint activity opportunity, `NA` when that opportunity is
+#'   zero), `spell_count`, `weight_sum`, `weighted_duration` (weight times
+#'   duration, summed), `latest_weight` (the weight of the last spell to end),
+#'   `first` and `last` (the pair's earliest onset and latest terminus), and
+#'   the `activity.duration` and `activity.count` aliases for compatibility
+#'   with `networkDynamic::network.collapse()`.
+#'
+#'   The node table carries one row per vertex, with `name`,
+#'   `activity_duration` (time the vertex was active, overlaps counted once)
+#'   and its `activity.duration` alias.
 #' @examples
 #' dn <- dynet(data.frame(
 #'   from = c("A", "A"), to = c("B", "B"),
@@ -214,7 +230,14 @@ collapse_network <- function(
 #' @param row.names,optional Ignored; present for compatibility.
 #' @param what `"edges"` or `"nodes"`.
 #' @param ... Ignored.
-#' @return A plain data frame.
+#' @return A plain `data.frame`. For `"edges"`, one row per collapsed vertex
+#'   pair carrying every weighting side by side: `from`, `to`, `binary`,
+#'   `union_duration`, `total_duration`, `duration_fraction`, `spell_count`,
+#'   `weight_sum`, `weighted_duration`, `latest_weight`, `first`, `last`, and
+#'   the `activity.duration` and `activity.count` aliases. For `"nodes"`, one
+#'   row per vertex with `name`, `activity_duration` and its
+#'   `activity.duration` alias, plus any static vertex attributes the network
+#'   carries. See [collapse_network()] for what each weighting means.
 #' @export
 as.data.frame.dynet_collapsed <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {

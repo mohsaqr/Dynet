@@ -18,8 +18,11 @@ snapshots(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{at}{Optional numeric time. When given, only the bin containing that
-time is returned.}
+\item{at}{Optional numeric time, narrowing the result to the bins that
+cover it. With the default disjoint tiling that is one bin; with an
+overlapping \code{window} every bin containing the time is returned. A time
+outside every bin falls back to the nearest bin rather than an empty
+result, so \code{at} never returns zero rows on a nonempty network.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
@@ -42,7 +45,9 @@ observation it gives one window per session or observed component.}
 }
 \value{
 A \code{dynet_snapshot} data frame with one row per active edge per bin:
-\code{session} (when present), \code{time}, \code{from}, \code{to}, \code{weight} and \code{n_spells}.
+\code{session} (when the network has sessions), \code{observation} (when
+observation is discontinuous, naming the observed component the bin falls
+in), \code{time}, \code{from}, \code{to}, \code{weight} and \code{n_spells}.
 \code{\link[=print]{print()}} shows a header and the first rows, \code{\link[=summary]{summary()}} collapses to one
 row per bin, \code{\link[=plot]{plot()}} draws how many ties each bin holds, and
 \code{\link[=as.data.frame]{as.data.frame()}} returns the plain table. A pair

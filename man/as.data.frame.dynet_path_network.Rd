@@ -22,7 +22,11 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain data frame.
+A plain \code{data.frame}. For \code{"edges"}, one row per hop used by an
+optimal route, with \code{from}, \code{to}, \code{weight}, \code{first_time}, \code{last_time} and
+\code{n_endpoints}. For \code{"nodes"}, one row per reached vertex, with \code{name},
+\code{arrival_time}, \code{latency}, \code{n_hops}, \code{n_paths} and \code{groups}. See
+\code{\link[=path_network]{path_network()}} for what each column means.
 }
 \description{
 Tidy tables from a temporal path-union network

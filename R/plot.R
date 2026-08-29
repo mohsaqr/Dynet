@@ -5,7 +5,7 @@
 #' Draw a temporal network
 #'
 #' @description
-#' Five views, each answering a different question.
+#' Nine views, each answering a different question.
 #'
 #' \describe{
 #'   \item{`"events"`}{Every contact as a link drawn at the moment it fires,
@@ -24,6 +24,15 @@
 #'   \item{`"snapshots"`}{Small multiples, one `cograph::splot()` per time
 #'     bin, laid out on shared coordinates so positions are comparable across
 #'     panels.}
+#'   \item{`"layers"`}{The multilayer view: one network per time slice, drawn
+#'     as a stack of layers in which each vertex appears once per slice and is
+#'     joined to its own copy in the next by an identity arc of weight
+#'     `omega`.}
+#'   \item{`"heatmap"`}{The matrix counterpart of `"layers"`: each slice is a
+#'     tilted heatmap plane rather than a node-link diagram.}
+#'   \item{`"stack"`}{The same slices projected as a node-link stack, each
+#'     vertex keeping one colour through the whole stack so it can be followed
+#'     between planes.}
 #'   \item{`"proximity"`}{Vertices placed on a vertical line at each time
 #'     point according to how close they are in the network, and joined
 #'     through time. Clusters appear as bands of lines travelling together.}
@@ -67,12 +76,12 @@
 #'   occurs across the network, so one-off links recede and habitual ones
 #'   stand out.
 #' @param type One of `"timeline"`, `"events"`, `"activity"`, `"network"`,
-#'   `"snapshots"`,
-#'   `"proximity"`.
+#'   `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or `"proximity"`.
 #' @param at For `"network"`, the time to draw. `NULL` draws the whole window
 #'   flattened.
-#' @param step For `"layers"`, the width of each time slice. `NULL` uses the
-#'   construction interval.
+#' @param step For `"layers"`, `"heatmap"` and `"stack"`, the width of each
+#'   time slice. `NULL` uses the construction interval. At least two slices
+#'   are needed, so too wide a `step` is an error rather than a single panel.
 #' @param omega For `"layers"`, the weight on the identity arcs carrying a
 #'   vertex between adjacent slices, that is, the interlayer coupling.
 #' @param start,end Window the plot to `[start, end]` before drawing. Either
@@ -82,14 +91,18 @@
 #' @param panels For snapshots, the maximum number of panels to draw. Bins are
 #'   sampled evenly across the window and the choice is reported.
 #' @param measure For the proximity view, the node-level measure that line
-#'   thickness follows. Any measure [dyn_centrality()] accepts.
+#'   thickness follows. Any measure [dyn_centrality()] accepts at snapshot
+#'   scope; the temporal-scope-only measures `"reach"` and `"reach_count"`
+#'   are not available here, because the view redraws the measure over many
+#'   short slices.
 #' @param phases For the proximity view, how many phases to split the window
 #'   into for the network panels. `NULL` uses the network's sessions when it
 #'   has them and three phases otherwise.
 #' @param networks Whether the proximity view draws a network panel per phase.
 #' @param events Whether the proximity view marks the times edges formed.
-#' @param labels Whether the proximity view names each line at its right-hand
-#'   end, in place of a legend.
+#' @param labels Whether vertices are named in place of a legend: at the
+#'   right-hand end of each line in the proximity view, and beside each node
+#'   in the `"layers"` and `"stack"` views.
 #' @param highlight Vertex names to draw in colour in the proximity view, with
 #'   the rest in grey.
 #' @param slices How many times the proximity view measures the network across
@@ -110,14 +123,22 @@
 #' @param default_dist Distance assumed between vertices with no path between
 #'   them, in the proximity view.
 #' @param base_size Base font size for the ggplot views.
-#' @param style A base-graphics style list from [.dyn_style()], used by the
+#' @param style A base-graphics style list from `.dyn_style()`, used by the
 #'   proximity view.
 #' @param ... Passed to `cograph::splot()` for the network, snapshot and
 #'   proximity views.
 #'
-#' @return For `"timeline"` and `"activity"`, a `ggplot` object. For
-#'   `"network"`, `"snapshots"` and `"proximity"`, the figure is drawn on the
-#'   current device and `x` is returned invisibly.
+#' @return For `"timeline"`, `"events"`, `"activity"` and `"heatmap"`, a
+#'   `ggplot` object, which prints itself when the call is not assigned. For
+#'   `"network"`, `"snapshots"`, `"layers"`, `"stack"` and `"proximity"`, the
+#'   figure is drawn on the current device and `x` is returned invisibly.
+#'
+#' @references
+#' Okabe, M., & Ito, K. (2008). Color universal design: how to make figures
+#' and presentations that are friendly to colorblind people.
+#'
+#' Chaikin, G. M. (1974). An algorithm for high-speed curve generation.
+#' *Computer Graphics and Image Processing*, 3(4), 346-349.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -213,7 +234,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param prefix Prefix for the slice names.
 #' @return A named list of square weight matrices, one per slice, sharing
 #'   dimnames.
-#' @keywords internal
+#' @noRd
 .dyn_layer_matrices <- function(x, step, prefix = "t") {
   .check(
     "`step` must be one positive number or NULL." =
@@ -239,7 +260,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 
 #' Draw the time slices as heatmap planes
 #'
-#' The matrix counterpart of [.plot_layers()]: each slice is a tilted heatmap
+#' The matrix counterpart of `.plot_layers()`: each slice is a tilted heatmap
 #' plane rather than a node-link diagram. Unlike the other two layer views
 #' this returns a `ggplot`, because `cograph::plot_ml_heatmap()` does; the
 #' caller prints it like any other ggplot view in this method.
@@ -249,7 +270,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Passed to `cograph::plot_ml_heatmap()`.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_layer_heatmap <- function(x, step, palette, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The heatmap view needs the cograph package.",
@@ -277,7 +298,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param labels Whether to draw vertex labels.
 #' @param ... Passed to `cograph::plot_temporal()`.
 #' @return The `dynet` object, invisibly. Drawn to the current device.
-#' @keywords internal
+#' @noRd
 .plot_layer_stack <- function(x, step, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The stack view needs the cograph package.",
@@ -304,7 +325,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A character vector of colours defining the ramp.
-#' @keywords internal
+#' @noRd
 .dyn_heat_ramp <- function(palette) {
   c("#FFFFFF", .dyn_palette(palette, 2L))
 }
@@ -325,7 +346,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param labels Whether to draw vertex labels.
 #' @param ... Passed to `cograph::plot_mlna()`.
 #' @return The `dynet` object, invisibly. Drawn to the current device.
-#' @keywords internal
+#' @noRd
 .plot_layers <- function(x, step, omega, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The layer view needs the cograph package.",
@@ -371,7 +392,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param dots The captured `...`.
 #' @param type The plot type being drawn.
 #' @return `TRUE`, invisibly.
-#' @keywords internal
+#' @noRd
 .check_plot_dots <- function(dots, type) {
   if (!length(dots)) return(invisible(TRUE))
   nm <- names(dots)
@@ -409,7 +430,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param x A `dynet` object.
 #' @param start,end Optional bounds; `NULL` keeps the observed edge.
 #' @return A `dynet` object covering the requested window.
-#' @keywords internal
+#' @noRd
 .clip_plot_range <- function(x, start, end) {
   if (is.null(start) && is.null(end)) return(x)
   span <- x$meta$time_range
@@ -444,8 +465,11 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param y1,y2 Actor positions of the two endpoints.
 #' @param d How far the glyph may bulge into the gutter.
 #' @param n Vertices in the polyline.
+#' @param pivot Where along the span the bow peaks, as `cograph::splot()`'s
+#'   `curve_pivot` does. `0.5` is symmetric; the value is clamped away from
+#'   the endpoints.
 #' @return A data frame of `x` and `y` polyline vertices.
-#' @keywords internal
+#' @noRd
 .link_path <- function(style, x, y1, y2, d, n = 60L, pivot = 0.5) {
   t <- seq(0, 1, length.out = n)
   y <- y1 + t * (y2 - y1)
@@ -479,7 +503,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param s,e Spell starts and ends.
 #' @param lo,hi Bin bounds.
 #' @return The length of the clipped union.
-#' @keywords internal
+#' @noRd
 .union_len <- function(s, e, lo, hi) {
   s <- pmax(s, lo); e <- pmin(e, hi)
   ok <- e > s
@@ -499,7 +523,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param split Share of the run that keeps the source colour.
 #' @param blend Fade between the two rather than switching at a boundary.
 #' @return A character vector of `n` colours.
-#' @keywords internal
+#' @noRd
 .link_cols <- function(from_col, to_col, n, split = 0.8, blend = FALSE) {
   if (isTRUE(blend)) {
     ramp <- grDevices::colorRamp(c(from_col, to_col))
@@ -519,7 +543,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param interval Bin width for `"bin"`.
 #' @param stamps Distinct onsets for `"event"`.
 #' @return Numeric positions.
-#' @keywords internal
+#' @noRd
 .event_place <- function(v, time, span, interval, stamps) {
   switch(time,
     clock = v,
@@ -541,8 +565,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param weight Scale alpha and width by how usual the pair is.
 #' @param palette Palette specification.
 #' @param base_size Base text size.
+#' @param aes Named list of `cograph::splot()` aesthetics the caller set
+#'   explicitly, spliced into the drawing so they are not swallowed.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_events <- function(x, link, time, bins, aggregate, nest, split, blend,
                          weight, palette, base_size, aes = list()) {
   .check(
@@ -711,7 +737,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' Translate a splot shape name to a ggplot shape code
 #' @param shape A splot shape name or a ggplot shape number.
 #' @return An integer ggplot shape code.
-#' @keywords internal
+#' @noRd
 .node_shape <- function(shape) {
   if (is.numeric(shape)) return(as.integer(shape[[1L]]))
   codes <- c(circle = 21L, square = 22L, diamond = 23L, triangle = 24L,
@@ -722,7 +748,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 
 #' Require cograph, the renderer for every node-link view
 #' @return `TRUE`, invisibly.
-#' @keywords internal
+#' @noRd
 .need_cograph <- function() {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition(
@@ -738,7 +764,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Passed to `cograph::splot()`, overriding the defaults below.
 #' @return `x`, invisibly.
-#' @keywords internal
+#' @noRd
 .splot_network <- function(x, at = NULL, palette = "okabe", ...) {
   .need_cograph()
   net <- if (is.null(at)) x else .bin_netobject(x, at)
@@ -749,7 +775,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' Dynet's rendering defaults, with anything the caller set taking precedence
 #'
 #' Colour is carried by the registered `"dynet"` theme (see
-#' [.register_dynet_theme()]); everything the theme contract cannot express
+#' `.register_dynet_theme()`); everything the theme contract cannot express
 #' is stated here. Two things make the extra layer necessary.
 #'
 #' First, `cograph::splot()` treats a directed netobject carrying no `$method`
@@ -772,7 +798,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param user List of arguments supplied by the caller.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A list of arguments for `cograph::splot()`.
-#' @keywords internal
+#' @noRd
 .splot_args <- function(net, user, palette = "okabe") {
   defaults <- list(
     theme            = "dynet",
@@ -817,7 +843,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' @param args Argument list destined for `cograph::splot()`.
 #' @return A character vector of colours.
-#' @keywords internal
+#' @noRd
 .effective_fill <- function(args) {
   if (!is.null(args$node_fill)) return(args$node_fill)
   theme <- args$theme
@@ -835,7 +861,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' Whether a netobject carries usable layout coordinates
 #' @param net A netobject.
 #' @return A single `TRUE` or `FALSE`.
-#' @keywords internal
+#' @noRd
 .has_layout <- function(net) {
   x <- net$nodes$x
   !is.null(x) && !all(is.na(x))
@@ -844,7 +870,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' Vertex radius that shrinks as the network grows
 #' @param n Vertex count.
 #' @return A single numeric size for `cograph::splot()`.
-#' @keywords internal
+#' @noRd
 .node_size <- function(n) max(2.5, min(8, 24 / sqrt(max(1L, n))))
 
 #' Arrowhead size that shrinks as the network grows
@@ -857,17 +883,17 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' @param n Vertex count.
 #' @return A single numeric size for `cograph::splot()`.
-#' @keywords internal
+#' @noRd
 .arrow_size <- function(n) max(0.35, min(0.75, 1.7 / sqrt(max(1L, n))))
 
 #' Vertex fill colours, following the partition when there is one
 #' cograph's own `palette_colorblind()` is an interpolated ramp, not the
-#' Okabe-Ito set, so the partition colours come from [.dyn_palette()].
+#' Okabe-Ito set, so the partition colours come from `.dyn_palette()`.
 #'
 #' @param net A netobject carrying a `groups` column.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A character vector of colours, one per vertex.
-#' @keywords internal
+#' @noRd
 .node_fill <- function(net, palette = "okabe") {
   g <- as.character(net$nodes$groups)
   lev <- sort(unique(g))
@@ -880,7 +906,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Passed to `cograph::splot()`.
 #' @return `x`, invisibly.
-#' @keywords internal
+#' @noRd
 .splot_snapshots <- function(x, panels = 9L, palette = "okabe", ...) {
   .need_cograph()
   grid <- as.data.frame(x, what = "bins")
@@ -918,7 +944,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.bin_netobject(dn, 1)
-#' @keywords internal
+#' @noRd
 .bin_netobject <- function(x, at) {
   enc <- .encode(x)
   grid <- .grid_for(enc, x)
@@ -955,11 +981,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   .as_netobject(keep, nodes, x$directed, groups, x$meta, vertex_spells)
 }
 
-#' Timeline of edge spells
-#' @param x A `dynet` object.
-#' @param top Number of busiest pairs to draw.
-#' @param base_size Base font size.
-#' Edge activity over time as an intensity heatmap
+#' Timeline of edge spells as a per-pair intensity heatmap
 #'
 #' One row per vertex pair, time on the x axis, fill showing how much of each
 #' bin the pair was active. Zero-duration contact data has no share to report,
@@ -970,7 +992,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param bins Number of equal bins, or `NULL` for the network's own interval.
 #' @param base_size Base text size.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_timeline <- function(x, top, bins, base_size) {
   e <- as.data.frame(x)
   if (!nrow(e)) {
@@ -1031,7 +1053,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param x A `dynet` object.
 #' @param base_size Base font size.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_activity <- function(x, base_size) {
   plot(events(x, measure = c("formation", "dissolution", "active")),
        base_size = base_size) +
@@ -1141,7 +1163,7 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
 #' Rescale a vector to the interval minus one to one
 #' @param v Numeric vector.
 #' @return A numeric vector of the same length.
-#' @keywords internal
+#' @noRd
 .rescale <- function(v) {
   rng <- range(v, finite = TRUE)
   if (!is.finite(diff(rng)) || diff(rng) == 0) return(rep(0, length(v)))
@@ -1151,7 +1173,7 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
 #' Small offsets that separate vertices sharing a value
 #' @param v Numeric vector of grouping values.
 #' @return A numeric vector of offsets spanning most of one unit band.
-#' @keywords internal
+#' @noRd
 .jitter_within <- function(v) {
   spread <- stats::ave(v, v,
                        FUN = function(g) seq_along(g) / (length(g) + 1) - 0.5)

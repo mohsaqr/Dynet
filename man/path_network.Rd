@@ -10,7 +10,16 @@ path_network(x)
 \item{x}{A result from \code{\link[=paths]{paths()}}.}
 }
 \value{
-A static \code{dynet_path_network} cograph netobject.
+A static \code{dynet_path_network} cograph netobject, whose two tidy
+tables are reached with \code{as.data.frame(x, what = "edges")} and
+\code{as.data.frame(x, what = "nodes")}. The edge table has one row per hop
+used by at least one optimal route, with \code{from}, \code{to}, \code{weight} (how many
+endpoint/path families use the hop), \code{first_time} and \code{last_time} (the
+hop's temporal range) and \code{n_endpoints} (how many distinct endpoints it
+serves). The node table has one row per vertex the source actually
+reaches, the source included, with \code{name}, \code{arrival_time}, \code{latency},
+\code{n_hops}, \code{n_paths} and \code{groups} (hop count as a grouping label for
+plotting). Unreachable vertices are absent, not present with \code{NA}.
 }
 \description{
 \code{paths()} uses an endpoint-local foremost-then-shortest criterion, so

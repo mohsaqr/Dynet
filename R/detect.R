@@ -28,7 +28,7 @@
 #' Normalise a column name for alias matching
 #' @param x Character vector of column names.
 #' @return Character vector, lower-cased with non-alphanumerics removed.
-#' @keywords internal
+#' @noRd
 .norm_name <- function(x) {
   gsub("[^a-z0-9]", "", tolower(x))
 }
@@ -39,7 +39,7 @@
 #' @param role Name of an entry in `.dynet_aliases`.
 #' @param exclude Character vector of column names already claimed.
 #' @return The matching column name, or `NULL`.
-#' @keywords internal
+#' @noRd
 .match_column <- function(data, role, exclude = character()) {
   aliases <- .dynet_aliases[[role]]
   cand <- setdiff(names(data), exclude)
@@ -57,7 +57,7 @@
 #' @param exclude Character vector of column names already claimed.
 #' @param arg Argument name to quote in error messages.
 #' @return The resolved column name, or `NULL` when nothing matches.
-#' @keywords internal
+#' @noRd
 .resolve_column <- function(data, given, role, exclude = character(),
                             arg = role) {
   if (!is.null(given)) {
@@ -96,7 +96,7 @@
 #' Number of seconds in one unit of `time_unit`
 #' @param time_unit One of "seconds", "minutes", "hours", "days", "weeks".
 #' @return A single numeric.
-#' @keywords internal
+#' @noRd
 .unit_seconds <- function(time_unit) {
   switch(time_unit,
     seconds = 1,
@@ -119,7 +119,7 @@
 #' @param origin Numeric or date-time origin. `NULL` uses `min(x)`.
 #' @return A list with `values` (numeric), `unit` (character) and
 #'   `origin` (the value mapped to zero).
-#' @keywords internal
+#' @noRd
 .parse_time <- function(x, time_unit = "auto", origin = NULL) {
   if (is.factor(x)) x <- as.character(x)
 
@@ -169,7 +169,7 @@
 #'
 #' @param span_seconds Numeric span in seconds.
 #' @return One of "seconds", "minutes", "hours", "days".
-#' @keywords internal
+#' @noRd
 .auto_unit <- function(span_seconds) {
   if (!is.finite(span_seconds) || span_seconds <= 0) return("seconds")
   if (span_seconds < 2 * 60) "seconds"
@@ -184,7 +184,7 @@
 #'
 #' @param x Character vector.
 #' @return A `POSIXct` vector.
-#' @keywords internal
+#' @noRd
 .parse_datetime_strings <- function(x) {
   trial <- lapply(.dynet_time_formats, function(fmt) {
     as.POSIXct(x, format = fmt, tz = "UTC")
