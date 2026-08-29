@@ -24,6 +24,7 @@ dyn_centrality(
   groups = NULL,
   beta = 0.1,
   decay = 0,
+  transition = 1,
   criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest")
 )
 }
@@ -33,9 +34,9 @@ dyn_centrality(
 \item{measure}{One or more of \code{"degree"}, \code{"strength"}, \code{"prestige"}, \code{"closeness"},
 \code{"betweenness"}, \code{"eigenvector"}, \code{"pagerank"}, \code{"hub"}, \code{"authority"},
 \code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
-\code{"load"}, \code{"flow_betweenness"}, or \code{"diffusion"} for snapshot scope;
-\code{"closeness"},
-\code{"betweenness"}, \code{"reach"} or \code{"reach_count"} for temporal scope.}
+\code{"load"}, \code{"flow_betweenness"}, \code{"participation"} or \code{"diffusion"} for
+snapshot scope; \code{"closeness"}, \code{"betweenness"}, \code{"reach"},
+\code{"reach_count"}, \code{"katz"} or \code{"pagerank"} for temporal scope.}
 
 \item{scope}{\code{"snapshot"} for a value per time bin, \code{"temporal"} for one
 value per vertex computed on time-respecting paths.}
@@ -47,7 +48,9 @@ on its own rows.}
 \item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
 \code{"window"} uses the current positive/default window.}
 
-\item{damping}{Damping factor for PageRank.}
+\item{damping}{Damping factor for PageRank, at either scope. In the
+temporal formulation it is the paper's jumping probability, so each extra
+step of a temporal walk is worth \code{damping} times the last.}
 
 \item{mode}{Which edges count on a directed network: \code{"all"} both
 directions, \code{"out"} outgoing only, \code{"in"} incoming only. Name several at
@@ -120,6 +123,13 @@ Each additional hop multiplies a walk's contribution by \code{beta}.}
 
 \item{decay}{For \code{measure = "katz"} only: exponential time-decay rate. Zero
 weights every past walk equally.}
+
+\item{transition}{For temporal \code{measure = "pagerank"} only: the transition
+probability in \verb{(0, 1]}. A walk waiting at a vertex declines each passing
+outgoing contact with probability \code{transition} and takes it otherwise, so
+a smaller value spreads a walk's next step further into the future. The
+boundary value \code{1} is a separate rule, not a limit: the walk takes the
+first contact that passes.}
 
 \item{criterion}{For \code{scope = "temporal"} only: which optimisation problem
 the journeys solve. \code{"foremost_then_shortest"} is the default and what
@@ -273,6 +283,44 @@ with positive latencies. The measure therefore has inverse-time units, is
 invariant to translating the time axis, and scales inversely when time is
 rescaled.
 
+Temporal PageRank scores a vertex by the damped, transition-weighted count
+of temporal walks that end at it, following Rozenshtein and Gionis (2016).
+It is computed by their Algorithm 1 in one pass over the contact stream: a
+contact \verb{(u, v, t)} starts a fresh walk at \code{u} worth \code{1 - damping}, then
+carries \code{damping} times whatever mass is waiting at \code{u} across to \code{v}. With
+\code{transition < 1} the mass left behind at \code{u} is multiplied by \code{transition}
+for each contact it declines, so a walk\'s next step follows a geometric
+distribution over the outgoing contacts that pass. \code{transition = 1} is a
+distinct rule rather than the limit of that one: the waiting mass leaves
+entirely on the first passing contact.
+
+Two consequences are worth stating plainly. The raw score grows linearly
+with the number of contacts, so it is comparable only within one window;
+\code{rescale = TRUE}, the default for this measure, divides by the total and is
+what makes two windows comparable. And the walk does not restart uniformly:
+a walk begins at \code{u} once per outgoing contact of \code{u}, so the implied
+personalization is the out-degree distribution. Under repeated uniform
+sampling from a fixed digraph and \code{transition = 1}, the rescaled scores
+converge to static PageRank personalized by weighted out-degree; on a
+digraph of constant out-degree that is exactly the uniform-teleport
+PageRank reported at snapshot scope. There is no teleportation matrix and so
+no dangling-mass correction: a vertex with no outgoing contact simply holds
+its mass. A vertex that never appears as a contact endpoint scores exactly
+zero, and a block with no eligible contact at all scores \code{NaN} throughout
+once rescaled.
+
+Simultaneous contacts are batched strictly for both stream measures,
+\code{"katz"} and \code{"pagerank"}: every contact sharing a timestamp reads the
+active mass as it stood before that instant, and the arrivals it produces
+are only available afterwards. This deliberately differs from \code{\link[=paths]{paths()}},
+which composes equal-time contacts at \code{traversal_time = 0}, and from a
+literal reading of Algorithm 1, which would let one contact continue a walk
+another contact delivered in the same instant. Without the batch rule the
+answer would depend on the arbitrary order of rows inside one instant, and
+therefore on the vertex labelling. On a stream whose timestamps are
+distinct and which carries no self-contact, the batched recurrence reduces
+to Algorithm 1 exactly.
+
 Temporal measures use \code{\link[=paths]{paths()}} traversal semantics: nondecreasing
 times, unlimited waiting, half-open interval spells, and a separate exact
 timestamp rule for point events. Positive \code{traversal_time} requires an
@@ -322,6 +370,12 @@ dyn_centrality(few, measure = "closeness", scope = "temporal")
 dyn_centrality(few, measure = "reach", scope = "temporal",
                start = 0, end = 10)
 
+# Stream measures need no path search, so they run on the whole network.
+dyn_centrality(dn, measure = "katz", scope = "temporal")
+dyn_centrality(dn, measure = "pagerank", scope = "temporal")
+dyn_centrality(dn, measure = "pagerank", scope = "temporal",
+               transition = 0.5)
+
 # A seven-day window, stepped one day at a time.
 dyn_centrality(dn, measure = "degree", step = 1, window = 7)
 
@@ -350,4 +404,14 @@ Butts, C. T. (2024). \emph{sna: Tools for Social Network Analysis}, version 2.8.
 doi:10.32614/CRAN.package.sna.
 
 Lin, N. (1976). \emph{Foundations of Social Research}. McGraw-Hill.
+
+Rozenshtein, P., & Gionis, A. (2016). Temporal PageRank. In \emph{Machine
+Learning and Knowledge Discovery in Databases (ECML PKDD 2016)}, LNCS 9852,
+674-689.
+
+Beres, F., Palovics, R., Olah, A., & Benczur, A. A. (2018). Temporal walk
+based centrality metric for graph streams. \emph{Applied Network Science}, 3, 32.
+
+Page, L., Brin, S., Motwani, R., & Winograd, T. (1999). The PageRank
+citation ranking: Bringing order to the web. Stanford InfoLab.
 }

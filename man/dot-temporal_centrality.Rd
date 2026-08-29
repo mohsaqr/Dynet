@@ -13,7 +13,10 @@
   traversal_time = 0,
   beta = 0.1,
   decay = 0,
-  criterion = "foremost_then_shortest"
+  criterion = "foremost_then_shortest",
+  damping = 0.85,
+  transition = 1,
+  rescale = TRUE
 )
 }
 \arguments{
@@ -27,6 +30,15 @@
 \item{start, end}{Optional traversal bounds for every temporal measure.}
 
 \item{traversal_time}{Nonnegative duration charged for every hop.}
+
+\item{beta, decay}{Temporal Katz attenuation and time-decay rate.}
+
+\item{criterion}{Path optimality criterion.}
+
+\item{damping, transition}{Temporal PageRank jumping and transition
+probabilities.}
+
+\item{rescale}{Whether temporal PageRank is normalized to sum one.}
 }
 \value{
 A \code{dynet_metric} at node level with no time column.

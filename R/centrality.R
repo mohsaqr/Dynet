@@ -16,12 +16,12 @@
                           "diffusion", "participation")
 
 .temporal_measures <- c("closeness", "betweenness", "reach", "reach_count",
-                        "katz")
+                        "katz", "pagerank")
 
 # Temporal measures computed by streaming the contact sequence rather than by
 # searching for paths. They need no per-source tree, so the trees are built
 # only when a path-based measure is actually requested.
-.stream_measures <- c("katz")
+.stream_measures <- c("katz", "pagerank")
 
 #' Resolve the `mode` argument, which may name several directions at once
 #'
@@ -107,9 +107,9 @@
 #' @param measure One or more of `"degree"`, `"strength"`, `"prestige"`, `"closeness"`,
 #'   `"betweenness"`, `"eigenvector"`, `"pagerank"`, `"hub"`, `"authority"`,
 #'   `"coreness"`, `"constraint"`, `"power"`, `"harary"`, `"information"`,
-#'   `"load"`, `"flow_betweenness"`, or `"diffusion"` for snapshot scope;
-#'   `"closeness"`,
-#'   `"betweenness"`, `"reach"` or `"reach_count"` for temporal scope.
+#'   `"load"`, `"flow_betweenness"`, `"participation"` or `"diffusion"` for
+#'   snapshot scope; `"closeness"`, `"betweenness"`, `"reach"`,
+#'   `"reach_count"`, `"katz"` or `"pagerank"` for temporal scope.
 #' @param scope `"snapshot"` for a value per time bin, `"temporal"` for one
 #'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
@@ -141,7 +141,9 @@
 #'   right so an event at the final instant is inside it; it cannot be combined
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
-#' @param damping Damping factor for PageRank.
+#' @param damping Damping factor for PageRank, at either scope. In the
+#'   temporal formulation it is the paper's jumping probability, so each extra
+#'   step of a temporal walk is worth `damping` times the last.
 #' @param exponent Attenuation factor for Bonacich `"power"`. Positive rewards
 #'   being connected to well-connected others; negative rewards the opposite,
 #'   which is the bargaining reading.
@@ -188,6 +190,12 @@
 #'   Each additional hop multiplies a walk's contribution by `beta`.
 #' @param decay For `measure = "katz"` only: exponential time-decay rate. Zero
 #'   weights every past walk equally.
+#' @param transition For temporal `measure = "pagerank"` only: the transition
+#'   probability in `(0, 1]`. A walk waiting at a vertex declines each passing
+#'   outgoing contact with probability `transition` and takes it otherwise, so
+#'   a smaller value spreads a walk's next step further into the future. The
+#'   boundary value `1` is a separate rule, not a limit: the walk takes the
+#'   first contact that passes.
 #' @param groups For `measure = "participation"` only: the name of a node
 #'   attribute, or one group label per vertex. Required for that measure and
 #'   rejected for every other.
@@ -316,6 +324,44 @@
 #' invariant to translating the time axis, and scales inversely when time is
 #' rescaled.
 #'
+#' Temporal PageRank scores a vertex by the damped, transition-weighted count
+#' of temporal walks that end at it, following Rozenshtein and Gionis (2016).
+#' It is computed by their Algorithm 1 in one pass over the contact stream: a
+#' contact `(u, v, t)` starts a fresh walk at `u` worth `1 - damping`, then
+#' carries `damping` times whatever mass is waiting at `u` across to `v`. With
+#' `transition < 1` the mass left behind at `u` is multiplied by `transition`
+#' for each contact it declines, so a walk\'s next step follows a geometric
+#' distribution over the outgoing contacts that pass. `transition = 1` is a
+#' distinct rule rather than the limit of that one: the waiting mass leaves
+#' entirely on the first passing contact.
+#'
+#' Two consequences are worth stating plainly. The raw score grows linearly
+#' with the number of contacts, so it is comparable only within one window;
+#' `rescale = TRUE`, the default for this measure, divides by the total and is
+#' what makes two windows comparable. And the walk does not restart uniformly:
+#' a walk begins at `u` once per outgoing contact of `u`, so the implied
+#' personalization is the out-degree distribution. Under repeated uniform
+#' sampling from a fixed digraph and `transition = 1`, the rescaled scores
+#' converge to static PageRank personalized by weighted out-degree; on a
+#' digraph of constant out-degree that is exactly the uniform-teleport
+#' PageRank reported at snapshot scope. There is no teleportation matrix and so
+#' no dangling-mass correction: a vertex with no outgoing contact simply holds
+#' its mass. A vertex that never appears as a contact endpoint scores exactly
+#' zero, and a block with no eligible contact at all scores `NaN` throughout
+#' once rescaled.
+#'
+#' Simultaneous contacts are batched strictly for both stream measures,
+#' `"katz"` and `"pagerank"`: every contact sharing a timestamp reads the
+#' active mass as it stood before that instant, and the arrivals it produces
+#' are only available afterwards. This deliberately differs from [paths()],
+#' which composes equal-time contacts at `traversal_time = 0`, and from a
+#' literal reading of Algorithm 1, which would let one contact continue a walk
+#' another contact delivered in the same instant. Without the batch rule the
+#' answer would depend on the arbitrary order of rows inside one instant, and
+#' therefore on the vertex labelling. On a stream whose timestamps are
+#' distinct and which carries no self-contact, the batched recurrence reduces
+#' to Algorithm 1 exactly.
+#'
 #' Temporal measures use [paths()] traversal semantics: nondecreasing
 #' times, unlimited waiting, half-open interval spells, and a separate exact
 #' timestamp rule for point events. Positive `traversal_time` requires an
@@ -350,6 +396,16 @@
 #'
 #' Lin, N. (1976). *Foundations of Social Research*. McGraw-Hill.
 #'
+#' Rozenshtein, P., & Gionis, A. (2016). Temporal PageRank. In *Machine
+#' Learning and Knowledge Discovery in Databases (ECML PKDD 2016)*, LNCS 9852,
+#' 674-689.
+#'
+#' Beres, F., Palovics, R., Olah, A., & Benczur, A. A. (2018). Temporal walk
+#' based centrality metric for graph streams. *Applied Network Science*, 3, 32.
+#'
+#' Page, L., Brin, S., Motwani, R., & Winograd, T. (1999). The PageRank
+#' citation ranking: Bringing order to the web. Stanford InfoLab.
+#'
 #' @examples
 #' dn <- dynet(school_contacts)
 #'
@@ -376,6 +432,12 @@
 #' dyn_centrality(few, measure = "closeness", scope = "temporal")
 #' dyn_centrality(few, measure = "reach", scope = "temporal",
 #'                start = 0, end = 10)
+#'
+#' # Stream measures need no path search, so they run on the whole network.
+#' dyn_centrality(dn, measure = "katz", scope = "temporal")
+#' dyn_centrality(dn, measure = "pagerank", scope = "temporal")
+#' dyn_centrality(dn, measure = "pagerank", scope = "temporal",
+#'                transition = 0.5)
 #'
 #' # A seven-day window, stepped one day at a time.
 #' dyn_centrality(dn, measure = "degree", step = 1, window = 7)
@@ -407,9 +469,14 @@ dyn_centrality <- function(dn,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
                            lambda = 1, groups = NULL,
-                           beta = 0.1, decay = 0,
+                           beta = 0.1, decay = 0, transition = 1,
                            criterion = c("foremost_then_shortest",
                                          "min_hops", "foremost", "fastest")) {
+  # Temporal PageRank's raw mass grows with the length of the stream, so its
+  # useful default is the normalized score. `rescale` therefore has a
+  # measure-dependent default, which needs the untouched state of the
+  # argument rather than its value.
+  rescale_supplied <- !missing(rescale)
   sessions <- match.arg(sessions)
   criterion <- match.arg(criterion)
   .check_dynet(dn, sessions)
@@ -447,9 +514,11 @@ dyn_centrality <- function(dn,
       is.logical(rescale) && length(rescale) == 1L && !is.na(rescale)
   )
 
-  if (rescale && !"prestige" %in% measure) {
+  temporal_pagerank <- identical(scope, "temporal") && "pagerank" %in% measure
+  if (temporal_pagerank && !rescale_supplied) rescale <- TRUE
+  if (rescale && !"prestige" %in% measure && !temporal_pagerank) {
     stop(errorCondition(
-      "`rescale = TRUE` requires `measure = \"prestige\"`.",
+      "`rescale = TRUE` requires `measure = \"prestige\"`, or temporal `measure = \"pagerank\"`.",
       class = "dynet_bad_input", call = NULL
     ))
   }
@@ -471,15 +540,29 @@ dyn_centrality <- function(dn,
       "`groups` applies only to measure = \"participation\".",
       class = "dynet_bad_input", call = NULL))
   }
+  # A stream measure walks no journeys, so a per-hop traversal cost has no
+  # meaning for it. Reject only when every requested measure is a stream
+  # measure; a mixed call still needs it for the path-based ones.
+  streamed <- intersect(measure, .stream_measures)
+  if (identical(scope, "temporal") && length(streamed) && traversal_time > 0 &&
+      !length(setdiff(measure, .stream_measures))) {
+    stop(errorCondition(sprintf(
+      "`traversal_time` has no meaning for a stream measure such as %s, which walks no journeys.",
+      paste(sQuote(streamed), collapse = " or ")),
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (temporal_pagerank) {
+    .check(
+      "`transition` must be a single number in (0, 1]." =
+        length(transition) == 1L && is.numeric(transition) &&
+          is.finite(transition) && transition > 0 && transition <= 1
+    )
+  } else if (!isTRUE(all.equal(transition, 1))) {
+    stop(errorCondition(
+      "`transition` applies only to temporal `measure = \"pagerank\"`.",
+      class = "dynet_bad_input", call = NULL))
+  }
   if ("katz" %in% measure) {
-    # A stream measure walks no journeys, so a per-hop traversal cost has no
-    # meaning for it. Reject only when every requested measure is a stream
-    # measure; a mixed call still needs it for the path-based ones.
-    if (traversal_time > 0 && !length(setdiff(measure, .stream_measures))) {
-      stop(errorCondition(
-        "`traversal_time` has no meaning for a stream measure such as \"katz\", which walks no journeys.",
-        class = "dynet_bad_input", call = NULL))
-    }
     .check(
       "`beta` must be a single number in (0, 1]." =
         length(beta) == 1L && is.numeric(beta) && is.finite(beta) &&
@@ -563,7 +646,7 @@ dyn_centrality <- function(dn,
     }
     return(.temporal_centrality(
       dn, measure, sessions, start, end, traversal_time, beta, decay,
-      criterion
+      criterion, damping = damping, transition = transition, rescale = rescale
     ))
   }
 
@@ -1544,13 +1627,20 @@ dyn_centrality <- function(dn,
 #' @param sessions Session mode.
 #' @param start,end Optional traversal bounds for every temporal measure.
 #' @param traversal_time Nonnegative duration charged for every hop.
+#' @param beta,decay Temporal Katz attenuation and time-decay rate.
+#' @param criterion Path optimality criterion.
+#' @param damping,transition Temporal PageRank jumping and transition
+#'   probabilities.
+#' @param rescale Whether temporal PageRank is normalized to sum one.
 #' @return A `dynet_metric` at node level with no time column.
 #' @keywords internal
 .temporal_centrality <- function(dn, measure, sessions,
                                  start = NULL, end = NULL,
                                  traversal_time = 0,
                                  beta = 0.1, decay = 0,
-                                 criterion = "foremost_then_shortest") {
+                                 criterion = "foremost_then_shortest",
+                                 damping = 0.85, transition = 1,
+                                 rescale = TRUE) {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   frames <- Map(function(enc, label) {
@@ -1602,7 +1692,8 @@ dyn_centrality <- function(dn,
     })
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
-                        horizon$start, horizon$end, criterion)), measure)
+                        horizon$start, horizon$end, criterion,
+                        damping, transition, rescale)), measure)
     data.frame(session = label, node = enc$names,
                measure = rep(measure, each = enc$n),
                value = unlist(vals, use.names = FALSE),
@@ -1619,32 +1710,53 @@ dyn_centrality <- function(dn,
       "computed on time-respecting paths within the requested traversal window",
     traversal_time = traversal_time
   )
+  # The criterion the search actually optimized, and the quantity closeness
+  # therefore inverted. Reporting the default here regardless of what was asked
+  # for would describe the wrong measure.
   closeness_metadata <- list(
-    criterion = "foremost_then_shortest",
-    distance = "forward_latency",
+    criterion = criterion,
+    distance = switch(criterion,
+      min_hops = "hop_count",
+      fastest = "journey_duration",
+      "forward_latency"),
     normalization = "reachable_inverse_mean"
   )
   betweenness_metadata <- list(
-    criterion = "foremost_then_shortest",
+    criterion = criterion,
     pair_domain = "forward_reachable_ordered",
     normalization = "none",
     path_identity = "canonical_atom_sequence"
   )
+  pagerank_metadata <- list(
+    damping = damping,
+    transition = transition,
+    normalization = if (rescale) "sum_to_one" else "none",
+    walk_rule = "strict",
+    # Proposition 2 of Rozenshtein and Gionis (2016) covers the strict branch
+    # only, so no static limit is claimed for a transition below one.
+    static_limit = if (transition >= 1) {
+      "out_degree_personalized_pagerank"
+    } else {
+      "none_established"
+    }
+  )
+  direct <- function(x, record) {
+    for (field in names(record)) attr(x, field) <- record[[field]]
+    x
+  }
   if (identical(measure, "closeness")) {
-    attr(out, "criterion") <- closeness_metadata$criterion
-    attr(out, "distance") <- closeness_metadata$distance
-    attr(out, "normalization") <- closeness_metadata$normalization
+    out <- direct(out, closeness_metadata)
   } else if (identical(measure, "betweenness")) {
-    attr(out, "criterion") <- betweenness_metadata$criterion
-    attr(out, "pair_domain") <- betweenness_metadata$pair_domain
-    attr(out, "normalization") <- betweenness_metadata$normalization
-    attr(out, "path_identity") <- betweenness_metadata$path_identity
+    out <- direct(out, betweenness_metadata)
+  } else if (identical(measure, "pagerank")) {
+    out <- direct(out, pagerank_metadata)
   } else {
     metadata <- list()
     if ("closeness" %in% measure) metadata$closeness <- closeness_metadata
     if ("betweenness" %in% measure) {
       metadata$betweenness <- betweenness_metadata
     }
+    if ("pagerank" %in% measure) metadata$pagerank <- pagerank_metadata
     if (length(metadata)) attr(out, "measure_metadata") <- metadata
   }
   effective_mode <- if (identical(sessions, "bounded") &&
@@ -1656,14 +1768,25 @@ dyn_centrality <- function(dn,
 #' @param m Measure name.
 #' @param trees List of optimal search results, one per source.
 #' @param enc Encoded edge list.
+#' @param dn The temporal network, for the observation test.
+#' @param beta,decay Temporal Katz attenuation and time-decay rate.
+#' @param lower,upper The measurement window.
+#' @param criterion Path optimality criterion.
+#' @param damping,transition Temporal PageRank jumping and transition
+#'   probabilities.
+#' @param rescale Whether temporal PageRank is normalized to sum one.
 #' @return A numeric vector, one value per vertex.
 #' @keywords internal
 .temporal_measure <- function(m, trees, enc, dn = NULL, beta = 0.1,
                               decay = 0, lower = NULL, upper = NULL,
-                              criterion = "foremost_then_shortest") {
+                              criterion = "foremost_then_shortest",
+                              damping = 0.85, transition = 1,
+                              rescale = TRUE) {
   n <- enc$n
   switch(m,
     katz = .temporal_katz_values(enc, dn, beta, decay, lower, upper),
+    pagerank = .temporal_pagerank_values(enc, dn, damping, transition,
+                                         rescale, lower, upper),
     reach = .temporal_reach_values(trees, n, m)[[1L]],
     reach_count = .temporal_reach_values(trees, n, m)[[1L]],
     closeness = .temporal_closeness_values(trees, n, criterion),
@@ -1836,25 +1959,16 @@ dyn_centrality <- function(dn,
   n <- enc$n
   x <- numeric(n)
   last <- rep(lower, n)
-  eligible <- !enc$raw_event_onset_censored &
-    .time_in_observation(dn, enc$raw_event_start) &
-    enc$raw_event_start >= lower & enc$raw_event_start <= upper
-  if (!any(eligible)) return(x)
-  from <- enc$raw_from[eligible]
-  to <- enc$raw_to[eligible]
-  when <- enc$raw_event_start[eligible]
-  # Deterministic order, so a row permutation of the input cannot change the
-  # answer; the batch rule then makes the within-instant order irrelevant too.
-  ord <- order(when, from, to)
-  from <- from[ord]; to <- to[ord]; when <- when[ord]
+  stream <- .contact_stream(enc, dn, lower, upper)
+  if (!length(stream$when)) return(x)
+  from <- stream$from; to <- stream$to; when <- stream$when
   phi <- function(gap) if (decay == 0) 1 else exp(-decay * gap)
   starts <- c(TRUE, when[-1L] != when[-length(when)])
-  batch <- cumsum(starts)
+  batches <- split(seq_along(when), cumsum(starts))
   cap <- .Machine$double.xmax / 2
   # A stream is sequential by definition: each batch reads scores that the
   # previous batch wrote, so there is nothing to vectorise across batches.
-  for (b in unique(batch)) {
-    idx <- which(batch == b)
+  for (idx in batches) {
     t <- when[[idx[[1L]]]]
     touched <- unique(c(from[idx], to[idx]))
     gap <- t - last[touched]
@@ -1876,6 +1990,105 @@ dyn_centrality <- function(dn,
     }
   }
   x * phi(upper - last)
+}
+
+#' The eligible contact stream of a temporal network, in canonical order
+#'
+#' Both stream measures read the same slice of the network: uncensored contacts
+#' whose onset falls inside the observation and inside the measurement window.
+#' The order is fixed by `(time, from, to)` so a row permutation of the input
+#' cannot change any answer; the batch rule each measure applies then makes the
+#' within-instant order irrelevant as well.
+#'
+#' @param enc An encoding from [.encode()].
+#' @param dn The temporal network, for the observation test.
+#' @param lower,upper The measurement window.
+#' @return A list with integer `from` and `to` and numeric `when`, all of the
+#'   same length, or all empty when nothing is eligible.
+#' @keywords internal
+.contact_stream <- function(enc, dn, lower, upper) {
+  eligible <- !enc$raw_event_onset_censored &
+    .time_in_observation(dn, enc$raw_event_start) &
+    enc$raw_event_start >= lower & enc$raw_event_start <= upper
+  from <- enc$raw_from[eligible]
+  to <- enc$raw_to[eligible]
+  when <- enc$raw_event_start[eligible]
+  ord <- order(when, from, to)
+  list(from = from[ord], to = to[ord], when = when[ord])
+}
+
+#' Temporal PageRank by one pass over the contact stream
+#'
+#' Algorithm 1 of Rozenshtein and Gionis (2016), generalized to simultaneous
+#' contacts. Each contact `(u, v, t)` starts a walk at `u` worth `1 - damping`,
+#' then carries `damping` times the mass waiting at `u` across to `v`. Mass
+#' that stays behind is attenuated by `transition` once per contact it
+#' declines; at `transition = 1` it leaves entirely instead, which is the
+#' paper's separate branch and not a limit of the other one.
+#'
+#' Contacts sharing a timestamp form one batch and all read the active mass as
+#' it stood before that instant, so neither the row order inside an instant nor
+#' the vertex labelling can affect the result. A batch of one contact between
+#' distinct vertices reproduces Algorithm 1 line for line. Where a vertex has
+#' `k` outgoing contacts in one batch, the mass waiting there declines all `k`
+#' offers with probability `transition^k`, and the `k` walks the batch starts
+#' at that vertex face the same offers.
+#'
+#' @param enc An encoding from [.encode()].
+#' @param dn The temporal network, for the observation test.
+#' @param damping The jumping probability, in `(0, 1)`.
+#' @param transition The transition probability, in `(0, 1]`.
+#' @param rescale Whether to divide the scores by their total.
+#' @param lower,upper The measurement window.
+#' @return A numeric vector, one score per vertex.
+#' @keywords internal
+.temporal_pagerank_values <- function(enc, dn, damping, transition, rescale,
+                                      lower, upper) {
+  n <- enc$n
+  r <- numeric(n)
+  stream <- .contact_stream(enc, dn, lower, upper)
+  # No eligible contact leaves every score at zero, so the normalized score is
+  # zero over zero. That is undefined, not zero, and is reported as such.
+  if (!length(stream$when)) return(if (rescale) rep(NaN, n) else r)
+  s <- numeric(n)
+  jump <- 1 - damping
+  strict <- transition >= 1
+  when <- stream$when
+  instant <- cumsum(c(TRUE, when[-1L] != when[-length(when)]))
+  batches <- split(seq_along(when), instant)
+  # A stream is sequential by definition: each batch reads the active mass the
+  # previous batch left behind, so there is nothing to vectorize across
+  # batches.
+  for (idx in batches) {
+    u <- stream$from[idx]
+    v <- stream$to[idx]
+    pre <- s
+    # What each contact carries: the mass already waiting at its source, plus
+    # the length-zero walk the contact itself starts there. That is lines 4
+    # and 5 of Algorithm 1, read in that order.
+    carried <- damping * (pre[u] + jump)
+    out_here <- tabulate(u, n)
+    r <- r + out_here * jump
+    # The mass that stayed. Under the strict branch a vertex with any outgoing
+    # contact in this batch is emptied; otherwise every offer it declined
+    # costs it one factor of `transition`.
+    s <- if (strict) {
+      ifelse(out_here > 0L, 0, pre)
+    } else {
+      transition^out_here * (pre + out_here * jump)
+    }
+    arriving <- if (strict) carried else carried * (1 - transition)
+    # Several contacts in one batch can share a receiver, so their arrivals are
+    # summed rather than assigned; a bare r[v] <- would keep only the last.
+    landed <- rowsum(cbind(carried, arriving), group = v, reorder = FALSE)
+    target <- as.integer(rownames(landed))
+    r[target] <- r[target] + landed[, 1L]
+    s[target] <- s[target] + landed[, 2L]
+  }
+  if (!rescale) return(r)
+  # Every contact adds a positive `1 - damping` to its sender, so a nonempty
+  # stream always has a positive total and this cannot divide by zero.
+  r / sum(r)
 }
 
 #' Reduce temporal search trees to inverse mean forward latency

@@ -13,7 +13,10 @@
   decay = 0,
   lower = NULL,
   upper = NULL,
-  criterion = "foremost_then_shortest"
+  criterion = "foremost_then_shortest",
+  damping = 0.85,
+  transition = 1,
+  rescale = TRUE
 )
 }
 \arguments{
@@ -22,6 +25,19 @@
 \item{trees}{List of optimal search results, one per source.}
 
 \item{enc}{Encoded edge list.}
+
+\item{dn}{The temporal network, for the observation test.}
+
+\item{beta, decay}{Temporal Katz attenuation and time-decay rate.}
+
+\item{lower, upper}{The measurement window.}
+
+\item{criterion}{Path optimality criterion.}
+
+\item{damping, transition}{Temporal PageRank jumping and transition
+probabilities.}
+
+\item{rescale}{Whether temporal PageRank is normalized to sum one.}
 }
 \value{
 A numeric vector, one value per vertex.
