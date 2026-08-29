@@ -24,7 +24,7 @@ dyn_centrality(
   groups = NULL,
   beta = 0.1,
   decay = 0,
-  criterion = c("foremost_then_shortest", "min_hops")
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest")
 )
 }
 \arguments{
@@ -125,7 +125,14 @@ weights every past walk equally.}
 the journeys solve. \code{"foremost_then_shortest"} is the default and what
 every earlier release computed; \code{"min_hops"} counts fewest contacts, which
 makes closeness dimensionless and comparable with its static counterpart.
-Reach and reach count are identical under both.}
+\code{"foremost"} (pure earliest arrival) is accepted for closeness, where it
+equals the default because closeness reads only the arrival, and refused
+for betweenness with \code{dynet_intractable_criterion}, because that needs
+the count of every vertex-simple foremost journey, which is #P-hard
+(Buss et al., 2024). \code{"fastest"} measures closeness by journey duration
+rather than arrival, so a vertex that is reached late but quickly is
+close; betweenness under it is not implemented. Reach and reach count
+are identical under all.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time

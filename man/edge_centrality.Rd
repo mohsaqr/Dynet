@@ -7,7 +7,7 @@
 edge_centrality(
   dn,
   measure = "betweenness",
-  criterion = c("foremost_then_shortest", "min_hops"),
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
@@ -20,7 +20,9 @@ edge_centrality(
 \item{measure}{Currently \code{"betweenness"}.}
 
 \item{criterion}{Which optimisation problem the credited journeys solve, as
-in \code{\link[=paths]{paths()}}.}
+in \code{\link[=paths]{paths()}}. \code{"foremost"} is refused with \code{dynet_intractable_criterion}:
+crediting contacts needs the count of every vertex-simple foremost
+journey, which is #P-hard.}
 
 \item{sessions}{Session aggregation policy.}
 

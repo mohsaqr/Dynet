@@ -9,11 +9,13 @@ paths(
   from,
   at = NULL,
   direction = c("forward", "backward"),
-  criterion = c("foremost_then_shortest", "min_hops"),
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest",
+    "latest_departure"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
-  traversal_time = 0
+  traversal_time = 0,
+  max_states = 1e+05
 )
 }
 \arguments{
@@ -33,8 +35,26 @@ scale. It cannot be combined with \code{start} or \code{end}.}
 \code{"foremost_then_shortest"} (the default, and what every earlier release
 computed) takes the earliest arrival and, among journeys attaining it, the
 fewest hops. \code{"min_hops"} takes the fewest time-respecting contacts and,
-among those, the earliest arrival. These are different problems and can
-select different journeys; only reachability is identical under both.}
+among those, the earliest arrival. \code{"foremost"} is pure earliest arrival
+with no tie-break: the whole family of vertex-simple journeys attaining
+it, so \code{n_paths} counts every one and \code{n_hops} is \code{NA} when they differ
+in length. Counting foremost paths is #P-hard in general (Buss et al.,
+2024), so the family is enumerated exactly, keeping only prefixes that
+can still attain some endpoint's optimum; the search raises
+\code{dynet_path_family_too_large} if it exceeds \code{max_states}. \code{"fastest"}
+minimises journey duration, arrival minus departure, the one criterion
+that measures transit rather than clock position; among equally fast
+journeys it takes the earliest departure, then the fewest hops. Its
+minimum can be an infimum with no minimising journey (a departure that
+approaches an interval's excluded terminus), reported with
+\code{attained = FALSE} and an empty family. \code{"latest_departure"} asks the planning
+question: leaving \code{from}, how late can one set off and still reach each
+vertex by \code{end}? It is a forward query and needs a finite deadline, so
+\code{end} (or \code{at}) must be given unless the network has an explicit
+observation window; combining it with \code{direction = "backward"} is an
+error, because the target-pivoted latest departure is what a backward
+query already reports. These are different problems and can select
+different journeys; only reachability is identical across criteria.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
@@ -44,12 +64,24 @@ instead of \code{at}.}
 
 \item{traversal_time}{Nonnegative duration charged for every hop, in the
 network's time unit. A calendar network also accepts a scalar \code{difftime}.}
+
+\item{max_states}{For \code{criterion = "foremost"} only: the largest number of
+search states one source may expand before the family is declared too
+large. Supplying it with any other criterion is an error.}
 }
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
 per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{attained}
 (whether that optimum itself is realized), \code{latency} (time taken from the
-source), \code{n_hops}, and the exact count \code{n_paths}. Bounded mode adds \code{path_session} and
+source), \code{n_hops}, and the exact count \code{n_paths}. Under
+\code{criterion = "latest_departure"} a \code{departure_time} column follows
+\code{arrival_time}, holding the latest departure supremum from \code{from}, and a
+\code{duration} column; \code{arrival_time}, \code{n_hops} and \code{n_paths} then describe
+the journeys that depart exactly then (earliest arrival, then fewest
+hops, within that family). Under \code{criterion = "fastest"} the same two
+columns hold the fastest journey's departure and its duration. In both
+cases an unattained optimum keeps its limiting departure, arrival and
+duration but has \code{n_hops = NA} and \code{n_paths = 0}. Bounded mode adds \code{path_session} and
 \code{n_best_sessions}; separate mode adds \code{session} and \code{origin}. Use
 \code{as.data.frame(x, what = "steps")} for every reconstructed optimal route;
 its endpoint-local \code{path_id} distinguishes tied atom sequences.
@@ -105,6 +137,22 @@ journey ending at the named target by the resolved \code{end}, and \code{latency
 \code{end} minus that value. A supremum at an interval's excluded terminus need
 not itself be an attainable departure.
 
+A latest-departure query is solved by time reversal: the latest departure
+from \code{from} into a vertex \code{z} by \code{end} is the label a backward search rooted
+at \code{z} assigns to \code{from}, so one backward search per vertex answers it with
+every session, activity and attainment rule inherited unchanged. In
+particular each target inherits the backward anchor rule and must be active
+at \code{end}; the empty journey departs from \code{from} at \code{end} itself. The
+\code{optimality} attribute records \code{"maximum"} for this criterion and
+\code{"minimum"} for the others, and \code{deadline} records the resolved \code{end}.
+
+A fastest query is a sweep over candidate departures: for a fixed
+source-ready time the problem is prefix-optimal again, so the minimum
+duration is the minimum over departures \code{d} of the earliest arrival from
+\code{d} minus \code{d}. The candidates are the atom-domain endpoints (shifted by
+whole multiples of \code{traversal_time}), each taken exactly and from below,
+at which the source can depart; one forward search runs per candidate.
+
 With \code{sessions = "bounded"}, each endpoint is optimized across complete
 session-specific searches. A unique winner is named in \code{path_session}; ties
 leave it missing and are counted in \code{n_best_sessions}. No merged predecessor
@@ -135,6 +183,15 @@ backward supremum has zero because it has no maximizing journey.
 dn <- dynet(school_contacts)
 paths(dn, from = "Ana")
 paths(dn, from = "Ana", start = 0, end = 10)
+paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
+
+# Every earliest-arrival journey, not only the shortest ones
+few <- dynet(data.frame(from = c("A", "A", "B", "C"),
+                        to = c("D", "B", "C", "D"),
+                        time = c(4, 1, 2, 4)),
+             format = "contact", directed = TRUE)
+paths(few, from = "A", criterion = "foremost")
+paths(few, from = "A", criterion = "fastest")
 summary(paths(dn, from = "Ana"))
 
 }
@@ -149,4 +206,15 @@ Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
 Casteigts, A., Corsini, A., & Sarkar, W. (2024). Simple, strict, proper,
 happy: A study of reachability in temporal graphs. \emph{Theoretical Computer
 Science}, 991, 114434.
+
+Buss, S., Molter, H., Niedermeier, R., & Rymar, M. (2024). Algorithmic
+aspects of temporal betweenness. \emph{Network Science}, 12(2), 160-188.
+
+Wu, H., Cheng, J., Huang, S., Ke, Y., Lu, Y., & Xu, Y. (2014). Path
+problems in temporal graphs. \emph{Proceedings of the VLDB Endowment}, 7(9),
+721-732.
+
+Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest, fastest,
+and foremost journeys in dynamic networks. \emph{International Journal of
+Foundations of Computer Science}, 14(2), 267-285.
 }

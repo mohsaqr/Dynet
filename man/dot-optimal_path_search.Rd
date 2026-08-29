@@ -12,7 +12,10 @@
   lower = -Inf,
   upper = Inf,
   traversal_time = 0,
-  criterion = "foremost_then_shortest"
+  criterion = "foremost_then_shortest",
+  max_states = 1e+05,
+  origin_attained = TRUE,
+  prepared = NULL
 )
 }
 \arguments{
@@ -27,6 +30,17 @@
 \item{lower, upper}{Inclusive query bounds.}
 
 \item{traversal_time}{Nonnegative duration charged per hop.}
+
+\item{criterion}{Which optimisation problem to solve.}
+
+\item{max_states}{State budget; only \code{criterion = "foremost"} can reach it.}
+
+\item{origin_attained}{Whether the anchor is ready exactly at \code{origin}.
+\code{FALSE} makes a forward source ready arbitrarily close before \code{origin},
+so arrivals can be unattained infima, mirroring backward suprema.}
+
+\item{prepared}{Atom and domain tables from \code{\link[=.path_search_tables]{.path_search_tables()}}, which
+a caller running many searches on one encoding computes once.}
 }
 \value{
 An internal optimal-path search object.

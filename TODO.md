@@ -38,7 +38,7 @@ interval, which the project's own standards forbid.
 |---|---|---:|---|---|
 | 0 | Defects in shipped code | 3 | 3 / 0 / 0 | **DONE** (D1 withdrawn, D2+D3 fixed) |
 | 1 | Null models and generators | 8 | 3 / 4 / 1 | **DONE** (A0-A5, B1-B2) |
-| 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **B6, B1, A1, A3, A6, A7, B4 DONE**; 7 open |
+| 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **B6, B1, A1, A3, A6, A7, B4, A5, A2, A4 DONE**; 4 open |
 | 3 | Global temporal measures, inter-event times, motifs | 7 | 2 / 3 / 2 | Stage 2 for path-dependent items |
 | 4 | Temporal communities and phases | 7 | 1 / 5 / 1 | Stage 0 D2 |
 | 5 | Animation, representation, interop | 6 | 0 / 3 / 3 | nothing |

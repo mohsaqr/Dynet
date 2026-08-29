@@ -7,11 +7,13 @@
 .criterion_select(criterion)
 }
 \arguments{
-\item{criterion}{One of \code{"foremost_then_shortest"} or \code{"min_hops"}.}
+\item{criterion}{One of \code{"foremost_then_shortest"}, \code{"min_hops"} or
+\code{"foremost"}.}
 }
 \value{
-A list with \code{primary} and \code{secondary}, each naming a state field and
-a direction, plus \code{cost} naming the field the criterion optimised.
+A list with \code{primary} and \code{secondary} (\code{NULL} when the criterion
+applies no tie-break), each naming a state field, plus \code{cost} naming the
+field the criterion optimised.
 }
 \description{
 Each criterion is a different optimisation problem over the same feasible

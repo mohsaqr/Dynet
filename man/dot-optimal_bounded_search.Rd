@@ -16,7 +16,10 @@
   traversal_time = 0,
   activity_mode = c("collapse", "separate"),
   activity_session = NULL,
-  criterion = "foremost_then_shortest"
+  criterion = "foremost_then_shortest",
+  max_states = 1e+05,
+  origin_attained = TRUE,
+  table_cache = NULL
 )
 }
 \arguments{
@@ -35,6 +38,17 @@
 \item{lower, upper}{Query bounds.}
 
 \item{traversal_time}{Nonnegative duration per hop.}
+
+\item{activity_mode, activity_session}{Session handling for vertex activity.}
+
+\item{criterion}{Which optimisation problem to solve.}
+
+\item{max_states}{State budget for \code{criterion = "foremost"}.}
+
+\item{origin_attained}{Whether the anchor is ready exactly at \code{origin}.}
+
+\item{table_cache}{An environment in which atom and domain tables are
+shared across the searches of one query, or \code{NULL}.}
 }
 \value{
 A direct or session-envelope optimal search.

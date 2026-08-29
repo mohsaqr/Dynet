@@ -244,8 +244,11 @@ test_that("V02 all snapshot centralities pin empty and singleton populations", {
     node = c("A", "B", "C"), start = 0, end = 1
   ))
   measures <- setdiff(Dynet:::.node_measures, c("indegree", "outdegree"))
+  # participation is the one measure that needs a grouping; one label per
+  # vertex keeps every enumerated measure in the same call.
+  groups <- c("g1", "g1", "g2")
   got <- as.data.frame(dyn_centrality(
-    empty, measures, start = 2, end = 2, step = 1, window = 0
+    empty, measures, start = 2, end = 2, step = 1, window = 0, groups = groups
   ))
   expect_true(all(is.na(got$value)))
 
@@ -253,7 +256,8 @@ test_that("V02 all snapshot centralities pin empty and singleton populations", {
     node = c("A", "B", "C"), start = c(2, 0, 0), end = c(3, 1, 1)
   ))
   one <- as.data.frame(dyn_centrality(
-    singleton, measures, start = 2, end = 2, step = 1, window = 0
+    singleton, measures, start = 2, end = 2, step = 1, window = 0,
+    groups = groups
   ))
   expect_true(all(is.na(one$value[one$node != "A"])))
   expect_equal(one$value[one$node == "A" & one$measure == "pagerank"], 1)

@@ -172,7 +172,14 @@
 #'   the journeys solve. `"foremost_then_shortest"` is the default and what
 #'   every earlier release computed; `"min_hops"` counts fewest contacts, which
 #'   makes closeness dimensionless and comparable with its static counterpart.
-#'   Reach and reach count are identical under both.
+#'   `"foremost"` (pure earliest arrival) is accepted for closeness, where it
+#'   equals the default because closeness reads only the arrival, and refused
+#'   for betweenness with `dynet_intractable_criterion`, because that needs
+#'   the count of every vertex-simple foremost journey, which is #P-hard
+#'   (Buss et al., 2024). `"fastest"` measures closeness by journey duration
+#'   rather than arrival, so a vertex that is reached late but quickly is
+#'   close; betweenness under it is not implemented. Reach and reach count
+#'   are identical under all.
 #' @param traversal_time Nonnegative duration charged for every temporal-path
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
@@ -402,11 +409,19 @@ dyn_centrality <- function(dn,
                            lambda = 1, groups = NULL,
                            beta = 0.1, decay = 0,
                            criterion = c("foremost_then_shortest",
-                                         "min_hops")) {
+                                         "min_hops", "foremost", "fastest")) {
   sessions <- match.arg(sessions)
   criterion <- match.arg(criterion)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
+  if (identical(criterion, "foremost") && "betweenness" %in% measure) {
+    .stop_intractable_criterion("betweenness")
+  }
+  if (identical(criterion, "fastest") && "betweenness" %in% measure) {
+    stop(errorCondition(
+      "Temporal betweenness under criterion = \"fastest\" is not implemented; use \"foremost_then_shortest\" or \"min_hops\".",
+      class = "dynet_bad_input", call = NULL))
+  }
   mode  <- .resolve_modes(mode)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   window <- .legacy_sample(window, sample)
@@ -1551,19 +1566,40 @@ dyn_centrality <- function(dn,
     # Stream measures need no per-source search, so the trees are built only
     # when a path-based measure was actually asked for.
     needs_trees <- length(setdiff(measure, .stream_measures)) > 0L
-    trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), function(s)
-      .optimal_bounded_search(
-        dn, walk, s, t0, "forward", bounded,
-        lower = horizon$start, upper = horizon$end,
-        traversal_time = traversal_time,
-        activity_mode = if (identical(sessions, "separate")) {
-          "separate"
-        } else {
-          "collapse"
-        },
-        activity_session = if (identical(sessions, "separate")) label else NULL,
-        criterion = criterion
-      ))
+    # Closeness reads only the earliest arrival, which is identical under
+    # "foremost" and "foremost_then_shortest"; only the family differs, and
+    # enumerating it is exhaustive. Betweenness under "foremost" is refused
+    # before this point.
+    search_criterion <- if (identical(criterion, "foremost")) {
+      "foremost_then_shortest"
+    } else criterion
+    trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), function(s) {
+      if (identical(criterion, "fastest")) {
+        .fastest_search(
+          dn, walk, s, horizon$start, horizon$end, bounded,
+          traversal_time = traversal_time,
+          activity_mode = if (identical(sessions, "separate")) {
+            "separate"
+          } else {
+            "collapse"
+          },
+          activity_session = if (identical(sessions, "separate")) label else NULL
+        )
+      } else {
+        .optimal_bounded_search(
+          dn, walk, s, t0, "forward", bounded,
+          lower = horizon$start, upper = horizon$end,
+          traversal_time = traversal_time,
+          activity_mode = if (identical(sessions, "separate")) {
+            "separate"
+          } else {
+            "collapse"
+          },
+          activity_session = if (identical(sessions, "separate")) label else NULL,
+          criterion = search_criterion
+        )
+      }
+    })
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
                         horizon$start, horizon$end, criterion)), measure)
@@ -1757,6 +1793,25 @@ dyn_centrality <- function(dn,
   Reduce(`+`, per_source)
 }
 
+#' Refuse a betweenness under a criterion whose family cannot be counted
+#'
+#' Temporal betweenness divides by the number of optimal journeys. Under pure
+#' foremost that number is #P-hard to compute (Buss et al., 2024), so the
+#' measure is refused rather than approximated.
+#'
+#' @param what Name of the measure for the message.
+#' @return Never returns; raises `dynet_intractable_criterion`.
+#' @keywords internal
+.stop_intractable_criterion <- function(what) {
+  stop(errorCondition(
+    sprintf(paste0(
+      "Temporal %s under criterion = \"foremost\" needs the count of every ",
+      "vertex-simple earliest-arrival journey, which is #P-hard. Use ",
+      "\"foremost_then_shortest\" or \"min_hops\"."), what),
+    class = c("dynet_intractable_criterion", "dynet_bad_input"), call = NULL
+  ))
+}
+
 #' Temporal Katz centrality by one pass over the contact stream
 #'
 #' The attenuated, time-decayed count of temporal walks ending at each vertex,
@@ -1848,6 +1903,10 @@ dyn_centrality <- function(dn,
     # while under foremost it carries inverse-time units.
     distance <- if (identical(criterion, "min_hops")) {
       as.numeric(tree$n_hops[target])
+    } else if (identical(criterion, "fastest")) {
+      # An unattained infimum is still the distance: no journey is that
+      # fast, but journeys arbitrarily close to it exist.
+      tree$duration[target]
     } else {
       tree$arrival[target] - tree$origin
     }
@@ -1894,7 +1953,9 @@ dyn_centrality <- function(dn,
 #' @param dn A temporal network from [dynet()].
 #' @param measure Currently `"betweenness"`.
 #' @param criterion Which optimisation problem the credited journeys solve, as
-#'   in [paths()].
+#'   in [paths()]. `"foremost"` is refused with `dynet_intractable_criterion`:
+#'   crediting contacts needs the count of every vertex-simple foremost
+#'   journey, which is #P-hard.
 #' @param sessions Session aggregation policy.
 #' @param start,end First and last time to search.
 #' @param traversal_time Nonnegative duration charged for every hop.
@@ -1924,11 +1985,19 @@ dyn_centrality <- function(dn,
 #' @export
 edge_centrality <- function(dn, measure = "betweenness",
                             criterion = c("foremost_then_shortest",
-                                          "min_hops"),
+                                          "min_hops", "foremost", "fastest"),
                             sessions = c("bounded", "collapse", "separate"),
                             start = NULL, end = NULL, traversal_time = 0) {
   sessions <- match.arg(sessions)
   criterion <- match.arg(criterion)
+  if (identical(criterion, "foremost")) {
+    .stop_intractable_criterion("contact betweenness")
+  }
+  if (identical(criterion, "fastest")) {
+    stop(errorCondition(
+      "Contact betweenness under criterion = \"fastest\" is not implemented.",
+      class = "dynet_bad_input", call = NULL))
+  }
   .check_dynet(dn, sessions)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   allowed <- "betweenness"

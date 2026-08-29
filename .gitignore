@@ -25,3 +25,4 @@ inst/reproduction/**/*.html
 # Stray plotting artifacts from running examples and tests
 Rplots.pdf
 tests/testthat/Rplots.pdf
+tests/testthat/_problems/
