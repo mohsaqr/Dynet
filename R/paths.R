@@ -1700,6 +1700,42 @@ paths <- function(dn, from, at = NULL,
 # dyn_reachability()
 # ===========================================================================
 
+#' Reduce reachability trees to reach and to cost measures
+#'
+#' Reach counts the feasible set and is the same under every criterion. The
+#' cost measures summarise the optimal journeys themselves and therefore depend
+#' on which criterion selected them.
+#'
+#' @param trees Breadth-first trees, one per source.
+#' @param cost_trees Optimal-search trees, or `NULL` when no cost measure was
+#'   asked for.
+#' @param n Size of the vertex universe.
+#' @param measure Which measures to reduce to.
+#' @return A named list of numeric vectors, one per measure.
+#' @keywords internal
+.reachability_values <- function(trees, cost_trees, n, measure) {
+  count <- vapply(trees, function(tree) as.numeric(sum(
+    is.finite(tree$arrival) & seq_len(n) != tree$source
+  )), numeric(1L))
+  stats::setNames(lapply(measure, function(m) {
+    switch(m,
+      reach_count = count,
+      reach = count / max(1, n - 1L),
+      latency = vapply(cost_trees, function(tree) {
+        target <- seq_len(n) != tree$source & is.finite(tree$arrival)
+        # An empty reachable set is 0/0, so NaN, never a fabricated zero.
+        if (!any(target)) return(NaN)
+        mean(abs(tree$arrival[target] - tree$origin))
+      }, numeric(1L)),
+      hops = vapply(cost_trees, function(tree) {
+        target <- seq_len(n) != tree$source & is.finite(tree$arrival)
+        if (!any(target)) return(NaN)
+        mean(as.numeric(tree$n_hops[target]))
+      }, numeric(1L))
+    )
+  }), measure)
+}
+
 #' Reachability of every vertex
 #'
 #' @description
@@ -1721,10 +1757,16 @@ paths <- function(dn, from, at = NULL,
 #'   spells remain terminus-exclusive.
 #' @param traversal_time Nonnegative duration charged for every hop, in the
 #'   network's time unit. A calendar network also accepts a scalar `difftime`.
-#' @param measure One or both of `"reach"`, the proportion of other vertices,
-#'   and `"reach_count"`, their number. The source vertex is excluded from
-#'   both.
+#' @param measure One or more of `"reach"`, the share of other vertices joined
+#'   by a time-respecting path; `"reach_count"`, their number; `"latency"`, the
+#'   mean elapsed time to reach them; and `"hops"`, the mean number of contacts
+#'   taken. The source vertex is excluded from all four. The two cost measures
+#'   are `NaN` when nothing is reachable, since the mean is then 0/0.
 #'
+#' @param criterion Which optimisation problem the journeys solve. Reach and
+#'   reach count are identical under every criterion, because they depend on
+#'   the feasible set rather than on which journey wins; `latency` and `hops`
+#'   summarise the selected journeys and do depend on it.
 #' @return A `dynet_metric` at node level. Proportion measures are named
 #'   `forward_reach` and `backward_reach`; counts are named
 #'   `forward_reach_count` and `backward_reach_count`.
@@ -1772,8 +1814,11 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
                              at = NULL,
                              sessions = c("bounded", "collapse", "separate"),
                              start = NULL, end = NULL, traversal_time = 0,
-                             measure = "reach") {
+                             measure = "reach",
+                             criterion = c("foremost_then_shortest",
+                                           "min_hops")) {
   sessions <- match.arg(sessions)
+  criterion <- match.arg(criterion)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
   traversal_time <- .as_traversal_time(traversal_time, dn)
@@ -1782,7 +1827,7 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
     "`measure` must name at least one measure." = length(measure) > 0L,
     "`measure` cannot contain missing values." = !anyNA(measure)
   )
-  allowed <- c("reach", "reach_count")
+  allowed <- c("reach", "reach_count", "latency", "hops")
   bad <- setdiff(measure, allowed)
   if (length(bad) > 0L) {
     stop(errorCondition(
@@ -1806,6 +1851,24 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
         clamp_missing = identical(sessions, "separate")
       )
       t0 <- if (identical(d, "backward")) window$end else window$start
+      # Cost measures need the optimal search, which is also what temporal
+      # closeness uses; that is what makes 1/latency == closeness exact rather
+      # than merely close. Reach itself is criterion-invariant and keeps the
+      # cheaper breadth-first walk.
+      wants_cost <- any(measure %in% c("latency", "hops"))
+      cost_trees <- if (!wants_cost) NULL else lapply(seq_len(enc$n), function(s)
+        .optimal_bounded_search(
+          dn, e2, s, t0, d, identical(sessions, "bounded"),
+          lower = window$start, upper = window$end,
+          traversal_time = traversal_time,
+          activity_mode = if (identical(sessions, "separate")) {
+            "separate"
+          } else {
+            "collapse"
+          },
+          activity_session = if (identical(sessions, "separate")) label else NULL,
+          criterion = criterion
+        ))
       trees <- lapply(seq_len(enc$n), function(s) {
         if (identical(d, "backward")) {
           .bfs_backward_bounded(
@@ -1831,7 +1894,7 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
           )
         }
       })
-      .temporal_reach_values(trees, enc$n, measure)
+      .reachability_values(trees, cost_trees, enc$n, measure)
     })
     data.frame(session = label, node = enc$names,
                measure = unlist(lapply(wanted, function(d) {
