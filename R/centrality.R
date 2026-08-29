@@ -1676,6 +1676,48 @@ dyn_centrality <- function(dn,
   out
 }
 
+#' Credit optimal journeys to the contacts that carried them
+#'
+#' The same prefix and suffix counts the vertex dependency uses, accumulated on
+#' the predecessor arc rather than on the vertex it entered. Every optimal
+#' journey is vertex-simple, so it traverses each contact at most once.
+#'
+#' @param search A direct result from [.optimal_path_search()].
+#' @param endpoint Integer target vertex.
+#' @param n_atoms Number of canonical contact atoms.
+#' @return A numeric vector of dependency, one per atom.
+#' @keywords internal
+.optimal_edge_dependency <- function(search, endpoint, n_atoms) {
+  out <- numeric(n_atoms)
+  if (endpoint == search$source || search$n_paths[[endpoint]] == 0) return(out)
+  terminal <- search$selected_states[[endpoint]]
+  if (!length(terminal)) return(out)
+
+  state <- search$state
+  suffix <- numeric(length(state$vertex))
+  suffix[terminal] <- 1
+  # Suffix counts depend on every child one hop deeper, so descending hop order
+  # is a genuine sequential dependency, exactly as for the vertex form.
+  for (child in order(state$hops, decreasing = TRUE)) {
+    if (suffix[[child]] == 0 || !length(state$pred_state[[child]])) next
+    for (parent in state$pred_state[[child]]) {
+      suffix[[parent]] <- .path_count_add(suffix[[parent]], suffix[[child]])
+    }
+  }
+  for (child in seq_along(state$vertex)) {
+    if (suffix[[child]] == 0) next
+    parents <- state$pred_state[[child]]
+    atoms <- state$pred_atom[[child]]
+    if (!length(parents)) next
+    for (i in seq_along(parents)) {
+      atom <- atoms[[i]]
+      out[[atom]] <- out[[atom]] +
+        state$count[[parents[[i]]]] * suffix[[child]]
+    }
+  }
+  out / search$n_paths[[endpoint]]
+}
+
 #' Reduce optimal appearance DAGs to raw temporal betweenness
 #'
 #' For every reachable ordered source-target pair, the exact number of
@@ -1835,4 +1877,114 @@ dyn_centrality <- function(dn,
   stats::setNames(lapply(measure, function(m) {
     if (identical(m, "reach_count")) count else count / max(1, n - 1L)
   }), measure)
+}
+
+#' Temporal centrality of the contacts themselves
+#'
+#' @description
+#' Credits every optimal time-respecting journey to the contacts that carried
+#' it, giving a betweenness score per contact rather than per vertex. This is
+#' the measure intervention questions actually ask: not which people matter,
+#' but which meetings did.
+#'
+#' The row unit is one canonical contact, not one pair. The same `A -> B` pair
+#' active in two disjoint spells is two rows, because a journey uses one of
+#' them and not the other.
+#'
+#' @param dn A temporal network from [dynet()].
+#' @param measure Currently `"betweenness"`.
+#' @param criterion Which optimisation problem the credited journeys solve, as
+#'   in [paths()].
+#' @param sessions Session aggregation policy.
+#' @param start,end First and last time to search.
+#' @param traversal_time Nonnegative duration charged for every hop.
+#' @return A `dynet_metric` at edge level, one row per contact, with columns
+#'   `from`, `to`, `start`, `end`, `measure` and `value`. A contact used by no
+#'   optimal journey is present with value zero rather than dropped, so the
+#'   result is a complete census.
+#' @details
+#' The score is not normalised, and its range is the same `[0, (n-1)(n-2)]` as
+#' the vertex measure.
+#'
+#' An exact identity ties this to [dyn_centrality()]: because every optimal
+#' journey is vertex-simple, it enters each vertex through exactly one contact,
+#' so the scores of the contacts arriving at a vertex sum to that vertex's
+#' temporal betweenness plus the number of sources that reach it. The tests
+#' assert it, which makes this verb checkable without any external reference.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' edge_centrality(dn)
+#' @seealso [dyn_centrality()] for the vertex form.
+#' @references
+#' Oettershagen, L., and Mutzel, P. (2022). TGLib: an open-source library for
+#' temporal graph analysis. *ICDM Workshops*. arXiv:2209.12587.
+#'
+#' Brandes, U. (2001). A faster algorithm for betweenness centrality. *Journal
+#' of Mathematical Sociology*, 25(2), 163-177.
+#' @export
+edge_centrality <- function(dn, measure = "betweenness",
+                            criterion = c("foremost_then_shortest",
+                                          "min_hops"),
+                            sessions = c("bounded", "collapse", "separate"),
+                            start = NULL, end = NULL, traversal_time = 0) {
+  sessions <- match.arg(sessions)
+  criterion <- match.arg(criterion)
+  .check_dynet(dn, sessions)
+  traversal_time <- .as_traversal_time(traversal_time, dn)
+  allowed <- "betweenness"
+  bad <- setdiff(measure, allowed)
+  if (length(bad) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown edge measure %s. Available: %s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(allowed, collapse = ", ")),
+      class = "dynet_unknown_measure", call = NULL))
+  }
+
+  parts <- .split_sessions(dn, sessions)
+  frames <- Map(function(enc, label) {
+    walk <- .undirect_or_reverse(enc, dn$directed, "forward")
+    encoding_range <- .encoding_time_range(dn, enc)
+    horizon <- .path_window(
+      dn, "forward", NULL, start, end,
+      default_start = encoding_range[["start"]],
+      default_end = encoding_range[["end"]],
+      clamp_missing = identical(sessions, "separate")
+    )
+    searches <- lapply(seq_len(enc$n), function(s)
+      .optimal_bounded_search(
+        dn, walk, s, horizon$start, "forward",
+        identical(sessions, "bounded"),
+        lower = horizon$start, upper = horizon$end,
+        traversal_time = traversal_time,
+        activity_mode = if (identical(sessions, "separate")) {
+          "separate"
+        } else {
+          "collapse"
+        },
+        activity_session = if (identical(sessions, "separate")) label else NULL,
+        criterion = criterion
+      ))
+    atoms <- searches[[1L]]$atoms
+    n_atoms <- length(atoms$from)
+    credit <- Reduce(`+`, lapply(searches, function(search) {
+      Reduce(`+`, lapply(seq_len(enc$n), function(z) {
+        .optimal_edge_dependency(search, z, n_atoms)
+      }), init = numeric(n_atoms))
+    }), init = numeric(n_atoms))
+    data.frame(
+      session = label,
+      from = enc$names[atoms$from], to = enc$names[atoms$to],
+      start = atoms$start, end = atoms$end,
+      measure = "betweenness", value = credit,
+      stringsAsFactors = FALSE
+    )
+  }, parts, names(parts))
+
+  out <- .metric(do.call(rbind, frames), level = "edge",
+                 what = "Contact betweenness", dn = dn,
+                 note = "optimal journeys credited to the contacts that carried them",
+                 traversal_time = traversal_time)
+  attr(out, "criterion") <- criterion
+  out
 }
