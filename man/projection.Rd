@@ -11,7 +11,8 @@ projection(
   end = NULL,
   step = NULL,
   window = NULL,
-  omega = 1
+  omega = 1,
+  coupling = c("ordinal", "categorical")
 )
 }
 \arguments{
@@ -34,6 +35,14 @@ single slice, closed on the right.}
 to the next, that is, the interlayer coupling of the time-expanded
 network. One keeps an identity arc as heavy as a unit contact; zero
 leaves the slices uncoupled. Must be a single non-negative number.}
+
+\item{coupling}{Which slices an identity arc may join. \code{"ordinal"}, the
+default and the only temporally meaningful choice, joins each slice to
+the next one only, so a vertex is tied to its immediate past and future.
+\code{"categorical"} joins every pair of slices, which is the convention for
+unordered aspect-layers such as phone, email and face-to-face; it is
+offered so a multiplex analysis can be reproduced and compared, and it
+asserts that time has no order. See Mucha et al. (2010), Figure 1.}
 }
 \value{
 An object of class \code{dynet_projection}. Use

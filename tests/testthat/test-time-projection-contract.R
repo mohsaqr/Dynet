@@ -70,7 +70,8 @@ test_that("E02 metadata and fixed accessor schemas are public", {
   expect_identical(names(projection$meta), c(
     "source_directed", "directed", "time_unit", "origin", "step", "window",
     "sessions", "n_nodes", "n_slices", "n_blocks", "vertex_rule",
-    "within_slice_rule", "identity_rule", "omega", "identity_weight",
+    "within_slice_rule", "identity_rule", "omega", "coupling",
+    "identity_weight",
     "undirected_rule", "observation_gap_waiting", "session_aggregation",
     "node_attribute_names", "node_attribute_renames"
   ))

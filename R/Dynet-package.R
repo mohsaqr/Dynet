@@ -10,9 +10,11 @@ NULL
 # ggplot2 aesthetics are non-standard evaluation; declare the column names
 # used inside aes() so R CMD check does not flag them as globals.
 utils::globalVariables(c(
-  ".grp", ".row", "arrival_time", "arrival_time_prev", "count", "depth",
+  ".grp", ".row", "active", "arrival_time", "arrival_time_prev", "community",
+  "count", "depth",
   "depth_prev", "edge", "end_draw", "endpoint", "ev", "freq", "from", "group",
-  "id", "label", "label_y", "measure", "node", "other", "pair", "position",
+  "high", "id", "label", "label_y", "low", "measure", "mid", "node", "other",
+  "pair", "phase", "position",
   "session", "size", "start", "ties", "time", "to", "value", "weight", "x",
   "xend",
   "y", "yend", "yf"

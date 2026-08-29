@@ -118,6 +118,13 @@
 #'   to the next, that is, the interlayer coupling of the time-expanded
 #'   network. One keeps an identity arc as heavy as a unit contact; zero
 #'   leaves the slices uncoupled. Must be a single non-negative number.
+#' @param coupling Which slices an identity arc may join. `"ordinal"`, the
+#'   default and the only temporally meaningful choice, joins each slice to
+#'   the next one only, so a vertex is tied to its immediate past and future.
+#'   `"categorical"` joins every pair of slices, which is the convention for
+#'   unordered aspect-layers such as phone, email and face-to-face; it is
+#'   offered so a multiplex analysis can be reproduced and compared, and it
+#'   asserts that time has no order. See Mucha et al. (2010), Figure 1.
 #'
 #' @return An object of class `dynet_projection`. Use
 #'   `as.data.frame(x, what = "vertices")` for vertex states and
@@ -143,8 +150,10 @@
 #' @export
 projection <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
-    start = NULL, end = NULL, step = NULL, window = NULL, omega = 1) {
+    start = NULL, end = NULL, step = NULL, window = NULL, omega = 1,
+    coupling = c("ordinal", "categorical")) {
   sessions <- match.arg(sessions)
+  coupling <- match.arg(coupling)
   .check_dynet(dn, sessions)
   .check("`omega` must be one non-negative number." =
            length(omega) == 1L && is.numeric(omega) && is.finite(omega) &&
@@ -245,17 +254,28 @@ projection <- function(
     identity_rows <- list()
     identity_index <- 0L
     if (nrow(grid) > 1L) {
+      # Ordinal coupling ties a slice to the next one only; categorical ties
+      # every ordered pair, which is what an unordered aspect-layer needs and
+      # what a temporal network must not have.
       for (slice in seq_len(nrow(grid) - 1L)) {
+        reach <- if (identical(coupling, "ordinal")) {
+          slice + 1L
+        } else {
+          seq.int(slice + 1L, nrow(grid))
+        }
         from_ids <- state_offset + (slice - 1L) * n + seq_len(n)
-        to_ids <- state_offset + slice * n + seq_len(n)
-        for (node in seq_len(n)) {
-          identity_index <- identity_index + 1L
-          identity_rows[[identity_index]] <- .projection_edge_row(
-            from_ids[[node]], to_ids[[node]], enc$names[[node]], enc$names[[node]],
-            label, slice, slice + 1L, grid$time[[slice]],
-            grid$time[[slice + 1L]], "identity_arc", omega, 0L,
-            session_blocks
-          )
+        for (later in reach) {
+          to_ids <- state_offset + (later - 1L) * n + seq_len(n)
+          for (node in seq_len(n)) {
+            identity_index <- identity_index + 1L
+            identity_rows[[identity_index]] <- .projection_edge_row(
+              from_ids[[node]], to_ids[[node]],
+              enc$names[[node]], enc$names[[node]],
+              label, slice, later, grid$time[[slice]],
+              grid$time[[later]], "identity_arc", omega, 0L,
+              session_blocks
+            )
+          }
         }
       }
     }
@@ -289,8 +309,11 @@ projection <- function(
     within_slice_rule = if (spec$window == 0) {
       "snapshot_exact_induced"
     } else "snapshot_any_union_induced",
-    identity_rule = "forward_unconditional_waiting_consecutive_slices",
+    identity_rule = if (identical(coupling, "ordinal")) {
+      "forward_unconditional_waiting_consecutive_slices"
+    } else "forward_unconditional_waiting_all_slice_pairs",
     omega = omega,
+    coupling = coupling,
     identity_weight = omega,
     undirected_rule = if (dn$directed) {
       "one_directed_arc_per_pair"

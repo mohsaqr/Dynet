@@ -38,9 +38,9 @@ interval, which the project's own standards forbid.
 |---|---|---:|---|---|
 | 0 | Defects in shipped code | 3 | 3 / 0 / 0 | **DONE** (D1 withdrawn, D2+D3 fixed) |
 | 1 | Null models and generators | 8 | 3 / 4 / 1 | **DONE** (A0-A5, B1-B2) |
-| 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **B6, B1, A1, A3, A6, A7, B4, A5, A2, A4 DONE**; 4 open |
+| 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **B6, B1, A1, A3, A6, A7, B4, A5, A2, A4, B2 DONE**; 3 open |
 | 3 | Global temporal measures, inter-event times, motifs | 7 | 2 / 3 / 2 | Stage 2 for path-dependent items |
-| 4 | Temporal communities and phases | 7 | 1 / 5 / 1 | Stage 0 D2 |
+| 4 | Temporal communities and phases | 7 | 1 / 5 / 1 | **DONE** (items 1-7) |
 | 5 | Animation, representation, interop | 6 | 0 / 3 / 3 | nothing |
 | | **Total** | **45** | **11 / 24 / 10** | |
 
@@ -67,7 +67,10 @@ Stage 3  B1 gaps, A2 persistence, A3 turnover, C1 motifs  (independent)
          A1 temporal efficiency/diameter ─> A4 node-level efficiency
          A5 segregation (SID) — specced but argued lowest value
 
-Stage 4  needs Stage 0 D2 first; builds on projection(), not supra_adjacency  │
+Stage 4  DONE. 1 coupling ─> 2 multislice_modularity ─> 3 temporal_communities
+                                            ├─> 4 match_communities ─> 6 community_trajectory
+                                            └─> 5 community_change
+         7 phases() rode on similarity() and needed none of them
 Stage 5  independent throughout                                              ─┘
 ```
 
