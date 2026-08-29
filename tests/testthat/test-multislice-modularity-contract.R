@@ -210,3 +210,71 @@ test_that("metadata records the choices Q depends on", {
   expect_identical(attr(out, "coupling"), "ordinal")
   expect_false(attr(out, "symmetrised"))
 })
+
+test_that("the per-bin table has one row per slice and reports the slice itself", {
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  out <- multislice_modularity(dn, membership = as.data.frame(found),
+                               step = 5, window = 5)
+  bins <- as.data.frame(out, what = "bins")
+  expect_identical(nrow(bins), length(unique(found$time)))
+  expect_identical(bins$time, sort(unique(found$time)))
+  expect_true(all(c("q", "two_m", "n_communities") %in% names(bins)))
+  # Each slice's own edge total, which the supra assembly can confirm.
+  supra <- Dynet:::.supra(projection(dn, step = 5, window = 5))
+  expect_equal(bins$two_m,
+               vapply(supra$blocks[[1L]]$layers, sum, numeric(1L)))
+  expect_true(all(bins$n_communities >= 1))
+})
+
+test_that("with no coupling the whole series is the weighted mean of its bins", {
+  # The identity that gives the per-bin numbers their meaning, and the same
+  # one the igraph calibration above pins from the other side.
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  out <- multislice_modularity(dn, membership = as.data.frame(found),
+                               omega = 0, step = 5, window = 5)
+  bins <- as.data.frame(out, what = "bins")
+  total <- as.data.frame(out)$value[as.data.frame(out)$measure == "q"]
+  expect_equal(sum(bins$q * bins$two_m) / sum(bins$two_m), total,
+               tolerance = sqrt(.Machine$double.eps))
+})
+
+test_that("a slice's own modularity does not depend on the coupling", {
+  # omega ties the slices together but adds nothing inside one, so the
+  # per-bin values must be identical across omega even as the total moves.
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  membership <- as.data.frame(found)
+  loose <- multislice_modularity(dn, membership = membership, omega = 0,
+                                 step = 5, window = 5)
+  tight <- multislice_modularity(dn, membership = membership, omega = 2,
+                                 step = 5, window = 5)
+  expect_equal(as.data.frame(loose, what = "bins")$q,
+               as.data.frame(tight, what = "bins")$q)
+  expect_false(isTRUE(all.equal(as.data.frame(loose)$value,
+                               as.data.frame(tight)$value)))
+})
+
+test_that("an edgeless slice has no modularity of its own, and says so", {
+  nm <- LETTERS[1:4]
+  dn <- dynet(data.frame(from = c("A", "C"), to = c("B", "D"),
+                         time = c(0, 0)),
+              format = "contact", directed = FALSE,
+              nodes = data.frame(name = nm),
+              observation_start = 0, observation_end = 3)
+  bins <- as.data.frame(multislice_modularity(dn, omega = 1, step = 1,
+                                              window = 1), what = "bins")
+  expect_true(any(is.na(bins$q)))
+  expect_false(any(is.nan(bins$q[!is.na(bins$q)])))
+  expect_true(all(bins$two_m[is.na(bins$q)] == 0))
+})
+
+test_that("the accessor refuses a table it does not have", {
+  dn <- crossover_network()
+  out <- multislice_modularity(dn, step = 1, window = 1)
+  expect_error(as.data.frame(out, what = "slices"))
+  expect_s3_class(out, "dynet_modularity")
+  expect_s3_class(out, "dynet_metric")
+  expect_identical(nrow(as.data.frame(out)), 6L)
+})

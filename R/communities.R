@@ -300,7 +300,32 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
   attr(out, "omega") <- omega
   attr(out, "coupling") <- coupling
   attr(out, "symmetrised") <- supra$symmetrised
+  bins <- parts$bins
+  if (!("session" %in% names(dn$nodes)) && all(is.na(bins$session))) {
+    bins$session <- NULL
+  }
+  attr(out, "bins") <- bins
+  class(out) <- unique(c("dynet_modularity", class(out)))
   out
+}
+
+#' Tidy data frame of a multislice modularity result
+#'
+#' @param x A `dynet_modularity` from [multislice_modularity()].
+#' @param row.names,optional Ignored, for method consistency.
+#' @param what `"total"` for the whole-series decomposition, or `"bins"` for
+#'   one row per slice: that slice's own Newman--Girvan modularity `q`, its
+#'   edge total `two_m`, and `n_communities`, the number of communities with a
+#'   member in it.
+#' @param ... Passed on for `what = "total"`.
+#' @return A plain data frame.
+#' @export
+as.data.frame.dynet_modularity <- function(x, row.names = NULL,
+                                           optional = FALSE,
+                                           what = c("total", "bins"), ...) {
+  what <- match.arg(what)
+  if (identical(what, "bins")) return(attr(x, "bins"))
+  NextMethod()
 }
 
 #' The multislice quality function, given assembled slices and labels
@@ -314,8 +339,9 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
 #' @param gamma Resolution.
 #' @param omega Interlayer coupling.
 #' @param coupling `"ordinal"` or `"categorical"`.
-#' @return A list with `q`, `q_intra`, `q_inter`, `two_mu`, `n_communities`
-#'   and `n_empty_slices`.
+#' @return A list with `q`, `q_intra`, `q_inter`, `two_mu`, `n_communities`,
+#'   `n_empty_slices`, and `bins`: one row per slice carrying that slice's own
+#'   modularity, its edge total and how many communities it holds.
 #' @keywords internal
 .multislice_quality <- function(supra, labels, gamma, omega, coupling) {
   empty <- 0L
@@ -339,8 +365,19 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
         empty <<- empty + 1L
         0
       }
-      c(intra = edges - gamma * null, k = two_m)
+      # The slice's own Newman-Girvan modularity, which is what the whole
+      # series reduces to a weighted mean of when the slices are uncoupled.
+      c(intra = edges - gamma * null, k = two_m,
+        q = if (two_m > 0) (edges - gamma * null) / two_m else NA_real_,
+        n_communities = length(groups))
     })
+    per_bin <- data.frame(
+      session = b$session, time = b$times,
+      q = vapply(slice, function(x) x[["q"]], numeric(1L)),
+      two_m = vapply(slice, function(x) x[["k"]], numeric(1L)),
+      n_communities = vapply(slice, function(x) x[["n_communities"]],
+                             numeric(1L)),
+      stringsAsFactors = FALSE)
     intra <- sum(vapply(slice, function(x) x[["intra"]], numeric(1L)))
     # Each coupled pair is counted in both directions, matching the ordered
     # double sum over (s, r) in the published formula.
@@ -353,7 +390,7 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
     } else {
       sum(g[, -n_slices, drop = FALSE] == g[, -1L, drop = FALSE])
     }
-    list(intra = intra, inter = 2 * omega * agree,
+    list(intra = intra, inter = 2 * omega * agree, bins = per_bin,
          two_mu = sum(vapply(slice, function(x) x[["k"]], numeric(1L))) +
            omega * sum(degree) * nrow(g))
   }, supra$blocks, labels)
@@ -365,9 +402,11 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
   }
   intra <- sum(vapply(per_block, function(x) x$intra, numeric(1L))) / two_mu
   inter <- sum(vapply(per_block, function(x) x$inter, numeric(1L))) / two_mu
+  bins <- do.call(rbind, lapply(per_block, function(x) x$bins))
+  rownames(bins) <- NULL
   list(q = intra + inter, q_intra = intra, q_inter = inter, two_mu = two_mu,
        n_communities = length(unique(unlist(labels, use.names = FALSE))),
-       n_empty_slices = empty)
+       n_empty_slices = empty, bins = bins)
 }
 
 #' Which slices each slice is coupled to
@@ -609,6 +648,42 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
        h2 = -sum(cols / total * log(cols / total)))
 }
 
+#' Expected mutual information of two labellings under the hypergeometric null
+#'
+#' The chance level that adjusted mutual information subtracts: the mutual
+#' information two labellings with these exact community sizes would show if
+#' they were paired at random (Vinh, Epps & Bailey 2010).
+#'
+#' Every factorial is taken in log space. The hypergeometric coefficients
+#' overflow a double well before a few hundred elements, so the naive product
+#' returns `Inf` on networks this package routinely handles.
+#'
+#' @param a,b Community sizes of the two labellings.
+#' @param total The number of elements.
+#' @return A single number, in nats.
+#' @examples
+#' Dynet:::.expected_mutual_information(c(3, 3), c(2, 4), 6L)
+#' @keywords internal
+.expected_mutual_information <- function(a, b, total) {
+  # Sequential only in the sense that the double sum is over community pairs;
+  # each term is independent and the inner sum over the overlap is vectorised.
+  sum(vapply(seq_along(a), function(i) {
+    sum(vapply(seq_along(b), function(j) {
+      # An overlap of zero contributes zero by the 0 log 0 convention, and the
+      # hypergeometric support bounds the rest.
+      low <- max(1L, a[[i]] + b[[j]] - total)
+      high <- min(a[[i]], b[[j]])
+      if (low > high) return(0)
+      n <- seq.int(low, high)
+      log_p <- lfactorial(a[[i]]) + lfactorial(b[[j]]) +
+        lfactorial(total - a[[i]]) + lfactorial(total - b[[j]]) -
+        lfactorial(total) - lfactorial(n) - lfactorial(a[[i]] - n) -
+        lfactorial(b[[j]] - n) - lfactorial(total - a[[i]] - b[[j]] + n)
+      sum((n / total) * log(n * total / (a[[i]] * b[[j]])) * exp(log_p))
+    }, numeric(1L)))
+  }, numeric(1L)))
+}
+
 #' One partition-comparison statistic
 #'
 #' @param a,b Label vectors of equal length.
@@ -646,6 +721,20 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
       both <- ct$pairs_together
       either <- ct$pairs_row + ct$pairs_col - both
       if (either <= 0) 1 else both / either
+    },
+    ami = ,
+    iami = {
+      # Intersection-adjusted mutual information is adjusted mutual
+      # information over the vertices both partitions have, which is the set
+      # this function is always handed. The two names are therefore the same
+      # number here, and both are offered because the literature uses both.
+      info <- .mutual_information(ct)
+      expected <- .expected_mutual_information(ct$row, ct$col, ct$total)
+      denominator <- (info$h1 + info$h2) / 2 - expected
+      # Two identical trivial partitions carry no information and agree
+      # perfectly, so the ratio is 0/0. Defined as 1, the agreement.
+      if (abs(denominator) < .Machine$double.eps) 1 else
+        (info$mi - expected) / denominator
     },
     omega_index = {
       # Agreement on how many communities each pair shares. For disjoint
@@ -1505,8 +1594,9 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
 #' follow a community, not to measure change.
 #'
 #' @param x A `dynet_communities` frame from [temporal_communities()].
-#' @param measure One or more of `"nmi"`, `"ari"`, `"vi"`, `"split_join"`,
-#'   `"jaccard"` and `"omega_index"`.
+#' @param measure One or more of `"nmi"`, `"ami"`, `"uami"`, `"iami"`,
+#'   `"ari"`, `"vi"`, `"split_join"`, `"jaccard"` and `"omega_index"`. The
+#'   default asks for the first several; name them explicitly to choose.
 #' @param against `"previous"` compares each bin with the one before it,
 #'   `"first"` with the opening bin, `"all"` with every other bin.
 #'
@@ -1528,17 +1618,41 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
 #' The first bin has no predecessor, so under `against = "previous"` its value
 #' is `NA` by construction.
 #'
-#' What the six measure, briefly. `"nmi"` is shared information normalised by
+#' What each measures, briefly. `"nmi"` is shared information normalised by
 #' the mean entropy, in \eqn{[0, 1]}, high for agreement; it is **not**
-#' chance-corrected, so two unrelated partitions score above zero. `"ari"` is
-#' chance-corrected and centred on zero for unrelated partitions, which is why
-#' both are offered. `"vi"` is a true metric in nats, zero for agreement and
-#' unbounded above. `"split_join"` counts the vertices that would have to move,
-#' so it is an integer in \eqn{[0, 2N]}. `"jaccard"` scores agreement over
-#' co-classified pairs. `"omega_index"` is chance-corrected pair agreement; for
-#' the disjoint partitions this package produces it coincides exactly with
-#' `"ari"`, and it is offered because it is what `multinet` reports and because
-#' it generalises to overlapping communities.
+#' chance-corrected, so two unrelated partitions score above zero. `"ami"` is
+#' the same quantity with the chance level subtracted, and is the one to reach
+#' for. `"ari"` is chance-corrected pair agreement, centred on zero for
+#' unrelated partitions. `"vi"` is a true metric in nats, zero for agreement
+#' and unbounded above. `"split_join"` counts the vertices that would have to
+#' move, so it is an integer in \eqn{[0, 2N]}. `"jaccard"` scores agreement
+#' over co-classified pairs. `"omega_index"` is chance-corrected pair
+#' agreement; for the disjoint partitions this package produces it coincides
+#' exactly with `"ari"`, and it is offered because it is what `multinet`
+#' reports and because it generalises to overlapping communities.
+#'
+#' `"uami"` and `"iami"` are Zhong et al.'s (2025) answer to a problem every
+#' temporal network has: the vertex set moves between bins, and ordinary
+#' mutual information assumes it does not. `"iami"` compares over the
+#' **intersection**, the vertices both bins have. `"uami"` compares over the
+#' **union**, giving each partition one extra virtual community holding the
+#' vertices it does not have, so a vertex arriving or leaving is itself
+#' information about the change rather than something discarded. The two
+#' answer different questions: `"iami"` asks whether the vertices that stayed
+#' kept their company, `"uami"` asks whether the whole structure held. Since
+#' every other measure here is already restricted to the shared vertices,
+#' `"iami"` is numerically identical to `"ami"` in this package, and is
+#' offered under both names because the literature uses both.
+#'
+#' Two notes on the sources, because both cost time to discover. Adjusted
+#' mutual information admits more than one normaliser: this package divides by
+#' the **arithmetic mean** of the two entropies, matching `"nmi"` above,
+#' `sklearn`'s default, and the stated intent of Zhong et al.; `aricode::AMI`
+#' divides by the **maximum** instead, so the two disagree by convention and
+#' not by error. And the expression printed for the adjusted measures in Zhong
+#' et al. subtracts the chance term once in a denominator that needs it twice,
+#' which scores two identical partitions at 0.949 rather than 1; the corrected
+#' form is used here.
 #'
 #' @references
 #' Danon, L., Diaz-Guilera, A., Duch, J., & Arenas, A. (2005). Comparing
@@ -1564,15 +1678,20 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
 #' Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic measures
 #' for clusterings comparison. *JMLR*, 11, 2837-2854.
 #'
+#' Zhong, P., Ba, C., Mondragon, R., & Clegg, R. (2025). Quantifying community
+#' evolution in temporal networks. *Scientific Reports*, 15, 45373.
+#'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
 #' community_change(found)
-#' community_change(found, measure = c("nmi", "ari"))
+#' community_change(found, measure = c("ami", "ari"))
+#' community_change(found, measure = c("iami", "uami"))
 #'
 #' @export
-community_change <- function(x, measure = c("nmi", "ari", "vi", "split_join",
-                                            "jaccard", "omega_index"),
+community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
+                                            "split_join", "jaccard",
+                                            "omega_index", "uami", "iami"),
                              against = c("previous", "first", "all")) {
   against <- match.arg(against)
   .check(
@@ -1581,7 +1700,8 @@ community_change <- function(x, measure = c("nmi", "ari", "vi", "split_join",
     "`measure` must be a character vector naming at least one statistic." =
       is.character(measure) && length(measure) > 0L && !anyNA(measure)
   )
-  known <- c("nmi", "ari", "vi", "split_join", "jaccard", "omega_index")
+  known <- c("nmi", "ami", "uami", "iami", "ari", "vi", "split_join",
+             "jaccard", "omega_index")
   unknown <- setdiff(measure, known)
   if (length(unknown) > 0L) {
     stop(errorCondition(sprintf(
@@ -1601,13 +1721,27 @@ community_change <- function(x, measure = c("nmi", "ari", "vi", "split_join",
       stats::setNames(x$community[pick], as.character(x$node)[pick])
     })
     compare <- function(i, j) {
-      shared <- intersect(names(labels[[i]]), names(labels[[j]]))
+      left <- labels[[i]]
+      right <- labels[[j]]
+      shared <- intersect(names(left), names(right))
       compared <<- c(compared, length(shared))
-      if (length(shared) < 2L) {
-        return(stats::setNames(rep(NA_real_, length(measure)), measure)) 
+      whole <- union(names(left), names(right))
+      # The union alignment: each partition gains one virtual community
+      # holding the vertices it does not have, so every vertex of the union
+      # carries a label on both sides and the contingency table is complete.
+      widen <- function(part) {
+        out <- stats::setNames(rep("(absent)", length(whole)), whole)
+        out[names(part)] <- as.character(part)
+        out
       }
-      vapply(measure, function(m) .compare_partitions(
-        labels[[i]][shared], labels[[j]][shared], m), numeric(1L))
+      vapply(measure, function(m) {
+        if (identical(m, "uami")) {
+          if (length(whole) < 2L) return(NA_real_)
+          return(.compare_partitions(widen(left), widen(right), "ami"))
+        }
+        if (length(shared) < 2L) return(NA_real_)
+        .compare_partitions(left[shared], right[shared], m)
+      }, numeric(1L))
     }
     if (identical(against, "all")) {
       grid <- expand.grid(i = seq_along(times), j = seq_along(times))

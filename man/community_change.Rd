@@ -6,15 +6,17 @@
 \usage{
 community_change(
   x,
-  measure = c("nmi", "ari", "vi", "split_join", "jaccard", "omega_index"),
+  measure = c("nmi", "ami", "ari", "vi", "split_join", "jaccard", "omega_index", "uami",
+    "iami"),
   against = c("previous", "first", "all")
 )
 }
 \arguments{
 \item{x}{A \code{dynet_communities} frame from \code{\link[=temporal_communities]{temporal_communities()}}.}
 
-\item{measure}{One or more of \code{"nmi"}, \code{"ari"}, \code{"vi"}, \code{"split_join"},
-\code{"jaccard"} and \code{"omega_index"}.}
+\item{measure}{One or more of \code{"nmi"}, \code{"ami"}, \code{"uami"}, \code{"iami"},
+\code{"ari"}, \code{"vi"}, \code{"split_join"}, \code{"jaccard"} and \code{"omega_index"}. The
+default asks for the first several; name them explicitly to choose.}
 
 \item{against}{\code{"previous"} compares each bin with the one before it,
 \code{"first"} with the opening bin, \code{"all"} with every other bin.}
@@ -49,23 +51,48 @@ absence, not a zero.
 The first bin has no predecessor, so under \code{against = "previous"} its value
 is \code{NA} by construction.
 
-What the six measure, briefly. \code{"nmi"} is shared information normalised by
+What each measures, briefly. \code{"nmi"} is shared information normalised by
 the mean entropy, in \eqn{[0, 1]}, high for agreement; it is \strong{not}
-chance-corrected, so two unrelated partitions score above zero. \code{"ari"} is
-chance-corrected and centred on zero for unrelated partitions, which is why
-both are offered. \code{"vi"} is a true metric in nats, zero for agreement and
-unbounded above. \code{"split_join"} counts the vertices that would have to move,
-so it is an integer in \eqn{[0, 2N]}. \code{"jaccard"} scores agreement over
-co-classified pairs. \code{"omega_index"} is chance-corrected pair agreement; for
-the disjoint partitions this package produces it coincides exactly with
-\code{"ari"}, and it is offered because it is what \code{multinet} reports and because
-it generalises to overlapping communities.
+chance-corrected, so two unrelated partitions score above zero. \code{"ami"} is
+the same quantity with the chance level subtracted, and is the one to reach
+for. \code{"ari"} is chance-corrected pair agreement, centred on zero for
+unrelated partitions. \code{"vi"} is a true metric in nats, zero for agreement
+and unbounded above. \code{"split_join"} counts the vertices that would have to
+move, so it is an integer in \eqn{[0, 2N]}. \code{"jaccard"} scores agreement
+over co-classified pairs. \code{"omega_index"} is chance-corrected pair
+agreement; for the disjoint partitions this package produces it coincides
+exactly with \code{"ari"}, and it is offered because it is what \code{multinet}
+reports and because it generalises to overlapping communities.
+
+\code{"uami"} and \code{"iami"} are Zhong et al.'s (2025) answer to a problem every
+temporal network has: the vertex set moves between bins, and ordinary
+mutual information assumes it does not. \code{"iami"} compares over the
+\strong{intersection}, the vertices both bins have. \code{"uami"} compares over the
+\strong{union}, giving each partition one extra virtual community holding the
+vertices it does not have, so a vertex arriving or leaving is itself
+information about the change rather than something discarded. The two
+answer different questions: \code{"iami"} asks whether the vertices that stayed
+kept their company, \code{"uami"} asks whether the whole structure held. Since
+every other measure here is already restricted to the shared vertices,
+\code{"iami"} is numerically identical to \code{"ami"} in this package, and is
+offered under both names because the literature uses both.
+
+Two notes on the sources, because both cost time to discover. Adjusted
+mutual information admits more than one normaliser: this package divides by
+the \strong{arithmetic mean} of the two entropies, matching \code{"nmi"} above,
+\code{sklearn}'s default, and the stated intent of Zhong et al.; \code{aricode::AMI}
+divides by the \strong{maximum} instead, so the two disagree by convention and
+not by error. And the expression printed for the adjusted measures in Zhong
+et al. subtracts the chance term once in a denominator that needs it twice,
+which scores two identical partitions at 0.949 rather than 1; the corrected
+form is used here.
 }
 \examples{
 dn <- dynet(school_contacts)
 found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
 community_change(found)
-community_change(found, measure = c("nmi", "ari"))
+community_change(found, measure = c("ami", "ari"))
+community_change(found, measure = c("iami", "uami"))
 
 }
 \references{
@@ -91,4 +118,7 @@ unifies overlaps and hierarchy. \emph{Scientific Reports}, 9, 8574.
 
 Vinh, N. X., Epps, J., & Bailey, J. (2010). Information theoretic measures
 for clusterings comparison. \emph{JMLR}, 11, 2837-2854.
+
+Zhong, P., Ba, C., Mondragon, R., & Clegg, R. (2025). Quantifying community
+evolution in temporal networks. \emph{Scientific Reports}, 15, 45373.
 }

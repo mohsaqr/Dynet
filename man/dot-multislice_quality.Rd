@@ -18,8 +18,9 @@
 \item{coupling}{\code{"ordinal"} or \code{"categorical"}.}
 }
 \value{
-A list with \code{q}, \code{q_intra}, \code{q_inter}, \code{two_mu}, \code{n_communities}
-and \code{n_empty_slices}.
+A list with \code{q}, \code{q_intra}, \code{q_inter}, \code{two_mu}, \code{n_communities},
+\code{n_empty_slices}, and \code{bins}: one row per slice carrying that slice's own
+modularity, its edge total and how many communities it holds.
 }
 \description{
 Split out from \code{\link[=multislice_modularity]{multislice_modularity()}} so the optimiser in
