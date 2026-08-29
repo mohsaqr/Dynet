@@ -1,6 +1,6 @@
 Package: Dynet
 Title: Tidy Temporal Network Analysis
-Version: 0.3.54
+Version: 0.3.55
 Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre"),
     email = "saqr@saqr.me")
 Description: Construction, measurement and visualisation of temporal
@@ -19,7 +19,7 @@ Description: Construction, measurement and visualisation of temporal
     ecosystem.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 4.4)
+Depends: R (>= 4.1)
 Imports:
     cograph,
     ggplot2,

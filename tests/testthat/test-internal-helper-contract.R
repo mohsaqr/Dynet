@@ -80,3 +80,22 @@ test_that(".finalize_optimal_search returns one entry per vertex", {
   expect_true(all(is.infinite(fin$arrival[!fin$attained])))
   expect_true(all(is.na(fin$n_hops[!fin$attained])))
 })
+
+test_that("the internal %||% matches the base operator it stands in for", {
+  # Dynet defines `%||%` so the dependency floor can stay at 4.1 rather than
+  # the 4.4 base's own version would force. That is only safe while the two
+  # behave identically, so pin it against base wherever base has one.
+  skip_if_not(getRversion() >= "4.4.0", "base %||% needs R 4.4")
+  ours <- getFromNamespace("%||%", "Dynet")
+  cases <- list(
+    list(NULL, 1), list(2, 1), list(NA, 1), list(list(), 1),
+    list(character(0), 1), list(FALSE, 1), list(NULL, NULL),
+    list(NULL, NA), list(0, NULL)
+  )
+  lapply(cases, function(case) {
+    expect_identical(
+      ours(case[[1]], case[[2]]),
+      base::`%||%`(case[[1]], case[[2]])
+    )
+  })
+})

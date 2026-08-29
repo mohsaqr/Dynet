@@ -16,6 +16,21 @@
                       class = "dynet_bad_input", call = NULL))
 }
 
+#' Default value for `NULL`
+#'
+#' Identical in behaviour to the `%||%` that base R gained in 4.4.0. It is
+#' defined here so the package's 93 call sites can keep using the operator
+#' while the dependency floor stays at the 4.1 the native pipe requires;
+#' without it, `Depends: R (>= 4.4)` would exclude every R older than
+#' April 2024 for the sake of one operator. On R 4.4 and later this
+#' definition simply shadows the identical base one inside the namespace.
+#'
+#' @param x A value that may be `NULL`.
+#' @param y Replacement used when `x` is `NULL`.
+#' @return `x` unless it is `NULL`, in which case `y`.
+#' @noRd
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 # ===========================================================================
 # Tolerant time comparison
 # ===========================================================================
