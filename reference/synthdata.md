@@ -1,0 +1,76 @@
+# Synthetic code-transition network (Trees of Thought stand-in)
+
+A synthetic temporal network of how one interaction code follows another
+in asynchronous discussion. Vertices are the ten codes a message can
+carry, so a vertex is a **category, never a person**, and a tie runs
+from the code of a message to the code of the message it replies to.
+
+## Usage
+
+``` r
+synthdata
+```
+
+## Format
+
+A `data.frame` with 101 rows and 5 columns:
+
+- from:
+
+  Character. Code of the replying message.
+
+- to:
+
+  Character. Code of the message replied to.
+
+- start:
+
+  Numeric. When the spell opens.
+
+- end:
+
+  Numeric. When it closes.
+
+- weight:
+
+  Integer. Message pairs the spell represents.
+
+## Source
+
+Synthesised from the *Trees of Thought* code-transition network by the
+resampling described above; see `data-raw/synthdata.R`.
+
+## Details
+
+This is a stand-in for the network analysed in the *Trees of Thought*
+study, whose own data is not redistributable. It was built by drawing a
+random 70% subset of that study's edge spells and resampling that subset
+with replacement to 90% of the original spell count, so it omits about a
+third of the real spells and repeats others. **No row of it should be
+read as a finding about the study**, and figures computed from it will
+not match the published ones. It exists so the analysis can be run and
+taught end to end.
+
+Spells are weighted by how many message pairs they represent, overlap in
+time, and include self-loops, because a code following itself is a real
+and common transition. Build with `loops = TRUE` to keep them, and name
+`weight = "weight"` or the spell counts are silently replaced by ones.
+
+## Examples
+
+``` r
+dynet(synthdata, directed = TRUE, loops = TRUE, weight = "weight")
+#> Keeping 14 self-loop event(s); they are excluded from degree.
+#> # Temporal network (interval format, directed) | a cograph netobject
+#> # 10 vertices | 101 edge spells | 48 distinct pairs
+#> # observed from 0 to 5.800729 step, binned every 1
+#> 
+#>            from               to start      end duration weight
+#>       Composing       Evaluation     0 3.078993 3.078993     10
+#>  Socioemotional Group_regulation     0 3.182975 3.182975     57
+#>  Socioemotional Group_regulation     0 3.182975 3.182975     57
+#>  Socioemotional Group_regulation     0 3.182975 3.182975     57
+#>        Question         Question     0 3.452118 3.452118    126
+#>        Question         Question     0 3.452118 3.452118    126
+#> # 95 more spells. summary() describes the network; plot() draws it.
+```
