@@ -1124,3 +1124,32 @@
   rownames(out) <- NULL
   out
 }
+
+#' Draw a result on request, and return it either way
+#'
+#' Implements the `plot = TRUE` convention the measurement verbs share. The
+#' model is base R's `hist()`: drawing is a SIDE EFFECT, and the verb still
+#' returns its tidy result, invisibly when it has drawn. That keeps the
+#' package's contract -- every verb returns a tidy data frame -- while sparing
+#' the caller a wrapping call for the common case of wanting to see it.
+#'
+#' Returning the ggplot object instead was the alternative. It was rejected
+#' because it makes a verb's return type depend on an argument, so
+#' `x <- centrality(dn, plot = TRUE)` would silently hand back something no
+#' other verb returns and nothing downstream accepts.
+#'
+#' @param result The verb's result object.
+#' @param plot Whether to draw it.
+#' @param ... Passed to the object's `plot()` method.
+#' @return `result`, invisibly when it was drawn and visibly otherwise.
+#' @noRd
+.maybe_plot <- function(result, plot, ...) {
+  .check("`plot` must be one non-missing logical value." =
+           is.logical(plot) && length(plot) == 1L && !is.na(plot))
+  if (!plot) return(result)
+  drawn <- graphics::plot(result, ...)
+  # A ggplot is only drawn when it is printed; a base-graphics method has
+  # already drawn by the time it returns.
+  if (inherits(drawn, "ggplot")) print(drawn)
+  invisible(result)
+}

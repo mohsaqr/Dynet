@@ -248,6 +248,11 @@
 #' @param min_count Keep only branches used by at least this many optimal
 #'   routes. The default of `1` keeps the complete family; a higher value is
 #'   the caller's explicit pruning.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_path_trajectories` data frame with one row per tree node
 #'   and columns `node`, `parent`, `depth`, `count`, `probability`, `vertex`,
 #'   `time`, `session` and `branch`. `depth` is the hop number from the
@@ -261,7 +266,7 @@
 #' @seealso [plot_path_trajectories()] to draw the tree, [path_network()] for
 #'   the route union as a network.
 #' @export
-path_trajectories <- function(x, min_count = 1L) {
+path_trajectories <- function(x, min_count = 1L, plot = FALSE) {
   if (!inherits(x, "dynet_paths")) {
     stop(errorCondition("`x` must be a result from `paths()`.",
                         class = "dynet_bad_input", call = NULL))
@@ -297,7 +302,7 @@ path_trajectories <- function(x, min_count = 1L) {
   attr(out, "anchor") <- attr(x, "source")
   attr(out, "min_count") <- as.integer(min_count)
   class(out) <- c("dynet_path_trajectories", "data.frame")
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Tidy table of a temporal trajectory tree
@@ -445,8 +450,11 @@ plot_path_trajectories <- function(
   body_layout$label_y <- body_layout$y -
     (0.012 + point_size * 0.0035) * label_span
 
-  body_layout$label <- paste(
-    gsub("_", " ", body_layout$vertex, fixed = TRUE), value_label, sep = "\n"
+  # One line, not two. A stacked "vertex \n value" label doubles the height of
+  # every node's text block, which is what forces the branch axis apart and
+  # leaves the glyphs looking like empty circles floating above their captions.
+  body_layout$label <- sprintf(
+    "%s (%s)", gsub("_", " ", body_layout$vertex, fixed = TRUE), value_label
   )
 
   limits <- if (identical(measure, "predictability")) c(0, 1) else NULL
@@ -527,4 +535,51 @@ plot_path_trajectories <- function(
       ggplot2::theme(axis.text.x = ggplot2::element_blank(),
                      axis.ticks.x = ggplot2::element_blank())
   }
+}
+
+#' Summarise path trajectories
+#'
+#' @param object A `dynet_path_trajectories` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per depth: `depth`, the number of
+#'   distinct `branches` reaching it, the `vertices` they land on, the summed
+#'   `count` of routes through it, and `mean_branching`, the average branching
+#'   fraction of those routes. Note `probability` in the underlying table is
+#'   CONDITIONAL on each parent, so it is averaged rather than summed: adding
+#'   conditional fractions across siblings would not be a probability at all.
+#'   Depth zero is the queried vertex itself and has no parent, so its
+#'   `mean_branching` is `NA`.
+#' @examples
+#' summary(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' @export
+summary.dynet_path_trajectories <- function(object, ...) {
+  flat <- as.data.frame(object)
+  parts <- lapply(sort(unique(flat$depth)), function(d) {
+    rows <- flat[flat$depth == d, , drop = FALSE]
+    data.frame(
+      depth = d, branches = length(unique(rows$branch)),
+      vertices = length(unique(rows$vertex)),
+      count = sum(rows$count),
+      mean_branching = mean(rows$probability)
+    )
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
+}
+
+#' Plot path trajectories
+#'
+#' A method wrapper so `plot()` works on the result directly. It draws exactly
+#' what [plot_path_trajectories()] draws; that function remains the place where
+#' the appearance arguments are documented.
+#'
+#' @param x A `dynet_path_trajectories` result.
+#' @param ... Passed to [plot_path_trajectories()].
+#' @return A `ggplot` object.
+#' @examples
+#' plot(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' @export
+plot.dynet_path_trajectories <- function(x, ...) {
+  plot_path_trajectories(x, ...)
 }

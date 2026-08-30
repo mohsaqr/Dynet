@@ -7,7 +7,8 @@
 burstiness(
   dn,
   measure = c("burstiness", "memory", "events"),
-  sessions = c("bounded", "collapse", "separate")
+  sessions = c("bounded", "collapse", "separate"),
+  plot = FALSE
 )
 }
 \arguments{
@@ -17,6 +18,12 @@ burstiness(
 \code{"mean_gap"}.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric} at node level with no time column: one row per

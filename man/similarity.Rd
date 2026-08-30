@@ -11,7 +11,8 @@ similarity(
   start = NULL,
   end = NULL,
   step = NULL,
-  window = NULL
+  window = NULL,
+  plot = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,12 @@ range.}
 \item{step, window}{How often to measure and how much time each measurement
 covers. Default to the interval the network was built with. \code{window = "all"} is rejected here, because a similarity matrix of one bin against
 itself says nothing.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_similarity} data frame with one row per ordered pair of

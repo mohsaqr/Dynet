@@ -20,7 +20,8 @@ dyn_centrality(
   traversal_time = 0,
   prestige = "indegree",
   rescale = FALSE,
-  lambda = 1
+  lambda = 1,
+  plot = FALSE
 )
 }
 \arguments{
@@ -106,6 +107,12 @@ return \code{NA}. This argument requires \code{measure = "prestige"}.}
 \item{lambda}{Nonnegative multiplier for \code{"diffusion"}. Diffusion degree is
 the sum of the selected degree of a vertex and all of its one-step
 neighbours, multiplied by \code{lambda}.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time

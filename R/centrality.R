@@ -165,6 +165,11 @@
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric`: a tidy data frame with one row per vertex, time
 #'   point and measure. Columns are `session` (only when the network has
 #'   sessions), `time` (snapshot scope only), `node`, `measure` and `value`.
@@ -422,7 +427,7 @@ dyn_centrality <- function(dn,
                            step = NULL, window = NULL,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
-                           lambda = 1) {
+                           lambda = 1, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
@@ -817,24 +822,24 @@ dyn_centrality <- function(dn,
     attr(out, "prestige_diagnostics") <- diagnostics
     if (any(diagnostics$status == "infeasible")) {
       warning(warningCondition(sprintf(
-        "Row-column prestige is structurally undefined in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Row-column prestige is structurally undefined in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "infeasible")
       ), class = "dynet_prestige_infeasible", call = NULL))
     }
     if (any(diagnostics$status == "nonconverged")) {
       warning(warningCondition(sprintf(
-        "Row-column prestige did not converge in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Row-column prestige did not converge in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "nonconverged")
       ), class = "dynet_prestige_nonconvergence", call = NULL))
     }
     if (any(diagnostics$status == "undefined")) {
       warning(warningCondition(sprintf(
-        "Eigenvector prestige is undefined in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Eigenvector prestige is undefined in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "undefined")
       ), class = "dynet_prestige_eigen_undefined", call = NULL))
     }
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Compute one snapshot centrality measure

@@ -55,6 +55,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level with one row per time point and
 #'   group pair. Directed `measure` labels use `"A -> B"`; undirected labels
 #'   use `"A -- B"`. `value` is the active binary-dyad count, and the
@@ -80,7 +85,7 @@ mixing <- function(dn, attribute,
                        sessions = c("bounded", "collapse", "separate"),
                        sample = NULL,
                        start = NULL, end = NULL,
-                       step = NULL, window = NULL) {
+                       step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -172,7 +177,7 @@ mixing <- function(dn, attribute,
     sessions, collapse = "calendar_union", bounded = "session_induced_union",
     separate = "session_local"
   )
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Count active binary dyads by group pair
@@ -236,6 +241,11 @@ mixing <- function(dn, attribute,
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_snapshot` data frame with one row per active edge per bin:
 #'   `session` (when the network has sessions), `observation` (when
 #'   observation is discontinuous, naming the observed component the bin falls
@@ -258,7 +268,7 @@ snapshots <- function(dn, at = NULL,
                           sessions = c("bounded", "collapse", "separate"),
                           sample = NULL,
                           start = NULL, end = NULL,
-                          step = NULL, window = NULL) {
+                          step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -322,7 +332,7 @@ snapshots <- function(dn, at = NULL,
   attr(out, "time_unit") <- dn$meta$time_unit
   attr(out, "directed") <- dn$directed
   class(out) <- c("dynet_snapshot", "data.frame")
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Tidy table of snapshot edges

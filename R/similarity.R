@@ -27,6 +27,11 @@
 #'   covers. Default to the interval the network was built with. `window =
 #'   "all"` is rejected here, because a similarity matrix of one bin against
 #'   itself says nothing.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_similarity` data frame with one row per ordered pair of
 #'   time bins and columns `time`, `other`, `measure` and `value`. The
 #'   diagonal is included and is one for every coefficient except
@@ -43,7 +48,7 @@
 similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
                                       "cosine", "pearson"),
                        sessions = c("bounded", "collapse", "separate"),
-                       start = NULL, end = NULL, step = NULL, window = NULL) {
+                       start = NULL, end = NULL, step = NULL, window = NULL, plot = FALSE) {
   .check_dynet(dn, match.arg(sessions))
   method <- match.arg(method)
   if (!requireNamespace("cograph", quietly = TRUE)) {
@@ -82,7 +87,7 @@ similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
   rownames(out) <- NULL
   attr(out, "time_unit") <- dn$meta$time_unit
   class(out) <- c("dynet_similarity", "data.frame")
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Tidy table of time-bin similarity
@@ -136,4 +141,35 @@ plot.dynet_similarity <- function(x, base_size = 12, ...) {
     ggplot2::theme(
       panel.grid = ggplot2::element_blank(),
       plot.title = ggplot2::element_text(face = "bold"))
+}
+
+#' Summarise snapshot similarity
+#'
+#' @param object A `dynet_similarity` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per bin: `time`, the `mean`, `min`
+#'   and `max` similarity to every other bin, and `nearest`, the time of the
+#'   most similar other bin. The self-comparison is excluded throughout, so a
+#'   bin with no comparable neighbour reports `NaN` and `NA`.
+#' @examples
+#' summary(similarity(dynet(school_contacts), step = 5, window = 5))
+#' @export
+summary.dynet_similarity <- function(object, ...) {
+  flat <- as.data.frame(object)
+  others <- flat[flat$time != flat$other, , drop = FALSE]
+  parts <- lapply(sort(unique(flat$time)), function(t) {
+    rows <- others[others$time == t, , drop = FALSE]
+    data.frame(
+      time = t,
+      mean = mean(rows$value), min = suppressWarnings(min(rows$value)),
+      max = suppressWarnings(max(rows$value)),
+      nearest = if (nrow(rows)) rows$other[which.max(rows$value)] else NA_real_
+    )
+  })
+  out <- do.call(rbind, parts)
+  # An empty min/max is -Inf/Inf from the base reducers; NA is the honest read.
+  out$min[!is.finite(out$min)] <- NA_real_
+  out$max[!is.finite(out$max)] <- NA_real_
+  rownames(out) <- NULL
+  out
 }

@@ -328,6 +328,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level, one row per time point and
 #'   measure.
 #'
@@ -423,7 +428,7 @@ events <- function(dn,
                        measure = c("formation", "dissolution"),
                        sessions = c("bounded", "collapse", "separate"),
                        start = NULL, end = NULL,
-                       step = NULL, window = NULL) {
+                       step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   spec <- .window_spec(dn, start, end, step, window)
@@ -649,7 +654,7 @@ events <- function(dn,
       separate = "session_local"
     )
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Earliest observed evidence contributed by each raw spell
@@ -959,6 +964,11 @@ events <- function(dn,
 #'   incidence. Undirected networks normalize every request to `"all"`. An
 #'   explicitly supplied mode is invalid for every other duration unit.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric`. Pair and edge-spell units are edge-level: pair has
 #'   columns `from`, `to`, `measure`, and `value`, while spell additionally has
 #'   `raw_spell`.
@@ -1041,7 +1051,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
                           censored = c("include", "exclude"),
                           unit = c("pair", "spell", "vertex_activity",
                                    "vertex_spell", "node_ties"),
-                          mode = c("out", "in", "all")) {
+                          mode = c("out", "in", "all"), plot = FALSE) {
   mode_supplied <- !missing(mode)
   sessions <- match.arg(sessions)
   censored <- match.arg(censored)
@@ -1305,7 +1315,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
     effective_sessions, collapse = "labels_erased", bounded = "session_local_then_union",
     separate = "session_local"
   )
-  result
+  .maybe_plot(result, plot)
 }
 
 
@@ -1330,6 +1340,11 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'   `"mean_gap"`.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at node level with no time column: one row per
 #'   vertex and measure. Attributes record the event identity, dispersion,
 #'   memory, loop, weight, and session-gap conventions as
@@ -1371,7 +1386,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'
 #' @export
 burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
-                           sessions = c("bounded", "collapse", "separate")) {
+                           sessions = c("bounded", "collapse", "separate"), plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   allowed <- c("burstiness", "memory", "events", "mean_gap")
@@ -1428,7 +1443,7 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
     sessions, collapse = "included", bounded = "excluded",
     separate = "session_local"
   )
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Burstiness statistics for one vertex's event times

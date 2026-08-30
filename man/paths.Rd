@@ -12,7 +12,8 @@ paths(
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
-  traversal_time = 0
+  traversal_time = 0,
+  plot = FALSE
 )
 }
 \arguments{
@@ -36,6 +37,12 @@ instead of \code{at}.}
 
 \item{traversal_time}{Nonnegative duration charged for every hop, in the
 network's time unit. A calendar network also accepts a scalar \code{difftime}.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row

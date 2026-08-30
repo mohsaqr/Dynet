@@ -63,6 +63,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level: one row per time point and
 #'   measure, with columns `session` (when present), `time`, `measure` and
 #'   `value`.
@@ -171,7 +176,7 @@ metrics <- function(dn, measure = "density",
                         sessions = c("bounded", "collapse", "separate"),
                         sample = NULL,
                         start = NULL, end = NULL,
-                        step = NULL, window = NULL) {
+                        step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -329,7 +334,7 @@ metrics <- function(dn, measure = "density",
       "ordered_distinct_endpoints"
     } else "unordered_distinct_endpoints"
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Compute one graph-level measure

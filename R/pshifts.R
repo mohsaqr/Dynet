@@ -139,6 +139,11 @@
 #'   sequence and never uses a predecessor outside the range.
 #' @param group_events Infer one group-directed turn from simultaneous distinct
 #'   recipients, or retain every dyadic row.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_pshifts` data frame whose shape follows `output`.
 #'   `"final"` gives one row per shift class -- thirteen rows, always all
 #'   thirteen even when a class never occurred -- with columns `shift` (the
@@ -167,7 +172,7 @@
 pshifts <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
     output = c("final", "cumulative"), start = NULL, end = NULL,
-    group_events = c("simultaneous", "none")) {
+    group_events = c("simultaneous", "none"), plot = FALSE) {
   sessions <- match.arg(sessions)
   output <- match.arg(output)
   group_events <- match.arg(group_events)
@@ -250,7 +255,7 @@ pshifts <- function(
   if ("session" %in% names(out) && !identical(sessions, "separate")) {
     out$session <- NULL
   }
-  structure(out, class = c("dynet_pshifts", "data.frame"),
+  out <- structure(out, class = c("dynet_pshifts", "data.frame"),
             event_identity = "uncensored_observed_raw_spell_start",
             classification = "gibson_13", interval_contribution = "onset_only",
             group_target = if (identical(group_events, "simultaneous")) {
@@ -267,4 +272,107 @@ pshifts <- function(
               bounded = "session_local_sequences_pooled",
               separate = "session_local_rows"
             ))
+  .maybe_plot(out, plot)
+}
+
+#' Tidy data frame of participation shift counts
+#'
+#' @param x A `dynet_pshifts` result.
+#' @param row.names Ignored; present for compatibility with the generic.
+#' @param optional Ignored; present for compatibility with the generic.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per shift type: `shift`, `family` and
+#'   `count`, preceded by `session` when the result is session-local. The
+#'   thirteen Gibson shift types are always present, including those with a
+#'   count of zero.
+#' @examples
+#' as.data.frame(pshifts(dynet(school_contacts)))
+#' @export
+as.data.frame.dynet_pshifts <- function(x, row.names = NULL, optional = FALSE,
+                                        ...) {
+  out <- x
+  attributes(out) <- list(names = names(x), row.names = seq_len(nrow(x)),
+                          class = "data.frame")
+  out
+}
+
+#' Print participation shift counts
+#'
+#' @param x A `dynet_pshifts` result.
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @examples
+#' pshifts(dynet(school_contacts))
+#' @export
+print.dynet_pshifts <- function(x, ...) {
+  observed <- sum(x$count)
+  cat(sprintf("# Participation shifts (Gibson 2003, %d types)\n", nrow(x)))
+  cat(sprintf("# %d classified turn transition%s across %d famil%s\n",
+              observed, if (observed == 1L) "" else "s",
+              length(unique(x$family)),
+              if (length(unique(x$family)) == 1L) "y" else "ies"))
+  print(as.data.frame(x), row.names = FALSE)
+  invisible(x)
+}
+
+#' Summarise participation shifts by family
+#'
+#' @param object A `dynet_pshifts` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per shift family: `family`, its
+#'   `count`, the `share` of all classified transitions it accounts for, and
+#'   `top_shift`, the single most frequent shift type within it. `share` is
+#'   `NaN` when nothing was classified.
+#' @examples
+#' summary(pshifts(dynet(school_contacts)))
+#' @export
+summary.dynet_pshifts <- function(object, ...) {
+  flat <- as.data.frame(object)
+  total <- sum(flat$count)
+  by_family <- lapply(split(flat, flat$family), function(part) {
+    best <- part$shift[which.max(part$count)]
+    data.frame(
+      family = part$family[[1L]], count = sum(part$count),
+      share = sum(part$count) / total,
+      top_shift = if (sum(part$count) > 0) best else NA_character_,
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, by_family)
+  out <- out[order(-out$count, out$family), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+#' Plot participation shift counts
+#'
+#' One horizontal bar per shift type, grouped and coloured by family. Families
+#' are distinguished by a direct axis grouping as well as by fill, so the
+#' figure does not rely on colour alone.
+#'
+#' @param x A `dynet_pshifts` result.
+#' @param ... Ignored.
+#' @return A `ggplot` object.
+#' @examples
+#' plot(pshifts(dynet(school_contacts)))
+#' @export
+plot.dynet_pshifts <- function(x, ...) {
+  flat <- as.data.frame(x)
+  if ("session" %in% names(flat)) {
+    flat <- stats::aggregate(count ~ shift + family, data = flat, FUN = sum)
+  }
+  flat$shift <- factor(flat$shift, levels = rev(unique(flat$shift)))
+  ggplot2::ggplot(flat, ggplot2::aes(x = count, y = shift, fill = family)) +
+    ggplot2::geom_col(width = 0.7) +
+    ggplot2::facet_grid(rows = ggplot2::vars(family), scales = "free_y",
+                        space = "free_y", switch = "y") +
+    ggplot2::scale_fill_manual(values = .okabe_ito(), guide = "none") +
+    ggplot2::labs(x = "Turn transitions", y = NULL,
+                  title = "Participation shifts") +
+    ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      strip.placement = "outside",
+      strip.text.y.left = ggplot2::element_text(angle = 0, hjust = 1),
+      panel.grid.major.y = ggplot2::element_blank()
+    )
 }

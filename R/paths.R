@@ -1455,6 +1455,11 @@
 #' @param traversal_time Nonnegative duration charged for every hop, in the
 #'   network's time unit. A calendar network also accepts a scalar `difftime`.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return An object of class `"dynet_paths"`: a tidy data frame with one row
 #'   per vertex and columns `node`, `reachable`, `arrival_time`, `attained`
 #'   (whether that optimum itself is realized), `latency` (time taken from the
@@ -1545,7 +1550,7 @@
 paths <- function(dn, from, at = NULL,
                       direction = c("forward", "backward"),
                       sessions = c("bounded", "collapse", "separate"),
-                      start = NULL, end = NULL, traversal_time = 0) {
+                      start = NULL, end = NULL, traversal_time = 0, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
@@ -1630,7 +1635,7 @@ paths <- function(dn, from, at = NULL,
                       criterion = "foremost_then_shortest",
                       path_mode = path_mode, optimal_search = search_descriptor,
                       tree_previous = tree_previous)
-  .vertex_path_metadata(result, path_mode)
+  .maybe_plot(.vertex_path_metadata(result, path_mode), plot)
 }
 
 #' Adapt an encoding for undirected traversal or backward search
@@ -1698,6 +1703,11 @@ paths <- function(dn, from, at = NULL,
 #'   and `"reach_count"`, their number. The source vertex is excluded from
 #'   both.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at node level. Proportion measures are named
 #'   `forward_reach` and `backward_reach`; counts are named
 #'   `forward_reach_count` and `backward_reach_count`.
@@ -1745,7 +1755,7 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
                              at = NULL,
                              sessions = c("bounded", "collapse", "separate"),
                              start = NULL, end = NULL, traversal_time = 0,
-                             measure = "reach") {
+                             measure = "reach", plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
@@ -1827,5 +1837,5 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
                  traversal_time = traversal_time)
   effective_mode <- if (identical(sessions, "bounded") &&
                         is.null(dn$meta$sessions)) "collapse" else sessions
-  .vertex_path_metadata(out, effective_mode)
+  .maybe_plot(.vertex_path_metadata(out, effective_mode), plot)
 }
