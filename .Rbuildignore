@@ -5,6 +5,7 @@
 ^legacy$
 ^tmp$
 ^docs$
+^dev-notes$
 ^SPEC\.md$
 ^MATH_ROADMAP\.md$
 ^HANDOFF\.md$
