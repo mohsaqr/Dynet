@@ -55,6 +55,15 @@
 #'   and the shape every other verb expects. `"wide"` spreads time across
 #'   columns, giving one row per vertex (or per measure for graph-level
 #'   quantities), which is convenient for exporting a table.
+#' @param what `"values"`, the default, gives the measured values.
+#'   `"diagnostics"` gives the record a prestige computation keeps when it
+#'   cannot produce a value, which is what the accompanying warning refers to:
+#'   one row per reporting block that was undefined, infeasible or
+#'   nonconverged, with `session`, `time`, `stage`, `status` and `reason`,
+#'   the solver's `iterations` and `residual`, the `balance_*` family for the
+#'   row-column scaling step, and `spectral_radius`, `eigenspace_dimension`
+#'   and `eigen_residual` for the eigen step. A result with nothing to report
+#'   gives a zero-row frame of those same columns rather than `NULL`.
 #' @param ... Ignored.
 #'
 #' @return A plain `data.frame`. Long layout carries `measure` and `value`
@@ -71,11 +80,34 @@
 #' dn <- dynet(school_contacts)
 #' as.data.frame(dyn_centrality(dn, measure = "degree"))
 #' as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
+#' as.data.frame(dyn_centrality(dn, measure = "degree"), what = "diagnostics")
 #'
 #' @export
 as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
-                                       layout = c("long", "wide"), ...) {
+                                       layout = c("long", "wide"),
+                                       what = c("values", "diagnostics"), ...) {
   layout <- match.arg(layout)
+  what <- match.arg(what)
+  if (identical(what, "diagnostics")) {
+    found <- attr(x, "prestige_diagnostics")
+    if (is.null(found)) {
+      # A typed empty frame rather than NULL, so a caller can bind, count or
+      # print the result without first testing whether anything was recorded.
+      # The schema mirrors the single builder in `.prestige_values()`; a test
+      # asserts the two agree, so this cannot drift away from it silently.
+      return(data.frame(
+        session = character(), time = numeric(), stage = character(),
+        status = character(), reason = character(), iterations = integer(),
+        residual = numeric(), balance_status = character(),
+        balance_reason = character(), balance_iterations = integer(),
+        balance_residual = numeric(), spectral_radius = numeric(),
+        eigenspace_dimension = integer(), eigen_residual = numeric(),
+        stringsAsFactors = FALSE
+      ))
+    }
+    rownames(found) <- NULL
+    return(found)
+  }
   df <- x
   attributes(df) <- list(names = names(x), row.names = seq_len(nrow(x)),
                          class = "data.frame")

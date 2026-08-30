@@ -16,11 +16,12 @@ over the whole observed period; or a character vector of names, a factor,
 a logical mask, or any data frame carrying a \code{name} or \code{node} column. Only
 ties whose two endpoints are in this set are eligible.}
 
-\item{ties}{Optional integer row positions or logical mask over the raw
-spell table, in the order \code{as.data.frame(dn)} returns it. A mask must
-have exactly that many elements. Unlike \code{nodes}, this argument is not a
-condition: it is evaluated normally, so a selection by edge attribute has
-to be computed before the call.}
+\item{ties}{Which ties to keep. Either a condition on the spell table,
+evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{course == "g1"},
+\code{duration > 2 & weight >= 1} -- over the columns \code{as.data.frame(dn)}
+returns, tie attributes included; or integer row positions or a logical
+mask over that same table, in that order, a mask having exactly as many
+elements as there are spells.}
 
 \item{keep_isolates}{Whether named nodes without a selected tie remain.}
 }

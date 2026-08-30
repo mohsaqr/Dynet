@@ -264,3 +264,108 @@ print.dynet_collapsed <- function(x, ...) {
   print(utils::head(as.data.frame(x), 6L), row.names = FALSE)
   invisible(x)
 }
+
+#' Tidy data frame of session-specific collapsed networks
+#'
+#' Stacks the per-session edge tables into one tidy frame with a `session`
+#' key, so a session-separated collapse reads like every other verb's result.
+#' Without this the base method flattened the list sideways into a single row
+#' of `s1.from`, `s2.from`, ... columns.
+#'
+#' @param x A `dynet_collapsed_list` from
+#'   `collapse_network(sessions = "separate")`.
+#' @param row.names Ignored; present for compatibility with the generic.
+#' @param optional Ignored; present for compatibility with the generic.
+#' @param session Optional session name. Supply one to get that session's
+#'   table alone, without the `session` key; the default stacks them all.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per collapsed pair per session, with
+#'   `session` first and then the columns
+#'   `as.data.frame.dynet_collapsed()` returns.
+#' @examples
+#' dn <- dynet(data.frame(
+#'   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
+#'   session = c("s1", "s2")
+#' ), session = "session")
+#' as.data.frame(collapse_network(dn, sessions = "separate"))
+#' as.data.frame(collapse_network(dn, sessions = "separate"), session = "s1")
+#' @export
+as.data.frame.dynet_collapsed_list <- function(x, row.names = NULL,
+                                               optional = FALSE,
+                                               session = NULL, ...) {
+  if (!is.null(session)) {
+    if (length(session) != 1L || !session %in% names(x)) {
+      stop(errorCondition(sprintf(
+        "`session` must be one of: %s.", paste(names(x), collapse = ", ")),
+        class = c("dynet_unknown_session", "dynet_bad_input"), call = NULL))
+    }
+    return(as.data.frame(x[[session]]))
+  }
+  parts <- lapply(names(x), function(label) {
+    one <- as.data.frame(x[[label]])
+    if (!nrow(one)) return(NULL)
+    cbind(session = label, one, stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, parts)
+  if (is.null(out)) {
+    out <- cbind(session = character(), as.data.frame(x[[1L]]))
+  }
+  rownames(out) <- NULL
+  out
+}
+
+#' Print session-specific collapsed networks
+#'
+#' @param x A `dynet_collapsed_list`.
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(data.frame(
+#'   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
+#'   session = c("s1", "s2")
+#' ), session = "session")
+#' collapse_network(dn, sessions = "separate")
+#' @export
+print.dynet_collapsed_list <- function(x, ...) {
+  flat <- as.data.frame(x)
+  cat(sprintf("# Collapsed networks, one per session (%d session%s)\n",
+              length(x), if (length(x) == 1L) "" else "s"))
+  cat(sprintf("# %d collapsed pair%s in total\n", nrow(flat),
+              if (nrow(flat) == 1L) "" else "s"))
+  print(utils::head(flat, 12L), row.names = FALSE)
+  if (nrow(flat) > 12L) {
+    cat(sprintf("# %d more. as.data.frame() returns every row.\n",
+                nrow(flat) - 12L))
+  }
+  invisible(x)
+}
+
+#' Summarise session-specific collapsed networks
+#'
+#' @param object A `dynet_collapsed_list`.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per session: `session`, the number of
+#'   collapsed `pairs`, the `nodes` those pairs span, and the summed
+#'   `union_duration` and `total_duration`.
+#' @examples
+#' dn <- dynet(data.frame(
+#'   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
+#'   session = c("s1", "s2")
+#' ), session = "session")
+#' summary(collapse_network(dn, sessions = "separate"))
+#' @export
+summary.dynet_collapsed_list <- function(object, ...) {
+  parts <- lapply(names(object), function(label) {
+    one <- as.data.frame(object[[label]])
+    data.frame(
+      session = label, pairs = nrow(one),
+      nodes = length(unique(c(one$from, one$to))),
+      union_duration = sum(one$union_duration),
+      total_duration = sum(one$total_duration),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
+}

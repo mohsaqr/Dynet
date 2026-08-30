@@ -275,6 +275,28 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   .node_names(value, "nodes")
 }
 
+#' Resolve a `ties` selection, evaluating a condition over the spell table
+#'
+#' The counterpart of `.select_nodes()` for edges. The spell table is the first
+#' environment the condition sees, so a tie attribute named in the condition
+#' resolves to its column, the same precedence `subset()` gives a data frame's
+#' own columns over the calling frame.
+#'
+#' Whatever the expression evaluates to is handed on unchanged to
+#' `.edit_row_selector()`, so row positions and a logical mask keep working
+#' exactly as before; the only new capability is that a bare condition on a tie
+#' attribute now resolves instead of raising "object not found".
+#'
+#' @param dn A `dynet` object.
+#' @param expr The unevaluated `ties` argument, from `substitute()`.
+#' @param env The caller's frame.
+#' @return Whatever the selection evaluates to, or `NULL`.
+#' @noRd
+.select_ties <- function(dn, expr, env) {
+  if (is.null(expr)) return(NULL)
+  eval(expr, as.data.frame(dn), env)
+}
+
 #' Read vertex names out of whatever the caller had to hand
 #'
 #' A vertex selection usually arrives as the result of a measurement that has
@@ -313,11 +335,12 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #'   over the whole observed period; or a character vector of names, a factor,
 #'   a logical mask, or any data frame carrying a `name` or `node` column. Only
 #'   ties whose two endpoints are in this set are eligible.
-#' @param ties Optional integer row positions or logical mask over the raw
-#'   spell table, in the order `as.data.frame(dn)` returns it. A mask must
-#'   have exactly that many elements. Unlike `nodes`, this argument is not a
-#'   condition: it is evaluated normally, so a selection by edge attribute has
-#'   to be computed before the call.
+#' @param ties Which ties to keep. Either a condition on the spell table,
+#'   evaluated the way [subset()] evaluates one -- `course == "g1"`,
+#'   `duration > 2 & weight >= 1` -- over the columns `as.data.frame(dn)`
+#'   returns, tie attributes included; or integer row positions or a logical
+#'   mask over that same table, in that order, a mask having exactly as many
+#'   elements as there are spells.
 #' @param keep_isolates Whether named nodes without a selected tie remain.
 #' @return A new `dynet` object with selected ties, nodes, vertex activity, and
 #'   all static attributes retained.
@@ -334,6 +357,7 @@ induce_subgraph <- function(dn, nodes = NULL, ties = NULL,
                             keep_isolates = FALSE) {
   .check_dynet(dn, "bounded")
   nodes <- .select_nodes(dn, substitute(nodes), parent.frame())
+  ties <- .select_ties(dn, substitute(ties), parent.frame())
   .check("`keep_isolates` must be one non-missing logical value." =
            is.logical(keep_isolates) && length(keep_isolates) == 1L &&
              !is.na(keep_isolates))

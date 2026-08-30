@@ -355,3 +355,33 @@ print.dynet_projection <- function(x, ...) {
   print(utils::head(x$vertices, 6L), row.names = FALSE)
   invisible(x)
 }
+
+#' Summarise a time projection
+#'
+#' @param object A `dynet_projection` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per slice: `slice`, its `time`, the
+#'   number of `active` vertex states, the `within_slice` arcs induced in it,
+#'   and the `identity_arcs` leaving it for the next slice. The final slice
+#'   emits no identity arcs, so its count is zero.
+#' @examples
+#' summary(projection(dynet(school_contacts), step = 5, window = 5))
+#' @export
+summary.dynet_projection <- function(object, ...) {
+  vertices <- as.data.frame(object, what = "vertices")
+  edges <- as.data.frame(object, what = "edges")
+  within <- edges[edges$edge_type == "within_slice", , drop = FALSE]
+  identity <- edges[edges$edge_type == "identity_arc", , drop = FALSE]
+  parts <- lapply(sort(unique(vertices$slice)), function(s) {
+    data.frame(
+      slice = s,
+      time = vertices$time[vertices$slice == s][[1L]],
+      active = sum(vertices$active[vertices$slice == s]),
+      within_slice = sum(within$from_slice == s),
+      identity_arcs = sum(identity$from_slice == s)
+    )
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
+}
