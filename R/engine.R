@@ -670,9 +670,31 @@
 #' @return A single number.
 #' @noRd
 .default_end <- function(t_min, t_max, step) {
-  span <- t_max - t_min
-  n <- max(1L, as.integer(ceiling(span / step - 1e-9)))
-  t_min + (n - 1L) * step
+  t_min + (.grid_bins(t_max - t_min, step) - 1L) * step
+}
+
+#' Number of bins of width `step` needed to cover a span
+#'
+#' A span that is an exact multiple of `step` must not gain a spurious
+#' trailing bin from representation error, so a ratio within rounding error of
+#' a whole number is taken to be that whole number. Anything genuinely above
+#' it takes the ceiling.
+#'
+#' The tolerance is per element and relative to the ratio. The previous form,
+#' `ceiling(span / step - 1e-9)`, subtracted a fixed epsilon from the ratio
+#' itself, which is a tolerance on the bin COUNT rather than on time: it
+#' discarded any event landing up to `1e-9 * step` above an exact multiple,
+#' silently dropping it from every measurement built on the grid.
+#'
+#' @param span,step Numeric widths, recycled as usual.
+#' @return An integer vector of bin counts, at least one.
+#' @noRd
+.grid_bins <- function(span, step) {
+  ratio <- span / step
+  nearest <- round(ratio)
+  tol <- 128 * .Machine$double.eps * pmax(1, abs(ratio))
+  exact <- abs(ratio - nearest) <= tol
+  pmax(1L, as.integer(ifelse(exact, nearest, ceiling(ratio))))
 }
 
 #' Build the measurement grid

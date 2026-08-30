@@ -99,3 +99,32 @@ test_that("the internal %||% matches the base operator it stands in for", {
     )
   })
 })
+
+test_that(".grid_bins keeps a late event without inventing a trailing bin", {
+  gb <- getFromNamespace(".grid_bins", "Dynet")
+  # Exact multiples, including ones the ratio cannot represent exactly:
+  # 0.3 / 0.1 is 2.9999999999999996, which must still be three bins.
+  expect_identical(gb(3, 1), 3L)
+  expect_identical(gb(0.3, 0.1), 3L)
+  expect_identical(gb(c(3, 0.3, 7), c(1, 0.1, 2)), c(3L, 3L, 4L))
+  # A span genuinely above a multiple needs the extra bin, however slightly.
+  # Regression: `ceiling(span / step - 1e-9)` put a fixed tolerance on the bin
+  # COUNT, so anything within 1e-9 * step of a multiple was rounded away.
+  expect_identical(gb(1 + 5e-10, 1), 2L)
+  expect_identical(gb(1 + 1e-9, 1), 2L)
+  expect_identical(gb(0, 1), 1L)
+})
+
+test_that("an event just past a bin boundary is not silently discarded", {
+  # The user-visible consequence of the bug above: the second contact fell
+  # outside the only bin built, and vanished from every derived measurement.
+  lapply(c(5e-10, 1e-9, 2e-9, 1e-6), function(offset) {
+    dn <- quiet_dynet(
+      data.frame(from = c("A", "C"), to = c("B", "D"), time = c(0, 1 + offset)),
+      format = "contact", interval = 1
+    )
+    seen <- as.data.frame(snapshots(dn))
+    expect_identical(nrow(seen), 2L)
+    expect_identical(length(unique(seen$time)), 2L)
+  })
+})

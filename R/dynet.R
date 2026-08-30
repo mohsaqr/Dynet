@@ -316,9 +316,7 @@ dynet <- function(data,
     metadata$observation_spells_explicit <- TRUE
     metadata$observation_gap_waiting <- "allowed"
     metadata$latency_clock <- "calendar"
-    metadata$n_bins <- sum(pmax(
-      1L, as.integer(ceiling(observations$duration / interval - 1e-9))
-    ))
+    metadata$n_bins <- sum(.grid_bins(observations$duration, interval))
   }
   metadata$raw_censoring <- if (censor_explicit) "explicit" else "none"
   if (censor_explicit) {
