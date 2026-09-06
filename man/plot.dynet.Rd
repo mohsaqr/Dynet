@@ -70,15 +70,19 @@ windowed, and an empty window is an error rather than an empty panel.}
 
 \item{top}{For the timeline, draw only the \code{top} busiest vertex pairs.}
 
-\item{step}{For \code{"layers"}, \code{"heatmap"} and \code{"stack"}, the width of each
-time slice. \code{NULL} uses the construction interval. At least two slices
-are needed, so too wide a \code{step} is an error rather than a single panel.}
+\item{step}{Width of one time bin, in the network's time unit. For
+\code{"timeline"} and \code{"events"} it is the bin the activity is counted in
+(\code{1/24} on a network measured in days is hourly); for \code{"layers"},
+\code{"heatmap"} and \code{"stack"} it is the width of each slice, and at least
+two slices are needed, so too wide a \code{step} is an error rather than a
+single panel. \code{NULL} uses the construction interval.}
 
 \item{omega}{For \code{"layers"}, the weight on the identity arcs carrying a
 vertex between adjacent slices, that is, the interlayer coupling.}
 
 \item{bins}{Number of equal time bins for \code{"timeline"} and \code{"events"}.
-\code{NULL} uses the network's own interval.}
+\code{NULL} uses the network's own interval. \code{step}, a width, takes
+precedence when both are given.}
 
 \item{link}{Link glyph for \code{"events"}: \code{"hook"} (default), \code{"arc"},
 \code{"chevron"}, \code{"wave"} or \code{"bracket"}.}

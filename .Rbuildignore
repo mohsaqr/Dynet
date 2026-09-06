@@ -21,3 +21,4 @@
 ^Dynet\.Rcheck$
 ^Dynet_.*\.tar\.gz$
 ^CLAUDE\.md$
+^cran-comments\.md$

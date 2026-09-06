@@ -9,7 +9,8 @@ plot_path_trajectories(
   measure = c("frequency", "time", "predictability"),
   orientation = c("horizontal", "vertical"),
   min_count = 1L,
-  base_size = 11
+  base_size = 11,
+  palette = "okabe"
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ number on the x axis; \code{"vertical"} grows it top to bottom.}
 routes. Ignored when \code{x} is already a \code{\link[=path_trajectories]{path_trajectories()}} result.}
 
 \item{base_size}{Base text size.}
+
+\item{palette}{Palette for the vertex colours of the frequency view, as in
+\code{\link[=plot.dynet]{plot.dynet()}}.}
 }
 \value{
 A \code{ggplot} object.

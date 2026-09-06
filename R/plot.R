@@ -55,7 +55,8 @@
 #' @param label_size,label_color,label_fontface Axis label aesthetics, named as
 #'   in `cograph::splot()`.
 #' @param bins Number of equal time bins for `"timeline"` and `"events"`.
-#'   `NULL` uses the network's own interval.
+#'   `NULL` uses the network's own interval. `step`, a width, takes
+#'   precedence when both are given.
 #' @param link Link glyph for `"events"`: `"hook"` (default), `"arc"`,
 #'   `"chevron"`, `"wave"` or `"bracket"`.
 #' @param time Time axis for `"events"`. `"bin"` groups onsets into equal
@@ -79,9 +80,12 @@
 #'   `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or `"proximity"`.
 #' @param at For `"network"`, the time to draw. `NULL` draws the whole window
 #'   flattened.
-#' @param step For `"layers"`, `"heatmap"` and `"stack"`, the width of each
-#'   time slice. `NULL` uses the construction interval. At least two slices
-#'   are needed, so too wide a `step` is an error rather than a single panel.
+#' @param step Width of one time bin, in the network's time unit. For
+#'   `"timeline"` and `"events"` it is the bin the activity is counted in
+#'   (`1/24` on a network measured in days is hourly); for `"layers"`,
+#'   `"heatmap"` and `"stack"` it is the width of each slice, and at least
+#'   two slices are needed, so too wide a `step` is an error rather than a
+#'   single panel. `NULL` uses the construction interval.
 #' @param omega For `"layers"`, the weight on the identity arcs carrying a
 #'   vertex between adjacent slices, that is, the interlayer coupling.
 #' @param start,end Window the plot to `[start, end]` before drawing. Either
@@ -194,8 +198,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     label_size = label_size, label_color = label_color,
     label_fontface = label_fontface))
   switch(type,
-    timeline   = .plot_timeline(x, top, bins, base_size),
+    timeline   = .plot_timeline(x, top, bins, base_size, step = step),
     events     = .plot_events(x, link = link, time = time, bins = bins,
+                              step = step,
                               aggregate = aggregate, nest = nest,
                               split = split, blend = blend, weight = weight,
                               palette = palette, base_size = base_size,
@@ -569,7 +574,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'   explicitly, spliced into the drawing so they are not swallowed.
 #' @return A `ggplot` object.
 #' @noRd
-.plot_events <- function(x, link, time, bins, aggregate, nest, split, blend,
+.plot_events <- function(x, link, time, bins, step = NULL, aggregate, nest, split, blend,
                          weight, palette, base_size, aes = list()) {
   .check(
     "`split` must be one number between 0 and 1." =
@@ -599,7 +604,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   e <- e[e$from != e$to, , drop = FALSE]
 
   span <- x$meta$time_range
-  interval <- if (is.null(bins)) x$meta$interval else diff(span) / bins
+  interval <- .bin_width(x, span, bins, step)
   stamps <- sort(unique(c(e$start, loops$start)))
   e$ev <- .event_place(e$start, time, span, interval, stamps)
   if (nrow(loops)) {
@@ -993,7 +998,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param base_size Base text size.
 #' @return A `ggplot` object.
 #' @noRd
-.plot_timeline <- function(x, top, bins, base_size) {
+.plot_timeline <- function(x, top, bins, base_size, step = NULL) {
   e <- as.data.frame(x)
   if (!nrow(e)) {
     stop(errorCondition("The network has no edge spell to draw.",
@@ -1005,8 +1010,12 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   dropped <- length(busiest) - length(keep)
   e <- e[e$pair %in% keep, , drop = FALSE]
 
-  span <- range(c(e$start, e$end))
-  width <- if (is.null(bins)) x$meta$interval else diff(span) / bins
+  # The drawn span is the observation window, so a declared window clips the
+  # picture as it clips every measurement; spells are cut to it.
+  span <- x$meta$time_range
+  e$start <- pmax(e$start, span[[1L]]); e$end <- pmin(e$end, span[[2L]])
+  e <- e[e$end >= e$start, , drop = FALSE]
+  width <- .bin_width(x, span, bins, step)
   n_bin <- max(1L, ceiling(diff(span) / width))
   edges <- span[[1L]] + seq.int(0L, n_bin) * width
   mid <- utils::head(edges, -1L) + width / 2
@@ -1178,4 +1187,64 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
   spread <- stats::ave(v, v,
                        FUN = function(g) seq_along(g) / (length(g) + 1) - 0.5)
   spread * 1.8
+}
+
+#' Width of one bin for the timeline and events views
+#'
+#' `step` is a width in the network's time unit and wins; `bins` is a count
+#' over the drawn span; neither means the network's own interval.
+#'
+#' @param x A `dynet` object.
+#' @param span Numeric length-2 range being drawn.
+#' @param bins Number of bins, or `NULL`.
+#' @param step Bin width, or `NULL`.
+#' @return A single positive width.
+#' @noRd
+.bin_width <- function(x, span, bins, step) {
+  if (!is.null(step)) {
+    .check("`step` must be one positive number." =
+             length(step) == 1L && is.numeric(step) && is.finite(step) &&
+             step > 0)
+    return(step)
+  }
+  if (is.null(bins)) x$meta$interval else diff(span) / bins
+}
+
+#' Draw a collapsed temporal network
+#'
+#' The union of a network's ties over a window, as a node-link diagram with
+#' Dynet's rendering defaults; any `cograph::splot()` argument overrides them.
+#'
+#' @param x A result from [collapse_network()].
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param ... Passed to `cograph::splot()`.
+#' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' plot(collapse_network(dn), layout = "oval")
+#' @export
+plot.dynet_collapsed <- function(x, palette = "okabe", ...) {
+  .need_cograph()
+  do.call(cograph::splot, c(list(x), .splot_args(x, list(...), palette)))
+  invisible(x)
+}
+
+#' Draw a path network
+#'
+#' The hops used by a set of optimal temporal paths, as a node-link diagram
+#' with Dynet's rendering defaults; any `cograph::splot()` argument overrides
+#' them.
+#'
+#' @param x A result from [path_network()].
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param ... Passed to `cograph::splot()`.
+#' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' plot(path_network(paths(dn, from = "Ana")), layout = "oval")
+#' @export
+plot.dynet_path_network <- function(x, palette = "okabe", ...) {
+  .need_cograph()
+  do.call(cograph::splot, c(list(x), .splot_args(x, list(...), palette)))
+  invisible(x)
 }

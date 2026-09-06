@@ -21,6 +21,11 @@
 #'     connected for the span of that group. Name `actor` and `group`.}
 #' }
 #'
+#' Every other column of `data` is kept as a tie attribute: it appears in
+#' `as.data.frame()` and can be selected on with `induce_subgraph(ties = )`.
+#' Co-presence logs keep none, because their rows are memberships rather than
+#' ties.
+#'
 #' Column names are resolved case-insensitively from a table of aliases, so
 #' `Sender`/`Receiver`, `source`/`target` and `onset`/`terminus` are all
 #' understood without being spelled out. Times may be numeric, `Date`,
@@ -56,6 +61,12 @@
 #' @param duration Column name for a spell duration, used in place of `end`.
 #' @param time Column name for an event time, used in place of `start`.
 #'   Auto-detected from `time`, `timestamp`, `date`, `datetime`.
+#' @param thread_clock For a threaded log, `"absolute"` (the default) keeps
+#'   every post on the calendar; `"relative"` puts each thread on its own
+#'   clock, measured from the thread's first post, so a tie opens at the
+#'   time since its thread began and closes when the thread ends. Threads are
+#'   then comparable by how they unfold rather than by when they happened,
+#'   the convention of the *Trees of Thought* study. Requires `thread`.
 #' @param thread Column name identifying a conversation thread. Naming it
 #'   selects the threaded format.
 #' @param actor,group Column names for the actor and the shared group. Naming
@@ -152,6 +163,7 @@ dynet <- function(data,
                   session = NULL, weight = NULL, nodes = NULL, groups = NULL,
                   format = c("auto", "interval", "contact", "threaded",
                              "copresence"),
+                  thread_clock = c("absolute", "relative"),
                   directed = TRUE, interval = 1, time_unit = "auto",
                   observation_start = NULL, observation_end = NULL,
                   observation_spells = NULL,
@@ -160,6 +172,12 @@ dynet <- function(data,
                   vertex_spells = NULL) {
 
   format <- match.arg(format)
+  thread_clock <- match.arg(thread_clock)
+  if (identical(thread_clock, "relative") && is.null(thread)) {
+    stop(errorCondition(
+      "`thread_clock = \"relative\"` needs a threaded log: name the `thread` column.",
+      class = c("dynet_needs_thread", "dynet_bad_input"), call = NULL))
+  }
   observation_conflict <- !is.null(observation_spells) &&
     (!is.null(observation_start) || !is.null(observation_end))
   if (observation_conflict) {
@@ -197,7 +215,7 @@ dynet <- function(data,
     copresence = .build_copresence(data, actor, group, time, start, end,
                                    session, time_unit),
     threaded   = .build_threaded(data, from, to, time, thread, session,
-                                 time_unit),
+                                 time_unit, thread_clock = thread_clock),
     contact    = .build_contact(data, from, to, time, session, time_unit),
     interval   = .build_interval(data, from, to, start, end, duration, session,
                                  time_unit)
@@ -213,6 +231,10 @@ dynet <- function(data,
   e$terminus_censored <- .resolve_censor_flag(
     data, terminus_censored, built$row_index, nrow(e), "terminus_censored"
   )
+  if (!identical(format, "copresence")) {
+    e <- .attach_tie_attributes(e, data, built, session, weight,
+                                onset_censored, terminus_censored)
+  }
   flagged_point <- e$end == e$start &
     (e$onset_censored | e$terminus_censored)
   if (any(flagged_point)) {
@@ -866,7 +888,8 @@ dynet <- function(data,
               paste(setdiff(names(data), f), collapse = ", ")),
       class = "dynet_missing_column", call = NULL))
   }
-  vals <- list(from = as.character(data[[f]]), to = as.character(data[[t]]))
+  vals <- list(from = as.character(data[[f]]), to = as.character(data[[t]]),
+               columns = c(f, t))
   if (anyNA(vals$from) || anyNA(vals$to)) {
     stop(errorCondition("Source and target columns must not contain NA values.",
                         class = "dynet_bad_input", call = NULL))
@@ -944,7 +967,8 @@ dynet <- function(data,
     time_unit = parsed_start$unit,
     origin    = parsed_start$origin,
     row_index = seq_len(nrow(data)),
-    node_pool = character()
+    node_pool = character(),
+    used      = c(dyad$columns, s_col, e_col, d_col)
   )
 }
 
@@ -973,7 +997,8 @@ dynet <- function(data,
     time_unit = parsed$unit,
     origin    = parsed$origin,
     row_index = seq_len(nrow(data)),
-    node_pool = character()
+    node_pool = character(),
+    used      = c(dyad$columns, t_col)
   )
 }
 
@@ -988,7 +1013,8 @@ dynet <- function(data,
 #' @param time_unit Requested time unit.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
 #' @noRd
-.build_threaded <- function(data, from, to, time, thread, session, time_unit) {
+.build_threaded <- function(data, from, to, time, thread, session, time_unit,
+                            thread_clock = "absolute") {
   base <- .build_contact(data, from, to, time, session, time_unit)
   th_col <- .resolve_column(data, thread, "thread", arg = "thread")
   if (is.null(th_col)) {
@@ -1004,7 +1030,16 @@ dynet <- function(data,
   }
   last_post <- tapply(base$edges$start, th, max)
   base$edges$end <- as.numeric(last_post[th])
+  if (identical(thread_clock, "relative")) {
+    # Every thread on its own clock: time since the thread's first post. This
+    # is the Trees of Thought convention, where threads are compared by how
+    # they unfold rather than by when they happened.
+    first_post <- tapply(base$edges$start, th, min)
+    base$edges$end <- base$edges$end - as.numeric(first_post[th])
+    base$edges$start <- base$edges$start - as.numeric(first_post[th])
+  }
   base$edges$thread <- th
+  base$used <- c(base$used, th_col)
   base
 }
 
@@ -1113,6 +1148,46 @@ dynet <- function(data,
 #' @param n Number of built rows.
 #' @return A numeric vector of length `n`.
 #' @noRd
+#' Carry the log's other columns into the spell table as tie attributes
+#'
+#' Every column of `data` that the builder did not consume (endpoints, times,
+#' thread, session, weight, censor flags) and that does not collide with a
+#' canonical spell column is kept, row for row, so a selection such as
+#' `induce_subgraph(ties = group == "A_01")` can see it. Co-presence logs are
+#' skipped by the caller: their rows are memberships, not ties.
+#'
+#' @param e Spell table under construction.
+#' @param data The user's log.
+#' @param built The builder result, with `used` and `row_index`.
+#' @param session,weight,onset_censored,terminus_censored The column names
+#'   the caller supplied, or `NULL`.
+#' @return `e` with the attribute columns appended.
+#' @noRd
+.attach_tie_attributes <- function(e, data, built, session, weight,
+                                   onset_censored, terminus_censored) {
+  session_col <- .resolve_column(data, session, "session", arg = "session")
+  weight_col <- if (is.null(weight)) NULL else
+    .resolve_column(data, weight, "duration", arg = "weight")
+  consumed <- c(built$used, session_col, weight_col, onset_censored,
+                terminus_censored)
+  canonical <- c("from", "to", "start", "end", "duration", "weight",
+                 "session", "thread", "onset_censored", "terminus_censored",
+                 ".raw_spell")
+  extras <- setdiff(names(data), c(consumed, canonical))
+  if (!length(extras) || is.null(built$row_index)) return(e)
+  values <- data[built$row_index, extras, drop = FALSE]
+  vector_column <- vapply(values, function(v) is.atomic(v) && is.null(dim(v)),
+                          logical(1L))
+  if (!all(vector_column)) {
+    stop(errorCondition(
+      sprintf("Tie attribute column(s) must be atomic vectors: %s.",
+              paste(extras[!vector_column], collapse = ", ")),
+      class = c("dynet_bad_tie_attribute", "dynet_bad_input"), call = NULL))
+  }
+  e[extras] <- lapply(values, function(v) if (is.factor(v)) as.character(v) else v)
+  e
+}
+
 .resolve_weight <- function(data, weight, row_index, n) {
   if (is.null(weight)) return(rep(1, n))
   if (is.null(row_index)) {

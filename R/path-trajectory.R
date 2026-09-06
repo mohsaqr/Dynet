@@ -301,6 +301,9 @@ path_trajectories <- function(x, min_count = 1L, plot = FALSE) {
   attr(out, "direction") <- attr(x, "direction") %||% "forward"
   attr(out, "anchor") <- attr(x, "source")
   attr(out, "min_count") <- as.integer(min_count)
+  # Network order, for consistent colours; a separate-session result lists a
+  # vertex once per session, so the order is taken once.
+  attr(out, "vertices") <- unique(x$node)
   class(out) <- c("dynet_path_trajectories", "data.frame")
   .maybe_plot(out, plot)
 }
@@ -317,6 +320,7 @@ as.data.frame.dynet_path_trajectories <- function(
   attr(out, "direction") <- NULL
   attr(out, "anchor") <- NULL
   attr(out, "min_count") <- NULL
+  attr(out, "vertices") <- NULL
   class(out) <- "data.frame"
   out
 }
@@ -365,6 +369,8 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' @param min_count Draw only branches used by at least this many optimal
 #'   routes. Ignored when `x` is already a [path_trajectories()] result.
 #' @param base_size Base text size.
+#' @param palette Palette for the vertex colours of the frequency view, as in
+#'   [plot.dynet()].
 #' @return A `ggplot` object.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -376,7 +382,7 @@ print.dynet_path_trajectories <- function(x, ...) {
 plot_path_trajectories <- function(
     x, measure = c("frequency", "time", "predictability"),
     orientation = c("horizontal", "vertical"), min_count = 1L,
-    base_size = 11) {
+    base_size = 11, palette = "okabe") {
   measure <- match.arg(measure)
   orientation <- match.arg(orientation)
   .check("`base_size` must be one positive number." =
@@ -426,6 +432,12 @@ plot_path_trajectories <- function(
   }
   layout$fill_value <- NA_real_
   layout$fill_value[!is_root] <- fill_value
+  # The frequency view already says "how many" through node size, so its fill
+  # is free to say "which vertex": one colour per vertex, the same colour the
+  # vertex has in every other view. The other two measures keep their ramps.
+  by_vertex <- identical(measure, "frequency")
+  vertices <- unique(attr(tree, "vertices") %||% sort(unique(body$vertex)))
+  layout$vertex_fill <- factor(layout$vertex, levels = vertices)
   edges <- .path_tree_edges(layout)
 
   body_layout <- layout[!is_root, , drop = FALSE]
@@ -471,11 +483,15 @@ plot_path_trajectories <- function(
       ggplot2::aes(x = x, y = y, group = edge, linewidth = count),
       colour = "grey60", lineend = "round", linejoin = "round"
     ) +
-    ggplot2::geom_point(
+    (if (by_vertex) ggplot2::geom_point(
+      data = body_layout,
+      ggplot2::aes(x = x, y = y, size = count, fill = vertex_fill),
+      shape = 21, colour = "grey25", stroke = 0.2, na.rm = TRUE
+    ) else ggplot2::geom_point(
       data = body_layout,
       ggplot2::aes(x = x, y = y, size = count, fill = fill_value),
       shape = 21, colour = "grey25", stroke = 0.2, na.rm = TRUE
-    ) +
+    )) +
     ggplot2::geom_text(
       data = body_layout,
       ggplot2::aes(x = x, y = label_y, label = label),
@@ -498,9 +514,11 @@ plot_path_trajectories <- function(
     # Node size already carries the route count, so a frequency fill would
     # print the same legend twice; keep the fill guide only when it says
     # something size does not.
-    ggplot2::scale_fill_gradient(
+    (if (by_vertex) ggplot2::scale_fill_manual(
+      values = .vertex_colours(vertices, palette), guide = "none", drop = FALSE)
+     else ggplot2::scale_fill_gradient(
       low = ramp[[1L]], high = ramp[[2L]], limits = limits, name = legend,
-      guide = if (identical(measure, "frequency")) "none" else "colourbar") +
+      guide = "colourbar")) +
     ggplot2::labs(
       title = sprintf("%s temporal path trajectories %s %s",
                       tools::toTitleCase(direction), anchor_word,
