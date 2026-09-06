@@ -479,12 +479,12 @@ dyn_centrality <- function(dn,
   }
   retired <- intersect(measure, c("indegree", "outdegree"))
   if (length(retired) > 0L) {
-    warning(sprintf(
+    warning(warningCondition(sprintf(
       "%s deprecated; use `measure = \"degree\"` with %s.",
       paste(sQuote(retired), collapse = " and "),
       paste(sprintf("`mode = \"%s\"`", sub("degree$", "", retired)),
             collapse = " and ")),
-      call. = FALSE)
+      class = "dynet_deprecated", call = NULL))
   }
   if (!dn$directed) {
     undirected_only <- intersect(measure,
@@ -529,7 +529,7 @@ dyn_centrality <- function(dn,
   jobs <- .measure_modes(measure, mode, dn$directed)
   spec <- .window_spec(dn, start, end, step, window)
   prestige_diagnostics <- list()
-  eigen_undefined <- 0L
+  undefined_blocks <- list()
   df <- .over_bins(dn, sessions, node_level = TRUE, spec = spec,
     snapshot = TRUE, fun = function(enc, act, bin, state) {
       binary_full <- .adjacency(enc, act, dn$directed, weighted = FALSE)
@@ -550,7 +550,7 @@ dyn_centrality <- function(dn,
           )
         } else numeric()
         if (isTRUE(attr(value, "undefined"))) {
-          eigen_undefined <<- eigen_undefined + 1L
+          undefined_blocks[[m]] <<- (undefined_blocks[[m]] %||% 0L) + 1L
         }
         diagnostic <- attr(value, "prestige_diagnostic")
         if (!is.null(diagnostic)) {
@@ -825,11 +825,19 @@ dyn_centrality <- function(dn,
       attr(out, "measure_metadata") <- list(prestige = metadata)
     }
   }
-  if (eigen_undefined > 0L) {
+  spectral_undefined <- sum(unlist(undefined_blocks[intersect(names(undefined_blocks), c("eigenvector", "hub", "authority"))]))
+  if (spectral_undefined > 0L) {
     warning(warningCondition(sprintf(
       "Eigenvector, hub or authority centrality is undefined in %d reporting block(s): the snapshot's spectral radius is zero or its Perron root is repeated, so no single eigenvector exists; values are NA.",
-      eigen_undefined
-    ), class = "dynet_eigen_undefined", call = NULL))
+      spectral_undefined
+    ), class = c("dynet_eigen_undefined", "dynet_measure_undefined"), call = NULL))
+  }
+  singular <- sum(unlist(undefined_blocks[intersect(names(undefined_blocks), c("power", "information"))]))
+  if (singular > 0L) {
+    warning(warningCondition(sprintf(
+      "Bonacich power or information centrality is undefined in %d reporting block(s): the linear system is singular; values are NA.",
+      singular
+    ), class = c("dynet_kernel_singular", "dynet_measure_undefined"), call = NULL))
   }
   if (length(prestige_diagnostics)) {
     diagnostics <- do.call(rbind, prestige_diagnostics)

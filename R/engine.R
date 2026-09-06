@@ -641,8 +641,9 @@
 .legacy_sample <- function(window = NULL, sample = NULL) {
   if (is.null(sample)) return(window)
   sample <- match.arg(sample, c("window", "instant"))
-  warning("`sample` is deprecated; use `window = 0` for point sampling and a positive `window` for window sampling.",
-          call. = FALSE)
+  warning(warningCondition(
+    "`sample` is deprecated; use `window = 0` for point sampling and a positive `window` for window sampling.",
+    class = "dynet_deprecated", call = NULL))
   if (identical(sample, "instant")) {
     if (!is.null(window) && !isTRUE(all.equal(as.numeric(window), 0))) {
       stop(errorCondition(

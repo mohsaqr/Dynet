@@ -166,8 +166,10 @@ rename_nodes <- function(dn, mapping) {
 #' Update temporal ties and their attributes
 #'
 #' @param dn A temporal network.
-#' @param ties Integer row positions or a logical mask referring to
-#'   `as.data.frame(dn, what = "edges")`.
+#' @param ties Which ties to update: a condition on the spell table,
+#'   evaluated the way [subset()] evaluates one, over the columns
+#'   `as.data.frame(dn)` returns; or integer row positions or a logical mask
+#'   over that table.
 #' @param data A data frame with one row or one row per selected tie. Columns
 #'   may be canonical tie fields or arbitrary atomic spell attributes.
 #' @param loops Whether an endpoint update may introduce a new self-loop.
@@ -175,6 +177,7 @@ rename_nodes <- function(dn, mapping) {
 #' @return A new internally consistent `dynet` object.
 #' @export
 update_ties <- function(dn, ties, data, loops = FALSE) {
+  ties <- .select_ties(dn, substitute(ties), parent.frame())
   .check_dynet(dn, "bounded")
   .check("`loops` must be one non-missing logical value." =
            is.logical(loops) && length(loops) == 1L && !is.na(loops))

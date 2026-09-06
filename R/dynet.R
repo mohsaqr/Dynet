@@ -268,6 +268,16 @@ dynet <- function(data,
   # accessor, whose one-row-per-input-derived-spell contract is unchanged.
   e$.raw_spell <- seq_len(nrow(e))
 
+  # Undirected spells are stored once, with endpoints in a canonical order, so
+  # that A-B and B-A are the same edge. Canonicalise BEFORE sorting, so the
+  # order here is the order every later rebuild (`.rebuild_ties()`) produces
+  # and a tie's row position survives an edit.
+  if (!directed) {
+    lo <- pmin(e$from, e$to)
+    hi <- pmax(e$from, e$to)
+    e$from <- lo
+    e$to   <- hi
+  }
   e <- e[order(e$start, e$end, e$from, e$to), , drop = FALSE]
   rownames(e) <- NULL
 
@@ -278,15 +288,6 @@ dynet <- function(data,
   node_table <- .build_nodes(
     e, nodes, c(built$node_pool, vertex_activity$spells$node)
   )
-
-  # Undirected spells are stored once, with endpoints in a canonical order, so
-  # that A-B and B-A are the same edge.
-  if (!directed) {
-    lo <- pmin(e$from, e$to)
-    hi <- pmax(e$from, e$to)
-    e$from <- lo
-    e$to   <- hi
-  }
 
   t_min <- min(e$start)
   t_max <- max(e$end)
@@ -1242,8 +1243,9 @@ dynet <- function(data,
   attrs$name <- key_values
   dup <- duplicated(attrs$name)
   if (any(dup)) {
-    warning(sprintf("`nodes` has %d duplicate vertex row(s); the first is kept.",
-                    sum(dup)), call. = FALSE)
+    warning(warningCondition(
+      sprintf("`nodes` has %d duplicate vertex row(s); the first is kept.", sum(dup)),
+      class = "dynet_duplicate_nodes", call = NULL))
     attrs <- attrs[!dup, , drop = FALSE]
   }
   merged <- merge(out, attrs, by = "name", all.x = TRUE, sort = FALSE)

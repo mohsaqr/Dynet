@@ -73,8 +73,12 @@ test_that("Krackhardt's indices take known values on the shapes they describe", 
 
 test_that("the new measures reach the public verbs", {
   dn <- quiet_dynet(random_edges(seed = 30L), interval = 4)
-  node <- as.data.frame(dyn_centrality(dn,
-    measure = c("power", "harary", "information", "load", "flow_betweenness")))
+  # Bonacich power hits a singular `I - beta A` on some blocks; that is now a
+  # classed warning rather than a silent NA (review 2026-09-05, finding 9).
+  expect_warning(
+    node <- as.data.frame(dyn_centrality(dn,
+      measure = c("power", "harary", "information", "load", "flow_betweenness"))),
+    class = "dynet_kernel_singular")
   expect_setequal(unique(node$measure),
                   c("power", "harary", "information", "load",
                     "flow_betweenness"))

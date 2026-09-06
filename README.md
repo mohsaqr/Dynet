@@ -37,7 +37,8 @@ dynet(forum_posts, time = "timestamp")
 # Threaded log: a post stays active until its thread falls silent
 dynet(forum_posts, thread = "thread", nodes = forum_people)
 
-# Co-presence log: actors sharing a group become connected
+# Co-presence log: actors sharing a group become connected (every member
+# pair, for the whole span of the group; attendance inside it is not used)
 dynet(seminar_attendance, actor = "student", group = "seminar")
 ```
 
@@ -386,7 +387,10 @@ plot(deg, top = 5)
 trajectory of ordinary centrality. `scope = "temporal"` measures the vertex
 against time-respecting paths across the whole window. The second has no static
 counterpart: it cannot travel backwards in time, so it is never inflated the way
-a flattened network is. Explicit vertex activity gates these temporal paths;
+a flattened network is. Temporal closeness is the inverse mean latency, so a
+source whose every reachable vertex is reached at zero latency (simultaneous
+contacts, common in contact logs) scores `Inf`; give `traversal_time` a
+positive value to score such data. Explicit vertex activity gates these temporal paths;
 an inactive source has zero temporal reach and closeness, while fixed node rows
 and fixed risk-set denominators are retained.
 
