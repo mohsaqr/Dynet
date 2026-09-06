@@ -300,3 +300,36 @@ test_that("eigenvector prestige obeys coordinates and rejects wrong scope", {
     measure = "prestige", prestige = "eigenvector", scope = "temporal"
   ), class = "dynet_unknown_measure")
 })
+
+test_that("prestige diagnostics are reachable through the accessor", {
+  dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
+  suppressWarnings(undefined <- dyn_centrality(
+    dn, measure = "prestige", prestige = "eigenvector",
+    start = 0, end = 1, step = 1, window = 0
+  ))
+  # The record used to be reachable only with attr(), and the warning named a
+  # bare `prestige_diagnostics` without saying how to get it.
+  found <- as.data.frame(undefined, what = "diagnostics")
+  expect_identical(found$status, rep("undefined", 2L))
+  expect_identical(found$reason, rep("zero_spectral_radius", 2L))
+  expect_identical(found, {
+    raw <- attr(undefined, "prestige_diagnostics")
+    rownames(raw) <- NULL
+    raw
+  })
+
+  # A result with nothing recorded gives an empty frame of the SAME shape, so
+  # a caller can bind or count without testing for NULL first. This also pins
+  # the hardcoded empty schema against the real builder: if a column is added
+  # to one and not the other, this fails.
+  empty <- as.data.frame(
+    dyn_centrality(dn, measure = "degree", scope = "snapshot"),
+    what = "diagnostics"
+  )
+  expect_identical(nrow(empty), 0L)
+  expect_identical(names(empty), names(found))
+  expect_identical(vapply(empty, function(z) class(z)[[1L]], character(1L)),
+                   vapply(found, function(z) class(z)[[1L]], character(1L)))
+
+  expect_error(as.data.frame(undefined, what = "nonsense"))
+})

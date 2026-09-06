@@ -9,6 +9,7 @@
   row.names = NULL,
   optional = FALSE,
   layout = c("long", "wide"),
+  what = c("values", "diagnostics"),
   ...
 )
 }
@@ -24,14 +25,28 @@ and the shape every other verb expects. \code{"wide"} spreads time across
 columns, giving one row per vertex (or per measure for graph-level
 quantities), which is convenient for exporting a table.}
 
+\item{what}{\code{"values"}, the default, gives the measured values.
+\code{"diagnostics"} gives the record a prestige computation keeps when it
+cannot produce a value, which is what the accompanying warning refers to:
+one row per reporting block that was undefined, infeasible or
+nonconverged, with \code{session}, \code{time}, \code{stage}, \code{status} and \code{reason},
+the solver's \code{iterations} and \code{residual}, the \verb{balance_*} family for the
+row-column scaling step, and \code{spectral_radius}, \code{eigenspace_dimension}
+and \code{eigen_residual} for the eigen step. A result with nothing to report
+gives a zero-row frame of those same columns rather than \code{NULL}.}
+
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}. In long layout the columns are \code{session}
-(only when the network has sessions), \code{time}, \code{node} (node-level
-measures only), \code{measure} and \code{value}, one row per observation. In wide
-layout the first columns identify the row and the remaining columns are
-time points.
+A plain \code{data.frame}. Long layout carries \code{measure} and \code{value}
+with one row per observation, alongside whichever columns say what was
+measured: \code{session} when the network has sessions, \code{time} for anything
+measured on a grid of bins, \code{node} for a vertex-level quantity, \code{from}
+and \code{to} for a pair-level one, \code{vertex_spell} and \code{implicit} for
+per-spell vertex durations from \code{\link[=durations]{durations()}}, and \code{from_group} and
+\code{to_group} for \code{\link[=mixing]{mixing()}}. A graph-level series carries \code{time},
+\code{measure} and \code{value} alone. In wide layout the identifying columns come
+first and the remaining columns are the time points, one per bin.
 }
 \description{
 Tidy data frame of a temporal measure
@@ -40,5 +55,6 @@ Tidy data frame of a temporal measure
 dn <- dynet(school_contacts)
 as.data.frame(dyn_centrality(dn, measure = "degree"))
 as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
+as.data.frame(dyn_centrality(dn, measure = "degree"), what = "diagnostics")
 
 }

@@ -16,13 +16,20 @@ Optional columns are \code{weight}, \code{session}, \code{onset_censored}, and
 \item{loops}{Whether added self-loops are permitted.}
 }
 \value{
-A new directed \code{dynet} object.
+A new directed \code{dynet} object carrying the added spells, with the
+same structure as the input.
 }
 \description{
-Add directed temporal arcs
+The same operation as \code{\link[=add_ties]{add_ties()}}, with one extra guarantee: the network
+must already be directed, so \code{from} and \code{to} keep the direction the caller
+means. Adding an arc to an undirected network raises a condition of class
+\code{dynet_needs_directed} rather than silently recording a symmetric tie.
 }
 \examples{
 dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
 dn <- add_nodes(dn, "C")
 add_arcs(dn, data.frame(from = "B", to = "C", start = 1, end = 2))
+}
+\seealso{
+\code{\link[=add_ties]{add_ties()}}, which does not require a directed network.
 }

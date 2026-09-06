@@ -20,6 +20,7 @@ dynet(
   nodes = NULL,
   groups = NULL,
   format = c("auto", "interval", "contact", "threaded", "copresence"),
+  thread_clock = c("absolute", "relative"),
   directed = TRUE,
   interval = 1,
   time_unit = "auto",
@@ -69,6 +70,13 @@ colours and groups by it without further argument.}
 \item{format}{One of \code{"auto"}, \code{"interval"}, \code{"contact"}, \code{"threaded"},
 \code{"copresence"}. \code{"auto"} infers the format from the arguments you name
 and the columns present.}
+
+\item{thread_clock}{For a threaded log, \code{"absolute"} (the default) keeps
+every post on the calendar; \code{"relative"} puts each thread on its own
+clock, measured from the thread's first post, so a tie opens at the
+time since its thread began and closes when the thread ends. Threads are
+then comparable by how they unfold rather than by when they happened,
+the convention of the \emph{Trees of Thought} study. Requires \code{thread}.}
 
 \item{directed}{Whether edges are directed. Co-presence networks are always
 undirected.}
@@ -131,6 +139,11 @@ Saqr and Nouri (2020). Name the \code{thread} argument to select this.}
 \item{copresence}{Two-mode attendance data. Actors sharing a group become
 connected for the span of that group. Name \code{actor} and \code{group}.}
 }
+
+Every other column of \code{data} is kept as a tie attribute: it appears in
+\code{as.data.frame()} and can be selected on with \code{induce_subgraph(ties = )}.
+Co-presence logs keep none, because their rows are memberships rather than
+ties.
 
 Column names are resolved case-insensitively from a table of aliases, so
 \code{Sender}/\code{Receiver}, \code{source}/\code{target} and \code{onset}/\code{terminus} are all

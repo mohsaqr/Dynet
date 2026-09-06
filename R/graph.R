@@ -63,6 +63,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level: one row per time point and
 #'   measure, with columns `session` (when present), `time`, `measure` and
 #'   `value`.
@@ -155,6 +160,10 @@
 #' processes: a large sample study. *Annals of Statistics*, 10, 1100-1120.
 #' \doi{10.1214/aos/1176345976}
 #'
+#' Krackhardt, D. (1994). Graph theoretical dimensions of informal
+#' organizations. In *Computational Organization Theory* (pp. 89-111).
+#' Lawrence Erlbaum.
+#'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' metrics(dn, measure = "density")
@@ -167,7 +176,7 @@ metrics <- function(dn, measure = "density",
                         sessions = c("bounded", "collapse", "separate"),
                         sample = NULL,
                         start = NULL, end = NULL,
-                        step = NULL, window = NULL) {
+                        step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -325,7 +334,7 @@ metrics <- function(dn, measure = "density",
       "ordered_distinct_endpoints"
     } else "unordered_distinct_endpoints"
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Compute one graph-level measure
@@ -336,7 +345,7 @@ metrics <- function(dn, measure = "density",
 #' @examples
 #' a <- matrix(c(0, 1, 0, 0), 2, 2)
 #' Dynet:::.graph_measure("density", a, directed = TRUE)
-#' @keywords internal
+#' @noRd
 .graph_measure <- function(m, a, directed) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -449,7 +458,7 @@ metrics <- function(dn, measure = "density",
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A numeric vector of the finite distances between distinct vertices.
-#' @keywords internal
+#' @noRd
 .offdiag_distances <- function(a, directed) {
   d <- .geodesic(a, directed)
   off <- d[row(d) != col(d)]
@@ -466,7 +475,7 @@ metrics <- function(dn, measure = "density",
 #' @param directed Whether the network is directed.
 #' @return A single numeric value; `NA` below three vertices, where the most
 #'   centralised graph is not defined.
-#' @keywords internal
+#' @noRd
 .max_centralisation <- function(what, n, directed) {
   if (n < 3L) return(NA_real_)
   # Degree and betweenness use the standard Freeman maxima. Closeness uses
@@ -482,7 +491,7 @@ metrics <- function(dn, measure = "density",
 #' Human-readable label for a graph measure
 #' @param m Measure name.
 #' @return A single character string.
-#' @keywords internal
+#' @noRd
 .graph_label <- function(m) {
   lookup <- c(density = "Density", edges = "Active edges",
               active_nodes = "Active vertices", isolates = "Isolates",

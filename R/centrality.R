@@ -33,7 +33,7 @@
 #' @examples
 #' Dynet:::.resolve_modes(c("all", "out", "in"))
 #' Dynet:::.resolve_modes("in")
-#' @keywords internal
+#' @noRd
 .resolve_modes <- function(mode) {
   choices <- c("all", "out", "in")
   if (identical(mode, choices)) return("all")
@@ -69,7 +69,7 @@
 #' @examples
 #' Dynet:::.measure_modes("degree", c("in", "out"), TRUE)
 #' Dynet:::.measure_modes(c("degree", "betweenness"), c("all", "in"), TRUE)
-#' @keywords internal
+#' @noRd
 .measure_modes <- function(measure, mode, directed) {
   many <- length(mode) > 1L
   rows <- lapply(measure, function(m) {
@@ -118,9 +118,9 @@
 #'   out-degree from a single call; the extra directions are then labelled
 #'   `degree_in` and `degree_out` in the `measure` column, while a call naming
 #'   one direction keeps the plain measure name. Applies to
-#'   `"degree"`, `"strength"`, `"closeness"`, `"coreness"`, `"harary"` and
-#'   `"eigenvector"`; the remaining measures have a single directional
-#'   definition and ignore it. Ignored
+#'   `"degree"`, `"strength"`, `"closeness"`, `"coreness"`, `"harary"`,
+#'   `"eigenvector"` and `"diffusion"`; the remaining measures have a single
+#'   directional definition and ignore it. Ignored
 #'   entirely on an undirected network. In-degree is therefore
 #'   `mode = "in"`. The old `"indegree"` and `"outdegree"` measure names
 #'   remain as deprecated aliases.
@@ -186,6 +186,11 @@
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @param beta For `measure = "katz"` only: walk attenuation in `(0, 1]`.
 #'   Each additional hop multiplies a walk's contribution by `beta`.
 #' @param decay For `measure = "katz"` only: exponential time-decay rate. Zero
@@ -206,7 +211,11 @@
 #'   [as.data.frame()]. A closeness- or betweenness-only temporal result stores
 #'   its mathematical choices as direct attributes; a mixed temporal result
 #'   stores named records under `measure_metadata`. Snapshot prestige follows
-#'   the same direct-versus-scoped metadata convention.
+#'   the same direct-versus-scoped metadata convention. When a prestige
+#'   variant is structurally undefined or fails to converge, the affected
+#'   values are `NA`, a warning says how many reporting blocks were affected,
+#'   and a `prestige_diagnostics` record naming the stage and reason for each
+#'   is attached to the result.
 #'
 #' @details
 #' `step` and `window` are separate on purpose. `step` is how often you look;
@@ -396,6 +405,44 @@
 #'
 #' Lin, N. (1976). *Foundations of Social Research*. McGraw-Hill.
 #'
+#' Brandes, U. (2001). A faster algorithm for betweenness centrality.
+#' *Journal of Mathematical Sociology*, 25(2), 163-177.
+#'
+#' Bonacich, P. (1987). Power and centrality: a family of measures.
+#' *American Journal of Sociology*, 92(5), 1170-1182.
+#'
+#' Hage, P., & Harary, F. (1995). Eccentricity and centrality in networks.
+#' *Social Networks*, 17(1), 57-63.
+#'
+#' Stephenson, K., & Zelen, M. (1989). Rethinking centrality. *Social
+#' Networks*, 11(1), 1-37.
+#'
+#' Goh, K.-I., Kahng, B., & Kim, D. (2001). Universal behavior of load
+#' distribution in scale-free networks. *Physical Review Letters*, 87(27),
+#' 278701.
+#'
+#' Freeman, L. C., Borgatti, S. P., & White, D. R. (1991). Centrality in
+#' valued graphs. *Social Networks*, 13(2), 141-154.
+#'
+#' Bonacich, P. (1972). Factoring and weighting approaches to status scores
+#' and clique identification. *Journal of Mathematical Sociology*, 2, 113-120.
+#' doi:10.1080/0022250X.1972.9989806.
+#'
+#' Berman, A., & Plemmons, R. J. (1994). *Nonnegative Matrices in the
+#' Mathematical Sciences*. SIAM. doi:10.1137/1.9781611971262.
+#'
+#' Sinkhorn, R. (1964). A relationship between arbitrary positive matrices
+#' and doubly stochastic matrices. *Annals of Mathematical Statistics*, 35,
+#' 876-879. doi:10.1214/aoms/1177703591.
+#'
+#' Sinkhorn, R., & Knopp, P. (1967). Concerning nonnegative matrices and
+#' doubly stochastic matrices. *Pacific Journal of Mathematics*, 21, 343-348.
+#' doi:10.2140/pjm.1967.21.343.
+#'
+#' Knight, P. A. (2008). The Sinkhorn-Knopp algorithm: convergence and
+#' applications. *SIAM Journal on Matrix Analysis and Applications*, 30,
+#' 261-275. doi:10.1137/060659624.
+#'
 #' Rozenshtein, P., & Gionis, A. (2016). Temporal PageRank. In *Machine
 #' Learning and Knowledge Discovery in Databases (ECML PKDD 2016)*, LNCS 9852,
 #' 674-689.
@@ -471,7 +518,8 @@ dyn_centrality <- function(dn,
                            lambda = 1, groups = NULL,
                            beta = 0.1, decay = 0, transition = 1,
                            criterion = c("foremost_then_shortest",
-                                         "min_hops", "foremost", "fastest")) {
+                                         "min_hops", "foremost", "fastest"),
+                           plot = FALSE) {
   # Temporal PageRank's raw mass grows with the length of the stream, so its
   # useful default is the normalized score. `rescale` therefore has a
   # measure-dependent default, which needs the untouched state of the
@@ -958,24 +1006,24 @@ dyn_centrality <- function(dn,
     attr(out, "prestige_diagnostics") <- diagnostics
     if (any(diagnostics$status == "infeasible")) {
       warning(warningCondition(sprintf(
-        "Row-column prestige is structurally undefined in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Row-column prestige is structurally undefined in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "infeasible")
       ), class = "dynet_prestige_infeasible", call = NULL))
     }
     if (any(diagnostics$status == "nonconverged")) {
       warning(warningCondition(sprintf(
-        "Row-column prestige did not converge in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Row-column prestige did not converge in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "nonconverged")
       ), class = "dynet_prestige_nonconvergence", call = NULL))
     }
     if (any(diagnostics$status == "undefined")) {
       warning(warningCondition(sprintf(
-        "Eigenvector prestige is undefined in %d reporting block(s); values are NA. See `prestige_diagnostics`.",
+        "Eigenvector prestige is undefined in %d reporting block(s); values are NA. See `as.data.frame(x, what = \"diagnostics\")`.",
         sum(diagnostics$status == "undefined")
       ), class = "dynet_prestige_eigen_undefined", call = NULL))
     }
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Participation coefficient of every vertex in one snapshot
@@ -991,7 +1039,7 @@ dyn_centrality <- function(dn,
 #'   adjacency's own order.
 #' @return A numeric vector, one value per vertex. `NaN` for an eligible
 #'   vertex of degree zero, whose shares are 0/0.
-#' @keywords internal
+#' @noRd
 .participation <- function(b, directed, mode, groups) {
   n <- nrow(b)
   if (is.null(groups) || !n) return(rep(NaN, n))
@@ -1028,7 +1076,7 @@ dyn_centrality <- function(dn,
 #' @param lambda Diffusion-degree multiplier.
 #' @param groups Group labels for `"participation"`, one per vertex.
 #' @return A numeric vector, one value per vertex.
-#' @keywords internal
+#' @noRd
 .snapshot_measure <- function(m, a, directed, damping, mode = "all",
                               exponent = 1, prestige = "indegree",
                               rescale = FALSE, lambda = 1, groups = NULL) {
@@ -1091,7 +1139,7 @@ dyn_centrality <- function(dn,
 #' Sinkhorn, R., & Knopp, P. (1967). Concerning nonnegative matrices and
 #' doubly stochastic matrices. *Pacific Journal of Mathematics*, 21, 343-348.
 #' doi:10.2140/pjm.1967.21.343.
-#' @keywords internal
+#' @noRd
 .perfect_matching <- function(a) {
   b <- a > 0
   n <- nrow(b)
@@ -1138,7 +1186,7 @@ dyn_centrality <- function(dn,
 #' Sinkhorn, R., & Knopp, P. (1967). Concerning nonnegative matrices and
 #' doubly stochastic matrices. *Pacific Journal of Mathematics*, 21, 343-348.
 #' doi:10.2140/pjm.1967.21.343.
-#' @keywords internal
+#' @noRd
 .total_support <- function(a) {
   b <- a > 0
   n <- nrow(b)
@@ -1189,7 +1237,7 @@ dyn_centrality <- function(dn,
 #' Sinkhorn, R., & Knopp, P. (1967). Concerning nonnegative matrices and
 #' doubly stochastic matrices. *Pacific Journal of Mathematics*, 21, 343-348.
 #' doi:10.2140/pjm.1967.21.343.
-#' @keywords internal
+#' @noRd
 .rowcol_sweep <- function(x) {
   x <- x / rowSums(x)
   t(t(x) / colSums(x))
@@ -1218,7 +1266,7 @@ dyn_centrality <- function(dn,
 #' Knight, P. A. (2008). The Sinkhorn-Knopp algorithm: convergence and
 #' applications. *SIAM Journal on Matrix Analysis and Applications*, 30,
 #' 261-275. doi:10.1137/060659624.
-#' @keywords internal
+#' @noRd
 .rowcol_balance <- function(a, tol = 1e-12, max_iter = 10000L) {
   b <- (a > 0) * 1
   support <- .total_support(b)
@@ -1300,7 +1348,7 @@ dyn_centrality <- function(dn,
 #'
 #' Butts, C. T. (2024). *sna: Tools for Social Network Analysis*, version 2.8.
 #' doi:10.32614/CRAN.package.sna.
-#' @keywords internal
+#' @noRd
 .indegree_prestige <- function(a, rescale = FALSE, definition = "indegree",
                                tol = 1e-12, max_iter = 10000L,
                                warn = TRUE) {
@@ -1354,7 +1402,7 @@ dyn_centrality <- function(dn,
 #'
 #' Wasserman, S., & Faust, K. (1994). *Social Network Analysis: Methods and
 #' Applications*. Cambridge University Press, Chapter 5.
-#' @keywords internal
+#' @noRd
 .domain_prestige <- function(a, rescale = FALSE) {
   distance <- .geodesic(a, directed = TRUE)
   reachable <- is.finite(distance)
@@ -1386,7 +1434,7 @@ dyn_centrality <- function(dn,
 #'
 #' Wasserman, S., & Faust, K. (1994). *Social Network Analysis: Methods and
 #' Applications*. Cambridge University Press, Chapter 5.
-#' @keywords internal
+#' @noRd
 .domain_proximity_prestige <- function(a, rescale = FALSE) {
   distance <- .geodesic(a, directed = TRUE)
   finite <- is.finite(distance)
@@ -1449,7 +1497,7 @@ dyn_centrality <- function(dn,
 #'
 #' Berman, A., & Plemmons, R. J. (1994). *Nonnegative Matrices in the
 #' Mathematical Sciences*. SIAM. doi:10.1137/1.9781611971262.
-#' @keywords internal
+#' @noRd
 .eigen_prestige <- function(a, rescale = FALSE,
                             definition = c("eigenvector",
                                            "eigenvector.rownorm",
@@ -1591,7 +1639,7 @@ dyn_centrality <- function(dn,
 #' @param m Measure name.
 #' @param prestige Prestige definition used when `m = "prestige"`.
 #' @return A single character string.
-#' @keywords internal
+#' @noRd
 .measure_label <- function(m, prestige = "indegree") {
   if (identical(m, "prestige")) {
     return(switch(prestige,
@@ -1633,7 +1681,7 @@ dyn_centrality <- function(dn,
 #'   probabilities.
 #' @param rescale Whether temporal PageRank is normalized to sum one.
 #' @return A `dynet_metric` at node level with no time column.
-#' @keywords internal
+#' @noRd
 .temporal_centrality <- function(dn, measure, sessions,
                                  start = NULL, end = NULL,
                                  traversal_time = 0,
@@ -1776,7 +1824,7 @@ dyn_centrality <- function(dn,
 #'   probabilities.
 #' @param rescale Whether temporal PageRank is normalized to sum one.
 #' @return A numeric vector, one value per vertex.
-#' @keywords internal
+#' @noRd
 .temporal_measure <- function(m, trees, enc, dn = NULL, beta = 0.1,
                               decay = 0, lower = NULL, upper = NULL,
                               criterion = "foremost_then_shortest",
@@ -1799,7 +1847,7 @@ dyn_centrality <- function(dn,
 #' The result is a numerator, not a fraction. It is computed from exact prefix
 #' and suffix counts on one direct appearance DAG and never expands route rows.
 #'
-#' @param search A direct result from [.optimal_path_search()].
+#' @param search A direct result from `.optimal_path_search()`.
 #' @param endpoint Integer target vertex.
 #' @return A numeric vector of exact path counts, one per named vertex.
 #' @examples
@@ -1807,7 +1855,7 @@ dyn_centrality <- function(dn,
 #' enc <- Dynet:::.encode(dn)
 #' search <- Dynet:::.optimal_path_search(enc, 1L, 0, upper = 10)
 #' Dynet:::.optimal_endpoint_dependency(search, 2L)
-#' @keywords internal
+#' @noRd
 .optimal_endpoint_dependency <- function(search, endpoint) {
   n <- search$n
   out <- numeric(n)
@@ -1841,11 +1889,11 @@ dyn_centrality <- function(dn,
 #' the predecessor arc rather than on the vertex it entered. Every optimal
 #' journey is vertex-simple, so it traverses each contact at most once.
 #'
-#' @param search A direct result from [.optimal_path_search()].
+#' @param search A direct result from `.optimal_path_search()`.
 #' @param endpoint Integer target vertex.
 #' @param n_atoms Number of canonical contact atoms.
 #' @return A numeric vector of dependency, one per atom.
-#' @keywords internal
+#' @noRd
 .optimal_edge_dependency <- function(search, endpoint, n_atoms) {
   out <- numeric(n_atoms)
   if (endpoint == search$source || search$n_paths[[endpoint]] == 0) return(out)
@@ -1894,7 +1942,7 @@ dyn_centrality <- function(dn,
 #'   Dynet:::.optimal_path_search(enc, source, 0, upper = 10)
 #' })
 #' Dynet:::.temporal_betweenness_values(searches, enc$n)
-#' @keywords internal
+#' @noRd
 .temporal_betweenness_values <- function(trees, n) {
   per_source <- lapply(trees, function(search) {
     fractions <- lapply(seq_len(n), function(endpoint) {
@@ -1924,7 +1972,7 @@ dyn_centrality <- function(dn,
 #'
 #' @param what Name of the measure for the message.
 #' @return Never returns; raises `dynet_intractable_criterion`.
-#' @keywords internal
+#' @noRd
 .stop_intractable_criterion <- function(what) {
   stop(errorCondition(
     sprintf(paste0(
@@ -1948,13 +1996,13 @@ dyn_centrality <- function(dn,
 #' `traversal_time = 0`. Applying that rule here would make the result depend on
 #' the arbitrary order of contacts inside one instant.
 #'
-#' @param enc An encoding from [.encode()].
+#' @param enc An encoding from `.encode()`.
 #' @param dn The temporal network, for the observation test.
 #' @param beta Walk attenuation, in `(0, 1]`.
 #' @param decay Exponential time-decay rate; zero means no decay.
 #' @param lower,upper The measurement window.
 #' @return A numeric vector, one score per vertex.
-#' @keywords internal
+#' @noRd
 .temporal_katz_values <- function(enc, dn, beta, decay, lower, upper) {
   n <- enc$n
   x <- numeric(n)
@@ -2000,12 +2048,12 @@ dyn_centrality <- function(dn,
 #' cannot change any answer; the batch rule each measure applies then makes the
 #' within-instant order irrelevant as well.
 #'
-#' @param enc An encoding from [.encode()].
+#' @param enc An encoding from `.encode()`.
 #' @param dn The temporal network, for the observation test.
 #' @param lower,upper The measurement window.
 #' @return A list with integer `from` and `to` and numeric `when`, all of the
 #'   same length, or all empty when nothing is eligible.
-#' @keywords internal
+#' @noRd
 .contact_stream <- function(enc, dn, lower, upper) {
   eligible <- !enc$raw_event_onset_censored &
     .time_in_observation(dn, enc$raw_event_start) &
@@ -2034,14 +2082,14 @@ dyn_centrality <- function(dn,
 #' offers with probability `transition^k`, and the `k` walks the batch starts
 #' at that vertex face the same offers.
 #'
-#' @param enc An encoding from [.encode()].
+#' @param enc An encoding from `.encode()`.
 #' @param dn The temporal network, for the observation test.
 #' @param damping The jumping probability, in `(0, 1)`.
 #' @param transition The transition probability, in `(0, 1]`.
 #' @param rescale Whether to divide the scores by their total.
 #' @param lower,upper The measurement window.
 #' @return A numeric vector, one score per vertex.
-#' @keywords internal
+#' @noRd
 .temporal_pagerank_values <- function(enc, dn, damping, transition, rescale,
                                       lower, upper) {
   n <- enc$n
@@ -2105,7 +2153,7 @@ dyn_centrality <- function(dn,
 #'   arrival = c(0, 0, 2), source = 1L, origin = 0
 #' ))
 #' Dynet:::.temporal_closeness_values(trees, 3L)
-#' @keywords internal
+#' @noRd
 .temporal_closeness_values <- function(trees, n,
                                        criterion = "foremost_then_shortest") {
   vapply(trees, function(tree) {
@@ -2137,7 +2185,7 @@ dyn_centrality <- function(dn,
 #' @param n Size of the fixed vertex universe.
 #' @param measure One or more of `"reach"` and `"reach_count"`.
 #' @return A named list of numeric vectors in requested-measure order.
-#' @keywords internal
+#' @noRd
 .temporal_reach_values <- function(trees, n, measure) {
   count <- vapply(
     trees,

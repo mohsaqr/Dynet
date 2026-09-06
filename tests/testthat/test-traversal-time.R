@@ -694,3 +694,54 @@ test_that("interior interval duration agrees with tsna", {
   )
   expect_equal(traversal_rows(ours, "B")$arrival_time, theirs$tdist[2])
 })
+
+test_that("decimal times are not rejected by floating-point boundary error", {
+  # Regression: an arrival is a sum of a start plus one traversal_time per hop,
+  # and that sum is not representable exactly. With these values the third
+  # arrival is 0.30000000000000004, so a bare `candidate <= upper` rejected a
+  # path that is mathematically valid and lands exactly on the boundary.
+  contacts <- data.frame(
+    from = c("A", "B", "C"), to = c("B", "C", "D"),
+    time = c(0, 0.1, 0.2), stringsAsFactors = FALSE
+  )
+  dn <- quiet_dynet(contacts, format = "contact")
+  reached <- traversal_rows(
+    paths(dn, from = "A", start = 0, end = 0.3, traversal_time = 0.1), "D"
+  )
+  expect_true(reached$reachable)
+  expect_equal(reached$arrival_time, 0.3)
+  expect_identical(reached$n_hops, 3L)
+
+  # The boundary must still bind: an end below the true arrival rejects it.
+  expect_false(traversal_rows(
+    paths(dn, from = "A", start = 0, end = 0.25, traversal_time = 0.1), "D"
+  )$reachable)
+})
+
+test_that("an arrival landing exactly on the boundary is reachable at any scale", {
+  # The invariant that generalises the regression above: a three-hop walk whose
+  # arrival equals `end` exactly is reachable, whatever decimal scale the times
+  # are written in. Note the scale must be applied as a LITERAL end rather than
+  # as `3 * step` -- `3 * 0.1` is 0.30000000000000004, which moves the boundary
+  # above the arrival and stops the case exercising the boundary at all. That
+  # weaker form of this test survived the mutation that this one kills.
+  reachable_at <- function(step, end) {
+    contacts <- data.frame(
+      from = c("A", "B", "C"), to = c("B", "C", "D"),
+      time = c(0, step, 2 * step), stringsAsFactors = FALSE
+    )
+    dn <- quiet_dynet(contacts, format = "contact")
+    out <- as.data.frame(paths(
+      dn, from = "A", start = 0, end = end, traversal_time = step
+    ))
+    out$reachable[match(c("A", "B", "C", "D"), out$node)]
+  }
+  # 0.1/0.3 and 0.2/0.6 are the representations where the accumulated arrival
+  # exceeds the boundary in floating point; 1/3 is the exact integer control.
+  integral <- reachable_at(1, 3)
+  expect_true(all(integral))
+  lapply(list(c(0.1, 0.3), c(0.2, 0.6), c(0.7, 2.1), c(1000, 3000)),
+         function(case) {
+           expect_identical(reachable_at(case[[1]], case[[2]]), integral)
+         })
+})

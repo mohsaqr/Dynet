@@ -25,7 +25,7 @@ defects, and reproducing them would mean writing worse code to get worse
 numbers; both are named and measured in [what differs](#what-differs).
 
 ```{r libs}
-library(Dynet)
+devtools::load_all("../../..", quiet = TRUE)
 library(dplyr)
 library(rio)
 ```

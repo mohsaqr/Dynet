@@ -14,7 +14,7 @@
 #' @param possible Number of vertex pairs that could carry a tie, used to put
 #'   the Hamming count on the unit scale.
 #' @return A symmetric numeric matrix with the bin times as dimnames.
-#' @keywords internal
+#' @noRd
 .similarity_distance <- function(s, method, possible) {
   times <- sort(unique(c(s$time, s$other)))
   d <- matrix(0, length(times), length(times),
@@ -46,7 +46,7 @@
 #' @examples
 #' d <- as.matrix(dist(c(0, 0.1, 5, 5.2)))
 #' Dynet:::.fisher_partition(d, 2L)$phase
-#' @keywords internal
+#' @noRd
 .fisher_partition <- function(d, k) {
   n <- nrow(d)
   square <- d^2
@@ -99,7 +99,7 @@
 #' @examples
 #' d <- as.matrix(dist(c(0, 0.1, 5, 5.2)))
 #' Dynet:::.silhouette(d, c(1L, 1L, 2L, 2L))
-#' @keywords internal
+#' @noRd
 .silhouette <- function(d, phase) {
   clusters <- sort(unique(phase))
   vapply(seq_along(phase), function(i) {

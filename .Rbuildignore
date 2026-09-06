@@ -19,6 +19,8 @@
 ^Rplots\.pdf$
 ^Dynet\.Rcheck$
 ^Dynet_.*\.tar\.gz$
+^CLAUDE\.md$
+^cran-comments\.md$
 ^ecosystem$
 ^ECOSYSTEM\.md$
 ^ECOSYSTEM-INDEX\.md$

@@ -18,7 +18,7 @@
 #' @param text_color Title and emphasis colour.
 #' @param frame_color Panel frame colour, or `NA` for no frame.
 #' @return A named list of style constants.
-#' @keywords internal
+#' @noRd
 .dyn_style <- function(cex = 1, grid = TRUE, background = "#FFFFFF",
                        grid_color = "#ECEEF0", axis_color = "#6B7280",
                        text_color = "#1F2937", frame_color = "#D8DCE0") {
@@ -36,7 +36,7 @@
 #' Pad a range so a series does not touch the panel edge
 #' @param values Numeric vector.
 #' @return A numeric vector of length two.
-#' @keywords internal
+#' @noRd
 .dyn_expand_range <- function(values) {
   finite <- values[is.finite(values)]
   if (length(finite) == 0L) return(c(-0.5, 0.5))
@@ -56,10 +56,10 @@
 #'
 #' @param xlim,ylim Axis limits.
 #' @param main,xlab,ylab Panel labels.
-#' @param style A style list from [.dyn_style()].
+#' @param style A style list from `.dyn_style()`.
 #' @param x_axis,y_axis Whether to draw each axis.
 #' @return `NULL`, invisibly.
-#' @keywords internal
+#' @noRd
 .dyn_panel <- function(xlim, ylim, main = "", xlab = "", ylab = "",
                        style = .dyn_style(), x_axis = TRUE, y_axis = TRUE) {
   graphics::plot(NA, type = "n", xlim = xlim, ylim = ylim, axes = FALSE,
@@ -106,7 +106,7 @@
 #' @param y Numeric positions, in any order.
 #' @param gap Minimum separation to enforce.
 #' @return A numeric vector of adjusted positions, in the input order.
-#' @keywords internal
+#' @noRd
 .spread_labels <- function(y, gap) {
   ord <- order(y)
   v <- y[ord]

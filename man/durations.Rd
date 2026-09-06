@@ -10,7 +10,8 @@ durations(
   sessions = c("bounded", "collapse", "separate"),
   censored = c("include", "exclude"),
   unit = c("pair", "spell", "vertex_activity", "vertex_spell", "node_ties"),
-  mode = c("out", "in", "all")
+  mode = c("out", "in", "all"),
+  plot = FALSE
 )
 }
 \arguments{
@@ -42,6 +43,12 @@ fixed-node incident-tie quantities.}
 \item{mode}{For \code{unit = "node_ties"}, \code{"out"}, \code{"in"}, or \code{"all"} endpoint
 incidence. Undirected networks normalize every request to \code{"all"}. An
 explicitly supplied mode is invalid for every other duration unit.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric}. Pair and edge-spell units are edge-level: pair has

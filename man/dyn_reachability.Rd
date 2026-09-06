@@ -13,13 +13,15 @@ dyn_reachability(
   end = NULL,
   traversal_time = 0,
   measure = "reach",
-  criterion = c("foremost_then_shortest", "min_hops")
+  criterion = c("foremost_then_shortest", "min_hops"),
+  plot = FALSE
 )
 }
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{direction}{\code{"forward"}, \code{"backward"} or \code{"both"}.}
+\item{direction}{\code{"both"} (the default, reporting each vertex's forward and
+backward reach side by side), \code{"forward"} or \code{"backward"}.}
 
 \item{at}{Forward source-availability time or backward arrival deadline.
 Defaults to the beginning or end of each observed period, respectively.
@@ -44,6 +46,12 @@ are \code{NaN} when nothing is reachable, since the mean is then 0/0.}
 reach count are identical under every criterion, because they depend on
 the feasible set rather than on which journey wins; \code{latency} and \code{hops}
 summarise the selected journeys and do depend on it.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric} at node level. Proportion measures are named

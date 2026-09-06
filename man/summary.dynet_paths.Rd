@@ -12,9 +12,13 @@
 \item{...}{Ignored.}
 }
 \value{
-A one-row-per-property \code{data.frame} with the reachable count, the
-reachable share, and the median and maximum latency and hop count.
-Separate mode adds \code{session} and reports each session independently.
+A \code{data.frame} with columns \code{property} and \code{value}, one row per
+property, both character so the table prints as one block. The eight
+properties are \code{source}, \code{direction}, \code{reachable}, \verb{reachable share},
+\verb{median latency}, \verb{max latency}, \verb{median hops} and \verb{max hops}; the source
+is excluded from every count and share. Under \code{sessions = "separate"} a
+leading \code{session} column is added and the eight properties are repeated
+for each session.
 }
 \description{
 Summarise time-respecting paths

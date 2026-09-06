@@ -11,7 +11,7 @@
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.one_sided_observation(dn, 1, "before")
-#' @keywords internal
+#' @noRd
 .one_sided_observation <- function(dn, time,
                                    side = c("before", "after")) {
   side <- match.arg(side)
@@ -32,7 +32,7 @@
 
 #' One-sided vertex eligibility
 #' @param activity Encoded canonical activity from
-#'   [.encode_vertex_activity()].
+#'   `.encode_vertex_activity()`.
 #' @param time Numeric timestamp.
 #' @param side Limit immediately `"before"` or `"after"` the timestamp batch.
 #' @param session Optional session label; global rows also apply.
@@ -44,7 +44,7 @@
 #' Dynet:::.one_sided_vertex_eligibility(
 #'   Dynet:::.encode_vertex_activity(dn), 1, "after"
 #' )
-#' @keywords internal
+#' @noRd
 .one_sided_vertex_eligibility <- function(
     activity, time, side = c("before", "after"), session = NULL,
     erase_sessions = FALSE) {
@@ -82,7 +82,7 @@
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 1, end = 2),
 #'             observation_start = 0, observation_end = 3)
 #' Dynet:::.transition_pair_ledger(dn, Dynet:::.encode(dn), 1, "collapse")
-#' @keywords internal
+#' @noRd
 .transition_pair_ledger <- function(
     dn, enc, time, sessions = c("bounded", "collapse", "separate"),
     label = "all") {
@@ -225,7 +225,7 @@
 #'   dn, Dynet:::.encode(dn),
 #'   data.frame(lo = 0, hi = 1, closed = FALSE), "collapse"
 #' )
-#' @keywords internal
+#' @noRd
 .formation_rate_ledger <- function(dn, enc, bin,
                                    sessions = c("bounded", "collapse", "separate"),
                                    label = "all") {
@@ -267,7 +267,7 @@
 #'   dn, Dynet:::.encode(dn),
 #'   data.frame(lo = 0, hi = 2, closed = FALSE), "collapse"
 #' )
-#' @keywords internal
+#' @noRd
 .dissolution_rate_ledger <- function(
     dn, enc, bin, sessions = c("bounded", "collapse", "separate"),
     label = "all") {
@@ -328,6 +328,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level, one row per time point and
 #'   measure.
 #'
@@ -423,7 +428,7 @@ events <- function(dn,
                        measure = c("formation", "dissolution"),
                        sessions = c("bounded", "collapse", "separate"),
                        start = NULL, end = NULL,
-                       step = NULL, window = NULL) {
+                       step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   spec <- .window_spec(dn, start, end, step, window)
@@ -649,14 +654,14 @@ events <- function(dn,
       separate = "session_local"
     )
   }
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Earliest observed evidence contributed by each raw spell
 #' @param enc Encoded measurement view.
 #' @param dn Parent network.
 #' @return One time per raw spell, or `Inf` when wholly unobserved.
-#' @keywords internal
+#' @noRd
 .raw_observation_evidence <- function(enc, dn) {
   evidence <- rep(Inf, length(enc$raw_event_spell))
   starts <- .time_in_observation(dn, enc$raw_event_start)
@@ -676,7 +681,7 @@ events <- function(dn,
 #' @return A single character string.
 #' @examples
 #' Dynet:::.event_label("formation_fraction")
-#' @keywords internal
+#' @noRd
 .event_label <- function(m) {
   unname(c(formation = "Edges formed", dissolution = "Edges dissolved",
            active = "Active edges", new_pairs = "First-time pairs",
@@ -702,7 +707,7 @@ events <- function(dn,
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' enc <- Dynet:::.encode(dn)
 #' Dynet:::.duration_fragments(dn, enc, erase_sessions = TRUE)
-#' @keywords internal
+#' @noRd
 .duration_fragments <- function(dn, enc, session = NULL,
                                 erase_sessions = FALSE,
                                 censored = c("include", "exclude")) {
@@ -760,7 +765,7 @@ events <- function(dn,
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.duration_fragment_blocks(dn, "bounded", "include")
-#' @keywords internal
+#' @noRd
 .duration_fragment_blocks <- function(dn, sessions, censored) {
   enc <- .encode(dn)
   if (identical(sessions, "collapse") || is.null(dn$meta$sessions)) {
@@ -790,7 +795,7 @@ events <- function(dn,
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2),
 #'             vertex_spells = data.frame(node = "A", start = 0, end = 1))
 #' Dynet:::.vertex_duration_fragments(dn, "include")
-#' @keywords internal
+#' @noRd
 .vertex_duration_fragments <- function(dn, censored = c("include", "exclude"),
                                        session = NULL,
                                        erase_sessions = TRUE) {
@@ -866,7 +871,7 @@ events <- function(dn,
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.vertex_duration_blocks(dn, "bounded", "include")
-#' @keywords internal
+#' @noRd
 .vertex_duration_blocks <- function(dn, sessions, censored) {
   if (identical(sessions, "collapse") || is.null(dn$meta$sessions)) {
     return(list(all = .vertex_duration_fragments(
@@ -897,7 +902,7 @@ events <- function(dn,
 #' fragments <- data.frame(from = "A", to = "B", raw_spell = 1L,
 #'                         start = 0, end = 2, instant = FALSE)
 #' Dynet:::.node_tie_fragments(fragments, c("A", "B"), TRUE, "all")
-#' @keywords internal
+#' @noRd
 .node_tie_fragments <- function(fragments, nodes, directed,
                                 mode = c("out", "in", "all")) {
   mode <- match.arg(mode)
@@ -959,6 +964,11 @@ events <- function(dn,
 #'   incidence. Undirected networks normalize every request to `"all"`. An
 #'   explicitly supplied mode is invalid for every other duration unit.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric`. Pair and edge-spell units are edge-level: pair has
 #'   columns `from`, `to`, `measure`, and `value`, while spell additionally has
 #'   `raw_spell`.
@@ -1041,7 +1051,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
                           censored = c("include", "exclude"),
                           unit = c("pair", "spell", "vertex_activity",
                                    "vertex_spell", "node_ties"),
-                          mode = c("out", "in", "all")) {
+                          mode = c("out", "in", "all"), plot = FALSE) {
   mode_supplied <- !missing(mode)
   sessions <- match.arg(sessions)
   censored <- match.arg(censored)
@@ -1305,7 +1315,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
     effective_sessions, collapse = "labels_erased", bounded = "session_local_then_union",
     separate = "session_local"
   )
-  result
+  .maybe_plot(result, plot)
 }
 
 
@@ -1330,6 +1340,11 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'   `"mean_gap"`.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at node level with no time column: one row per
 #'   vertex and measure. Attributes record the event identity, dispersion,
 #'   memory, loop, weight, and session-gap conventions as
@@ -1371,7 +1386,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'
 #' @export
 burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
-                           sessions = c("bounded", "collapse", "separate")) {
+                           sessions = c("bounded", "collapse", "separate"), plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   allowed <- c("burstiness", "memory", "events", "mean_gap")
@@ -1428,14 +1443,14 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
     sessions, collapse = "included", bounded = "excluded",
     separate = "session_local"
   )
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Burstiness statistics for one vertex's event times
 #' @param times Numeric vector of event times.
 #' @return A named numeric vector with `burstiness`, `memory`, `events`,
 #'   `mean_gap`.
-#' @keywords internal
+#' @noRd
 .burst_stats <- function(times) {
   .burst_stats_sequences(list(times))
 }
@@ -1450,7 +1465,7 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
 #'   table of within-sequence adjacent-gap pairs.
 #' @examples
 #' Dynet:::.burst_primitives(list(c(0, 1, 2), c(100, 102, 106)))
-#' @keywords internal
+#' @noRd
 .burst_primitives <- function(sequences) {
   sequences <- lapply(sequences, sort)
   gaps_by_sequence <- lapply(sequences, diff)
@@ -1481,7 +1496,7 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
 #'   `mean_gap`.
 #' @examples
 #' Dynet:::.burst_stats_sequences(list(c(0, 1, 2), c(100, 101, 102)))
-#' @keywords internal
+#' @noRd
 .burst_stats_sequences <- function(sequences) {
   primitive <- .burst_primitives(sequences)
   gaps <- primitive$gaps

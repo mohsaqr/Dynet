@@ -4,7 +4,7 @@
 \alias{path_trajectories}
 \title{Optimal temporal routes as a counted trajectory tree}
 \usage{
-path_trajectories(x, min_count = 1L)
+path_trajectories(x, min_count = 1L, plot = FALSE)
 }
 \arguments{
 \item{x}{A result from \code{\link[=paths]{paths()}}.}
@@ -12,6 +12,12 @@ path_trajectories(x, min_count = 1L)
 \item{min_count}{Keep only branches used by at least this many optimal
 routes. The default of \code{1} keeps the complete family; a higher value is
 the caller's explicit pruning.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_path_trajectories} data frame with one row per tree node

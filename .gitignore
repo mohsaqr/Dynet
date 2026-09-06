@@ -9,6 +9,7 @@ legacy/
 local_testing_and_equivalence/
 
 # Session artifacts
+CLAUDE.md
 HANDOFF.md
 LEARNINGS.md
 CHANGES.md
@@ -21,6 +22,9 @@ inst/reproduction/**/*.html
 *.Rcheck/
 .Rproj.user/
 .DS_Store
+
+# Submission notes, local-only
+cran-comments.md
 
 # Stray plotting artifacts from running examples and tests
 Rplots.pdf

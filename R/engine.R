@@ -7,7 +7,7 @@
 #'
 #' @param ... Named logical conditions.
 #' @return `TRUE`, invisibly.
-#' @keywords internal
+#' @noRd
 .check <- function(...) {
   conds <- list(...)
   ok <- vapply(conds, isTRUE, logical(1L))
@@ -15,6 +15,76 @@
   stop(errorCondition(paste(names(conds)[!ok], collapse = "\n"),
                       class = "dynet_bad_input", call = NULL))
 }
+
+#' Default value for `NULL`
+#'
+#' Identical in behaviour to the `%||%` that base R gained in 4.4.0. It is
+#' defined here so the package's 93 call sites can keep using the operator
+#' while the dependency floor stays at the 4.1 the native pipe requires;
+#' without it, `Depends: R (>= 4.4)` would exclude every R older than
+#' April 2024 for the sake of one operator. On R 4.4 and later this
+#' definition simply shadows the identical base one inside the namespace.
+#'
+#' @param x A value that may be `NULL`.
+#' @param y Replacement used when `x` is `NULL`.
+#' @return `x` unless it is `NULL`, in which case `y`.
+#' @noRd
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
+# ===========================================================================
+# Tolerant time comparison
+# ===========================================================================
+# Path feasibility asks whether an arrival lands inside a closed interval, and
+# an arrival is a SUM of a start and one traversal_time per hop. That sum is
+# not representable exactly: with times 0, 0.1, 0.2 and traversal_time 0.1 the
+# third arrival is 0.30000000000000004, so a bare `<= 0.3` rejects a path that
+# is mathematically valid, while the integer-scaled version of the same
+# problem accepts it. Every time comparison against a domain boundary
+# therefore goes through these helpers rather than a bare operator.
+#
+# The tolerance is relative to the magnitude of the values being compared, not
+# a fixed epsilon: temporal networks are routinely built on Unix timestamps
+# (~1.7e9), where a double's own spacing is already ~2e-7, and a fixed
+# absolute tolerance would be meaningless there.
+
+#' Scale-relative tolerance for comparing two times
+#'
+#' Sized to absorb accumulated rounding from a realistic number of arithmetic
+#' operations while staying far below any meaningful temporal separation.
+#'
+#' @param ... Times entering the comparison. Non-finite values are ignored.
+#' @return A single non-negative tolerance on the scale of the inputs.
+#' @noRd
+.time_tol <- function(...) {
+  values <- abs(unlist(list(...), use.names = FALSE))
+  values <- values[is.finite(values)]
+  scale <- if (length(values)) max(1, values) else 1
+  128 * .Machine$double.eps * scale
+}
+
+#' Tolerant equality of two times
+#'
+#' @param a,b Numeric times, recycled as usual.
+#' @return A logical vector, `TRUE` where the two times agree to within
+#'   `.time_tol()`.
+#' @noRd
+.time_eq <- function(a, b) abs(a - b) <= .time_tol(a, b)
+
+#' Tolerant "at or before" comparison of two times
+#'
+#' @param a,b Numeric times, recycled as usual.
+#' @return A logical vector, `TRUE` where `a` is below `b` or within
+#'   `.time_tol()` of it.
+#' @noRd
+.time_leq <- function(a, b) a <= b + .time_tol(a, b)
+
+#' Tolerant "at or after" comparison of two times
+#'
+#' @param a,b Numeric times, recycled as usual.
+#' @return A logical vector, `TRUE` where `a` is above `b` or within
+#'   `.time_tol()` of it.
+#' @noRd
+.time_geq <- function(a, b) a >= b - .time_tol(a, b)
 
 # ===========================================================================
 # Internal compute engine: encoding, time bins, activity, adjacency
@@ -26,7 +96,7 @@
 #' @param dn Object to check.
 #' @param sessions Session handling mode.
 #' @return The matched session mode, invisibly.
-#' @keywords internal
+#' @noRd
 .check_dynet <- function(dn, sessions = "bounded") {
   if (!inherits(dn, "dynet")) {
     stop(errorCondition(
@@ -46,10 +116,19 @@
 #'
 #' @param dn A `dynet` object.
 #' @param rows Optional row subset of the spell table.
-#' @return A list with integer `from`/`to`, observation-clipped numeric
-#'   `start`/`end`, preserved `raw_start`/`raw_end`, numeric `weight`, logical
-#'   raw `instant`, logical `observed_activity`, and the vertex `names`.
-#' @keywords internal
+#' @return A list of parallel vectors, one element per observation fragment,
+#'   plus two scalars. The fragment vectors are: integer `from`/`to`;
+#'   observation-clipped numeric `start`/`end`; preserved `raw_start`/
+#'   `raw_end`; numeric `weight`; `session`; logical raw `instant`; logical
+#'   `observed_activity`; the `raw_spell`, `observation` and `fragment`
+#'   identifiers locating the fragment; the censor flags
+#'   `left_observation_censored`, `right_observation_censored`,
+#'   `onset_censored` and `terminus_censored`; and the
+#'   `raw_from`/`raw_to`/`raw_event_*` family, which carries the *unclipped*
+#'   raw event so that `events()` and `metrics()` can count formations and
+#'   dissolutions against what was recorded rather than against the clipped
+#'   fragment. The two scalars are the vertex `names` and their count `n`.
+#' @noRd
 .encode <- function(dn, rows = NULL) {
   e <- if (is.null(rows)) dn$spells else dn$spells[rows, , drop = FALSE]
   nm <- dn$nodes$name
@@ -130,7 +209,7 @@
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2),
 #'             vertex_spells = data.frame(node = "A", start = 0, end = 1))
 #' Dynet:::.observed_vertex_fragments(dn)
-#' @keywords internal
+#' @noRd
 .observed_vertex_fragments <- function(dn) {
   spells <- dn$vertex_spells %||% .empty_vertex_spells()
   empty <- data.frame(
@@ -199,7 +278,7 @@
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
 #' Dynet:::.encode_vertex_activity(dn, c("A", "B"))
-#' @keywords internal
+#' @noRd
 .encode_vertex_activity <- function(dn, names = dn$nodes$name) {
   fragments <- .observed_vertex_fragments(dn)
   declared <- names %in% unique((dn$vertex_spells %||%
@@ -215,7 +294,7 @@
 #' Canonical observation table for measurement
 #' @param dn A `dynet` object.
 #' @return Observation components, or `NULL` for an unbounded legacy object.
-#' @keywords internal
+#' @noRd
 .observation_table <- function(dn) {
   if (!is.null(dn$meta$observations)) return(dn$meta$observations)
   if (!is.null(dn$meta$observation)) {
@@ -233,7 +312,7 @@
 #' @param dn A `dynet` object.
 #' @param time Numeric times.
 #' @return Logical membership vector; component endpoints are closed.
-#' @keywords internal
+#' @noRd
 .time_in_observation <- function(dn, time) {
   observations <- .observation_table(dn)
   if (is.null(observations)) return(rep(TRUE, length(time)))
@@ -246,7 +325,7 @@
 #' @param dn A `dynet` object.
 #' @param time Numeric times.
 #' @return Numeric cumulative observed-time coordinates.
-#' @keywords internal
+#' @noRd
 .observed_time <- function(dn, time) {
   observations <- .observation_table(dn)
   if (is.null(observations)) return(time)
@@ -261,7 +340,7 @@
 #' @param dn A `dynet` object.
 #' @param spells Raw canonical spell rows.
 #' @return Tidy observed fragments with raw provenance.
-#' @keywords internal
+#' @noRd
 .observed_fragments <- function(dn, spells = dn$spells) {
   base_names <- c(
     "raw_spell", "observation", "fragment", "from", "to", "start", "end",
@@ -373,7 +452,7 @@
 #' @param dn A `dynet` object.
 #' @param arg Argument name, used in the error message.
 #' @return A single number, or `NULL` when `v` was `NULL`.
-#' @keywords internal
+#' @noRd
 .as_time <- function(v, dn, arg) {
   if (is.null(v)) return(NULL)
   if (length(v) != 1L) {
@@ -410,7 +489,7 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.as_traversal_time(1, dn)
-#' @keywords internal
+#' @noRd
 .as_traversal_time <- function(value, dn) {
   if (inherits(value, "Date") || inherits(value, "POSIXt")) {
     stop(errorCondition(
@@ -458,8 +537,14 @@
 #' @param step Spacing between measurements, or `NULL` for the network's
 #'   construction interval.
 #' @param window Width of each measurement, or `NULL` for `step`.
-#' @return A list with `start`, `end`, `step` and `window`.
-#' @keywords internal
+#' @return A list with `start` and `end` (each possibly `NULL`, meaning "use
+#'   this session's own observed range"), `phase_start` (the caller-supplied
+#'   `start`, or `NULL`, kept separately because `.observation_bins()` phases
+#'   every observation component's grid onto it so bins line up across
+#'   components), `step`, `window`, and `whole` (whether `window = "all"` was
+#'   asked for). `.observation_bins()` reads `phase_start` and `whole`, so
+#'   neither is optional.
+#' @noRd
 .window_spec <- function(dn, start = NULL, end = NULL, step = NULL,
                          window = NULL) {
   whole <- .is_whole_window(window)
@@ -522,7 +607,7 @@
 #'
 #' @param window The `window` argument as supplied.
 #' @return A single logical.
-#' @keywords internal
+#' @noRd
 .is_whole_window <- function(window) {
   is.character(window) && length(window) == 1L && !is.na(window) &&
     identical(window, "all")
@@ -537,7 +622,7 @@
 #' @return A named numeric vector with `start` and `end`.
 #' @examples
 #' Dynet:::.network_span(dynet(school_contacts))
-#' @keywords internal
+#' @noRd
 .network_span <- function(dn) {
   if (isTRUE(dn$meta$observation_explicit)) return(dn$meta$observation)
   c(start = min(dn$spells$start), end = max(dn$spells$end))
@@ -552,7 +637,7 @@
 #' @param window A window width supplied through the current API.
 #' @param sample `NULL`, `"window"` or `"instant"`.
 #' @return `window`, possibly translated to zero.
-#' @keywords internal
+#' @noRd
 .legacy_sample <- function(window = NULL, sample = NULL) {
   if (is.null(sample)) return(window)
   sample <- match.arg(sample, c("window", "instant"))
@@ -583,11 +668,33 @@
 #' @param t_min,t_max Observed time range.
 #' @param step Spacing between measurements.
 #' @return A single number.
-#' @keywords internal
+#' @noRd
 .default_end <- function(t_min, t_max, step) {
-  span <- t_max - t_min
-  n <- max(1L, as.integer(ceiling(span / step - 1e-9)))
-  t_min + (n - 1L) * step
+  t_min + (.grid_bins(t_max - t_min, step) - 1L) * step
+}
+
+#' Number of bins of width `step` needed to cover a span
+#'
+#' A span that is an exact multiple of `step` must not gain a spurious
+#' trailing bin from representation error, so a ratio within rounding error of
+#' a whole number is taken to be that whole number. Anything genuinely above
+#' it takes the ceiling.
+#'
+#' The tolerance is per element and relative to the ratio. The previous form,
+#' `ceiling(span / step - 1e-9)`, subtracted a fixed epsilon from the ratio
+#' itself, which is a tolerance on the bin COUNT rather than on time: it
+#' discarded any event landing up to `1e-9 * step` above an exact multiple,
+#' silently dropping it from every measurement built on the grid.
+#'
+#' @param span,step Numeric widths, recycled as usual.
+#' @return An integer vector of bin counts, at least one.
+#' @noRd
+.grid_bins <- function(span, step) {
+  ratio <- span / step
+  nearest <- round(ratio)
+  tol <- 128 * .Machine$double.eps * pmax(1, abs(ratio))
+  exact <- abs(ratio - nearest) <= tol
+  pmax(1L, as.integer(ifelse(exact, nearest, ceiling(ratio))))
 }
 
 #' Build the measurement grid
@@ -605,11 +712,11 @@
 #'
 #' @param t_min,t_max Observed time range, used for whichever of `start` and
 #'   `end` the caller left to the default.
-#' @param spec A resolved grid from [.window_spec()].
+#' @param spec A resolved grid from `.window_spec()`.
 #' @return A data frame with `bin`, `lo`, `hi`, `time` (the point at which the
 #'   measurement is reported, which is the window's left edge) and `closed`
 #'   (whether the window includes its right endpoint).
-#' @keywords internal
+#' @noRd
 .bins <- function(t_min, t_max, spec) {
   start <- spec$start %||% t_min
   if (isTRUE(spec$whole)) {
@@ -631,7 +738,7 @@
 #' @param dn A `dynet` object with explicit discontinuous observations.
 #' @param spec Resolved measurement specification.
 #' @return A grid with an `observation` identifier.
-#' @keywords internal
+#' @noRd
 .observation_bins <- function(dn, spec) {
   observations <- dn$meta$observations
   lower <- spec$start %||% min(observations$start)
@@ -685,7 +792,10 @@
 
 #' Which edges are active in a given window
 #'
-#' A spell counts when it overlaps the window at all, which loses no event.
+#' A spell counts when it overlaps the window at all, so no observed event is
+#' lost between windows. The result is then gated on `enc$observed_activity`,
+#' so a spell that overlaps the window but falls outside the network's
+#' observed support is still excluded.
 #' A zero-width window (`spec$window == 0`) instead samples the network at the
 #' window's time point, matching `tsna::tSnaStats(aggregate.dur = 0)`; an edge
 #' that starts and ends between two sample points is invisible to it.
@@ -693,12 +803,12 @@
 #' Instantaneous events -- contact logs, and the final post of a thread --
 #' belong to the window that contains them under either rule.
 #'
-#' @param enc Encoded edge list from [.encode()].
+#' @param enc Encoded edge list from `.encode()`.
 #' @param lo,hi Window boundaries.
 #' @param last Whether the window is closed on the right.
 #' @param window The window width, which selects the rule.
 #' @return A logical vector, one element per edge.
-#' @keywords internal
+#' @noRd
 .active <- function(enc, lo, hi, last = FALSE, window = NULL) {
   inst <- enc$instant
   at_point <- is.numeric(window) && length(window) == 1L && window == 0
@@ -718,7 +828,7 @@
 
 #' Eligible vertices in one reporting window and session scope
 #'
-#' @param activity Encoded activity from [.encode_vertex_activity()].
+#' @param activity Encoded activity from `.encode_vertex_activity()`.
 #' @param bin One row from the measurement grid.
 #' @param window Reporting-window width.
 #' @param session Optional session label. `NULL` applies global rows; a label
@@ -731,7 +841,7 @@
 #' va <- Dynet:::.encode_vertex_activity(dn)
 #' Dynet:::.vertex_eligibility(va,
 #'   data.frame(lo = 0, hi = 0, closed = TRUE), 0)
-#' @keywords internal
+#' @noRd
 .vertex_eligibility <- function(activity, bin, window, session = NULL,
                                 erase_sessions = FALSE) {
   eligible <- !activity$declared
@@ -778,7 +888,7 @@
 #' Dynet:::.snapshot_state(dn, enc,
 #'   data.frame(lo = 1, hi = 1, closed = TRUE, time = 1), 0,
 #'   "bounded", "all")
-#' @keywords internal
+#' @noRd
 .snapshot_state <- function(dn, enc, bin, window, sessions, label) {
   raw_active <- .active(
     enc, bin$lo, bin$hi, last = isTRUE(bin$closed), window = window
@@ -850,16 +960,22 @@
 #' Multi-edges are collapsed by summing. With `weighted = TRUE` a cell holds
 #' the summed edge weights; otherwise it holds the *number of active spells*
 #' joining the pair, which every measure that wants presence rather than
-#' volume reduces with [.binary()]. Diagonals are left untouched: if the
-#' network was built with `loops = TRUE`, self-loops appear on the diagonal
-#' exactly as recorded.
+#' volume reduces with `.binary()`.
+#'
+#' Undirected output is symmetrised with `a + t(a)`, and that changes two
+#' things a caller must not assume away. Unweighted undirected cells are
+#' forced back to 0/1 afterwards, so the spell count above is a *directed*
+#' guarantee only. And the diagonal is summed with itself, so a self-loop kept
+#' by `loops = TRUE` appears on an undirected weighted diagonal at twice its
+#' recorded weight -- the usual convention for undirected loops, but not the
+#' recorded number.
 #'
 #' @param enc Encoded edge list.
 #' @param active Logical vector selecting active edges.
 #' @param directed Whether to keep edge direction.
 #' @param weighted Whether cells hold summed weights or spell counts.
 #' @return A square numeric matrix with vertex names on both margins.
-#' @keywords internal
+#' @noRd
 .adjacency <- function(enc, active, directed, weighted = FALSE) {
   n <- enc$n
   a <- matrix(0, n, n, dimnames = list(enc$names, enc$names))
@@ -867,8 +983,8 @@
   i <- enc$from[active]
   j <- enc$to[active]
   w <- if (weighted) enc$weight[active] else rep(1, length(i))
-  # tabulate() over the linear cell index is far faster than a loop and keeps
-  # multi-edge accumulation exact.
+  # Aggregating over the linear cell index in one pass is far faster than a
+  # loop and keeps multi-edge accumulation exact.
   cell <- (j - 1L) * n + i
   agg <- tapply(w, cell, sum)
   a[as.integer(names(agg))] <- as.numeric(agg)
@@ -885,7 +1001,7 @@
 #' @param sessions Session mode.
 #' @return A named list of encodings. Length one and named `"all"` unless
 #'   `sessions = "separate"`.
-#' @keywords internal
+#' @noRd
 .split_sessions <- function(dn, sessions) {
   if (!identical(sessions, "separate")) {
     return(list(all = .encode(dn)))
@@ -897,21 +1013,69 @@
 #' The time grid an encoding should be measured on
 #' @param enc Encoded edge list.
 #' @param dn The parent network, for the default grid.
-#' @param spec A resolved grid from [.window_spec()]; the network's own
+#' @param spec A resolved grid from `.window_spec()`; the network's own
 #'   construction interval is used when absent.
-#' @return A data frame of windows from [.bins()].
-#' @keywords internal
+#' @return A data frame of windows from `.bins()`.
+#' @noRd
 .grid_for <- function(enc, dn, spec = NULL) {
   spec <- spec %||% .window_spec(dn)
-  if (!is.null(dn$meta$observations)) {
-    return(.observation_bins(dn, spec))
+  grid <- if (!is.null(dn$meta$observations)) {
+    .observation_bins(dn, spec)
+  } else if (isTRUE(dn$meta$observation_explicit)) {
+    .bins(dn$meta$observation[["start"]], dn$meta$observation[["end"]], spec)
+  } else {
+    .bins(min(enc$start), max(enc$end), spec)
   }
-  if (isTRUE(dn$meta$observation_explicit)) {
-    return(.bins(
-      dn$meta$observation[["start"]], dn$meta$observation[["end"]], spec
-    ))
+  .snap_grid(grid, enc, dn)
+}
+
+#' Snap window edges onto the spell boundaries they were meant to hit
+#'
+#' A grid is built arithmetically as `start + k * step`, and a step such as
+#' `1/24` (one hour on a network measured in days) is not representable, so
+#' the edge for hour 6 comes out as `0.24999999999999997` while the spell that
+#' starts at hour 6 was stored as the exact `0.25`. Every window predicate in
+#' the package compares times with plain `<` and `>=`, and that gap of one
+#' ulp is enough to place a spell that ends exactly at a window's start
+#' inside the window, or to drop one that starts exactly at its end. Rather
+#' than make each predicate tolerant, the grid itself is corrected once: an
+#' edge within `.time_tol()` of a boundary present in the data (a spell
+#' start or end, a raw event limit, or an observation limit) is replaced by
+#' that boundary, so the strict comparisons downstream are exact. An edge
+#' with no boundary nearby is left as it is. Reported `time` values follow
+#' `lo`, so a bin's time equals the data's own value of that instant.
+#'
+#' @param grid A window table from `.bins()` or `.observation_bins()`.
+#' @param enc Encoded edge list.
+#' @param dn Parent `dynet` object.
+#' @return `grid` with `lo`, `hi` and `time` snapped.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 5 / 24, end = 6 / 24))
+#' enc <- Dynet:::.encode(dn)
+#' grid <- data.frame(bin = 1:2, lo = (5:6) * (1 / 24), hi = (6:7) * (1 / 24),
+#'                    time = (5:6) * (1 / 24), closed = c(FALSE, TRUE))
+#' Dynet:::.snap_grid(grid, enc, dn)$hi[1] == 6 / 24
+#' @noRd
+.snap_grid <- function(grid, enc, dn) {
+  if (!nrow(grid)) return(grid)
+  observations <- .observation_table(dn)
+  anchors <- c(enc$start, enc$end, enc$raw_event_start, enc$raw_event_end,
+               observations$start, observations$end, dn$meta$time_range)
+  anchors <- sort(unique(anchors[is.finite(anchors)]))
+  if (!length(anchors)) return(grid)
+  snap <- function(x) {
+    # Nearest anchor on either side; take it when it lies within tolerance.
+    pos <- findInterval(x, anchors)
+    below <- anchors[pmax(pos, 1L)]
+    above <- anchors[pmin(pos + 1L, length(anchors))]
+    nearest <- ifelse(abs(x - below) <= abs(x - above), below, above)
+    hit <- abs(x - nearest) <= .time_tol(x, nearest)
+    ifelse(hit, nearest, x)
   }
-  .bins(min(enc$start), max(enc$end), spec)
+  grid$lo <- snap(grid$lo)
+  grid$hi <- snap(grid$hi)
+  grid$time <- grid$lo
+  grid
 }
 
 #' Resolve the default time range for one encoding
@@ -926,7 +1090,7 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.encoding_time_range(dn, Dynet:::.encode(dn))
-#' @keywords internal
+#' @noRd
 .encoding_time_range <- function(dn, enc) {
   if (isTRUE(dn$meta$observation_explicit)) return(dn$meta$observation)
   c(start = min(enc$start), end = max(enc$end))
@@ -942,7 +1106,7 @@
 #' @param sessions Session mode.
 #' @param fun Function of `(enc, active, bin)`, plus `state` when `snapshot`
 #'   is true.
-#' @param spec A resolved measurement grid from [.window_spec()].
+#' @param spec A resolved measurement grid from `.window_spec()`.
 #' @param node_level Whether `fun` returns one value per vertex.
 #' @param snapshot Whether to apply declared vertex eligibility and pass the
 #'   resulting snapshot state to `fun`.
@@ -953,7 +1117,7 @@
 #' Dynet:::.over_bins(dn, "bounded", function(enc, active, bin) {
 #'   c(active_edges = sum(active))
 #' })
-#' @keywords internal
+#' @noRd
 .over_bins <- function(dn, sessions, fun, spec = NULL, node_level = FALSE,
                        snapshot = FALSE) {
   spec  <- spec %||% .window_spec(dn)
@@ -1007,4 +1171,33 @@
   out <- do.call(rbind, frames)
   rownames(out) <- NULL
   out
+}
+
+#' Draw a result on request, and return it either way
+#'
+#' Implements the `plot = TRUE` convention the measurement verbs share. The
+#' model is base R's `hist()`: drawing is a SIDE EFFECT, and the verb still
+#' returns its tidy result, invisibly when it has drawn. That keeps the
+#' package's contract -- every verb returns a tidy data frame -- while sparing
+#' the caller a wrapping call for the common case of wanting to see it.
+#'
+#' Returning the ggplot object instead was the alternative. It was rejected
+#' because it makes a verb's return type depend on an argument, so
+#' `x <- centrality(dn, plot = TRUE)` would silently hand back something no
+#' other verb returns and nothing downstream accepts.
+#'
+#' @param result The verb's result object.
+#' @param plot Whether to draw it.
+#' @param ... Passed to the object's `plot()` method.
+#' @return `result`, invisibly when it was drawn and visibly otherwise.
+#' @noRd
+.maybe_plot <- function(result, plot, ...) {
+  .check("`plot` must be one non-missing logical value." =
+           is.logical(plot) && length(plot) == 1L && !is.na(plot))
+  if (!plot) return(result)
+  drawn <- graphics::plot(result, ...)
+  # A ggplot is only drawn when it is printed; a base-graphics method has
+  # already drawn by the time it returns.
+  if (inherits(drawn, "ggplot")) print(drawn)
+  invisible(result)
 }

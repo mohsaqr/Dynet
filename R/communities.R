@@ -33,7 +33,7 @@
 #' dn <- dynet(school_contacts)
 #' s <- Dynet:::.supra(projection(dn, step = 5, window = 5))
 #' length(s$blocks[[1]]$layers)
-#' @keywords internal
+#' @noRd
 .supra <- function(p, symmetrise = TRUE) {
   .check("`p` must be a projection from projection()." =
            inherits(p, "dynet_projection"))
@@ -92,7 +92,7 @@
 #' @return A numeric vector of partner counts, one per slice.
 #' @examples
 #' Dynet:::.coupling_degree(4L, "ordinal")
-#' @keywords internal
+#' @noRd
 .coupling_degree <- function(n_slices, coupling) {
   if (n_slices < 2L) return(rep(0, max(n_slices, 0L)))
   if (identical(coupling, "categorical")) return(rep(n_slices - 1, n_slices))
@@ -101,12 +101,12 @@
 
 #' Turn a membership frame into one label matrix per projection block
 #'
-#' @param supra A structure from [.supra()].
+#' @param supra A structure from `.supra()`.
 #' @param membership A data frame with `time`, `node`, `community`, plus
 #'   `session` when the projection has blocks, or `NULL` for the partition
 #'   that puts every state in one community.
 #' @return A list of integer `n x T` matrices, one per block, in block order.
-#' @keywords internal
+#' @noRd
 .membership_matrix <- function(supra, membership) {
   nodes <- supra$nodes
   n <- length(nodes)
@@ -334,7 +334,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' [temporal_communities()] can recompute \eqn{Q} from scratch at the end of
 #' every pass without rebuilding the projection.
 #'
-#' @param supra A structure from [.supra()].
+#' @param supra A structure from `.supra()`.
 #' @param labels A list of integer `n x T` label matrices, one per block.
 #' @param gamma Resolution.
 #' @param omega Interlayer coupling.
@@ -342,7 +342,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @return A list with `q`, `q_intra`, `q_inter`, `two_mu`, `n_communities`,
 #'   `n_empty_slices`, and `bins`: one row per slice carrying that slice's own
 #'   modularity, its edge total and how many communities it holds.
-#' @keywords internal
+#' @noRd
 .multislice_quality <- function(supra, labels, gamma, omega, coupling) {
   empty <- 0L
   # Slice by slice, block by block, in a fixed order: the sum is accumulated
@@ -416,7 +416,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @return A list of integer vectors, one per slice.
 #' @examples
 #' Dynet:::.coupling_partners(4L, "ordinal")
-#' @keywords internal
+#' @noRd
 .coupling_partners <- function(n_slices, coupling) {
   all <- seq_len(n_slices)
   lapply(all, function(s) {
@@ -449,7 +449,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @param max_passes Cap on aggregation passes.
 #' @return A list with `membership` (integer, one label per state, in
 #'   slice-major order) and `passes` (the number of passes used).
-#' @keywords internal
+#' @noRd
 .genlouvain_block <- function(layers, gamma, omega, coupling, visit,
                               tol = 1e-10, max_passes = 20L) {
   n <- nrow(layers[[1L]])
@@ -531,10 +531,10 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @param k Slice-local strengths, `n x T`.
 #' @param two_m Slice totals.
 #' @param gamma,omega Resolution and coupling.
-#' @param partners Coupled slices, from [.coupling_partners()].
+#' @param partners Coupled slices, from `.coupling_partners()`.
 #' @param n_comm Number of communities.
 #' @return A symmetric `n_comm x n_comm` numeric matrix.
-#' @keywords internal
+#' @noRd
 .aggregate_modularity <- function(layers, codes, k, two_m, gamma, omega,
                                   partners, n_comm) {
   n <- nrow(layers[[1L]])
@@ -576,7 +576,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @param b A symmetric numeric matrix.
 #' @param tol Minimum improvement that counts as a move.
 #' @return An integer membership vector, dense from one.
-#' @keywords internal
+#' @noRd
 .louvain_dense <- function(b, tol = 1e-10) {
   n <- nrow(b)
   memb <- seq_len(n)
@@ -615,7 +615,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #'   pair counts every statistic below is built from.
 #' @examples
 #' Dynet:::.contingency(c(1, 1, 1, 2, 2, 2), c(1, 1, 2, 2, 2, 2))$n
-#' @keywords internal
+#' @noRd
 .contingency <- function(a, b) {
   n <- unclass(table(a, b))
   total <- sum(n)
@@ -631,9 +631,9 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 
 #' Mutual information and the two entropies of a contingency table
 #'
-#' @param ct A structure from [.contingency()].
+#' @param ct A structure from `.contingency()`.
 #' @return A list with `mi`, `h1` and `h2`, in nats.
-#' @keywords internal
+#' @noRd
 .mutual_information <- function(ct) {
   total <- ct$total
   # 0 log 0 is 0 by convention; the zero cells are excluded by their value,
@@ -663,7 +663,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @return A single number, in nats.
 #' @examples
 #' Dynet:::.expected_mutual_information(c(3, 3), c(2, 4), 6L)
-#' @keywords internal
+#' @noRd
 .expected_mutual_information <- function(a, b, total) {
   # Sequential only in the sense that the double sum is over community pairs;
   # each term is independent and the inner sum over the overlap is vectorised.
@@ -693,7 +693,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #'   shared.
 #' @examples
 #' Dynet:::.compare_partitions(c(1, 1, 1, 2, 2, 2), c(1, 1, 2, 2, 2, 2), "ari")
-#' @keywords internal
+#' @noRd
 .compare_partitions <- function(a, b, measure) {
   if (length(a) < 2L) return(NA_real_)
   ct <- .contingency(a, b)
@@ -773,7 +773,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #'   assigned to that row, or `NA` when the row was matched only to padding.
 #' @examples
 #' Dynet:::.assign_max(matrix(c(4, 1, 1, 3), 2L, 2L))
-#' @keywords internal
+#' @noRd
 .assign_max <- function(weight) {
   .check("`weight` must be a numeric matrix." =
            is.matrix(weight) && is.numeric(weight) && !anyNA(weight))
@@ -838,7 +838,7 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #' @param overlap `"intersection"` or `"jaccard"`.
 #' @return A matrix of overlaps, rows the labels of `a` and columns those of
 #'   `b`, with those labels as dimnames.
-#' @keywords internal
+#' @noRd
 .community_overlap <- function(a, b, shared, overlap) {
   left <- factor(a[shared])
   right <- factor(b[shared])
@@ -1092,7 +1092,7 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
 #'
 #' @param weight A numeric matrix of overlaps.
 #' @return An integer vector of assigned columns, `NA` where none was left.
-#' @keywords internal
+#' @noRd
 .assign_greedy <- function(weight) {
   out <- rep(NA_integer_, nrow(weight))
   taken <- logical(ncol(weight))
@@ -1114,11 +1114,11 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
 
 #' One optimisation run over every block of a projection
 #'
-#' @param supra A structure from [.supra()].
+#' @param supra A structure from `.supra()`.
 #' @param gamma,omega,coupling,tol,max_passes Optimiser settings.
 #' @return A list of integer `n x T` label matrices, one per block, whose
 #'   labels are distinct across blocks.
-#' @keywords internal
+#' @noRd
 .genlouvain_run <- function(supra, gamma, omega, coupling, tol, max_passes) {
   offset <- 0L
   # Blocks share no coupling, so maximising each separately maximises the
@@ -1144,7 +1144,7 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
 #'
 #' @param run,best Integer label vectors over the same states.
 #' @return A numeric vector in `[0, 1]`, one entry per state.
-#' @keywords internal
+#' @noRd
 .state_agreement <- function(run, best) {
   ct <- .contingency(run, best)
   row <- match(as.character(run), rownames(ct$n))
@@ -1370,13 +1370,13 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
 
 #' Assemble the tidy membership frame from label matrices
 #'
-#' @param supra A structure from [.supra()].
+#' @param supra A structure from `.supra()`.
 #' @param labels A list of `n x T` label matrices, one per block.
 #' @param agreement Per-state stability, in state order.
 #' @param dn The source network, whose identity travels with the result so a
 #'   downstream verb can describe the network it came from.
 #' @return A `dynet_communities` data frame.
-#' @keywords internal
+#' @noRd
 .communities_frame <- function(supra, labels, agreement, dn) {
   nodes <- supra$nodes
   blocked <- !is.na(supra$blocks[[1L]]$session)
@@ -1406,12 +1406,12 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
 #' of states over the runs, discard agreement no better than chance, and
 #' re-cluster what is left, repeating until the runs agree.
 #'
-#' @param supra A structure from [.supra()].
+#' @param supra A structure from `.supra()`.
 #' @param flat A list of per-run membership vectors over the states.
 #' @param gamma,omega,coupling,tol,max_passes Optimiser settings.
 #' @param seeds The seeds to re-run from.
 #' @return A list of `n x T` label matrices, one per block.
-#' @keywords internal
+#' @noRd
 .consensus_partition <- function(supra, flat, gamma, omega, coupling, tol,
                                  max_passes, seeds) {
   shape <- lapply(supra$blocks, function(b) dim(b$active))
@@ -1807,7 +1807,7 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
 #'
 #' @param x A `dynet_communities` frame or a plain data frame.
 #' @return A list with `meta`, `nodes` and `directed`.
-#' @keywords internal
+#' @noRd
 .communities_source <- function(x) {
   attr(x, "source") %||% list(
     meta = list(time_unit = attr(x, "time_unit") %||% "step",
@@ -1828,7 +1828,7 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
 #' @param labels An `n x T` matrix of matched community labels.
 #' @return A list with `flexibility`, `promiscuity`, `persistence_node`,
 #'   `persistence_time`, `persistence_global` and `allegiance`.
-#' @keywords internal
+#' @noRd
 .trajectory_measures <- function(labels) {
   n <- nrow(labels)
   n_bins <- ncol(labels)
@@ -2046,7 +2046,7 @@ community_trajectory <- function(x,
 #' @param x A `dynet_communities` frame.
 #' @param reference A vertex attribute name, or one label per vertex.
 #' @return A named character vector, one label per vertex name.
-#' @keywords internal
+#' @noRd
 .trajectory_reference <- function(x, reference) {
   nodes <- sort(unique(as.character(x$node)))
   table <- .communities_source(x)$nodes

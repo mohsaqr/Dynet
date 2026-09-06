@@ -6,16 +6,18 @@
 #'
 #' @param df Long data frame with `measure` and `value` and, depending on
 #'   `level`, `time`, `node`, `session` or edge endpoints.
-#' @param level One of `"node"`, `"graph"`, `"edge"` or `"path"`.
+#' @param level One of `"node"`, `"graph"` or `"edge"`, naming what a row is
+#'   about. Only these three are produced; the value is carried on the result
+#'   and read back by the print, summary and plot methods.
 #' @param what Short human name of the quantity, used in printing.
 #' @param dn The network the measure came from.
 #' @param note Optional single line shown under the header.
-#' @param spec The resolved measurement grid from [.window_spec()], when the
+#' @param spec The resolved measurement grid from `.window_spec()`, when the
 #'   measure was taken on one.
 #' @param mode The direction convention used, when it applied.
 #' @param traversal_time Per-hop traversal duration for temporal paths.
 #' @return An object of class `c("dynet_metric", "data.frame")`.
-#' @keywords internal
+#' @noRd
 .metric <- function(df, level, what, dn, note = NULL, spec = NULL,
                     mode = NULL, traversal_time = NULL) {
   # A session column that is entirely absent of sessions is noise; drop it.
@@ -39,6 +41,7 @@
     mode      = mode,
     traversal_time = traversal_time,
     n_nodes   = nrow(dn$nodes),
+    nodes     = dn$nodes$name,
     directed  = dn$directed,
     net_format = dn$meta$format
   )
@@ -53,23 +56,59 @@
 #'   and the shape every other verb expects. `"wide"` spreads time across
 #'   columns, giving one row per vertex (or per measure for graph-level
 #'   quantities), which is convenient for exporting a table.
+#' @param what `"values"`, the default, gives the measured values.
+#'   `"diagnostics"` gives the record a prestige computation keeps when it
+#'   cannot produce a value, which is what the accompanying warning refers to:
+#'   one row per reporting block that was undefined, infeasible or
+#'   nonconverged, with `session`, `time`, `stage`, `status` and `reason`,
+#'   the solver's `iterations` and `residual`, the `balance_*` family for the
+#'   row-column scaling step, and `spectral_radius`, `eigenspace_dimension`
+#'   and `eigen_residual` for the eigen step. A result with nothing to report
+#'   gives a zero-row frame of those same columns rather than `NULL`.
 #' @param ... Ignored.
 #'
-#' @return A plain `data.frame`. In long layout the columns are `session`
-#'   (only when the network has sessions), `time`, `node` (node-level
-#'   measures only), `measure` and `value`, one row per observation. In wide
-#'   layout the first columns identify the row and the remaining columns are
-#'   time points.
+#' @return A plain `data.frame`. Long layout carries `measure` and `value`
+#'   with one row per observation, alongside whichever columns say what was
+#'   measured: `session` when the network has sessions, `time` for anything
+#'   measured on a grid of bins, `node` for a vertex-level quantity, `from`
+#'   and `to` for a pair-level one, `vertex_spell` and `implicit` for
+#'   per-spell vertex durations from [durations()], and `from_group` and
+#'   `to_group` for [mixing()]. A graph-level series carries `time`,
+#'   `measure` and `value` alone. In wide layout the identifying columns come
+#'   first and the remaining columns are the time points, one per bin.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' as.data.frame(dyn_centrality(dn, measure = "degree"))
 #' as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
+#' as.data.frame(dyn_centrality(dn, measure = "degree"), what = "diagnostics")
 #'
 #' @export
 as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
-                                       layout = c("long", "wide"), ...) {
+                                       layout = c("long", "wide"),
+                                       what = c("values", "diagnostics"), ...) {
   layout <- match.arg(layout)
+  what <- match.arg(what)
+  if (identical(what, "diagnostics")) {
+    found <- attr(x, "prestige_diagnostics")
+    if (is.null(found)) {
+      # A typed empty frame rather than NULL, so a caller can bind, count or
+      # print the result without first testing whether anything was recorded.
+      # The schema mirrors the single builder in `.prestige_values()`; a test
+      # asserts the two agree, so this cannot drift away from it silently.
+      return(data.frame(
+        session = character(), time = numeric(), stage = character(),
+        status = character(), reason = character(), iterations = integer(),
+        residual = numeric(), balance_status = character(),
+        balance_reason = character(), balance_iterations = integer(),
+        balance_residual = numeric(), spectral_radius = numeric(),
+        eigenspace_dimension = integer(), eigen_residual = numeric(),
+        stringsAsFactors = FALSE
+      ))
+    }
+    rownames(found) <- NULL
+    return(found)
+  }
   df <- x
   attributes(df) <- list(names = names(x), row.names = seq_len(nrow(x)),
                          class = "data.frame")
@@ -166,7 +205,7 @@ print.dynet_metric <- function(x, n = 12L, ...) {
 #' @param out The truncated object.
 #' @param side `"first"` or `"last"`.
 #' @return `out`, carrying a `fragment` attribute.
-#' @keywords internal
+#' @noRd
 .metric_fragment <- function(x, out, side) {
   attr(out, "fragment") <- attr(x, "fragment") %||% list(
     side = side,
@@ -365,7 +404,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param has_node Whether the measure is node-level.
 #' @param base_size Base font size.
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_heatmap <- function(df, x, has_node, base_size) {
   df$.row <- if (has_node) df$node else df$measure
   ggplot2::ggplot(df, ggplot2::aes(x = time, y = stats::reorder(.row, value),
@@ -383,7 +422,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' Median of the finite values, or zero when there are none
 #' @param v Numeric vector.
 #' @return A single numeric value.
-#' @keywords internal
+#' @noRd
 .finite_median <- function(v) {
   v <- v[is.finite(v)]
   if (length(v) == 0L) 0 else stats::median(v)
@@ -401,7 +440,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param from,to Endpoint labels.
 #' @param directed Whether the pair is ordered.
 #' @return A character vector of pair labels.
-#' @keywords internal
+#' @noRd
 .pair_label <- function(from, to, directed) {
   paste(from, if (isTRUE(directed)) "->" else "-", to)
 }
@@ -413,7 +452,7 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param top Largest number of rows to draw.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A `ggplot` object.
-#' @keywords internal
+#' @noRd
 .plot_no_time <- function(df, x, base_size, top = 30L, palette = "okabe") {
   df$.row <- if ("node" %in% names(df)) {
     df$node
@@ -436,9 +475,21 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
     sub <- sprintf("%d largest of %d shown", top, n_row)
   }
 
+  # A node-level result colours each bar by its vertex, in the network's own
+  # order, so the bar carries the same colour the vertex has in every other
+  # view; the axis label names it, so colour is never the only channel. Pair
+  # and graph-level results have no vertex to follow and take one colour.
+  by_node <- "node" %in% names(df)
+  vertices <- attr(x, "nodes") %||% sort(unique(df$.row))
+  fill_scale <- if (by_node) {
+    ggplot2::scale_fill_manual(values = .vertex_colours(vertices, palette),
+                               guide = "none")
+  } else NULL
   ggplot2::ggplot(df, ggplot2::aes(x = value,
                                    y = stats::reorder(.row, value))) +
-    ggplot2::geom_col(fill = .dyn_palette(palette, 1L), width = 0.7) +
+    (if (by_node) ggplot2::geom_col(ggplot2::aes(fill = .row), width = 0.7)
+     else ggplot2::geom_col(fill = .dyn_palette(palette, 1L), width = 0.7)) +
+    fill_scale +
     ggplot2::facet_wrap(~measure, scales = "free_x") +
     ggplot2::labs(x = attr(x, "what"), y = NULL, subtitle = sub) +
     ggplot2::theme_minimal(base_size = base_size) +

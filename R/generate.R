@@ -12,7 +12,7 @@
 #' @param directed Whether arcs are ordered.
 #' @param loops Whether to include self-pairs.
 #' @return A data frame with `from` and `to`, one row per eligible dyad.
-#' @keywords internal
+#' @noRd
 .dyad_universe <- function(names, directed, loops) {
   grid <- expand.grid(from = names, to = names, stringsAsFactors = FALSE,
                       KEEP.OUT.ATTRS = FALSE)
@@ -27,7 +27,7 @@
 #' @param dyads The dyad table the rows index.
 #' @param interval Width of one slice in network time.
 #' @return A data frame of interval spells.
-#' @keywords internal
+#' @noRd
 .runs_to_spells <- function(active, dyads, interval) {
   # Each maximal run of consecutive active slices becomes ONE spell. That is
   # what turns a slice model into Dynet's spell model, and it means the network
@@ -58,7 +58,7 @@
 #' @param birth Probability an inactive dyad becomes active.
 #' @param persist Probability an active dyad stays active.
 #' @return A logical matrix.
-#' @keywords internal
+#' @noRd
 .draw_activity <- function(n_dyads, times, p, birth, persist) {
   if (is.null(birth)) {
     return(matrix(stats::rbinom(n_dyads * times, 1L, p) == 1L,
@@ -86,7 +86,7 @@
 #' @param waiting Gap distribution.
 #' @param shape Shape parameter for `"weibull"` and `"lognormal"`.
 #' @return A numeric vector of event times inside `[0, times]`.
-#' @keywords internal
+#' @noRd
 .renewal_times <- function(times, rate, waiting, shape) {
   # Scale so the MEAN gap is 1/rate whatever the shape, or changing `shape`
   # would change the event rate as well as the burstiness and the two effects

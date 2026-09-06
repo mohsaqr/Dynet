@@ -12,7 +12,7 @@
 #' @param code Expression to evaluate, forced once.
 #' @return The value of `code`. When `seed` is not `NULL` the caller's
 #'   `.Random.seed` is exactly as it was on entry, whether or not it existed.
-#' @keywords internal
+#' @noRd
 .with_seed <- function(seed, code) {
   if (is.null(seed)) return(code)
   .check(
@@ -62,7 +62,7 @@
 #' @param method The method label, recorded in the surrogate's metadata.
 #' @param replicate Which replicate this is.
 #' @return A `dynet` object.
-#' @keywords internal
+#' @noRd
 .rebuild_surrogate <- function(dn, spells, method, replicate) {
   spells <- spells[order(spells$start, spells$end, spells$from, spells$to), ,
                    drop = FALSE]
@@ -77,7 +77,7 @@
 #' @param spells A spell table.
 #' @param directed Whether the network is directed.
 #' @return A character vector, one key per spell row.
-#' @keywords internal
+#' @noRd
 .pair_key <- function(spells, directed) {
   if (directed) return(paste(spells$from, spells$to, sep = "\r"))
   paste(pmin(spells$from, spells$to), pmax(spells$from, spells$to), sep = "\r")
@@ -88,7 +88,7 @@
 #' @param spells A candidate spell table.
 #' @param respect Which constraints to enforce.
 #' @return A logical vector, one per spell row.
-#' @keywords internal
+#' @noRd
 .spell_feasible <- function(dn, spells, respect) {
   ok <- rep(TRUE, nrow(spells))
   if ("observation" %in% respect) {
@@ -123,7 +123,7 @@
 #' @param swaps Double-edge swaps per distinct pair, for `"edges"`.
 #' @param max_tries Iteration cap on the repair loops.
 #' @return A list with the surrogate `spells` and the realised `acceptance`.
-#' @keywords internal
+#' @noRd
 .draw_surrogate <- function(dn, method, within, transpose, swaps, max_tries) {
   spells <- dn$spells
   n <- nrow(spells)
@@ -557,5 +557,5 @@ plot.dynet_null <- function(x, ...) {
 #' Identity helper so the plot method reads a column without NSE
 #' @param d A data frame.
 #' @return The `time` column.
-#' @keywords internal
+#' @noRd
 .data_time <- function(d) d$time

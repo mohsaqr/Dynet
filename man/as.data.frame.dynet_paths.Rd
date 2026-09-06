@@ -26,8 +26,17 @@ reconstructed optimal routes. The latter includes endpoint-local
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per endpoint for \code{"paths"} or one row
-per route step for \code{"steps"}.
+A plain \code{data.frame}. For \code{"paths"}, one row per endpoint vertex,
+the source included, with the columns \code{\link[=paths]{paths()}} documents: \code{node},
+\code{reachable}, \code{arrival_time}, \code{attained}, \code{latency}, \code{n_hops} and
+\code{n_paths}, plus \code{path_session} and \code{n_best_sessions} under
+\code{sessions = "bounded"}, and \code{session} and \code{origin} under
+\code{sessions = "separate"}. For \code{"steps"}, one row per step of every
+reconstructed optimal route, with \code{endpoint} (the vertex the route ends
+at), \code{path_id} (which of the tied optimal routes to that endpoint),
+\code{path_session}, \code{step} (position along the route, starting at the
+source), \code{node} (the vertex occupied at that step), \code{time} (when it was
+reached) and \code{attained}.
 }
 \description{
 Tidy data frame of time-respecting paths

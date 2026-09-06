@@ -19,7 +19,7 @@
 #' @param measure Node-level measure to read off each slice.
 #' @param slices Number of slices across the observation window, or `NULL` to
 #'   use the network's own time bins.
-#' @param window Width of each slice. `NULL` uses [.default_window()].
+#' @param window Width of each slice. `NULL` uses `.default_window()`.
 #' @param default_dist Distance assumed between vertices with no path between
 #'   them.
 #' @return A list with `pos` and `weight` (both vertices-by-slices matrices),
@@ -27,7 +27,7 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.proximity_slices(dn, slices = 5)
-#' @keywords internal
+#' @noRd
 .proximity_slices <- function(x, measure = "degree", slices = 120L,
                               window = NULL, default_dist = 2) {
   enc <- .encode(x)
@@ -113,7 +113,7 @@
 #'
 #' @param x A `dynet` object.
 #' @return A single positive number.
-#' @keywords internal
+#' @noRd
 .default_window <- function(x) {
   rng <- x$meta$time_range
   max(x$meta$interval, (rng[["end"]] - rng[["start"]]) / 6)
@@ -125,7 +125,7 @@
 #' @param n Vertex count.
 #' @param at The slice's time, for the warning message.
 #' @return A numeric vector of length `n`.
-#' @keywords internal
+#' @noRd
 .slice_position <- function(a, default_dist, n, at) {
   d <- .geodesic(a, directed = FALSE)
   joined <- d[is.finite(d)]
@@ -154,7 +154,7 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.range_netobject(dn, 0, 2)
-#' @keywords internal
+#' @noRd
 .range_netobject <- function(x, from, to) {
   enc <- .encode(x)
   width <- to - from
@@ -183,7 +183,7 @@
 #' @param phases Requested number of phases, or `NULL` to use sessions when
 #'   the network has them and three otherwise.
 #' @return A data frame with `label`, `from` and `to`.
-#' @keywords internal
+#' @noRd
 .phase_table <- function(x, phases = NULL) {
   rng <- x$meta$time_range
   if (is.null(phases) && !is.null(x$meta$sessions)) {
@@ -215,7 +215,7 @@
 #' @param slices How many times to measure the network across the window.
 #'   Smoothness comes from measuring often, never from interpolation: nothing
 #'   is drawn between two measurements. `NULL` measures once per time bin.
-#' @param window Width of each slice. `NULL` uses [.default_window()].
+#' @param window Width of each slice. `NULL` uses `.default_window()`.
 #'   When slices are closer together than they are wide the windows overlap,
 #'   which is what makes consecutive positions move gradually.
 #' @param flow Corner-cutting passes applied to each line, or `0` for sharp
@@ -223,10 +223,10 @@
 #'   it cannot overshoot one.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param highlight Vertex names to draw in colour, the rest in grey.
-#' @param style A style list from [.dyn_style()].
+#' @param style A style list from `.dyn_style()`.
 #' @param ... Passed to `cograph::splot()` for the network panels.
 #' @return `x`, invisibly.
-#' @keywords internal
+#' @noRd
 .plot_proximity <- function(x, measure = "degree", phases = NULL,
                             networks = TRUE, events = TRUE, labels = TRUE,
                             default_dist = 2, slices = 120L, window = NULL,
@@ -355,7 +355,7 @@
 #' @param right Right margin in lines.
 #' @param heights Relative panel heights passed to the layout.
 #' @return `NULL`, invisibly.
-#' @keywords internal
+#' @noRd
 .check_device <- function(right, heights) {
   din <- graphics::par("din")
   line <- graphics::par("csi")
@@ -393,7 +393,7 @@
 #' @return A matrix with the same columns and more rows.
 #' @references Chaikin, G. M. (1974). An algorithm for high-speed curve
 #'   generation. *Computer Graphics and Image Processing*, 3(4), 346-349.
-#' @keywords internal
+#' @noRd
 .chaikin <- function(m, passes = 2L) {
   pass <- 0L
   # Each pass reads the polyline the previous one produced.
@@ -433,7 +433,7 @@
 #' Dynet:::.draw_proximity_line(1:3, c(0, NA, 1), c(1, NA, 2), "black", 0)
 #' grDevices::dev.off()
 #' unlink(file)
-#' @keywords internal
+#' @noRd
 .draw_proximity_line <- function(times, pos, w, col, flow = 2L) {
   present <- is.finite(times) & is.finite(pos)
   if (!any(present)) return(list(x = numeric(), y = numeric()))
@@ -467,7 +467,7 @@
 #' @param ylim Panel limits.
 #' @param style A style list.
 #' @return `NULL`, invisibly.
-#' @keywords internal
+#' @noRd
 .draw_event_marks <- function(x, ylim, style) {
   ev <- as.data.frame(events(x, measure = "formation",
                                  sessions = "collapse"))
@@ -491,7 +491,7 @@
 #' @param xlim,ylim Panel limits.
 #' @param style A style list.
 #' @return `NULL`, invisibly.
-#' @keywords internal
+#' @noRd
 .draw_end_labels <- function(names, ends, cols, xlim, ylim, style) {
   gap <- diff(ylim) * 0.045
   at <- .spread_labels(ends, gap)
@@ -503,12 +503,12 @@
 }
 
 #' Draw the phase strip beneath the timeline
-#' @param phase_tbl A phase table from [.phase_table()].
+#' @param phase_tbl A phase table from `.phase_table()`.
 #' @param xlim Panel limits.
 #' @param style A style list.
 #' @param xlab Axis label.
 #' @return `NULL`, invisibly.
-#' @keywords internal
+#' @noRd
 .draw_phase_strip <- function(phase_tbl, xlim, style, xlab = "") {
   graphics::plot(NA, type = "n", xlim = xlim, ylim = c(0, 1), axes = FALSE,
                  ann = FALSE, xaxs = "i", yaxs = "i")

@@ -18,7 +18,7 @@
 #'   singular, which happens when the exponent hits an eigenvalue's reciprocal.
 #' @references Bonacich, P. (1987). Power and centrality: a family of
 #'   measures. *American Journal of Sociology*, 92(5), 1170-1182.
-#' @keywords internal
+#' @noRd
 .bonacich_power <- function(a, directed = TRUE, exponent = 1) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -45,7 +45,7 @@
 #' @param mode One of `"all"`, `"out"`, or `"in"`.
 #' @param lambda Nonnegative multiplier.
 #' @return A named numeric vector.
-#' @keywords internal
+#' @noRd
 .diffusion_degree <- function(a, directed = TRUE,
                               mode = c("all", "out", "in"), lambda = 1) {
   mode <- match.arg(mode)
@@ -71,7 +71,7 @@
 #' @return A named numeric vector.
 #' @references Hage, P., & Harary, F. (1995). Eccentricity and centrality in
 #'   networks. *Social Networks*, 17(1), 57-63.
-#' @keywords internal
+#' @noRd
 .harary <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
   if (directed && identical(mode, "in")) a <- t(a)
@@ -90,7 +90,7 @@
 #' @return A named numeric vector.
 #' @references Stephenson, K., & Zelen, M. (1989). Rethinking centrality.
 #'   *Social Networks*, 11(1), 1-37.
-#' @keywords internal
+#' @noRd
 .information <- function(a) {
   # Information centrality is defined on an undirected graph; a directed one
   # is symmetrised weakly, as sna does.
@@ -131,7 +131,7 @@
 #' @references Goh, K.-I., Kahng, B., & Kim, D. (2001). Universal behavior of
 #'   load distribution in scale-free networks. *Physical Review Letters*,
 #'   87(27), 278701.
-#' @keywords internal
+#' @noRd
 .load <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
   n <- nrow(b)
@@ -145,7 +145,7 @@
 #' @param s Source vertex index.
 #' @param n Vertex count.
 #' @return A numeric vector of length `n`.
-#' @keywords internal
+#' @noRd
 .load_source <- function(b, s, n) {
   dist <- rep(-1L, n); dist[s] <- 0L
   frontier <- s
@@ -177,7 +177,7 @@
 #' @param cap Capacity matrix.
 #' @param s,t Source and sink vertex indices.
 #' @return A single number.
-#' @keywords internal
+#' @noRd
 .max_flow <- function(cap, s, t) {
   n <- nrow(cap)
   if (n < 2L || s == t) return(0)
@@ -223,7 +223,7 @@
 #' @return A named numeric vector.
 #' @references Freeman, L. C., Borgatti, S. P., & White, D. R. (1991).
 #'   Centrality in valued graphs. *Social Networks*, 13(2), 141-154.
-#' @keywords internal
+#' @noRd
 .flow_betweenness <- function(a, directed = TRUE) {
   cap <- .binary(a, directed)
   n <- nrow(cap)
@@ -261,7 +261,7 @@
 #' @return A single number.
 #' @references Krackhardt, D. (1994). Graph theoretical dimensions of informal
 #'   organizations. In *Computational Organization Theory* (pp. 89-111).
-#' @keywords internal
+#' @noRd
 .connectedness <- function(a) {
   n <- nrow(a)
   if (n <= 1L) return(1)
@@ -277,7 +277,7 @@
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A single number; `NaN` when no component admits a surplus edge.
-#' @keywords internal
+#' @noRd
 .efficiency <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
   sizes <- tabulate(.components(a, "weak")$membership)
@@ -295,7 +295,7 @@
 #'
 #' @param a Adjacency matrix.
 #' @return A single number; `NaN` when no pair is connected at all.
-#' @keywords internal
+#' @noRd
 .krackhardt_hierarchy <- function(a) {
   reach <- is.finite(.geodesic(a, directed = TRUE))
   upper <- upper.tri(reach)
@@ -314,7 +314,7 @@
 #'
 #' @param a Adjacency matrix.
 #' @return A single number.
-#' @keywords internal
+#' @noRd
 .lubness <- function(a) {
   reach <- is.finite(.geodesic(a, directed = TRUE))
   memb <- .components(a, "weak")$membership
@@ -332,7 +332,7 @@
 #' @param reach Logical reachability matrix.
 #' @param vi Vertex indices of the component.
 #' @return A single number.
-#' @keywords internal
+#' @noRd
 .lub_violations <- function(reach, vi) {
   r <- reach[vi, vi, drop = FALSE]
   pairs <- utils::combn(length(vi), 2L)

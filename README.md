@@ -32,7 +32,7 @@ library(Dynet)
 dynet(school_contacts)
 
 # Contact log: instantaneous events, no duration
-dynet(clicks, time = "timestamp")
+dynet(forum_posts, time = "timestamp")
 
 # Threaded log: a post stays active until its thread falls silent
 dynet(forum_posts, thread = "thread", nodes = forum_people)
@@ -89,7 +89,7 @@ fragment. A point contact still triggers its configured delayed arrival;
 session boundaries remain path walls.
 
 When interval limits are themselves censored, name strict logical source
-columns explicitly:
+columns explicitly (`interval_log` here and below stands for your own log):
 
 ```r
 dn <- dynet(
@@ -188,7 +188,10 @@ rebuilds the canonical spell identities and cograph projection together;
 cograph's static setters should be used only on a flattened cograph copy, not
 to edit a temporal Dynet object.
 
-The rest of the temporal state is editable by the same immutable contract:
+The rest of the temporal state is editable by the same immutable contract.
+The tables named below (`activity_table`, `new_activity`, `observed_periods`,
+`session_labels`) are stand-ins for your own data, so this block is a shape
+reference rather than a runnable chunk:
 
 ```r
 dn2 <- update_nodes(dn2, data.frame(name = "Ana", role = "facilitator"))
@@ -199,12 +202,19 @@ dn2 <- add_vertex_spells(dn2, new_activity)
 dn2 <- set_observations(dn2, data = observed_periods)
 dn2 <- set_tie_sessions(dn2, session_labels)
 dn2 <- rename_sessions(dn2, c(old = "new"))
-
-# An edge-attribute-induced temporal subgraph
-course <- induce_subgraph(
-  dn2, ties = as.data.frame(dn2)$course_group == "course_1"
-)
 ```
+
+A temporal subgraph is induced by a condition on the vertex table, evaluated
+the way `subset()` evaluates one, with any centrality it names computed over
+the whole observed period:
+
+```r
+induce_subgraph(dynet(school_contacts), degree > 16)
+```
+
+`induce_subgraph()` also takes `ties`, as integer row positions or a logical
+mask over the raw spell table, when a selection has to be made on the edges
+rather than the vertices.
 
 `update_vertex_spells()` and `remove_vertex_spells()` complete vertex-activity
 editing; `clear_observations()` restores continuous implicit observation.
@@ -251,13 +261,18 @@ durations(dn, unit = "node_ties", mode = "all")
 burstiness(dn)
 paths(dn, from = "Ana")
 path_network(paths(dn, from = "Ana"))
-plot_path_timeline(paths(dn, from = "Ana"))
+plot(paths(dn, from = "Ana"))
 plot_path_trajectories(paths(dn, from = "Ana"),
                        measure = "frequency", orientation = "vertical")
 dyn_reachability(dn)
 pshifts(dn)
-mixing(forum, attribute = "role")
 snapshots(dn, at = 3)
+similarity(dn, method = "jaccard")
+projection(dn)
+collapse_network(dn, weight = "union_duration")
+
+forum <- dynet(forum_posts, thread = "thread", nodes = forum_people)
+mixing(forum, attribute = "role")
 ```
 
 `pshifts()` converts uncensored observed raw spell onsets into Gibson's
@@ -403,9 +418,10 @@ between two sample points, a real loss on bursty data.
 may be addressed with dates:
 
 ```r
-metrics(dn, measure = "density",
-            start = as.Date("2024-09-01"), end = as.Date("2024-12-01"),
-            step = 7, window = 28)
+posts <- dynet(forum_posts, thread = "thread", nodes = forum_people)
+metrics(posts, measure = "density",
+               start = as.Date("2024-09-02"), end = as.Date("2024-10-01"),
+               step = 7, window = 28)
 ```
 
 One convention to know: on the **default** grid the final window is closed on
@@ -495,7 +511,7 @@ rather than a ranking. Use `prestige = "eigenvector.rowcolnorm"`.
 ### Which edges count: `mode`
 
 On a directed network, `mode` selects the direction for `degree`, `strength`,
-`closeness` and `coreness`:
+`closeness`, `coreness`, `harary`, `eigenvector` and `diffusion`:
 
 ```r
 dyn_centrality(dn, measure = "strength", mode = "in")   # in-strength
@@ -506,8 +522,9 @@ The former `measure = "indegree"` and `measure = "outdegree"` spellings remain
 available as deprecated aliases, so older scripts continue to run while moving
 to the common `degree` plus `mode` interface.
 
-`mode` applies to `degree`, `strength`, `closeness`, `coreness`, `harary` and
-`eigenvector`. `"all"` is the default and counts both directions, so a
+`mode` applies to `degree`, `strength`, `closeness`, `coreness`, `harary`,
+`eigenvector` and `diffusion`. `"all"` is the default and counts both
+directions, so a
 reciprocated pair counts twice — igraph's and cograph's convention. Measures
 with a single directional definition (prestige, betweenness, PageRank, hub,
 authority, constraint, load, information, flow betweenness) ignore it, as does an

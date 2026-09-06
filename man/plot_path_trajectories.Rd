@@ -9,7 +9,8 @@ plot_path_trajectories(
   measure = c("frequency", "time", "predictability"),
   orientation = c("horizontal", "vertical"),
   min_count = 1L,
-  base_size = 11
+  base_size = 11,
+  palette = "okabe"
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ number on the x axis; \code{"vertical"} grows it top to bottom.}
 routes. Ignored when \code{x} is already a \code{\link[=path_trajectories]{path_trajectories()}} result.}
 
 \item{base_size}{Base text size.}
+
+\item{palette}{Palette for the vertex colours of the frequency view, as in
+\code{\link[=plot.dynet]{plot.dynet()}}.}
 }
 \value{
 A \code{ggplot} object.
@@ -34,8 +38,10 @@ A \code{ggplot} object.
 \description{
 Draws the optimal route family returned by \code{\link[=paths]{paths()}} using the
 trajectory-tree grammar ported from the \code{transitiontrees} package: leaves
-stacked in depth-first order, parents centred on their children, branches
-carried by a cosine smoothstep, and capsule node glyphs. Branch width
+stacked in depth-first order, parents centred on their children, and
+branches carried by a cosine smoothstep. Nodes follow that package's
+horizontal phylogram rather than its capsule style -- a count-sized filled
+circle with its label set below it. Branch width
 always shows how many optimal routes use a branch; node fill shows the
 chosen \code{measure}, and every node also prints its value, so nothing is
 encoded by colour alone.

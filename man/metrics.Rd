@@ -12,7 +12,8 @@ metrics(
   start = NULL,
   end = NULL,
   step = NULL,
-  window = NULL
+  window = NULL,
+  plot = FALSE
 )
 }
 \arguments{
@@ -53,6 +54,12 @@ overlapping window; \code{0} samples the network at each point in time.
 right so an event at the final instant is inside it; it cannot be combined
 with \code{step}, and under \code{sessions = "separate"} or discontinuous
 observation it gives one window per session or observed component.}
+
+\item{plot}{Whether to draw the result as well as return it. Drawing is a
+side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
+its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
+wrapping \code{plot()} call without changing what comes back. Use \code{plot()} on
+the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric} at graph level: one row per time point and
@@ -160,4 +167,8 @@ Mining}, 8, 61. \doi{10.1007/s13278-018-0537-7}
 Andersen, P. K., & Gill, R. D. (1982). Cox's regression model for counting
 processes: a large sample study. \emph{Annals of Statistics}, 10, 1100-1120.
 \doi{10.1214/aos/1176345976}
+
+Krackhardt, D. (1994). Graph theoretical dimensions of informal
+organizations. In \emph{Computational Organization Theory} (pp. 89-111).
+Lawrence Erlbaum.
 }

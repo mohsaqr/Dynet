@@ -28,7 +28,7 @@
 #'
 #' @param x A result from [paths()].
 #' @return A list of character vectors, one per optimal route.
-#' @keywords internal
+#' @noRd
 .path_route_sequences <- function(x) {
   steps <- as.data.frame(x, what = "steps")
   if (!nrow(steps)) {
@@ -62,7 +62,7 @@
 #' Format an attained time as a stable token component
 #' @param time Numeric vector of attained times.
 #' @return A character vector.
-#' @keywords internal
+#' @noRd
 .path_time_token <- function(time) {
   out <- sprintf("%.12g", time)
   out[is.na(time)] <- "NA"
@@ -77,7 +77,7 @@
 #'
 #' @param node Character vector of prefix keys.
 #' @return A character vector of readable pathways.
-#' @keywords internal
+#' @noRd
 .path_display_path <- function(node) {
   vapply(node, \(one) {
     if (is.na(one)) return(NA_character_)
@@ -96,7 +96,7 @@
 #' Split a route token back into vertex, time and session
 #' @param token Character vector of route tokens.
 #' @return A data frame with `vertex`, `time` and `session` columns.
-#' @keywords internal
+#' @noRd
 .path_token_parts <- function(token) {
   parts <- strsplit(token, .PATH_UNIT, fixed = TRUE)
   pick <- function(index) vapply(parts, \(one) {
@@ -120,7 +120,7 @@
 #' @param sequences A list of character vectors of tokens.
 #' @param min_count Minimum prefix frequency to retain.
 #' @return A data frame with `node`, `parent`, `depth`, `count` and `last`.
-#' @keywords internal
+#' @noRd
 .path_prefix_tree <- function(sequences, min_count = 1L) {
   .check(
     "`sequences` must be a list of character vectors." =
@@ -175,9 +175,9 @@
 #' horizontal phylogram. The stack is reversed so the first route reads at
 #' the top of the canvas.
 #'
-#' @param tree A data frame from [.path_prefix_tree()].
+#' @param tree A data frame from `.path_prefix_tree()`.
 #' @return `tree` with an added numeric `branch` column.
-#' @keywords internal
+#' @noRd
 .path_tree_branches <- function(tree) {
   children <- split(tree$node[tree$node != .PATH_ROOT],
                     tree$parent[tree$node != .PATH_ROOT])
@@ -209,7 +209,7 @@
 #' @param layout A placed tree with `node`, `x`, `y` and `count` columns.
 #' @param n_pt Number of vertices per branch polyline.
 #' @return A data frame with `edge`, `x`, `y` and `count` columns.
-#' @keywords internal
+#' @noRd
 .path_tree_edges <- function(layout, n_pt = 40L) {
   child <- layout[!is.na(layout$parent), , drop = FALSE]
   if (!nrow(child)) {
@@ -248,6 +248,11 @@
 #' @param min_count Keep only branches used by at least this many optimal
 #'   routes. The default of `1` keeps the complete family; a higher value is
 #'   the caller's explicit pruning.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_path_trajectories` data frame with one row per tree node
 #'   and columns `node`, `parent`, `depth`, `count`, `probability`, `vertex`,
 #'   `time`, `session` and `branch`. `depth` is the hop number from the
@@ -261,7 +266,7 @@
 #' @seealso [plot_path_trajectories()] to draw the tree, [path_network()] for
 #'   the route union as a network.
 #' @export
-path_trajectories <- function(x, min_count = 1L) {
+path_trajectories <- function(x, min_count = 1L, plot = FALSE) {
   if (!inherits(x, "dynet_paths")) {
     stop(errorCondition("`x` must be a result from `paths()`.",
                         class = "dynet_bad_input", call = NULL))
@@ -296,8 +301,11 @@ path_trajectories <- function(x, min_count = 1L) {
   attr(out, "direction") <- attr(x, "direction") %||% "forward"
   attr(out, "anchor") <- attr(x, "source")
   attr(out, "min_count") <- as.integer(min_count)
+  # Network order, for consistent colours; a separate-session result lists a
+  # vertex once per session, so the order is taken once.
+  attr(out, "vertices") <- unique(x$node)
   class(out) <- c("dynet_path_trajectories", "data.frame")
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Tidy table of a temporal trajectory tree
@@ -312,6 +320,7 @@ as.data.frame.dynet_path_trajectories <- function(
   attr(out, "direction") <- NULL
   attr(out, "anchor") <- NULL
   attr(out, "min_count") <- NULL
+  attr(out, "vertices") <- NULL
   class(out) <- "data.frame"
   out
 }
@@ -337,8 +346,10 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' @description
 #' Draws the optimal route family returned by [paths()] using the
 #' trajectory-tree grammar ported from the `transitiontrees` package: leaves
-#' stacked in depth-first order, parents centred on their children, branches
-#' carried by a cosine smoothstep, and capsule node glyphs. Branch width
+#' stacked in depth-first order, parents centred on their children, and
+#' branches carried by a cosine smoothstep. Nodes follow that package's
+#' horizontal phylogram rather than its capsule style -- a count-sized filled
+#' circle with its label set below it. Branch width
 #' always shows how many optimal routes use a branch; node fill shows the
 #' chosen `measure`, and every node also prints its value, so nothing is
 #' encoded by colour alone.
@@ -358,6 +369,8 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' @param min_count Draw only branches used by at least this many optimal
 #'   routes. Ignored when `x` is already a [path_trajectories()] result.
 #' @param base_size Base text size.
+#' @param palette Palette for the vertex colours of the frequency view, as in
+#'   [plot.dynet()].
 #' @return A `ggplot` object.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -369,7 +382,7 @@ print.dynet_path_trajectories <- function(x, ...) {
 plot_path_trajectories <- function(
     x, measure = c("frequency", "time", "predictability"),
     orientation = c("horizontal", "vertical"), min_count = 1L,
-    base_size = 11) {
+    base_size = 11, palette = "okabe") {
   measure <- match.arg(measure)
   orientation <- match.arg(orientation)
   .check("`base_size` must be one positive number." =
@@ -419,6 +432,12 @@ plot_path_trajectories <- function(
   }
   layout$fill_value <- NA_real_
   layout$fill_value[!is_root] <- fill_value
+  # The frequency view already says "how many" through node size, so its fill
+  # is free to say "which vertex": one colour per vertex, the same colour the
+  # vertex has in every other view. The other two measures keep their ramps.
+  by_vertex <- identical(measure, "frequency")
+  vertices <- unique(attr(tree, "vertices") %||% sort(unique(body$vertex)))
+  layout$vertex_fill <- factor(layout$vertex, levels = vertices)
   edges <- .path_tree_edges(layout)
 
   body_layout <- layout[!is_root, , drop = FALSE]
@@ -443,8 +462,11 @@ plot_path_trajectories <- function(
   body_layout$label_y <- body_layout$y -
     (0.012 + point_size * 0.0035) * label_span
 
-  body_layout$label <- paste(
-    gsub("_", " ", body_layout$vertex, fixed = TRUE), value_label, sep = "\n"
+  # One line, not two. A stacked "vertex \n value" label doubles the height of
+  # every node's text block, which is what forces the branch axis apart and
+  # leaves the glyphs looking like empty circles floating above their captions.
+  body_layout$label <- sprintf(
+    "%s (%s)", gsub("_", " ", body_layout$vertex, fixed = TRUE), value_label
   )
 
   limits <- if (identical(measure, "predictability")) c(0, 1) else NULL
@@ -461,11 +483,15 @@ plot_path_trajectories <- function(
       ggplot2::aes(x = x, y = y, group = edge, linewidth = count),
       colour = "grey60", lineend = "round", linejoin = "round"
     ) +
-    ggplot2::geom_point(
+    (if (by_vertex) ggplot2::geom_point(
+      data = body_layout,
+      ggplot2::aes(x = x, y = y, size = count, fill = vertex_fill),
+      shape = 21, colour = "grey25", stroke = 0.2, na.rm = TRUE
+    ) else ggplot2::geom_point(
       data = body_layout,
       ggplot2::aes(x = x, y = y, size = count, fill = fill_value),
       shape = 21, colour = "grey25", stroke = 0.2, na.rm = TRUE
-    ) +
+    )) +
     ggplot2::geom_text(
       data = body_layout,
       ggplot2::aes(x = x, y = label_y, label = label),
@@ -488,9 +514,11 @@ plot_path_trajectories <- function(
     # Node size already carries the route count, so a frequency fill would
     # print the same legend twice; keep the fill guide only when it says
     # something size does not.
-    ggplot2::scale_fill_gradient(
+    (if (by_vertex) ggplot2::scale_fill_manual(
+      values = .vertex_colours(vertices, palette), guide = "none", drop = FALSE)
+     else ggplot2::scale_fill_gradient(
       low = ramp[[1L]], high = ramp[[2L]], limits = limits, name = legend,
-      guide = if (identical(measure, "frequency")) "none" else "colourbar") +
+      guide = "colourbar")) +
     ggplot2::labs(
       title = sprintf("%s temporal path trajectories %s %s",
                       tools::toTitleCase(direction), anchor_word,
@@ -525,4 +553,51 @@ plot_path_trajectories <- function(
       ggplot2::theme(axis.text.x = ggplot2::element_blank(),
                      axis.ticks.x = ggplot2::element_blank())
   }
+}
+
+#' Summarise path trajectories
+#'
+#' @param object A `dynet_path_trajectories` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per depth: `depth`, the number of
+#'   distinct `branches` reaching it, the `vertices` they land on, the summed
+#'   `count` of routes through it, and `mean_branching`, the average branching
+#'   fraction of those routes. Note `probability` in the underlying table is
+#'   CONDITIONAL on each parent, so it is averaged rather than summed: adding
+#'   conditional fractions across siblings would not be a probability at all.
+#'   Depth zero is the queried vertex itself and has no parent, so its
+#'   `mean_branching` is `NA`.
+#' @examples
+#' summary(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' @export
+summary.dynet_path_trajectories <- function(object, ...) {
+  flat <- as.data.frame(object)
+  parts <- lapply(sort(unique(flat$depth)), function(d) {
+    rows <- flat[flat$depth == d, , drop = FALSE]
+    data.frame(
+      depth = d, branches = length(unique(rows$branch)),
+      vertices = length(unique(rows$vertex)),
+      count = sum(rows$count),
+      mean_branching = mean(rows$probability)
+    )
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
+}
+
+#' Plot path trajectories
+#'
+#' A method wrapper so `plot()` works on the result directly. It draws exactly
+#' what [plot_path_trajectories()] draws; that function remains the place where
+#' the appearance arguments are documented.
+#'
+#' @param x A `dynet_path_trajectories` result.
+#' @param ... Passed to [plot_path_trajectories()].
+#' @return A `ggplot` object.
+#' @examples
+#' plot(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' @export
+plot.dynet_path_trajectories <- function(x, ...) {
+  plot_path_trajectories(x, ...)
 }

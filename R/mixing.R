@@ -55,6 +55,11 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level with one row per time point and
 #'   group pair. Directed `measure` labels use `"A -> B"`; undirected labels
 #'   use `"A -- B"`. `value` is the active binary-dyad count, and the
@@ -80,7 +85,7 @@ mixing <- function(dn, attribute,
                        sessions = c("bounded", "collapse", "separate"),
                        sample = NULL,
                        start = NULL, end = NULL,
-                       step = NULL, window = NULL) {
+                       step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -172,7 +177,7 @@ mixing <- function(dn, attribute,
     sessions, collapse = "calendar_union", bounded = "session_induced_union",
     separate = "session_local"
   )
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Count active binary dyads by group pair
@@ -190,7 +195,7 @@ mixing <- function(dn, attribute,
 #' @examples
 #' a <- matrix(c(1, 0, 2, 0), 2, 2)
 #' Dynet:::.mixing_counts(a, c(1L, 2L), expand.grid(from = 1:2, to = 1:2), TRUE)
-#' @keywords internal
+#' @noRd
 .mixing_counts <- function(a, group, pairs, directed) {
   present <- (a > 0) * 1
   if (!directed) present <- pmax(present, t(present))
@@ -216,8 +221,11 @@ mixing <- function(dn, attribute,
 #' verbs are seeing.
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param at Optional numeric time. When given, only the bin containing that
-#'   time is returned.
+#' @param at Optional numeric time, narrowing the result to the bins that
+#'   cover it. With the default disjoint tiling that is one bin; with an
+#'   overlapping `window` every bin containing the time is returned. A time
+#'   outside every bin falls back to the nearest bin rather than an empty
+#'   result, so `at` never returns zero rows on a nonempty network.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
@@ -233,8 +241,15 @@ mixing <- function(dn, attribute,
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
+#'   wrapping `plot()` call without changing what comes back. Use `plot()` on
+#'   the result when the figure needs arguments of its own.
 #' @return A `dynet_snapshot` data frame with one row per active edge per bin:
-#'   `session` (when present), `time`, `from`, `to`, `weight` and `n_spells`.
+#'   `session` (when the network has sessions), `observation` (when
+#'   observation is discontinuous, naming the observed component the bin falls
+#'   in), `time`, `from`, `to`, `weight` and `n_spells`.
 #'   [print()] shows a header and the first rows, [summary()] collapses to one
 #'   row per bin, [plot()] draws how many ties each bin holds, and
 #'   [as.data.frame()] returns the plain table. A pair
@@ -253,7 +268,7 @@ snapshots <- function(dn, at = NULL,
                           sessions = c("bounded", "collapse", "separate"),
                           sample = NULL,
                           start = NULL, end = NULL,
-                          step = NULL, window = NULL) {
+                          step = NULL, window = NULL, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -317,7 +332,7 @@ snapshots <- function(dn, at = NULL,
   attr(out, "time_unit") <- dn$meta$time_unit
   attr(out, "directed") <- dn$directed
   class(out) <- c("dynet_snapshot", "data.frame")
-  out
+  .maybe_plot(out, plot)
 }
 
 #' Tidy table of snapshot edges

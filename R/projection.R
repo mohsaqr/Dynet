@@ -6,7 +6,7 @@
 #' @param dn Parent temporal network.
 #' @param reserved Structural projection column names.
 #' @return A list with the copied attribute table and a named rename vector.
-#' @keywords internal
+#' @noRd
 .projection_node_attributes <- function(dn, reserved) {
   nodes <- as.data.frame(dn, what = "nodes")
   attributes <- nodes[, setdiff(names(nodes), "name"), drop = FALSE]
@@ -35,7 +35,7 @@
 #' Empty time-projection edge table
 #' @param include_session Whether to include the session key.
 #' @return A typed zero-row data frame.
-#' @keywords internal
+#' @noRd
 .empty_projection_edges <- function(include_session = FALSE) {
   out <- data.frame(
     from_state = integer(), to_state = integer(),
@@ -62,7 +62,7 @@
 #' @param n_spells Number of raw snapshot rows represented.
 #' @param include_session Whether the public session key is present.
 #' @return A one-row data frame.
-#' @keywords internal
+#' @noRd
 .projection_edge_row <- function(
     from_state, to_state, from_node, to_node, session,
     from_slice, to_slice, from_time, to_time, edge_type, weight, n_spells,
@@ -87,8 +87,9 @@
 #' `projection()` discretizes a temporal network into snapshot slices and
 #' connects each vertex state to its realization in the next slice. Within a
 #' slice it uses the same independently aggregated, endpoint-induced snapshot
-#' as [snapshots()]. Identity arcs always point forward and have weight
-#' one. The result is a tidy projection object rather than a bare matrix.
+#' as [snapshots()]. Identity arcs always point forward and carry the coupling
+#' weight `omega`. The result is a tidy projection object rather than a bare
+#' matrix.
 #'
 #' Every fixed-universe vertex receives one state in every emitted slice.
 #' `active` records whether the vertex was eligible in that slice. Identity
@@ -102,7 +103,8 @@
 #' edge produces reciprocal arcs, while an undirected loop is emitted once.
 #' Parallel active spells are one within-slice pair whose `weight` is their
 #' summed weight and whose `n_spells` records their count. Identity arcs have
-#' `weight = 1` and `n_spells = 0`.
+#' `weight = omega` and `n_spells = 0`, and `meta$identity_weight` reports the
+#' same value.
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param sessions Session handling. `"collapse"` erases labels. For a
@@ -376,4 +378,34 @@ print.dynet_projection <- function(x, ...) {
   ))
   print(utils::head(x$vertices, 6L), row.names = FALSE)
   invisible(x)
+}
+
+#' Summarise a time projection
+#'
+#' @param object A `dynet_projection` result.
+#' @param ... Ignored.
+#' @return A plain `data.frame`, one row per slice: `slice`, its `time`, the
+#'   number of `active` vertex states, the `within_slice` arcs induced in it,
+#'   and the `identity_arcs` leaving it for the next slice. The final slice
+#'   emits no identity arcs, so its count is zero.
+#' @examples
+#' summary(projection(dynet(school_contacts), step = 5, window = 5))
+#' @export
+summary.dynet_projection <- function(object, ...) {
+  vertices <- as.data.frame(object, what = "vertices")
+  edges <- as.data.frame(object, what = "edges")
+  within <- edges[edges$edge_type == "within_slice", , drop = FALSE]
+  identity <- edges[edges$edge_type == "identity_arc", , drop = FALSE]
+  parts <- lapply(sort(unique(vertices$slice)), function(s) {
+    data.frame(
+      slice = s,
+      time = vertices$time[vertices$slice == s][[1L]],
+      active = sum(vertices$active[vertices$slice == s]),
+      within_slice = sum(within$from_slice == s),
+      identity_arcs = sum(identity$from_slice == s)
+    )
+  })
+  out <- do.call(rbind, parts)
+  rownames(out) <- NULL
+  out
 }

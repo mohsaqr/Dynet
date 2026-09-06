@@ -311,8 +311,11 @@ summary(paths(sessioned, from = "Ana", sessions = "separate"))
 the weeks are visibly different: within week 1 Ana reaches 6 of the other 13
 students, within week 2 all 13, within week 3 only 5.
 
-`"bounded"` is the default everywhere. On a network with no sessions all three
-settings agree, so the default costs nothing when you have not declared any.
+`"bounded"` is the default everywhere. On a network with no sessions there is
+nothing to bound, so `"bounded"` and `"collapse"` give the same answer and the
+default costs nothing when you have not declared any sessions. `"separate"` is
+the exception: with no session column there is nothing to report separately,
+and it raises an error rather than silently pooling.
 
 ## Observation windows
 

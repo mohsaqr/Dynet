@@ -18,10 +18,10 @@
 #' `node_fill`, `background`, `label_color`, `edge_positive_color`,
 #' `edge_negative_color` and `node_border_color`, the last of which a
 #' `CographTheme` stores under the name `node_border` and so never matches.
-#' Everything a theme cannot carry stays in [.splot_args()].
+#' Everything a theme cannot carry stays in `.splot_args()`.
 #'
 #' @return `TRUE` if the theme was registered, `FALSE` otherwise, invisibly.
-#' @keywords internal
+#' @noRd
 .register_dynet_theme <- function() {
   if (!requireNamespace("cograph", quietly = TRUE)) return(invisible(FALSE))
   cograph::register_theme("dynet", cograph::CographTheme$new(
@@ -62,7 +62,7 @@
 #' @param ... Ignored; present because cograph passes layout parameters
 #'   through.
 #' @return A `data.frame` with `x` and `y`, one row per vertex.
-#' @keywords internal
+#' @noRd
 .layout_temporal <- function(network, ...) {
   nodes <- if (inherits(network, "CographNetwork")) network$get_nodes() else
     network$nodes
@@ -87,7 +87,7 @@
 #' `cograph::list_layouts()`.
 #'
 #' @return `TRUE` if the layout was registered, `FALSE` otherwise, invisibly.
-#' @keywords internal
+#' @noRd
 .register_dynet_layout <- function() {
   if (!requireNamespace("cograph", quietly = TRUE)) return(invisible(FALSE))
   cograph::register_layout("temporal", .layout_temporal)

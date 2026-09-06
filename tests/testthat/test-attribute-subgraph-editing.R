@@ -72,3 +72,46 @@ test_that("temporal subgraphs select raw spell attributes and induced nodes", {
   expect_setequal(as.data.frame(nodes, what = "nodes")$name, c("A", "B", "E"))
   expect_equal(nrow(as.data.frame(nodes)), 1)
 })
+
+test_that("`ties` accepts a condition on the spell table, as `nodes` does", {
+  dn <- dynet(data.frame(
+    from = c("A", "B", "C"), to = c("B", "C", "D"),
+    start = 0:2, end = c(1, 4, 3)
+  ), nodes = data.frame(name = LETTERS[1:5], role = 1:5))
+  dn <- update_ties(dn, 1:3, data.frame(course = c("g1", "g1", "g2")))
+
+  # The capability that was missing: a bare condition on a tie attribute.
+  # Before this, only `nodes` evaluated a condition and `ties` raised
+  # "object 'course' not found", which forced the caller to hand-build a mask
+  # with `as.data.frame(dn)$course == "g1"` -- the ritual Rule 0 forbids.
+  by_attribute <- induce_subgraph(dn, ties = course == "g1")
+  expect_identical(as.data.frame(by_attribute)$course, c("g1", "g1"))
+  expect_setequal(as.data.frame(by_attribute, what = "nodes")$name,
+                  c("A", "B", "C"))
+
+  # A structural column of the spell table works the same way.
+  expect_identical(nrow(as.data.frame(induce_subgraph(dn, ties = duration > 1))), 1L)
+
+  # Conditions on both tables compose.
+  expect_identical(
+    nrow(as.data.frame(induce_subgraph(dn, nodes = role < 4, ties = course == "g1"))),
+    2L
+  )
+
+  # Every previously supported form still resolves identically.
+  mask <- c(TRUE, TRUE, FALSE)
+  expect_identical(as.data.frame(induce_subgraph(dn, ties = mask)),
+                   as.data.frame(by_attribute))
+  expect_identical(as.data.frame(induce_subgraph(dn, ties = 1:2)),
+                   as.data.frame(by_attribute))
+  expect_identical(
+    as.data.frame(induce_subgraph(dn, ties = as.data.frame(dn)$course == "g1")),
+    as.data.frame(by_attribute)
+  )
+
+  expect_error(induce_subgraph(dn, ties = no_such_column == 1),
+               class = "simpleError")
+  expect_error(induce_subgraph(dn, ties = c(TRUE, FALSE)),
+               class = "dynet_bad_input")
+  expect_error(induce_subgraph(dn), class = "dynet_bad_input")
+})

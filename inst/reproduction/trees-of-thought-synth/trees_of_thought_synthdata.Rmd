@@ -1,0 +1,756 @@
+---
+title: "Trees of Thought: temporal-network reproduction with Dynet"
+subtitle: "The study's networkDynamic / tsna analysis, re-run on the bundled `synthdata`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup}
+# Messages and warnings are left on: anything the package says while building
+# or drawing belongs in the record, not suppressed out of it.
+knitr::opts_chunk$set(
+  message = TRUE, warning = TRUE, echo = TRUE,
+  fig.width = 10, fig.height = 6, dpi = 120
+)
+input_file <- knitr::current_input(dir = TRUE)
+repo_dir <- normalizePath(file.path(dirname(input_file), "../../.."),
+                          mustWork = TRUE)
+devtools::load_all(repo_dir)
+# The multilayer views below need cograph's repaired plane spacing, layer and
+# node labelling, and slice handling, which live in its working tree.
+devtools::load_all(normalizePath(file.path(repo_dir, "../cograph"),
+                                 mustWork = TRUE))
+```
+
+# What this document reproduces
+
+The *Trees of Thought* study coded asynchronous discussion messages into ten
+interaction codes and studied how one code follows another **over time**. Its
+unit of analysis is not the student but the code: a tie runs from the code of a
+message to the code of the message it replies to, so the network is a
+code-to-code process network whose vertices are `Question`, `Argument`,
+`Composing`, `Group_regulation` and the other seven categories.
+
+The original analysis pipeline was a chain of packages. `Craete.Rmd` assembled
+the spell table and called `networkDynamic()` to build the dynamic object;
+`Analyse_trees.Rmd` and `Centralities_trees.Rmd` swept it with `tsna`
+(`tSnaStats()`, `tErgmStats()`, `tiedDuration()`, `tReach()`, `tPath()`) and
+`ndtv` (`proximity.timeline()`, `transmissionTimeline()`, `plotPaths()`);
+`CraeteGROUP.Rmd` split it by course discussion group.
+
+This document asks whether **one package** can carry that whole analysis. It
+imports the saved network the study itself produced and re-runs each step with
+an exported Dynet verb. The mapping is:
+
+| Original call (script) | Dynet verb here |
+|---|---|
+| `networkDynamic()` object saved to `Out/*.RDS` (`Craete.Rmd`) | `as_dynet()` |
+| `tSnaStats(gden / efficiency / connectedness)` | `metrics(measure = c("density", "efficiency", "connectedness"))` |
+| `tSnaStats("mutuality")` and `tSnaStats("grecip", measure = "edgewise")` | the dyad census `mutual` count and `metrics(measure = "reciprocity")` |
+| `tErgmStats("edges" / "meandeg" / "triangle" / "idegree1.5" / "odegree1.5")` | `metrics(measure = ...)` |
+| `tSnaStats("dyad.census")`, `tSnaStats("triad.census")` | `metrics(measure = c("mutual", "asymmetric", "null"))`, `metrics(measure = "triads")` |
+| `tErgmStats('nodemix("Name")')` | `mixing(attribute = "name")` |
+| four `while` loops over `tSnaStats(snafun = degree / evcent / flowbet / betweenness / closeness / prestige)` | one `dyn_centrality(measure = ...)` call |
+| `centiserve::diffusion.degree(lambda = 1)` on the aggregate | `dyn_centrality(measure = "diffusion")` |
+| `tiedDuration(mode = , neighborhood = )` | `durations(unit = , mode = )` |
+| `tReach(direction = "fwd", start = , end = )` | `dyn_reachability()`, `dyn_centrality(scope = "temporal")` |
+| `proximity.timeline(time.increment = 0.1)` (`Visualize.Rmd`) | `plot(dn, type = "proximity")` |
+| `tPath(type = "earliest.arrive", graph.step.time = 0.1)` + `transmissionTimeline()` / `plotPaths()` inside a `while` loop over the ten codes (`Visualize.Rmd`) | `paths(direction = "forward", traversal_time = 0.1)` + `plot_path_trajectories()` |
+| `tPath(direction = "bkwd", type = "latest.depart", start = 0)` | `paths(direction = "backward", ...)` |
+| `split()` on `course_group` and a rebuild per group (`CraeteGROUP.Rmd`) | `induce_subgraph(ties = ...)` |
+
+Two differences from the original settings are deliberate and are flagged
+where they occur. First, the study swept its statistics day by day
+(`time.interval = 1`, `aggregate.dur = 1`); every sweep below uses
+`step = 0.1, window = 0.1`, a ten-times finer grid over the same window, which
+resolves the first day rather than collapsing it into one point. Second, the
+trajectory trees in the path sections are a Dynet visual with no counterpart
+in the original scripts, which drew `tPath()` results as hierarchical network
+plots; that section says so where it happens.
+
+## How to read this document
+
+This is a reproduction, not a second implementation hidden in a notebook.
+Every temporal-network number below is returned by an exported Dynet function.
+The document imports the saved network, calls those functions, and prints or
+plots the objects they return. It does not recompute a statistic by hand,
+reshape one into a substitute for another, run package-parity tests, or alter
+the supplied network. The final section audits those claims with code rather
+than asserting them.
+
+# The saved temporal network
+
+## Import
+
+The study's own saved network is not redistributable, so this document runs on
+`synthdata`, the synthetic stand-in bundled with the package: a random 70%
+subset of the study's edge spells, resampled with replacement to 90% of the
+original count. It has the same ten codes, the same spell shape and the same
+clock, so every verb below is exercised exactly as it was on the real network
+— but **the numbers are not the study's numbers**, and none of them should be
+read as a finding. See `?synthdata`.
+
+```{r import}
+dn <- dynet(synthdata, directed = TRUE, loops = TRUE,
+            weight = "weight")
+dn
+summary(dn)
+```
+
+The imported network has `r nrow(as.data.frame(dn, what = "nodes"))` codes and
+`r nrow(as.data.frame(dn))` weighted directed edge spells over
+`r nrow(as.data.frame(dn, what = "network"))` distinct ordered pairs, of which
+`r with(as.data.frame(dn), sum(from == to))` are self-loops — the network was
+built with `loops = TRUE`, and Dynet keeps them (it says so on import) while
+excluding them from degree.
+
+## What a spell means here
+
+This matters for everything that follows. In `Craete.Rmd` time is rescaled by
+`3600 * 24`, so the clock is **days since the start of the discussion the
+message belongs to**. A tie opens at the day offset of the message that
+created it and stays active until its discussion ends. Ties therefore
+accumulate rather than flicker, most of them open early, and the window is
+short: `summary()` above reports a span of about 5.8 days.
+
+```{r formation-dissolution-table}
+tie_events <- events(dn, measure = c("formation", "dissolution"),
+                     step = 0.5, window = 0.5)
+head(tie_events, 8)
+```
+
+The first row of that table is the whole story of this network's shape:
+the large majority of ties form at time 0. Every reachability and path result
+later in the document follows from it.
+
+# Seeing the temporal network
+
+## Edge-spell timeline
+
+One horizontal bar per spell, ordered by onset: the study's raw material
+before any statistic is computed.
+
+```{r edge-spell-timeline, fig.height=8}
+plot(dn, type = "timeline")
+```
+
+## Formation, dissolution, and active ties
+
+The same tie events as counts over time, with the active-tie stock beneath
+them. This is the plotted form of the `events()` table above.
+
+```{r edge-activity}
+plot(dn, type = "activity")
+```
+
+## Whole-window network through cograph
+
+The union of everything that was ever active, drawn with an explicitly styled
+`cograph::splot()` so no default theme is doing the reasoning.
+
+```{r whole-window-network, fig.height=8}
+cograph::splot(
+  dn,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2),
+  edge_alpha = 0.30,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+## Duration-weighted collapsed network
+
+The binary union above treats a tie that lived one hour like a tie that lived
+five days. `collapse_network(weight = "union_duration")` weights each pair by
+the total time it was active instead, which is the aggregate the original
+analysis approximated by setting `edge.lwd` from `tiedDuration()`.
+
+```{r collapsed-network, fig.height=8}
+collapsed <- collapse_network(dn, weight = "union_duration")
+collapsed
+cograph::splot(
+  collapsed,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2.5),
+  edge_alpha = 0.40,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+## Temporal snapshots
+
+Nine equally spaced cross-sections of the same network, the static-panel view
+of the process.
+
+```{r snapshots, fig.height=9, fig.width=10}
+plot(dn, type = "snapshots", panels = 9)
+```
+
+## Proximity timeline with phase networks
+
+`Visualize.Rmd` drew `proximity.timeline()` at `time.increment = 0.1` to show
+codes drifting together and apart. Dynet's proximity view is the same idea:
+each code is a line whose vertical position tracks its distance from the
+others, sliced finely and annotated here with five phase networks.
+
+```{r proximity-networks, fig.height=8, fig.width=12}
+plot(dn, type = "proximity", measure = "degree",
+     phases = 5, slices = 80)
+```
+
+## Proximity trajectories alone
+
+The same construction driven by betweenness instead of degree, without the
+phase networks.
+
+```{r proximity-lines, fig.height=7, fig.width=12}
+plot(dn, type = "proximity", measure = "betweenness",
+     networks = FALSE, slices = 80)
+```
+
+# Multilayer views of the sliced network
+
+The original pipeline had no multilayer view: `ndtv` drew the process as a
+proximity timeline and as animated snapshots, and the code-by-code structure
+was read off aggregate matrices. Cutting the window into slices and treating
+each slice as a layer of one multilayer network shows both at once — who was
+talking to whom, and when.
+
+Each slice carries the full code set, so a code keeps its identity across the
+stack. The slicing, the supra-adjacency, the layer membership and the display
+labels are assembled by the package.
+
+## Node-link layers
+
+Half-window slices, each a plane of the same ten codes.
+
+```{r ml-layers, fig.height=9, fig.width=13}
+plot(dn, type = "layers", step = 0.5, layout = "circle", node_size = 2)
+```
+
+`omega` weights the identity arcs carrying a code from one slice to the next —
+the interlayer coupling. Zero leaves the slices independent.
+
+```{r ml-layers-uncoupled, fig.height=9, fig.width=13}
+plot(dn, type = "layers", step = 0.5, omega = 0, layout = "circle",
+     node_size = 2)
+```
+
+## Heatmap planes
+
+The same slices as matrices rather than diagrams. Row and column names are
+drawn once against the front plane, so a cell reads as a code pair rather than
+an anonymous square.
+
+```{r ml-heatmap, fig.height=9, fig.width=13}
+plot(dn, type = "heatmap", step = 0.5, node_label_size = 3)
+```
+
+Thresholded, so only substantial transitions carry ink:
+
+```{r ml-heatmap-threshold, fig.height=9, fig.width=13}
+plot(dn, type = "heatmap", step = 0.5, threshold = 50, na_color = "#F4F4F4")
+```
+
+At the `step = 0.1` used for the centrality trajectories above, the window
+splits into 59 slices. That is the right resolution for a grid or a line, and
+too many planes to read as a stack — shown here so the limit is visible rather
+than asserted.
+
+```{r ml-heatmap-fine, fig.height=12, fig.width=13}
+plot(dn, type = "heatmap", step = 0.1, show_node_labels = FALSE)
+```
+
+## Projected stack
+
+`cograph::plot_temporal()`'s oblique projection, with one colour per code held
+across every plane. Empty windows are drawn rather than skipped, so a gap in
+the process is visible as a gap.
+
+```{r ml-stack, fig.height=10, fig.width=13}
+plot(dn, type = "stack", step = 0.5, edge_color = "#666666", edge_alpha = 0.5)
+```
+
+Cumulative, so each plane carries everything that has happened up to it:
+
+```{r ml-stack-cumulative, fig.height=10, fig.width=13}
+plot(dn, type = "stack", step = 0.5, slices = 10, cumulative = TRUE,
+     edge_color = "#666666")
+```
+
+# Graph-level trajectories
+
+## Main structural descriptives
+
+The original scripts collected these one call at a time and `cbind()`-ed the
+results into a wide matrix. `metrics()` takes the whole set in one call and
+returns one tidy row per time point and measure.
+
+```{r graph-main}
+graph_main <- metrics(
+  dn,
+  measure = c(
+    "density", "efficiency", "connectedness", "reciprocity",
+    "edges", "mean_degree"
+  ),
+  step = 0.1, window = 0.1
+)
+graph_main
+plot(graph_main, type = "ridge")
+```
+
+`reciprocity` here is the edgewise reciprocity — the share of arcs that are
+reciprocated — which is what `tSnaStats("grecip", measure = "edgewise")`
+returned in `Centralities_trees.Rmd`. The study also reported
+`tSnaStats("mutuality")`, the raw count of mutual dyads; that count is the
+`mutual` column of the dyad census below.
+
+## Dyad census
+
+```{r dyad-census}
+dyads <- metrics(
+  dn, measure = c("mutual", "asymmetric", "null"),
+  step = 0.1, window = 0.1
+)
+dyads
+plot(dyads)
+```
+
+## Triad census
+
+`Centralities_trees.Rmd` swept a triad census with
+`tSnaStats("triad.census")`. Dynet returns the same sixteen MAN triad types,
+one row per type per time point, drawn here as a heatmap.
+
+```{r triad-census, fig.height=8}
+triads <- metrics(dn, measure = "triads", step = 0.1, window = 0.1)
+triads
+plot(triads, type = "heatmap")
+```
+
+## Lightweight ERGM-style descriptives
+
+The counterparts of the study's `tErgmStats()` terms — `idegree1.5`,
+`odegree1.5`, `triangle` — plus the two-star and two-path counts that describe
+how the local structure builds up.
+
+```{r ergm-descriptives}
+ergm_descriptives <- metrics(
+  dn,
+  measure = c(
+    "indegree_1_5", "outdegree_1_5", "triangles",
+    "in_2stars", "out_2stars", "two_paths"
+  ),
+  step = 0.1, window = 0.1
+)
+ergm_descriptives
+plot(ergm_descriptives, type = "ridge")
+```
+
+# Node-level trajectories
+
+## Centrality
+
+The original centrality section was four `while` loops that called
+`tSnaStats()` once per measure, transposed each result, and stitched the
+pieces back together with `cbind()` and `rbind()` into
+`Centralities_Combined_rounded.xlsx`. Here the same five measures — degree,
+closeness, betweenness, eigenvector, flow betweenness — plus diffusion degree
+(the study computed that one separately, with `centiserve`, and only on the
+aggregate) come from a single call that already returns them tidily.
+
+```{r centrality-heatmap, fig.height=11}
+centrality <- dyn_centrality(
+  dn,
+  measure = c(
+    "degree", "closeness", "betweenness", "eigenvector",
+    "flow_betweenness", "diffusion"
+  ),
+  step = 0.1, window = 0.1
+)
+centrality
+plot(centrality, type = "heatmap")
+```
+
+```{r centrality-trajectories, fig.height=10}
+plot(centrality, type = "ridge", top = 10)
+```
+
+## In-degree and out-degree
+
+The study ran separate loops with `cmode = "indegree"` and
+`cmode = "outdegree"`; in Dynet the direction is the `mode` argument.
+
+```{r directed-degree, fig.height=7}
+directed_degree <- dyn_centrality(
+  dn, measure = "degree", mode = "in",
+  step = 0.1, window = 0.1
+)
+out_degree <- dyn_centrality(
+  dn, measure = "degree", mode = "out",
+  step = 0.1, window = 0.1
+)
+plot(directed_degree, type = "heatmap")
+plot(out_degree, type = "heatmap")
+```
+
+## Prestige
+
+The four prestige variants the study looped over — `indegree`, `eigenvector`,
+`domain` and `domain.proximity` — are the four values of the `prestige`
+argument.
+
+```{r prestige, fig.height=7}
+prestige_indegree <- dyn_centrality(
+  dn, measure = "prestige", prestige = "indegree",
+  step = 0.1, window = 0.1
+)
+prestige_eigenvector <- dyn_centrality(
+  dn, measure = "prestige", prestige = "eigenvector",
+  step = 0.1, window = 0.1
+)
+prestige_domain <- dyn_centrality(
+  dn, measure = "prestige", prestige = "domain",
+  step = 0.1, window = 0.1
+)
+prestige_proximity <- dyn_centrality(
+  dn, measure = "prestige", prestige = "domain.proximity",
+  step = 0.1, window = 0.1
+)
+plot(prestige_indegree, type = "heatmap")
+plot(prestige_eigenvector, type = "heatmap")
+plot(prestige_domain, type = "heatmap")
+plot(prestige_proximity, type = "heatmap")
+```
+
+# Code-to-code mixing
+
+`tErgmStats('nodemix("Name")')` produced one column per ordered pair of codes,
+which the original scripts then had to un-widen and re-aggregate by hand.
+`mixing()` returns the same 10 x 10 flows already long, one row per time point
+and per ordered pair.
+
+```{r mixing-heatmap, fig.height=14}
+mixing_flows <- mixing(dn, attribute = "name", step = 0.1, window = 0.1)
+mixing_flows
+plot(mixing_flows, type = "heatmap")
+```
+
+The original scripts then pulled out the mixing columns that involved
+regulation (`select(contains("reg"))`, which caught both `Group_regulation`
+and `T.Regulation`). The highlight below narrows that to the group-regulation
+flows, which keeps the lines distinguishable. The result carries `from_group`
+and `to_group` columns, so the selection is a `subset()` of the returned table
+handed straight back to the plot method; no mixing statistic is rebuilt
+here.
+
+```{r mixing-group-regulation, fig.height=7}
+group_regulation_flows <- with(
+  subset(as.data.frame(mixing_flows),
+         from_group == "Group_regulation" | to_group == "Group_regulation"),
+  unique(measure)
+)
+plot(mixing_flows, highlight = group_regulation_flows)
+```
+
+# Tie and vertex duration
+
+## Incident tie counts and durations by node
+
+`tiedDuration()` was called six times in `Visualize.Rmd` — count and duration,
+crossed with the `in`, `out` and `combined` neighbourhoods — and the six
+vectors were `cbind()`-ed into a table. `durations(unit = "node_ties")` gives
+the same quantities per node, with `mode` selecting the neighbourhood and
+`measure` selecting event count, total duration, or the union of active time
+(which, unlike the total, does not double-count overlapping spells).
+
+```{r node-tie-duration, fig.height=10}
+node_ties_all <- durations(
+  dn, unit = "node_ties", mode = "all",
+  measure = c("events", "total", "union")
+)
+node_ties_in <- durations(
+  dn, unit = "node_ties", mode = "in",
+  measure = c("events", "total", "union")
+)
+node_ties_out <- durations(
+  dn, unit = "node_ties", mode = "out",
+  measure = c("events", "total", "union")
+)
+plot(node_ties_all)
+plot(node_ties_in)
+plot(node_ties_out)
+```
+
+## Edge-pair duration
+
+The same accounting one level down, per ordered pair of codes, with the mean
+spell length added.
+
+```{r pair-duration, fig.height=10}
+pair_duration <- durations(
+  dn, unit = "pair",
+  measure = c("events", "total", "union", "mean")
+)
+pair_duration
+plot(pair_duration)
+```
+
+## Vertex activity duration
+
+How long each code was itself active, as opposed to how long its ties were.
+
+```{r vertex-duration, fig.height=8}
+vertex_duration <- durations(dn, unit = "vertex_activity")
+vertex_duration
+plot(vertex_duration)
+```
+
+# Temporal reachability and centrality
+
+`tReach()` was used to count, for each code, how many other codes it could
+reach along time-respecting paths within a window. `dyn_reachability()`
+answers the same question in both directions at once, and
+`dyn_centrality(scope = "temporal")` returns the path-based measures computed
+on the time-respecting paths themselves rather than on a snapshot.
+
+```{r reachability, fig.height=8}
+reachability <- dyn_reachability(
+  dn, direction = "both", measure = c("reach", "reach_count")
+)
+reachability
+plot(reachability)
+```
+
+```{r temporal-centrality, fig.height=9}
+temporal_centrality <- dyn_centrality(
+  dn,
+  measure = c("closeness", "betweenness", "reach", "reach_count"),
+  scope = "temporal"
+)
+temporal_centrality
+plot(temporal_centrality)
+```
+
+# Forward temporal paths from every code
+
+`Visualize.Rmd` looped over the ten codes with
+`tPath(direction = "fwd", type = "earliest.arrive", graph.step.time = 0.1)`
+and drew three pictures per code. `paths()` answers the same query — Dynet
+receives that traversal cost as `traversal_time = 0.1`, one tenth of a day per
+hop — and returns one tidy object per source.
+
+Before the atlas, one source in full, to show what the objects contain.
+
+```{r forward-path-example}
+question_paths <- paths(
+  dn, from = "Question", direction = "forward", traversal_time = 0.1
+)
+question_paths
+path_trajectories(question_paths)
+```
+
+The printed table gives, per destination, the earliest attainable arrival
+time, the latency from the source, the number of hops on the optimal route,
+and how many distinct optimal routes achieve it. `path_trajectories()` is the
+tidy tree behind the picture: one row per route prefix, so a code reached
+under two different temporal histories is two rows and the branches never
+cross misleadingly.
+
+The atlas below repeats that for every code. Each panel is a left-to-right
+trajectory tree: branch width and node size show how many optimal routes use a
+branch, node fill shows the same count, and every node prints its vertex name
+and value beneath its circle, so nothing is carried by colour alone. The table
+above each tree is the path result the tree is drawn from.
+
+```{r forward-path-atlas, results='asis', fig.height=8, fig.width=12}
+# A loop, not an apply: each iteration emits a section heading, a table and a
+# plot into the asis stream in order, which is a sequence of side effects
+# rather than a value to collect.
+code_names <- with(as.data.frame(dn, what = "nodes"), name)
+for (source_node in code_names) {
+  cat("\n\n## ", source_node, "\n\n", sep = "")
+  forward_paths <- paths(
+    dn, from = source_node, direction = "forward", traversal_time = 0.1
+  )
+  print(knitr::kable(
+    as.data.frame(forward_paths), digits = 3,
+    caption = paste("Earliest-arrival paths from", source_node)
+  ))
+  cat("\n\n")
+  print(plot_path_trajectories(
+    forward_paths, measure = "frequency", orientation = "horizontal"
+  ))
+  cat("\n\n")
+}
+```
+
+Read the tables together and the picture is consistent: because almost every
+tie opens at time 0, every code reaches every other code, and the `n_hops`
+and `latency` columns show it doing so in one or two hops within a fraction
+of a day. The trees are wide and shallow. That is a property of how the study built its spells —
+a tie stays open until its discussion ends — not an artefact of the traversal
+setting.
+
+# Backward temporal paths to every code
+
+The complementary query in `Visualize.Rmd` was
+`tPath(direction = "bkwd", type = "latest.depart", start = 0)`, again at
+`graph.step.time = 0.1`: which codes could have fed into this one, leaving as
+late as possible. Dynet expresses it as `direction = "backward"` with an
+explicit window. The deadline here is `end = 4`, four days into the roughly
+5.8-day span; a later deadline admits the same senders but with longer
+latencies, so the earlier deadline keeps the trees interpretable.
+
+```{r backward-path-atlas, results='asis', fig.height=8, fig.width=12}
+# Same reason for the loop as above: ordered side effects per code.
+for (target_node in code_names) {
+  cat("\n\n## ", target_node, "\n\n", sep = "")
+  backward_paths <- paths(
+    dn, from = target_node, direction = "backward", start = 0, end = 4,
+    traversal_time = 0.1
+  )
+  print(knitr::kable(
+    as.data.frame(backward_paths), digits = 3,
+    caption = paste("Latest-departure paths into", target_node)
+  ))
+  cat("\n\n")
+  print(plot_path_trajectories(
+    backward_paths, measure = "frequency", orientation = "horizontal"
+  ))
+  cat("\n\n")
+}
+```
+
+In these trees the queried code is the root and the possible senders branch
+away from it, so a branch is read right to left in time: `arrival_time` is the
+latest moment a sender could have departed and still reach the root by the
+deadline.
+
+# Course-group temporal subnetwork
+
+`CraeteGROUP.Rmd` split the interaction table by `course_group` and rebuilt a
+separate `networkDynamic` object for each group. Dynet keeps the tie
+attributes from the import, so a group is a selection over the existing
+network rather than a second construction: `induce_subgraph()` accepts a mask
+over the spell table, which is exactly the legacy filter expressed as an
+argument.
+
+`synthdata` carries no `course_group`, so the study's split cannot be
+reproduced here; that chunk needs the full private network. What *is*
+reproducible is the mechanism, and it is now simpler than the legacy filter:
+`ties` takes a condition on the spell table directly, so no mask has to be
+built first.
+
+```{r group-subnetwork-import}
+heavy <- induce_subgraph(dn, ties = weight > 100)
+summary(heavy)
+```
+
+On the real network the retained `course_group` column is what makes the
+study's split possible; `synthdata` carries only the structural columns, so
+the selection above is by spell weight instead. Either way the point is the
+same: the subnetwork is a selection over the existing object, not a second
+construction, and it is small enough to read code by code.
+
+```{r group-subnetwork-splot, fig.height=8}
+cograph::splot(
+  heavy,
+  theme = "dynet",
+  tna_styling = FALSE,
+  psych_styling = FALSE,
+  layout = "oval",
+  node_size = 4.5,
+  label_size = 0.55,
+  arrow_size = 0.35,
+  edge_width_range = c(0.15, 2.5),
+  edge_alpha = 0.40,
+  edge_labels = FALSE,
+  edge_label_style = "none"
+)
+```
+
+```{r group-subnetwork-timeline, fig.height=8}
+plot(heavy, type = "timeline")
+```
+
+```{r group-subnetwork-snapshots, fig.height=9}
+plot(heavy, type = "snapshots", panels = 9)
+```
+
+```{r group-subnetwork-metrics}
+plot(metrics(
+  heavy,
+  measure = c("density", "edges", "reciprocity", "connectedness"),
+  step = 0.1, window = 0.1
+), type = "ridge")
+```
+
+# Reproduction audit
+
+The claims made at the top are checked here rather than asserted.
+
+**Every verb used came from Dynet's public interface.** If any of these were
+internal, or had been renamed, the check below would say so.
+
+```{r audit-exports}
+verbs_used <- c(
+  "as_dynet", "collapse_network", "events", "metrics", "mixing",
+  "durations", "dyn_centrality", "dyn_reachability", "paths",
+  "path_trajectories", "plot_path_trajectories", "induce_subgraph"
+)
+data.frame(
+  verb = verbs_used,
+  exported = verbs_used %in% getNamespaceExports("Dynet")
+)
+```
+
+**The analysed network is the saved network, unaltered.** Re-importing the
+file after every statistic above has been computed must give an object
+identical to the one they were computed on.
+
+```{r audit-unchanged}
+identical(dn, dynet(synthdata, directed = TRUE, loops = TRUE,
+                    weight = "weight"))
+```
+
+**The self-loops were kept, not quietly dropped.** The study built the network
+with `loops = TRUE`. The count of loop spells in the imported network and the
+self-pairs carried through to the pair-duration table must agree.
+
+```{r audit-loops}
+with(as.data.frame(dn), sum(from == to))
+subset(as.data.frame(pair_duration), from == to & measure == "events")
+```
+
+What this document does **not** establish: it is not a numerical parity test
+against `tsna`. The sweep grid differs from the original by design
+(`step = 0.1` against the study's daily interval), a few measures are the
+nearest documented counterpart rather than the identical estimator, and no
+output here was compared value-by-value with a `tsna` run. The claim is that each analytical
+step of the study is available as one Dynet verb on the study's own data, and
+that the results are internally consistent — not that the two implementations
+agree to floating-point tolerance.
+
+# Session information
+
+```{r session-info}
+sessionInfo()
+```

@@ -26,10 +26,14 @@ networks \code{from} and \code{to} must be supplied together and their order is
 ignored.}
 }
 \value{
-A new directed \code{dynet} object.
+A new directed \code{dynet} object without the matched spells, with the
+same structure as the input.
 }
 \description{
-Remove directed temporal arcs
+The same operation as \code{\link[=remove_ties]{remove_ties()}}, with one extra guarantee: the
+network must already be directed, so a \code{from}/\code{to} pair names one arc and
+not both orientations. Removing an arc from an undirected network raises a
+condition of class \code{dynet_needs_directed}.
 }
 \examples{
 dn <- dynet(data.frame(
@@ -37,4 +41,7 @@ dn <- dynet(data.frame(
   start = c(0, 1), end = c(1, 2)
 ))
 remove_arcs(dn, ties = 1)
+}
+\seealso{
+\code{\link[=remove_ties]{remove_ties()}}, which does not require a directed network.
 }

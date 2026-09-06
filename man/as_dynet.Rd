@@ -2,9 +2,12 @@
 % Please edit documentation in R/coercion.R
 \name{as_dynet}
 \alias{as_dynet}
+\alias{as_dynet.dynet}
 \title{Convert an object to a Dynet temporal network}
 \usage{
 as_dynet(x, ...)
+
+\method{as_dynet}{dynet}(x, ...)
 }
 \arguments{
 \item{x}{An object representing a temporal network.}
@@ -12,7 +15,10 @@ as_dynet(x, ...)
 \item{...}{Passed to a class-specific method.}
 }
 \value{
-A \code{\link[=dynet]{dynet()}} temporal network.
+A \code{\link[=dynet]{dynet()}} temporal network: an object of class \code{dynet} carrying
+the tie ledger, the node table and the construction metadata. The \code{dynet}
+method is the identity, returning \code{x} unchanged, so \code{as_dynet()} is safe
+to call on an object that is already a temporal network.
 }
 \description{
 Convert an object to a Dynet temporal network
