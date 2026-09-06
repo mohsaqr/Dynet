@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -259,7 +259,7 @@
 <p><code>step</code> and <code>window</code> are separate on purpose, and that is the whole point. A measurement every day covering the last seven days is a <strong>rolling window</strong>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span></code></pre></div>
-<p>Setting them equal partitions the period into disjoint bins, which is the default. Setting <code>window = 0</code> samples the network at each point in time — the convention <code>tsna</code> uses with <code>aggregate.dur = 0</code>. A positive window is the default because point sampling silently drops any edge that begins and ends between two sample points, a real loss on bursty data.</p>
+<p>Setting them equal partitions the period into disjoint bins, which is the default. Setting <code>window = 0</code> samples the network at each point in time — the convention <code>tsna</code> uses with <code>aggregate.dur = 0</code>. Point sampling on the default grid runs through the last observed instant, as <code>tsna</code> does with an inclusive <code>end</code>. A positive window is the default because point sampling silently drops any edge that begins and ends between two sample points, a real loss on bursty data.</p>
 <p><code>start</code> and <code>end</code> default to the observed range, and a network built from dates may be addressed with dates:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">posts</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>

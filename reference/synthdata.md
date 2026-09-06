@@ -53,8 +53,8 @@ taught end to end.
 
 Spells are weighted by how many message pairs they represent, overlap in
 time, and include self-loops, because a code following itself is a real
-and common transition. Build with `loops = TRUE` to keep them, and name
-`weight = "weight"` or the spell counts are silently replaced by ones.
+and common transition. Build with `loops = TRUE` to keep them; the
+`weight` column is picked up as the tie weight.
 
 ## Examples
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## Dynet 0.4.2
+
+- `eigenvector`, `hub` and `authority` are certified like eigenvector
+  prestige: a snapshot whose spectral radius is zero or whose Perron
+  root is repeated returns `NA` for that block under a warning of class
+  `dynet_eigen_undefined`, instead of one arbitrary basis vector.
+- [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) picks
+  up a column named `weight`, `weights` or `strength` as the tie weight
+  and says so; before, an unnamed weight column was silently replaced by
+  ones.
+- `window = 0` on the default grid now samples through the last observed
+  instant, as `tsna` does; a positive window is unchanged.
+
 ## Dynet 0.4.1
 
 - Plot defaults: node-level bar charts and the frequency trajectory tree

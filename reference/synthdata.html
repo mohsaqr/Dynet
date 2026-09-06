@@ -13,7 +13,7 @@ a message to the code of the message it replies to."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,8 +91,8 @@ finding about the study</strong>, and figures computed from it will not match th
 published ones. It exists so the analysis can be run and taught end to end.</p>
 <p>Spells are weighted by how many message pairs they represent, overlap in
 time, and include self-loops, because a code following itself is a real and
-common transition. Build with <code>loops = TRUE</code> to keep them, and name
-<code>weight = "weight"</code> or the spell counts are silently replaced by ones.</p>
+common transition. Build with <code>loops = TRUE</code> to keep them; the <code>weight</code>
+column is picked up as the tie weight.</p>
     </div>
 
     <div class="section level2">

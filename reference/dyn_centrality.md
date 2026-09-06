@@ -194,12 +194,16 @@ smoothing over the noise of a sparse bin. The arguments match
 [`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html),
 where they are called `time.interval` and `aggregate.dur`.
 
-`"eigenvector"` is uniquely determined when the Perron eigenvalue has a
-one-dimensional eigenspace; strong connectivity is a sufficient
-condition. Disconnected snapshots with equally dominant components can
-have more than one correct eigenvector, so read the result as a
-within-snapshot ranking rather than an automatically comparable number
-across the whole series.
+`"eigenvector"`, `"hub"` and `"authority"` are certified the way
+eigenvector prestige is: a snapshot whose spectral radius is zero (no
+cycle) or whose Perron root is repeated (components of equal weight) has
+no single answer, and every vertex of that block is `NA` under a warning
+of class `dynet_eigen_undefined`. `"eigenvector"` is uniquely determined
+when the Perron eigenvalue has a one-dimensional eigenspace; strong
+connectivity is a sufficient condition. Disconnected snapshots with
+equally dominant components can have more than one correct eigenvector,
+so read the result as a within-snapshot ranking rather than an
+automatically comparable number across the whole series.
 
 Indegree prestige is the column sum of the directed binary active-dyad
 adjacency matrix. It is exactly snapshot degree with `mode = "in"`:

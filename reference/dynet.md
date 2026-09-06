@@ -133,7 +133,9 @@ dynet(
 
 - weight:
 
-  Column name for event multiplicity. Defaults to one event per row.
+  Column name for event multiplicity. `NULL` auto-detects a column named
+  `weight`, `weights` or `strength` (and says so); with none, every row
+  counts once.
 
 - nodes:
 

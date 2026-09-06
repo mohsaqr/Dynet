@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,15 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.2" id="dynet-042">Dynet 0.4.2<a class="anchor" aria-label="anchor" href="#dynet-042"></a></h2>
+<ul><li>
+<code>eigenvector</code>, <code>hub</code> and <code>authority</code> are certified like eigenvector prestige: a snapshot whose spectral radius is zero or whose Perron root is repeated returns <code>NA</code> for that block under a warning of class <code>dynet_eigen_undefined</code>, instead of one arbitrary basis vector.</li>
+<li>
+<code><a href="../reference/dynet.html">dynet()</a></code> picks up a column named <code>weight</code>, <code>weights</code> or <code>strength</code> as the tie weight and says so; before, an unnamed weight column was silently replaced by ones.</li>
+<li>
+<code>window = 0</code> on the default grid now samples through the last observed instant, as <code>tsna</code> does; a positive window is unchanged.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.1" id="dynet-041">Dynet 0.4.1<a class="anchor" aria-label="anchor" href="#dynet-041"></a></h2>
 <ul><li>Plot defaults: node-level bar charts and the frequency trajectory tree colour by vertex, in the network’s own order, so a vertex keeps one colour across every view; <code>plot(dn, type = "timeline")</code> and <code>"events"</code> take <code>step</code>, a bin width (<code>1/24</code> on a network in days is hourly), and the timeline is clipped to the declared observation window; <code><a href="../reference/collapse_network.html">collapse_network()</a></code> and <code><a href="../reference/path_network.html">path_network()</a></code> results have <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods with Dynet’s rendering defaults, so <code>plot(collapsed, layout = "oval")</code> is the whole call.</li>

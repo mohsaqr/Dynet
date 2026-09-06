@@ -477,10 +477,11 @@ metrics(dn, measure = "density", step = 1, window = 7)
 
 Setting them equal partitions the period into disjoint bins, which is
 the default. Setting `window = 0` samples the network at each point in
-time — the convention `tsna` uses with `aggregate.dur = 0`. A positive
-window is the default because point sampling silently drops any edge
-that begins and ends between two sample points, a real loss on bursty
-data.
+time — the convention `tsna` uses with `aggregate.dur = 0`. Point
+sampling on the default grid runs through the last observed instant, as
+`tsna` does with an inclusive `end`. A positive window is the default
+because point sampling silently drops any edge that begins and ends
+between two sample points, a real loss on bursty data.
 
 `start` and `end` default to the observed range, and a network built
 from dates may be addressed with dates:
