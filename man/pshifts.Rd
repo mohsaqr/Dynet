@@ -25,7 +25,11 @@ pshifts(
 sequence and never uses a predecessor outside the range.}
 
 \item{group_events}{Infer one group-directed turn from simultaneous distinct
-recipients, or retain every dyadic row.}
+recipients (\code{"simultaneous"}), or retain every dyadic row (\code{"none"}).
+Several turns at one instant are ordered by speaker, then group turn
+before dyadic turn, then target, each in the network's vertex order; the
+classification of consecutive turns depends on that order, so under
+\code{"none"} a batch of simultaneous replies is read in vertex order.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns

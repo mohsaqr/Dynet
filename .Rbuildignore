@@ -5,6 +5,7 @@
 ^legacy$
 ^tmp$
 ^docs$
+^dev-notes$
 ^SPEC\.md$
 ^MATH_ROADMAP\.md$
 ^HANDOFF\.md$
@@ -25,3 +26,5 @@
 ^ECOSYSTEM\.md$
 ^ECOSYSTEM-INDEX\.md$
 ^TODO\.md$
+^_pkgdown\.yml$
+^pkgdown$

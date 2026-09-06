@@ -38,8 +38,8 @@ published ones. It exists so the analysis can be run and taught end to end.
 
 Spells are weighted by how many message pairs they represent, overlap in
 time, and include self-loops, because a code following itself is a real and
-common transition. Build with \code{loops = TRUE} to keep them, and name
-\code{weight = "weight"} or the spell counts are silently replaced by ones.
+common transition. Build with \code{loops = TRUE} to keep them; the \code{weight}
+column is picked up as the tie weight.
 }
 \examples{
 dynet(synthdata, directed = TRUE, loops = TRUE, weight = "weight")

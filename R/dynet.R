@@ -73,8 +73,9 @@
 #'   both selects the co-presence format.
 #' @param session Column name for a session or period grouping. Sessions act
 #'   as walls that time-respecting paths do not cross.
-#' @param weight Column name for event multiplicity. Defaults to one event per
-#'   row.
+#' @param weight Column name for event multiplicity. `NULL` auto-detects a
+#'   column named `weight`, `weights` or `strength` (and says so); with none,
+#'   every row counts once.
 #' @param nodes Optional data frame of vertex attributes. The vertex key is
 #'   auto-detected, or given as the first column.
 #' @param groups Name of a column in `nodes` to use as the vertex partition.
@@ -267,6 +268,16 @@ dynet <- function(data,
   # accessor, whose one-row-per-input-derived-spell contract is unchanged.
   e$.raw_spell <- seq_len(nrow(e))
 
+  # Undirected spells are stored once, with endpoints in a canonical order, so
+  # that A-B and B-A are the same edge. Canonicalise BEFORE sorting, so the
+  # order here is the order every later rebuild (`.rebuild_ties()`) produces
+  # and a tie's row position survives an edit.
+  if (!directed) {
+    lo <- pmin(e$from, e$to)
+    hi <- pmax(e$from, e$to)
+    e$from <- lo
+    e$to   <- hi
+  }
   e <- e[order(e$start, e$end, e$from, e$to), , drop = FALSE]
   rownames(e) <- NULL
 
@@ -277,15 +288,6 @@ dynet <- function(data,
   node_table <- .build_nodes(
     e, nodes, c(built$node_pool, vertex_activity$spells$node)
   )
-
-  # Undirected spells are stored once, with endpoints in a canonical order, so
-  # that A-B and B-A are the same edge.
-  if (!directed) {
-    lo <- pmin(e$from, e$to)
-    hi <- pmax(e$from, e$to)
-    e$from <- lo
-    e$to   <- hi
-  }
 
   t_min <- min(e$start)
   t_max <- max(e$end)
@@ -1181,7 +1183,6 @@ dynet <- function(data,
   e
 }
 
-
 #' Resolve the per-event weight column
 #' @param data Source data frame.
 #' @param weight User-supplied column name or `NULL`.
@@ -1190,13 +1191,23 @@ dynet <- function(data,
 #' @return A numeric vector of length `n`.
 #' @noRd
 .resolve_weight <- function(data, weight, row_index, n) {
-  if (is.null(weight)) return(rep(1, n))
+  if (is.null(weight)) {
+    # A column named like a weight is taken as one, and said so, rather than
+    # silently replaced by ones (review 2026-09-05, finding 4).
+    if (is.null(row_index)) return(rep(1, n))
+    detected <- .resolve_column(data, NULL, "weight")
+    if (is.null(detected)) return(rep(1, n))
+    message(sprintf("Using column `%s` as the tie weight; name `weight = ` to choose another or drop the column to count each row once.",
+                    detected))
+    weight <- detected
+  }
   if (is.null(row_index)) {
-    warning("`weight` is ignored for co-presence networks, where each pair counts once.",
-            call. = FALSE)
+    warning(warningCondition(
+      "`weight` is ignored for co-presence networks, where each pair counts once.",
+      class = "dynet_weight_ignored"), call. = FALSE)
     return(rep(1, n))
   }
-  w <- data[[.resolve_column(data, weight, "duration", arg = "weight")]]
+  w <- data[[.resolve_column(data, weight, "weight", arg = "weight")]]
   if (!is.numeric(w)) {
     stop(errorCondition("The weight column must be numeric.",
                         class = "dynet_bad_input", call = NULL))
@@ -1232,8 +1243,9 @@ dynet <- function(data,
   attrs$name <- key_values
   dup <- duplicated(attrs$name)
   if (any(dup)) {
-    warning(sprintf("`nodes` has %d duplicate vertex row(s); the first is kept.",
-                    sum(dup)), call. = FALSE)
+    warning(warningCondition(
+      sprintf("`nodes` has %d duplicate vertex row(s); the first is kept.", sum(dup)),
+      class = "dynet_duplicate_nodes", call = NULL))
     attrs <- attrs[!dup, , drop = FALSE]
   }
   merged <- merge(out, attrs, by = "name", all.x = TRUE, sort = FALSE)

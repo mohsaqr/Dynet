@@ -17,8 +17,11 @@ remove_arcs(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{ties}{Optional integer positions or logical mask referring to the rows
-of \code{as.data.frame(dn, what = "edges")}.}
+\item{ties}{Which ties to remove: a condition on the spell table,
+evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{duration > 2},
+\code{course == "g1"} -- over the columns \code{as.data.frame(dn)} returns, tie
+attributes included; or integer positions or a logical mask over that
+table.}
 
 \item{from, to, start, end, session}{Optional selectors combined by conjunction.
 When \code{ties} is supplied, these selectors must be omitted. On undirected

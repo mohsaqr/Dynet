@@ -37,7 +37,8 @@ dynet(forum_posts, time = "timestamp")
 # Threaded log: a post stays active until its thread falls silent
 dynet(forum_posts, thread = "thread", nodes = forum_people)
 
-# Co-presence log: actors sharing a group become connected
+# Co-presence log: actors sharing a group become connected (every member
+# pair, for the whole span of the group; attendance inside it is not used)
 dynet(seminar_attendance, actor = "student", group = "seminar")
 ```
 
@@ -386,7 +387,10 @@ plot(deg, top = 5)
 trajectory of ordinary centrality. `scope = "temporal"` measures the vertex
 against time-respecting paths across the whole window. The second has no static
 counterpart: it cannot travel backwards in time, so it is never inflated the way
-a flattened network is. Explicit vertex activity gates these temporal paths;
+a flattened network is. Temporal closeness is the inverse mean latency, so a
+source whose every reachable vertex is reached at zero latency (simultaneous
+contacts, common in contact logs) scores `Inf`; give `traversal_time` a
+positive value to score such data. Explicit vertex activity gates these temporal paths;
 an inactive source has zero temporal reach and closeness, while fixed node rows
 and fixed risk-set denominators are retained.
 
@@ -410,7 +414,9 @@ metrics(dn, measure = "density", step = 1, window = 7)
 
 Setting them equal partitions the period into disjoint bins, which is the
 default. Setting `window = 0` samples the network at each point in time — the
-convention `tsna` uses with `aggregate.dur = 0`. A positive window is the
+convention `tsna` uses with `aggregate.dur = 0`. Point sampling on the default
+grid runs through the last observed instant, as `tsna` does with an
+inclusive `end`. A positive window is the
 default because point sampling silently drops any edge that begins and ends
 between two sample points, a real loss on bursty data.
 

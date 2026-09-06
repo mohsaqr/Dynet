@@ -641,8 +641,9 @@
 .legacy_sample <- function(window = NULL, sample = NULL) {
   if (is.null(sample)) return(window)
   sample <- match.arg(sample, c("window", "instant"))
-  warning("`sample` is deprecated; use `window = 0` for point sampling and a positive `window` for window sampling.",
-          call. = FALSE)
+  warning(warningCondition(
+    "`sample` is deprecated; use `window = 0` for point sampling and a positive `window` for window sampling.",
+    class = "dynet_deprecated", call = NULL))
   if (identical(sample, "instant")) {
     if (!is.null(window) && !isTRUE(all.equal(as.numeric(window), 0))) {
       stop(errorCondition(
@@ -724,7 +725,11 @@
     return(data.frame(bin = 1L, lo = start, hi = hi, time = start,
                       closed = TRUE, stringsAsFactors = FALSE))
   }
-  end   <- spec$end   %||% .default_end(t_min, t_max, spec$step)
+  # Point sampling (`window = 0`) runs through the last observed instant, as
+  # `tsna` samples `seq(start, end, time.interval)` inclusive; a positive
+  # window stops at the last window that still opens inside the period.
+  end   <- spec$end %||% if (identical(spec$window, 0)) t_max else
+    .default_end(t_min, t_max, spec$step)
   # A grid whose end precedes its start still yields the single measurement
   # at `start`, so that a verb never returns zero rows for a valid network.
   lo <- if (end < start) start else seq(from = start, to = end, by = spec$step)
@@ -765,9 +770,9 @@
         time = component_start, closed = TRUE, stringsAsFactors = FALSE
       ))
     }
-    last <- if (is.null(spec$end)) {
-      .default_end(first, component_end, spec$step)
-    } else component_end
+    last <- if (!is.null(spec$end)) component_end else
+      if (identical(spec$window, 0)) component_end else
+        .default_end(first, component_end, spec$step)
     times <- if (first > component_end) numeric() else
       seq(first, last, by = spec$step)
     if (!length(times)) return(NULL)

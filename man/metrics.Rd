@@ -115,6 +115,20 @@ induction; \code{window = 0} evaluates the exact state. Density and census
 opportunities, components, isolate counts, largest-component shares, and
 Freeman denominators therefore use eligible rather than fixed order.
 
+\code{"assortativity"} is Newman's degree assortativity computed with the
+\strong{total} degree (in plus out) at both ends of every arc, on directed and
+undirected snapshots alike. It is not the directed out-degree-to-in-degree
+variant \code{igraph::assortativity_degree(directed = TRUE)} reports, and the
+two disagree on directed data.
+
+\code{"centralization_closeness"} is a Freeman centralisation of this package's
+own closeness (reachable vertices divided by reachable distance, so it is
+defined on a disconnected snapshot), with the theoretical maximum of that
+score: \code{n - 1} for a directed snapshot (a single arc from the centre) and
+\code{n - 2} for an undirected one (one isolated dyad). It matches
+\code{sna::centralization(closeness)} on connected snapshots and not on
+disconnected ones, where sna's closeness is zero everywhere.
+
 Krackhardt's four indices -- \code{"connectedness"}, \code{"efficiency"},
 \code{"hierarchy"} and \code{"lubness"} -- describe how far a directed network
 departs from a pure out-tree. \code{"hierarchy"} and \code{"lubness"} are undefined

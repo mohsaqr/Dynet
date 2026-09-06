@@ -57,8 +57,9 @@ both selects the co-presence format.}
 \item{session}{Column name for a session or period grouping. Sessions act
 as walls that time-respecting paths do not cross.}
 
-\item{weight}{Column name for event multiplicity. Defaults to one event per
-row.}
+\item{weight}{Column name for event multiplicity. \code{NULL} auto-detects a
+column named \code{weight}, \code{weights} or \code{strength} (and says so); with none,
+every row counts once.}
 
 \item{nodes}{Optional data frame of vertex attributes. The vertex key is
 auto-detected, or given as the first column.}

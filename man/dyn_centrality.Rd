@@ -186,6 +186,11 @@ window, which keeps the resolution of the smaller step while smoothing over
 the noise of a sparse bin. The arguments match \code{tsna::tSnaStats()}, where
 they are called \code{time.interval} and \code{aggregate.dur}.
 
+\code{"eigenvector"}, \code{"hub"} and \code{"authority"} are certified the way eigenvector
+prestige is: a snapshot whose spectral radius is zero (no cycle) or whose
+Perron root is repeated (components of equal weight) has no single answer,
+and every vertex of that block is \code{NA} under a warning of class
+\code{dynet_eigen_undefined}.
 \code{"eigenvector"} is uniquely determined when the Perron eigenvalue has a
 one-dimensional eigenspace; strong connectivity is a sufficient condition.
 Disconnected snapshots with equally dominant components can have more than

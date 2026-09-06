@@ -138,7 +138,11 @@
 #' @param start,end Optional inclusive query limits; each query is a fresh
 #'   sequence and never uses a predecessor outside the range.
 #' @param group_events Infer one group-directed turn from simultaneous distinct
-#'   recipients, or retain every dyadic row.
+#'   recipients (`"simultaneous"`), or retain every dyadic row (`"none"`).
+#'   Several turns at one instant are ordered by speaker, then group turn
+#'   before dyadic turn, then target, each in the network's vertex order; the
+#'   classification of consecutive turns depends on that order, so under
+#'   `"none"` a batch of simultaneous replies is read in vertex order.
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the

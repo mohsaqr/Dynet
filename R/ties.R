@@ -459,8 +459,11 @@ add_ties <- function(dn, data, loops = FALSE) {
 #' Remove temporal ties
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param ties Optional integer positions or logical mask referring to the rows
-#'   of `as.data.frame(dn, what = "edges")`.
+#' @param ties Which ties to remove: a condition on the spell table,
+#'   evaluated the way [subset()] evaluates one -- `duration > 2`,
+#'   `course == "g1"` -- over the columns `as.data.frame(dn)` returns, tie
+#'   attributes included; or integer positions or a logical mask over that
+#'   table.
 #' @param from,to,start,end,session Optional selectors combined by conjunction.
 #'   When `ties` is supplied, these selectors must be omitted. On undirected
 #'   networks `from` and `to` must be supplied together and their order is
@@ -476,6 +479,8 @@ add_ties <- function(dn, data, loops = FALSE) {
 #' @export
 remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
                         start = NULL, end = NULL, session = NULL) {
+  # `ties` may be a condition on the spell table, as in induce_subgraph().
+  ties <- .select_ties(dn, substitute(ties), parent.frame())
   .check_dynet(dn, "bounded")
   selectors <- list(from = from, to = to, start = start, end = end,
                     session = session)
@@ -618,6 +623,7 @@ remove_arcs <- function(dn, ties = NULL, from = NULL, to = NULL,
                         class = c("dynet_needs_directed", "dynet_bad_input"),
                         call = NULL))
   }
+  ties <- .select_ties(dn, substitute(ties), parent.frame())
   remove_ties(dn, ties = ties, from = from, to = to, start = start,
               end = end, session = session)
 }

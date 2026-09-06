@@ -99,8 +99,8 @@
 #'
 #' Spells are weighted by how many message pairs they represent, overlap in
 #' time, and include self-loops, because a code following itself is a real and
-#' common transition. Build with `loops = TRUE` to keep them, and name
-#' `weight = "weight"` or the spell counts are silently replaced by ones.
+#' common transition. Build with `loops = TRUE` to keep them; the `weight`
+#' column is picked up as the tie weight.
 #'
 #' @format A `data.frame` with 101 rows and 5 columns:
 #' \describe{

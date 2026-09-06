@@ -9,8 +9,10 @@ update_ties(dn, ties, data, loops = FALSE)
 \arguments{
 \item{dn}{A temporal network.}
 
-\item{ties}{Integer row positions or a logical mask referring to
-\code{as.data.frame(dn, what = "edges")}.}
+\item{ties}{Which ties to update: a condition on the spell table,
+evaluated the way \code{\link[=subset]{subset()}} evaluates one, over the columns
+\code{as.data.frame(dn)} returns; or integer row positions or a logical mask
+over that table.}
 
 \item{data}{A data frame with one row or one row per selected tie. Columns
 may be canonical tie fields or arbitrary atomic spell attributes.}

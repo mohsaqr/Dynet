@@ -184,11 +184,30 @@
   if (all(m == 0)) return(stats::setNames(rep(0, n), rownames(a)))
   # A plain power iteration oscillates on bipartite and periodic graphs because
   # -rho can have the same modulus as the Perron root. A direct eigensolve
-  # selects the non-negative matrix's largest real eigenvalue instead.
-  eig <- eigen(m)
-  idx <- which.max(Re(eig$values))
-  x <- Re(eig$vectors[, idx])
-  x <- abs(x)
+  # selects the non-negative matrix's largest real eigenvalue instead, and the
+  # result is certified the way eigenvector prestige is: the Perron root must
+  # be positive and its eigenspace one-dimensional. A snapshot whose spectral
+  # radius is zero (acyclic), or whose Perron root is repeated (two components
+  # of equal weight), has no single answer, and returns NA rather than one
+  # basis vector of the eigenspace chosen by the solver.
+  scale <- max(1, max(abs(m)))
+  spectrum <- tryCatch(eigen(m, only.values = TRUE)$values,
+                       error = function(e) NULL)
+  undefined <- structure(stats::setNames(rep(NA_real_, n), rownames(a)),
+                         undefined = TRUE)
+  if (is.null(spectrum) || any(!is.finite(spectrum))) return(undefined)
+  radius <- max(Mod(spectrum))
+  if (radius <= tol * scale) return(undefined)
+  shifted <- m - diag(radius, n)
+  decomposition <- tryCatch(svd(shifted, nu = 0L, nv = n),
+                            error = function(e) NULL)
+  if (is.null(decomposition) || any(!is.finite(decomposition$d))) return(undefined)
+  null <- which(decomposition$d <= tol * max(1, radius, decomposition$d))
+  if (length(null) != 1L) return(undefined)
+  x <- decomposition$v[, null]
+  if (sum(x) < 0) x <- -x
+  x[abs(x) <= tol * max(1, abs(x))] <- 0
+  if (any(x < 0)) return(undefined)
   if (max(x) > 0) x <- x / max(x)
   stats::setNames(x, rownames(a))
 }

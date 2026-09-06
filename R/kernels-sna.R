@@ -25,8 +25,11 @@
   nm <- rownames(a)
   if (n == 0L) return(stats::setNames(numeric(0), nm))
   m <- diag(1, n) - exponent * b
+  # A singular system (exponent at the reciprocal of an eigenvalue) has no
+  # answer; the NA vector is flagged so the verb can say so once.
   ev <- tryCatch(rowSums(solve(m) %*% b),
-                 error = function(e) rep(NA_real_, n))
+                 error = function(e) structure(rep(NA_real_, n), undefined = TRUE))
+  if (isTRUE(attr(ev, "undefined"))) return(structure(stats::setNames(as.numeric(ev), nm), undefined = TRUE))
   ss <- sum(ev^2)
   # sna scales to sum of squares n; an all-zero vector has no scale to take.
   if (isTRUE(is.finite(ss)) && ss > 0) ev <- ev * sqrt(n / ss)
@@ -104,7 +107,8 @@
   amat <- 1 - mk
   diag(amat) <- 1 + rowSums(mk)
   cn <- tryCatch(solve(amat), error = function(e) NULL)
-  if (is.null(cn)) return(stats::setNames(rep(NA_real_, n), rownames(a)))
+  # Disconnected: the information matrix is singular; flagged, not silent.
+  if (is.null(cn)) return(structure(stats::setNames(rep(NA_real_, n), rownames(a)), undefined = TRUE))
   tr <- sum(diag(cn))
   r <- rowSums(cn)
   # The denominator uses the full vertex count, isolates included.

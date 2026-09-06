@@ -22,7 +22,8 @@
   group    = c("group", "event", "context", "room", "class", "meeting",
                "venue", "team", "channel"),
   actor    = c("actor", "person", "member", "student", "participant", "user",
-               "id", "name")
+               "id", "name"),
+  weight   = c("weight", "weights", "strength")
 )
 
 #' Normalise a column name for alias matching
