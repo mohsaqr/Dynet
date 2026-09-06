@@ -37,5 +37,6 @@ plot(x, palette = "okabe", ...)
 
 ``` r
 dn <- dynet(school_contacts)
-plot(collapse_network(dn), layout = "oval")
+flat <- collapse_network(dn)
+plot(flat, layout = "oval")
 ```

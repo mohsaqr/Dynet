@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -90,7 +90,9 @@ most frequent first, or the per-step table when <code>what = "steps"</code>.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="pathways.html">pathways</a></span><span class="op">(</span><span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathways.html">pathways</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                route endpoint count     share n_hops</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 Ana -&gt; Jonas -&gt; Kira -&gt; Ben -&gt; Eve      Eve     3 0.4285714      4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2                Ana -&gt; Mira -&gt; Gita     Gita     1 0.1428571      2</span>
@@ -103,8 +105,7 @@ most frequent first, or the per-step table when <code>what = "steps"</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3        10.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4         9.65</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5         7.98</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="pathways.html">pathways</a></span><span class="op">(</span><span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>              what <span class="op">=</span> <span class="st">"steps"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">routes</span>, what <span class="op">=</span> <span class="st">"steps"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                 route step vertex  time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1         Ana -&gt; Cara -&gt; Finn -&gt; Iris    0    Ana  0.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2         Ana -&gt; Cara -&gt; Finn -&gt; Iris    1   Cara  6.67</span>

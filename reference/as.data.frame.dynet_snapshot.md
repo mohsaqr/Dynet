@@ -35,7 +35,10 @@ A plain `data.frame` with the same rows and columns.
 ## Examples
 
 ``` r
-head(as.data.frame(snapshots(dynet(school_contacts))))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+bins_table <- as.data.frame(bins)
+head(bins_table)
 #>   time  from   to weight n_spells
 #> 1    0 Jonas Mira      1        1
 #> 2    0 Jonas  Dan      1        1

@@ -32,7 +32,8 @@ dn <- dynet(data.frame(
   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
   session = c("s1", "s2")
 ), session = "session")
-summary(collapse_network(dn, sessions = "separate"))
+by_session <- collapse_network(dn, sessions = "separate")
+summary(by_session)
 #>   session pairs nodes union_duration total_duration
 #> 1      s1     1     2              2              2
 #> 2      s2     1     2              3              3

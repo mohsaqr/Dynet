@@ -61,8 +61,9 @@ A `ggplot` object.
 
 ``` r
 dn <- dynet(school_contacts)
-plot(dyn_centrality(dn, measure = "degree"), top = 5)
+degree <- dyn_centrality(dn, measure = "degree")
+plot(degree, top = 5)
 
-plot(dyn_centrality(dn, measure = "degree"), palette = "extended")
+plot(degree, palette = "extended")
 
 ```

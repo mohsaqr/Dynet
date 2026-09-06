@@ -33,7 +33,10 @@ Depth zero is the queried vertex itself and has no parent, so its
 ## Examples
 
 ``` r
-summary(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+summary(trajectories)
 #>   depth branches vertices count mean_branching
 #> 1     0        1        1    19             NA
 #> 2     1        5        3    18      0.1894737

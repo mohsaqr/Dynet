@@ -36,5 +36,7 @@ A `ggplot` object.
 ## Examples
 
 ``` r
-plot(snapshots(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+plot(bins)
 ```

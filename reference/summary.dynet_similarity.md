@@ -29,7 +29,9 @@ with no comparable neighbour reports `NaN` and `NA`.
 ## Examples
 
 ``` r
-summary(similarity(dynet(school_contacts), step = 5, window = 5))
+dn <- dynet(school_contacts)
+bin_similarity <- similarity(dn, step = 5, window = 5)
+summary(bin_similarity)
 #>   time      mean        min       max nearest
 #> 1    0 0.2056708 0.11764706 0.2987013       5
 #> 2    5 0.2484987 0.08450704 0.3707865      10

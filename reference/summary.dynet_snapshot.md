@@ -28,7 +28,9 @@ present), `time`, `ties`, `nodes` and `weight`.
 ## Examples
 
 ``` r
-summary(snapshots(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+summary(bins)
 #>    time ties nodes weight
 #> 1     0   10    13     11
 #> 2     1    8     8      8

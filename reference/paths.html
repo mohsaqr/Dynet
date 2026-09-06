@@ -31,7 +31,7 @@ edge-row order or duplicate spell rows."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -254,7 +254,8 @@ Science</em>, 991, 114434.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE         6.12     TRUE    6.12      2       2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE         9.65     TRUE    9.65      3       1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          property   value</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1          source     Ana</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2       direction forward</span>

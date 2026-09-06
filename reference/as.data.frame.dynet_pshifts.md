@@ -37,7 +37,9 @@ count of zero.
 ## Examples
 
 ``` r
-as.data.frame(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+as.data.frame(shifts)
 #>    shift          family count
 #> 1  AB-BA  turn_receiving     0
 #> 2  AB-B0  turn_receiving     0

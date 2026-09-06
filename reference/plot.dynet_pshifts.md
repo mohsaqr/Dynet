@@ -28,5 +28,7 @@ A `ggplot` object.
 ## Examples
 
 ``` r
-plot(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+plot(shifts)
 ```

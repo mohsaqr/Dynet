@@ -187,7 +187,8 @@ events(dn)
 #>     5   formation     9
 #>     5 dissolution     9
 #> # 32 more rows. summary() aggregates them; plot() draws them.
-plot(events(dn, measure = c("formation", "dissolution")))
+turnover <- events(dn, measure = c("formation", "dissolution"))
+plot(turnover)
 
 events(dn, measure = "formation_fraction", start = 1, end = 1,
            window = 0)

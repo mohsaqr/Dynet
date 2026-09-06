@@ -72,7 +72,8 @@ the time points, one per bin.
 
 ``` r
 dn <- dynet(school_contacts)
-as.data.frame(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+as.data.frame(degree)
 #>     time  node measure value
 #> 1      0   Ana  degree     1
 #> 2      0   Ben  degree     1
@@ -382,7 +383,7 @@ as.data.frame(dyn_centrality(dn, measure = "degree"))
 #> 306   21   Leo  degree     1
 #> 307   21  Mira  degree     0
 #> 308   21  Nils  degree     1
-as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
+as.data.frame(degree, layout = "wide")
 #>     node measure t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 t16 t17
 #> 1    Ana  degree  1  0  1  2  1  1  7  6  3  2   3   1   2   5   4   0   0   0
 #> 2    Ben  degree  1  0  0  2  4  3  2  3  0  2   2   4   3   3   3   1   2   2
@@ -413,7 +414,7 @@ as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
 #> 12   1   0   1   1
 #> 13   2   2   2   0
 #> 14   0   1   3   1
-as.data.frame(dyn_centrality(dn, measure = "degree"), what = "diagnostics")
+as.data.frame(degree, what = "diagnostics")
 #>  [1] session              time                 stage               
 #>  [4] status               reason               iterations          
 #>  [7] residual             balance_status       balance_reason      

@@ -50,7 +50,8 @@ dn <- dynet(data.frame(
   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
   session = c("s1", "s2")
 ), session = "session")
-as.data.frame(collapse_network(dn, sessions = "separate"))
+by_session <- collapse_network(dn, sessions = "separate")
+as.data.frame(by_session)
 #>   session from to binary union_duration total_duration duration_fraction
 #> 1      s1    A  B      1              2              2         0.6666667
 #> 2      s2    A  B      1              3              3         1.0000000
@@ -60,7 +61,7 @@ as.data.frame(collapse_network(dn, sessions = "separate"))
 #>   activity.duration activity.count
 #> 1                 2              1
 #> 2                 3              1
-as.data.frame(collapse_network(dn, sessions = "separate"), session = "s1")
+as.data.frame(by_session, session = "s1")
 #>   from to binary union_duration total_duration duration_fraction spell_count
 #> 1    A  B      1              2              2         0.6666667           1
 #>   weight_sum weighted_duration latest_weight first last activity.duration

@@ -38,7 +38,8 @@ for part of the calendar reports fewer than the number of time points.
 
 ``` r
 dn <- dynet(school_contacts)
-summary(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+summary(degree)
 #>     node measure  n     mean       sd min max peak_time
 #> 1    Ana  degree 22 2.181818 2.015095   0   7         6
 #> 2    Ben  degree 22 2.000000 1.234427   0   4         4
@@ -54,7 +55,7 @@ summary(dyn_centrality(dn, measure = "degree"))
 #> 12   Leo  degree 22 1.636364 1.432462   0   5         6
 #> 13  Mira  degree 22 2.272727 1.695423   0   6        13
 #> 14  Nils  degree 22 2.181818 2.174229   0   7        14
-summary(dyn_centrality(dn, measure = "degree"), by = "time")
+summary(degree, by = "time")
 #>    time measure  n      mean        sd min max
 #> 1     0  degree 14 1.4285714 0.7559289   0   3
 #> 2     1  degree 14 1.1428571 1.2924123   0   4

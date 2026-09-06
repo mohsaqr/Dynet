@@ -1,5 +1,12 @@
 # Changelog
 
+## Dynet 0.4.4
+
+- Every example, the README, both vignettes and the reproductions are
+  written one call per line: a verb’s result is named, and the next verb
+  takes that object. No call is nested inside another. Nothing computed
+  changed.
+
 ## Dynet 0.4.3
 
 - [`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),

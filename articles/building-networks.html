@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -466,8 +466,9 @@ Keep them if the loop means something in your design:</p>
 <p><code>interval</code> sets the default bin width used by every
 measurement verb, in the network’s own time unit:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, interval <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">tiny_dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, interval <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dropped 1 self-loop event(s). Use loops = TRUE to keep them.</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">tiny_dn</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property    value</span></span>
 <span><span class="co">#&gt; 1                 format interval</span></span>
 <span><span class="co">#&gt; 2               directed      yes</span></span>
@@ -500,7 +501,8 @@ further argument.</p>
 <span><span class="co">#&gt; 4  student_03     Student        High     Student</span></span></code></pre></div>
 <p>Those attributes are what <code><a href="../reference/mixing.html">mixing()</a></code> partitions on:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">roles</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">role_mixing</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">roles</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">role_mixing</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Mixing by role (graph-level)</span></span>
 <span><span class="co">#&gt; # 55 time points, 1 per bin | time in days</span></span>
 <span><span class="co">#&gt; # measures: Facilitator -&gt; Facilitator, Student -&gt; Facilitator, Teacher -&gt; Facilitator, Facilitator -&gt; Student</span></span>
@@ -554,7 +556,8 @@ three weeks of contact give three weekly sessions:</p>
 argument with three settings, and the choice changes the answer rather
 than the formatting. Temporal paths show it most sharply:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"collapse"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">collapsed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"collapse"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">collapsed</span><span class="op">)</span></span>
 <span><span class="co">#&gt;          property   value</span></span>
 <span><span class="co">#&gt; 1          source     Ana</span></span>
 <span><span class="co">#&gt; 2       direction forward</span></span>
@@ -568,7 +571,8 @@ than the formatting. Temporal paths show it most sharply:</p>
 history as one continuous stream. Ana reaches all thirteen other
 students, at a median latency of 7.51 time steps.</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"bounded"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">inside</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"bounded"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">inside</span><span class="op">)</span></span>
 <span><span class="co">#&gt;          property   value</span></span>
 <span><span class="co">#&gt; 1          source     Ana</span></span>
 <span><span class="co">#&gt; 2       direction forward</span></span>
@@ -583,7 +587,8 @@ still reaches everyone, but she has to do it by routes that never cross
 a week boundary, so the journeys get longer — median latency rises to
 8.21 and the longest journey grows from four hops to five.</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"separate"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">per_session</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"separate"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">per_session</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    session        property   value</span></span>
 <span><span class="co">#&gt; 1   week_1          source     Ana</span></span>
 <span><span class="co">#&gt; 2   week_1       direction forward</span></span>
@@ -732,14 +737,18 @@ arrives report <code>NA</code> rather than a degree of zero — the
 difference between “had no contacts” and “was not there to have
 any”:</p>
 <div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">school_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<span><span class="va">school_degree_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">school_degree</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_degree_table</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   time node measure value</span></span>
 <span><span class="co">#&gt; 1    0  Ana  degree     1</span></span>
 <span><span class="co">#&gt; 2    0  Ben  degree     1</span></span>
 <span><span class="co">#&gt; 3    0 Cara  degree     1</span></span>
 <span><span class="co">#&gt; 4    0  Dan  degree     1</span></span></code></pre></div>
 <div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">scheduled</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">scheduled_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">scheduled</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<span><span class="va">scheduled_degree_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">scheduled_degree</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">scheduled_degree_table</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   time node measure value</span></span>
 <span><span class="co">#&gt; 1    0  Ana  degree     1</span></span>
 <span><span class="co">#&gt; 2    0  Ben  degree    NA</span></span>
@@ -748,13 +757,15 @@ any”:</p>
 <p>That distinction moves the summaries, because the empty bins are no
 longer averaged in as zeroes:</p>
 <div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">school_degree_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school_degree</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_degree_summary</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   node measure  n     mean       sd min max peak_time</span></span>
 <span><span class="co">#&gt; 1  Ana  degree 22 2.181818 2.015095   0   7         6</span></span>
 <span><span class="co">#&gt; 2  Ben  degree 22 2.000000 1.234427   0   4         4</span></span>
 <span><span class="co">#&gt; 3 Cara  degree 22 2.227273 1.342770   0   5         4</span></span></code></pre></div>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">scheduled</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">scheduled_degree_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">scheduled_degree</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">scheduled_degree_summary</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   node measure  n     mean       sd min max peak_time</span></span>
 <span><span class="co">#&gt; 1  Ana  degree 22 2.181818 2.015095   0   7         6</span></span>
 <span><span class="co">#&gt; 2  Ben  degree 15 2.133333 1.125463   0   4        11</span></span>
@@ -862,7 +873,8 @@ vector of old-to-new:</p>
 by an edge-level condition, keeping the time structure of what
 survives:</p>
 <div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">school</span>, nodes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span>, <span class="st">"Dan"</span>, <span class="st">"Eve"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">five</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">school</span>, nodes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span>, <span class="st">"Dan"</span>, <span class="st">"Eve"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">five</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property    value</span></span>
 <span><span class="co">#&gt; 1                 format interval</span></span>
 <span><span class="co">#&gt; 2               directed      yes</span></span>
@@ -894,7 +906,8 @@ frame back.</p>
 Ask for several at once and they arrive stacked with a
 <code>measure</code> column:</p>
 <div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">6</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">basics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">basics</span>, <span class="fl">6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Graph structure (graph-level)</span></span>
 <span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
 <span><span class="co">#&gt; # measures: density, edges, active_nodes</span></span>
@@ -909,9 +922,10 @@ Ask for several at once and they arrive stacked with a
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> collapses a series to one row per measure,
 with the time at which it peaked:</p>
 <div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span>,</span>
-<span>                                    <span class="st">"components"</span>, <span class="st">"transitivity"</span>,</span>
-<span>                                    <span class="st">"reciprocity"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">six</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span>,</span>
+<span>                                   <span class="st">"components"</span>, <span class="st">"transitivity"</span>,</span>
+<span>                                   <span class="st">"reciprocity"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">six</span><span class="op">)</span></span>
 <span><span class="co">#&gt;        measure  n        mean         sd        min        max peak_time</span></span>
 <span><span class="co">#&gt; 1 active_nodes 22 12.13636364 2.07698166 7.00000000 14.0000000         5</span></span>
 <span><span class="co">#&gt; 2   components 22  3.59090909 2.38365647 1.00000000  9.0000000        21</span></span>
@@ -925,7 +939,8 @@ that separation is the point. <code>step</code> is how often you look;
 Equal values tile the period into disjoint bins, which is the default; a
 larger window slides an overlapping one:</p>
 <div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">rolling</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Density (graph-level)</span></span>
 <span><span class="co">#&gt; # 22 time points, step 1, window 7 (rolling) | time in step</span></span>
 <span><span class="co">#&gt; # first 4 of 22 rows</span></span>
@@ -935,7 +950,8 @@ larger window slides an overlapping one:</p>
 <span><span class="co">#&gt;     2 density 0.3571429</span></span>
 <span><span class="co">#&gt;     3 density 0.3791209</span></span></code></pre></div>
 <div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">school_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">school_density</span><span class="op">)</span></span></code></pre></div>
 <p><img src="building-networks_files/figure-html/unnamed-chunk-48-1.png" class="r-plt" alt="" width="700"></p>
 <p>The <code>temporal_density</code> and <code>onset_intensity</code>
 selectors are the integrated counterparts — occupied pair-time and known
@@ -961,7 +977,8 @@ statistic — the network as it stood, one row per edge per time point.
 Give <code>at</code> for a single instant, or leave it out for the whole
 grid:</p>
 <div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">school</span>, at <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">at_five</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">school</span>, at <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">at_five</span>, <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Snapshot edges | 1 bin | 5 tie rows | time in step</span></span>
 <span><span class="co">#&gt;   time from   to weight n_spells</span></span>
 <span><span class="co">#&gt; 1    5 Kira  Leo      1        1</span></span>
@@ -972,7 +989,8 @@ grid:</p>
 <p><code><a href="../reference/events.html">events()</a></code> counts what changed rather than what was
 present: how many ties formed and dissolved in each bin.</p>
 <div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span>, <span class="fl">6</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">changes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">changes</span>, <span class="fl">6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Edge dynamics (graph-level)</span></span>
 <span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
 <span><span class="co">#&gt; # measures: formation, dissolution</span></span>
@@ -991,7 +1009,8 @@ the raw episodes, <code>"vertex_activity"</code> and
 <code>"vertex_spell"</code> for vertex presence,
 <code>"node_ties"</code> for incident tie time.</p>
 <div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span>, <span class="fl">6</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">tie_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tie_durations</span>, <span class="fl">6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Relationship duration (edge-level)</span></span>
 <span><span class="co">#&gt; # time in step</span></span>
 <span><span class="co">#&gt; # first 6 of 330 rows</span></span>
@@ -1004,7 +1023,8 @@ the raw episodes, <code>"vertex_activity"</code> and
 <span><span class="co">#&gt;   Ana Jonas  events     4</span></span>
 <span><span class="co">#&gt;   Ana  Kira  events     1</span></span></code></pre></div>
 <div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"spell"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">spell_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"spell"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spell_durations</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Relationship duration (edge-level)</span></span>
 <span><span class="co">#&gt; # time in step</span></span>
 <span><span class="co">#&gt; # first 4 of 240 rows</span></span>
@@ -1015,7 +1035,8 @@ the raw episodes, <code>"vertex_activity"</code> and
 <span><span class="co">#&gt;   Ana  Dan       168 duration  0.51</span></span>
 <span><span class="co">#&gt;   Ana  Dan       228 duration  0.19</span></span></code></pre></div>
 <div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"node_ties"</span>, mode <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">node_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"node_ties"</span>, mode <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">node_durations</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Incident tie duration (node-level)</span></span>
 <span><span class="co">#&gt; # 14 vertices | mode all | time in step</span></span>
 <span><span class="co">#&gt; # first 4 of 28 rows</span></span>
@@ -1061,8 +1082,10 @@ than recomputing it.</p>
 <span><span class="co">#&gt;               2</span></span>
 <span><span class="co">#&gt;               1</span></span></code></pre></div>
 <div class="sourceCode" id="cb56"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="../reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">school</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">7</span>,</span>
-<span>                                    weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">first_week</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">school</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">7</span>,</span>
+<span>                               weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span></span>
+<span><span class="va">first_week_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">first_week</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">first_week_table</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   from    to binary union_duration total_duration duration_fraction spell_count</span></span>
 <span><span class="co">#&gt; 1  Ana  Cara      1           0.10           0.10        0.01428571           1</span></span>
 <span><span class="co">#&gt; 2  Ana  Gita      1           0.33           0.33        0.04714286           1</span></span>

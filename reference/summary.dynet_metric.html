@@ -13,7 +13,7 @@ question a temporal network is being asked."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,8 @@ points.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">degree</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     node measure  n     mean       sd min max peak_time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1    Ana  degree 22 2.181818 2.015095   0   7         6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2    Ben  degree 22 2.000000 1.234427   0   4         4</span>
@@ -102,7 +103,7 @@ points.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 12   Leo  degree 22 1.636364 1.432462   0   5         6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 13  Mira  degree 22 2.272727 1.695423   0   6        13</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 14  Nils  degree 22 2.181818 2.174229   0   7        14</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">degree</span>, by <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    time measure  n      mean        sd min max</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1     0  degree 14 1.4285714 0.7559289   0   3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2     1  degree 14 1.1428571 1.2924123   0   4</span>

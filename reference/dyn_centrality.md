@@ -637,7 +637,8 @@ dyn_centrality(dn, measure = "degree", step = 1, window = 7)
 #>     0   Leo  degree     9
 #> # 296 more rows. summary() aggregates them; plot() draws them.
 
-summary(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+summary(degree)
 #>     node measure  n     mean       sd min max peak_time
 #> 1    Ana  degree 22 2.181818 2.015095   0   7         6
 #> 2    Ben  degree 22 2.000000 1.234427   0   4         4

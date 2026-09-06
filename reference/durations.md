@@ -269,7 +269,8 @@ durations(dn, unit = "node_ties", mode = "all")
 #>   Kira  events    38
 #>    Leo  events    28
 #> # 16 more rows. summary() aggregates them; plot() draws them.
-summary(durations(dn), by = "measure")
+tie_durations <- durations(dn)
+summary(tie_durations, by = "measure")
 #>   measure   n      mean        sd  min  max
 #> 1  events 110 2.1818182 1.4218596 1.00 8.00
 #> 2    mean 110 0.4518795 0.2553268 0.04 1.34

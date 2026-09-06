@@ -440,8 +440,9 @@ the network’s own time unit:
 
 ``` r
 
-summary(dynet(tiny, interval = 2))
+tiny_dn <- dynet(tiny, interval = 2)
 #> Dropped 1 self-loop event(s). Use loops = TRUE to keep them.
+summary(tiny_dn)
 #>                 property    value
 #> 1                 format interval
 #> 2               directed      yes
@@ -484,7 +485,8 @@ partitions on:
 
 ``` r
 
-head(mixing(roles, attribute = "role"), 4)
+role_mixing <- mixing(roles, attribute = "role")
+head(role_mixing, 4)
 #> # Mixing by role (graph-level)
 #> # 55 time points, 1 per bin | time in days
 #> # measures: Facilitator -> Facilitator, Student -> Facilitator, Teacher -> Facilitator, Facilitator -> Student
@@ -548,7 +550,8 @@ Temporal paths show it most sharply:
 
 ``` r
 
-summary(paths(sessioned, from = "Ana", sessions = "collapse"))
+collapsed <- paths(sessioned, from = "Ana", sessions = "collapse")
+summary(collapsed)
 #>          property   value
 #> 1          source     Ana
 #> 2       direction forward
@@ -566,7 +569,8 @@ latency of 7.51 time steps.
 
 ``` r
 
-summary(paths(sessioned, from = "Ana", sessions = "bounded"))
+inside <- paths(sessioned, from = "Ana", sessions = "bounded")
+summary(inside)
 #>          property   value
 #> 1          source     Ana
 #> 2       direction forward
@@ -585,7 +589,8 @@ the longest journey grows from four hops to five.
 
 ``` r
 
-summary(paths(sessioned, from = "Ana", sessions = "separate"))
+per_session <- paths(sessioned, from = "Ana", sessions = "separate")
+summary(per_session)
 #>    session        property   value
 #> 1   week_1          source     Ana
 #> 2   week_1       direction forward
@@ -759,7 +764,9 @@ between “had no contacts” and “was not there to have any”:
 
 ``` r
 
-head(as.data.frame(dyn_centrality(school, measure = "degree")), 4)
+school_degree <- dyn_centrality(school, measure = "degree")
+school_degree_table <- as.data.frame(school_degree)
+head(school_degree_table, 4)
 #>   time node measure value
 #> 1    0  Ana  degree     1
 #> 2    0  Ben  degree     1
@@ -769,7 +776,9 @@ head(as.data.frame(dyn_centrality(school, measure = "degree")), 4)
 
 ``` r
 
-head(as.data.frame(dyn_centrality(scheduled, measure = "degree")), 4)
+scheduled_degree <- dyn_centrality(scheduled, measure = "degree")
+scheduled_degree_table <- as.data.frame(scheduled_degree)
+head(scheduled_degree_table, 4)
 #>   time node measure value
 #> 1    0  Ana  degree     1
 #> 2    0  Ben  degree    NA
@@ -782,7 +791,8 @@ longer averaged in as zeroes:
 
 ``` r
 
-head(summary(dyn_centrality(school, measure = "degree")), 3)
+school_degree_summary <- summary(school_degree)
+head(school_degree_summary, 3)
 #>   node measure  n     mean       sd min max peak_time
 #> 1  Ana  degree 22 2.181818 2.015095   0   7         6
 #> 2  Ben  degree 22 2.000000 1.234427   0   4         4
@@ -791,7 +801,8 @@ head(summary(dyn_centrality(school, measure = "degree")), 3)
 
 ``` r
 
-head(summary(dyn_centrality(scheduled, measure = "degree")), 3)
+scheduled_degree_summary <- summary(scheduled_degree)
+head(scheduled_degree_summary, 3)
 #>   node measure  n     mean       sd min max peak_time
 #> 1  Ana  degree 22 2.181818 2.015095   0   7         6
 #> 2  Ben  degree 15 2.133333 1.125463   0   4        11
@@ -924,7 +935,8 @@ keeping the time structure of what survives:
 
 ``` r
 
-summary(induce_subgraph(school, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve")))
+five <- induce_subgraph(school, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve"))
+summary(five)
 #>                 property    value
 #> 1                 format interval
 #> 2               directed      yes
@@ -959,7 +971,8 @@ they arrive stacked with a `measure` column:
 
 ``` r
 
-head(metrics(school, measure = c("density", "edges", "active_nodes")), 6)
+basics <- metrics(school, measure = c("density", "edges", "active_nodes"))
+head(basics, 6)
 #> # Graph structure (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # measures: density, edges, active_nodes
@@ -978,9 +991,10 @@ one row per measure, with the time at which it peaked:
 
 ``` r
 
-summary(metrics(school, measure = c("density", "edges", "active_nodes",
-                                    "components", "transitivity",
-                                    "reciprocity")))
+six <- metrics(school, measure = c("density", "edges", "active_nodes",
+                                   "components", "transitivity",
+                                   "reciprocity"))
+summary(six)
 #>        measure  n        mean         sd        min        max peak_time
 #> 1 active_nodes 22 12.13636364 2.07698166 7.00000000 14.0000000         5
 #> 2   components 22  3.59090909 2.38365647 1.00000000  9.0000000        21
@@ -997,7 +1011,8 @@ bins, which is the default; a larger window slides an overlapping one:
 
 ``` r
 
-head(metrics(school, measure = "density", step = 1, window = 7), 4)
+rolling <- metrics(school, measure = "density", step = 1, window = 7)
+head(rolling, 4)
 #> # Density (graph-level)
 #> # 22 time points, step 1, window 7 (rolling) | time in step
 #> # first 4 of 22 rows
@@ -1010,7 +1025,8 @@ head(metrics(school, measure = "density", step = 1, window = 7), 4)
 
 ``` r
 
-plot(metrics(school, measure = "density"))
+school_density <- metrics(school, measure = "density")
+plot(school_density)
 ```
 
 ![](building-networks_files/figure-html/unnamed-chunk-48-1.png)
@@ -1044,7 +1060,8 @@ or leave it out for the whole grid:
 
 ``` r
 
-head(snapshots(school, at = 5), 5)
+at_five <- snapshots(school, at = 5)
+head(at_five, 5)
 #> # Snapshot edges | 1 bin | 5 tie rows | time in step
 #>   time from   to weight n_spells
 #> 1    5 Kira  Leo      1        1
@@ -1060,7 +1077,8 @@ dissolved in each bin.
 
 ``` r
 
-head(events(school), 6)
+changes <- events(school)
+head(changes, 6)
 #> # Edge dynamics (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # measures: formation, dissolution
@@ -1082,7 +1100,8 @@ episodes, `"vertex_activity"` and `"vertex_spell"` for vertex presence,
 
 ``` r
 
-head(durations(school), 6)
+tie_durations <- durations(school)
+head(tie_durations, 6)
 #> # Relationship duration (edge-level)
 #> # time in step
 #> # first 6 of 330 rows
@@ -1098,7 +1117,8 @@ head(durations(school), 6)
 
 ``` r
 
-head(durations(school, unit = "spell"), 4)
+spell_durations <- durations(school, unit = "spell")
+head(spell_durations, 4)
 #> # Relationship duration (edge-level)
 #> # time in step
 #> # first 4 of 240 rows
@@ -1112,7 +1132,8 @@ head(durations(school, unit = "spell"), 4)
 
 ``` r
 
-head(durations(school, unit = "node_ties", mode = "all"), 4)
+node_durations <- durations(school, unit = "node_ties", mode = "all")
+head(node_durations, 4)
 #> # Incident tie duration (node-level)
 #> # 14 vertices | mode all | time in step
 #> # first 4 of 28 rows
@@ -1164,8 +1185,10 @@ flat
 
 ``` r
 
-head(as.data.frame(collapse_network(school, start = 0, end = 7,
-                                    weight = "union_duration")), 4)
+first_week <- collapse_network(school, start = 0, end = 7,
+                               weight = "union_duration")
+first_week_table <- as.data.frame(first_week)
+head(first_week_table, 4)
 #>   from    to binary union_duration total_duration duration_fraction spell_count
 #> 1  Ana  Cara      1           0.10           0.10        0.01428571           1
 #> 2  Ana  Gita      1           0.33           0.33        0.04714286           1

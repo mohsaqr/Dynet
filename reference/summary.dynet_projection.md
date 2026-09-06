@@ -29,7 +29,9 @@ no identity arcs, so its count is zero.
 ## Examples
 
 ``` r
-summary(projection(dynet(school_contacts), step = 5, window = 5))
+dn <- dynet(school_contacts)
+slices <- projection(dn, step = 5, window = 5)
+summary(slices)
 #>   slice time active within_slice identity_arcs
 #> 1     1    0     14           40            14
 #> 2     2    5     14           60            14

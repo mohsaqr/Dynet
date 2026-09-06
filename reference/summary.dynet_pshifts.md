@@ -29,7 +29,9 @@ the `share` of all classified transitions it accounts for, and
 ## Examples
 
 ``` r
-summary(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+summary(shifts)
 #>            family count      share top_shift
 #> 1   turn_usurping   206 0.87659574     AB-XY
 #> 2  turn_receiving    18 0.07659574     AB-BY

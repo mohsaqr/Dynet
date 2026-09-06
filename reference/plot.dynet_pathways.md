@@ -52,5 +52,7 @@ already names, so colour never carries a distinction alone.
 ## Examples
 
 ``` r
-plot(pathways(dynet(school_contacts), from = "Ana"))
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+plot(routes)
 ```

@@ -129,7 +129,8 @@ exponential-family random graph models: terms and computational aspects.
 
 ``` r
 dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-mixing(dn, attribute = "role")
+role_mixing <- mixing(dn, attribute = "role")
+role_mixing
 #> # Mixing by role (graph-level)
 #> # 55 time points, 1 per bin | time in days
 #> # measures: Facilitator -> Facilitator, Student -> Facilitator, Teacher -> Facilitator, Facilitator -> Student, Student -> Student, Teacher -> Student, Facilitator -> Teacher, Student -> Teacher, Teacher -> Teacher
@@ -148,6 +149,6 @@ mixing(dn, attribute = "role")
 #>     1     Student -> Facilitator     0     Student Facilitator
 #>     1     Teacher -> Facilitator     0     Teacher Facilitator
 #> # 483 more rows. summary() aggregates them; plot() draws them.
-plot(mixing(dn, attribute = "role"))
+plot(role_mixing)
 
 ```

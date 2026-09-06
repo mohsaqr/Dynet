@@ -268,6 +268,7 @@ metrics(dn, measure = "density", step = 1, window = 3)
 #>    10 density 0.2087912
 #>    11 density 0.2582418
 #> # 10 more rows. summary() aggregates them; plot() draws them.
-plot(metrics(dn, measure = c("mutual", "asymmetric")))
+dyads <- metrics(dn, measure = c("mutual", "asymmetric"))
+plot(dyads)
 
 ```

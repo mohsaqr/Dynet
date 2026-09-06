@@ -32,5 +32,8 @@ A `ggplot` object.
 ## Examples
 
 ``` r
-plot(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+plot(trajectories)
 ```

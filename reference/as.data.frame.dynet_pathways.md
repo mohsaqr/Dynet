@@ -50,7 +50,9 @@ most frequent first, or the per-step table when `what = "steps"`.
 ## Examples
 
 ``` r
-as.data.frame(pathways(dynet(school_contacts), from = "Ana"))
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+as.data.frame(routes)
 #>                                route endpoint count     share n_hops
 #> 1 Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.4285714      4
 #> 2                Ana -> Mira -> Gita     Gita     1 0.1428571      2
@@ -63,8 +65,7 @@ as.data.frame(pathways(dynet(school_contacts), from = "Ana"))
 #> 3        10.00
 #> 4         9.65
 #> 5         7.98
-as.data.frame(pathways(dynet(school_contacts), from = "Ana"),
-              what = "steps")
+as.data.frame(routes, what = "steps")
 #>                                 route step vertex  time
 #> 1         Ana -> Cara -> Finn -> Iris    0    Ana  0.00
 #> 2         Ana -> Cara -> Finn -> Iris    1   Cara  6.67

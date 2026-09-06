@@ -17,7 +17,7 @@ dynet() through its nodes argument."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -166,7 +166,8 @@ exponential-family random graph models: terms and computational aspects.
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">mixing</span><span class="op">(</span><span class="va">dn</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">role_mixing</span> <span class="op">&lt;-</span> <span class="fu">mixing</span><span class="op">(</span><span class="va">dn</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">role_mixing</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Mixing by role (graph-level)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 55 time points, 1 per bin | time in days</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # measures: Facilitator -&gt; Facilitator, Student -&gt; Facilitator, Teacher -&gt; Facilitator, Facilitator -&gt; Student, Student -&gt; Student, Teacher -&gt; Student, Facilitator -&gt; Teacher, Student -&gt; Teacher, Teacher -&gt; Teacher</span>
@@ -185,7 +186,7 @@ exponential-family random graph models: terms and computational aspects.
 <span class="r-out co"><span class="r-pr">#&gt;</span>     1     Student -&gt; Facilitator     0     Student Facilitator</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     1     Teacher -&gt; Facilitator     0     Teacher Facilitator</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 483 more rows. summary() aggregates them; plot() draws them.</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu">mixing</span><span class="op">(</span><span class="va">dn</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">role_mixing</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="mixing-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

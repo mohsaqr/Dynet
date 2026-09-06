@@ -212,7 +212,8 @@ paths(dn, from = "Ana", start = 0, end = 10)
 #>   Kira      TRUE         6.12     TRUE    6.12      2       2
 #>    Leo      TRUE         9.65     TRUE    9.65      3       1
 #> # 2 more rows. summary() aggregates them; plot() draws the tree.
-summary(paths(dn, from = "Ana"))
+routes <- paths(dn, from = "Ana")
+summary(routes)
 #>          property   value
 #> 1          source     Ana
 #> 2       direction forward

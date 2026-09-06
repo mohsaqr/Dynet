@@ -108,7 +108,8 @@ Both are visible in a single call:
 
 ``` r
 
-head(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+head(degree)
 #> # Degree (node-level)
 #> # 14 vertices | 22 time points, 1 per bin | time in step
 #> # first 6 of 308 rows
@@ -127,7 +128,9 @@ underneath is an ordinary data frame.
 
 ``` r
 
-str(as.data.frame(metrics(dn, measure = "density")))
+density <- metrics(dn, measure = "density")
+density_table <- as.data.frame(density)
+str(density_table)
 #> 'data.frame':    22 obs. of  3 variables:
 #>  $ time   : num  0 1 2 3 4 5 6 7 8 9 ...
 #>  $ measure: chr  "density" "density" "density" "density" ...
@@ -147,7 +150,7 @@ computes a structural measure once per time bin.
 
 ``` r
 
-head(metrics(dn, measure = "density"))
+head(density)
 #> # Density (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # first 6 of 22 rows
@@ -162,7 +165,7 @@ head(metrics(dn, measure = "density"))
 
 ``` r
 
-summary(metrics(dn, measure = "density"))
+summary(density)
 #>   measure  n       mean         sd        min       max peak_time
 #> 1 density 22 0.08291708 0.03929021 0.03296703 0.1648352        14
 ```
@@ -172,7 +175,7 @@ closer to one in twelve. Plotted, the classroom breathes.
 
 ``` r
 
-plot(metrics(dn, measure = "density"), palette = "okabe")
+plot(density, palette = "okabe")
 ```
 
 ![](dynet_files/figure-html/density-plot-1.png)
@@ -229,7 +232,8 @@ reachable set.
 
 ``` r
 
-summary(paths(dn, from = "Ana"))
+from_ana <- paths(dn, from = "Ana")
+summary(from_ana)
 #>          property   value
 #> 1          source     Ana
 #> 2       direction forward
@@ -278,7 +282,8 @@ when you are tracing an exposure backwards rather than forwards.
 
 ``` r
 
-summary(paths(dn, from = "Ana", direction = "backward"))
+into_ana <- paths(dn, from = "Ana", direction = "backward")
+summary(into_ana)
 #>          property    value
 #> 1          source      Ana
 #> 2       direction backward
@@ -348,7 +353,8 @@ branching `probability` given its parent, and the bare `vertex` and
 
 ``` r
 
-head(path_trajectories(journeys))
+trajectories <- path_trajectories(journeys)
+head(trajectories)
 #> # Forward temporal trajectory tree from Ana
 #> # 6 nodes, 3 hops deep, 19 routes
 #>                                          node                          parent
@@ -381,7 +387,7 @@ pupil’s trajectory in one table, including when they peaked.
 
 ``` r
 
-summary(dyn_centrality(dn, measure = "degree"))
+summary(degree)
 #>     node measure  n     mean       sd min max peak_time
 #> 1    Ana  degree 22 2.181818 2.015095   0   7         6
 #> 2    Ben  degree 22 2.000000 1.234427   0   4         4
@@ -401,7 +407,7 @@ summary(dyn_centrality(dn, measure = "degree"))
 
 ``` r
 
-plot(dyn_centrality(dn, measure = "degree"), type = "heatmap", palette = "okabe")
+plot(degree, type = "heatmap", palette = "okabe")
 ```
 
 ![](dynet_files/figure-html/centrality-plot-1.png)
@@ -414,7 +420,8 @@ the class quickly” rather than “has many neighbours right now”.
 
 ``` r
 
-head(dyn_centrality(dn, measure = "closeness", scope = "temporal"))
+closeness <- dyn_centrality(dn, measure = "closeness", scope = "temporal")
+head(closeness)
 #> # Closeness (node-level)
 #> # 14 vertices | time in step
 #> # first 6 of 14 rows
@@ -436,7 +443,8 @@ never in a time-respecting order.
 
 ``` r
 
-head(metrics(dn, measure = "temporal_density"))
+temporal_density <- metrics(dn, measure = "temporal_density")
+head(temporal_density)
 #> # Temporal density (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # first 6 of 22 rows
@@ -456,7 +464,8 @@ produce it.
 
 ``` r
 
-head(events(dn, measure = "formation"))
+formation <- events(dn, measure = "formation")
+head(formation)
 #> # Edges formed (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # first 6 of 22 rows
@@ -471,7 +480,8 @@ head(events(dn, measure = "formation"))
 
 ``` r
 
-head(events(dn, measure = "dissolution"))
+dissolution <- events(dn, measure = "dissolution")
+head(dissolution)
 #> # Edges dissolved (graph-level)
 #> # 22 time points, 1 per bin | time in step
 #> # first 6 of 22 rows
@@ -492,7 +502,8 @@ the gaps between a vertex’s events against the exponential reference:
 
 ``` r
 
-head(burstiness(dn))
+bursts <- burstiness(dn)
+head(bursts)
 #> # Burstiness (node-level)
 #> # 14 vertices | time in step
 #> # first 6 of 42 rows
@@ -516,7 +527,8 @@ activity.
 
 ``` r
 
-head(durations(dn, measure = "mean"))
+mean_durations <- durations(dn, measure = "mean")
+head(mean_durations)
 #> # Relationship duration (edge-level)
 #> # time in step
 #> # first 6 of 110 rows
