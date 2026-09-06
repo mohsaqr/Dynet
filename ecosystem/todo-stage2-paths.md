@@ -450,7 +450,46 @@ discipline are the real work.
 
 ---
 
-### A3b — Give `criterion = "shortest"` a per-contact cost so it stops being `min_hops`
+### A3b — Give `criterion = "shortest"` a per-contact cost so it stops being `min_hops` — DONE 2026-09-06 (0.4.5)
+
+**Feature record (written 2026-09-06, before the code).**
+
+- Equation. A journey's cost is `Σ_a c(a)` over its contacts; `c(a) = 1`
+  under `cost = "hops"` (identical to `min_hops`) and `c(a) = w(a)`, the tie
+  weight, under `cost = "weight"`. `"shortest"` selects the journeys of
+  minimum cost; within them the earliest arrival; `n_paths` counts the
+  cheapest journeys that arrive earliest, mirroring the other criteria.
+  `path_cost` is the minimum; `n_hops` is the fewest hops among the cheapest
+  journeys, `NA` when they differ.
+- **Deviation from the proposal above: the weight is a cost only, not also
+  the hop's duration.** Letting the criterion change *when* a contact
+  completes would change reachability itself with the criterion, and Dynet
+  already has an explicit per-hop duration, `traversal_time`, which stays in
+  force. So `shortest` answers "least summed weight among time-respecting
+  journeys", the reading `weight` has everywhere else in the package.
+- Algorithm. Not a hop-layered sweep with a 2-D Pareto frontier: a
+  label-setting search over vertex appearances, settled in order of
+  accumulated cost (Dijkstra on the implicit appearance graph). Every cost
+  is positive, so the cheapest open appearance is final, every predecessor
+  settles before its successors, and journey counts are exact at settling.
+  A key `(vertex, time, attained)` reached again at equal cost (relative
+  tolerance `sqrt(.Machine$double.eps)`) merges counts and predecessors; a
+  cheaper arrival replaces it, and can never touch a settled state.
+  Betweenness dependency then walks the DAG in descending cost, because a
+  merged state can carry fewer hops than one of its parents.
+- Weights must be positive and finite (`dynet_bad_weight`, a
+  `dynet_bad_input`): a zero-cost cycle re-admits non-simple journeys. Two
+  overlapping spells of one pair coalesce into one contact at the weight of
+  the earlier spell (`.coalesce_traversal_intervals()` already did this).
+- Sessions. Bounded mode merges per-session searches by minimum cost, then
+  earliest arrival, then fewest hops. Separate mode ranks within each block.
+- Reach: identical under every criterion. Closeness: inverse mean
+  `path_cost`, metadata `distance = "summed_weight"`. `top`: valid here for
+  the same reason as under `min_hops` (settled costs are exact and later
+  vertices lie above the current mean), and the exactness test covers it.
+- Not done here: backward queries under `shortest` (`dynet_bad_input`),
+  `edge_centrality()` under it, and `dyn_reachability()` cost measures.
+
 
 **Why.** Under Dynet's single scalar `traversal_time`, "minimum transition
 sum" is `δ × hops` and carries no information beyond hop count (V5). Shipping

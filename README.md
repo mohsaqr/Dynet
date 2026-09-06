@@ -344,6 +344,10 @@ zero. It is an inverse-time rate, not a raw terminus intensity or spell-time
 sum. T03 and T04 can be requested together at positive width; instant
 dissolution fractions remain the `window = 0` quantity.
 
+`paths(criterion = "shortest", cost = "weight")` finds the journeys of least
+summed tie weight instead, and reports that sum as `path_cost`; the weight is
+a cost only, so what is reachable and when never changes with the criterion.
+
 `paths()` selects shortest-foremost journeys: earliest completion first,
 then the fewest hops. Its compact endpoint table reports the exact `n_paths`
 over canonical contact sequences; the steps accessor adds endpoint-local

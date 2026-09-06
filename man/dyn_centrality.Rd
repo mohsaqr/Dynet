@@ -25,7 +25,8 @@ dyn_centrality(
   beta = 0.1,
   decay = 0,
   transition = 1,
-  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest"),
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest", "shortest"),
+  cost = c("hops", "weight"),
   top = NULL,
   plot = FALSE
 )
@@ -143,11 +144,18 @@ for betweenness with \code{dynet_intractable_criterion}, because that needs
 the count of every vertex-simple foremost journey, which is #P-hard
 (Buss et al., 2024). \code{"fastest"} measures closeness by journey duration
 rather than arrival, so a vertex that is reached late but quickly is
-close; betweenness under it is not implemented. Reach and reach count
-are identical under all.}
+close; betweenness under it is not implemented. \code{"shortest"} minimises
+a summed cost per contact, \code{cost}: with hop costs it is \code{"min_hops"},
+with weight costs closeness is the inverse mean summed weight of the
+cheapest journeys and betweenness counts those journeys. Reach and reach
+count are identical under all.}
+
+\item{cost}{For \code{criterion = "shortest"} only: \code{"hops"} (one per contact)
+or \code{"weight"} (the tie weight, which must be positive and finite). See
+\code{\link[=paths]{paths()}}.}
 
 \item{top}{For temporal \code{measure = "closeness"} under
-\code{criterion = "min_hops"} only: return the \code{top} most central vertices,
+\code{criterion = "min_hops"} or \code{"shortest"} only: return the \code{top} most central vertices,
 plus every vertex tied at the \code{top}-th value, computing only the searches
 that ranking needs. Temporal closeness costs one full path search per
 vertex; a source is dropped as soon as the closeness of what it has

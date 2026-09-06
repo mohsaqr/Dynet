@@ -122,5 +122,6 @@ test_that("the partial-closeness bound is attained and non-increasing across lay
   expect_equal(Dynet:::.min_hops_closeness_bound(c(1L, 2L, 3L, 4L), c(0L, 1L, 1L, 2L), 1L), 3 / 4)
   # A vertex seen again at a later layer keeps its first-appearance distance.
   expect_equal(Dynet:::.min_hops_closeness_bound(c(1L, 2L, 2L), c(0L, 1L, 2L), 1L), 1)
-  expect_identical(Dynet:::.min_hops_closeness_bound(1L, 0L, 1L), 0)
+  # Nothing settled beyond the source bounds nothing.
+  expect_identical(Dynet:::.min_hops_closeness_bound(1L, 0L, 1L), Inf)
 })

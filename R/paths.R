@@ -708,7 +708,11 @@
     primary <- state[[rule$primary]][ids]
     take_max <- forward == FALSE && identical(rule$primary, "time")
     best <- if (take_max) max(primary) else min(primary)
-    ids <- ids[primary == best]
+    # A summed weight is a floating-point total, so equality there carries a
+    # tolerance; a time or a hop count is compared exactly as before.
+    ids <- if (identical(rule$primary, "cost")) {
+      ids[.cost_eq(primary, best)]
+    } else ids[primary == best]
     arrival[[endpoint]] <- if (identical(rule$primary, "time")) {
       best
     } else if (forward) min(state$time[ids]) else max(state$time[ids])
@@ -728,9 +732,10 @@
     family_hops <- unique(state$hops[ids])
     n_hops[[endpoint]] <- if (length(family_hops) == 1L) family_hops else
       NA_integer_
-    path_cost[[endpoint]] <- if (identical(rule$cost, "hops")) {
-      n_hops[[endpoint]]
-    } else arrival[[endpoint]]
+    path_cost[[endpoint]] <- switch(rule$cost,
+      hops = n_hops[[endpoint]],
+      cost = best,
+      arrival[[endpoint]])
     n_paths[[endpoint]] <- Reduce(
       .path_count_add, state$count[ids], init = 0
     )
@@ -765,10 +770,171 @@
                                   cost = "time"),
     min_hops = list(primary = "hops", secondary = "time", cost = "hops"),
     foremost = list(primary = "time", secondary = NULL, cost = "time"),
+    shortest = list(primary = "cost", secondary = "time", cost = "cost"),
     stop(errorCondition(sprintf("Unknown path criterion %s.",
                                 sQuote(criterion)),
                         class = "dynet_bad_input", call = NULL))
   )
+}
+
+#' Tolerant equality of two summed costs
+#' @param a,b Numeric costs, recycled as usual.
+#' @return Logical, `TRUE` within a relative `sqrt(.Machine$double.eps)`.
+#' @noRd
+.cost_eq <- function(a, b) {
+  abs(a - b) <= sqrt(.Machine$double.eps) * pmax(1, abs(a), abs(b))
+}
+
+#' Refuse tie weights that cannot serve as path costs
+#'
+#' A zero or negative weight would admit a zero-cost cycle and re-open
+#' non-simple journeys; a missing one has no sum.
+#'
+#' @param weight Numeric tie weights.
+#' @return `TRUE`, invisibly; otherwise `dynet_bad_weight`.
+#' @noRd
+.check_path_costs <- function(weight) {
+  bad <- !is.finite(weight) | weight <= 0
+  if (any(bad)) {
+    stop(errorCondition(sprintf(paste0(
+      "`cost = \"weight\"` needs every tie weight positive and finite; ",
+      "%d of %d are not (first offending value: %s)."),
+      sum(bad), length(bad), format(weight[bad][[1L]])),
+      class = c("dynet_bad_weight", "dynet_bad_input"), call = NULL))
+  }
+  invisible(TRUE)
+}
+
+#' Build the state DAG for minimum-cost temporal paths
+#'
+#' Each canonical contact atom carries its tie weight as an additive cost.
+#' States are exact vertex appearances, as in `.optimal_path_search()`, but
+#' they are settled in order of cost rather than by hop layer: every cost is
+#' positive, so the cheapest open state can never be improved, and every
+#' predecessor of a state is settled before it, which makes the journey
+#' counts exact when a state is settled. A state reached again at the same
+#' cost merges its counts and predecessors; one reached cheaper is replaced.
+#' Time enters only through feasibility: a contact is entered at the earliest
+#' feasible time after the current appearance, and completes
+#' `traversal_time` later, exactly as under the other criteria.
+#'
+#' @inheritParams .optimal_path_search
+#' @param abandon Optional function of `(vertex, cost, settled)`, the settled
+#'   state vectors, returning `TRUE` to stop the search; the result then
+#'   carries `abandoned = TRUE`.
+#' @return An internal optimal-path search object with a `cost` state field
+#'   and `path_cost` per endpoint.
+#' @noRd
+.shortest_path_search <- function(enc, source, origin, lower = -Inf,
+                                  upper = Inf, traversal_time = 0,
+                                  prepared = NULL, origin_attained = TRUE,
+                                  abandon = NULL) {
+  prepared <- prepared %||% .path_search_tables(enc, traversal_time)
+  atoms <- prepared$atoms
+  domains <- prepared$domains
+  n <- enc$n
+  weight <- atoms$weight
+  .check_path_costs(weight)
+  empty_state <- list(
+    vertex = integer(), time = numeric(), attained = logical(),
+    hops = integer(), cost = numeric(), count = numeric(),
+    pred_state = list(), pred_atom = list()
+  )
+  if (!.path_vertex_active(enc$path_activity, source, origin)) {
+    return(list(
+      direction = "forward", source = source, origin = origin,
+      names = enc$names, n = n, atoms = atoms, anchor_valid = FALSE,
+      state = empty_state, arrival = rep(Inf, n),
+      attained = rep(FALSE, n), n_hops = rep(NA_integer_, n),
+      path_cost = rep(NA_real_, n), n_paths = rep(0, n),
+      selected_states = vector("list", n), criterion = "shortest"
+    ))
+  }
+  vertex <- source
+  time <- origin
+  attained <- isTRUE(origin_attained)
+  hops <- 0L
+  cost <- 0
+  count <- 1
+  pred_state <- list(integer(0))
+  pred_atom <- list(integer(0))
+  settled <- FALSE
+  state_index <- new.env(hash = TRUE, parent = emptyenv())
+  state_key <- function(v, value, is_attained) {
+    if (value == 0) value <- 0
+    paste(v, sprintf("%.17g", value), as.integer(is_attained), sep = "\r")
+  }
+  assign(state_key(source, origin, attained), 1L, envir = state_index)
+  outgoing <- split(seq_along(atoms$from),
+                    factor(atoms$from, levels = seq_len(n)))
+
+  relax <- function(v, value, is_attained, total, depth, parent, atom) {
+    key <- state_key(v, value, is_attained)
+    if (exists(key, envir = state_index, inherits = FALSE)) {
+      id <- get(key, envir = state_index, inherits = FALSE)
+      if (.cost_eq(total, cost[[id]])) {
+        count[[id]] <<- .path_count_add(count[[id]], count[[parent]])
+        pred_state[[id]] <<- c(pred_state[[id]], parent)
+        pred_atom[[id]] <<- c(pred_atom[[id]], atom)
+        hops[[id]] <<- min(hops[[id]], depth)
+        return(invisible())
+      }
+      if (total > cost[[id]]) return(invisible())
+      # Cheaper: the state cannot be settled yet (its parent settled first
+      # and is cheaper still), so replacing it is safe.
+      cost[[id]] <<- total
+      hops[[id]] <<- depth
+      count[[id]] <<- count[[parent]]
+      pred_state[[id]] <<- parent
+      pred_atom[[id]] <<- atom
+      return(invisible())
+    }
+    id <- length(vertex) + 1L
+    vertex[[id]] <<- v
+    time[[id]] <<- value
+    attained[[id]] <<- is_attained
+    hops[[id]] <<- depth
+    cost[[id]] <<- total
+    count[[id]] <<- count[[parent]]
+    pred_state[[id]] <<- parent
+    pred_atom[[id]] <<- atom
+    settled[[id]] <<- FALSE
+    assign(key, id, envir = state_index)
+    invisible()
+  }
+
+  # Label-setting order: each pop settles the cheapest open state, so the
+  # loop is a genuine sequential dependency.
+  repeat {
+    open <- which(!settled)
+    if (!length(open)) break
+    cheapest <- open[cost[open] <= min(cost[open])]
+    id <- cheapest[[which.min(time[cheapest])]]
+    settled[[id]] <- TRUE
+    for (row in outgoing[[vertex[[id]]]]) {
+      entry <- .path_forward_entry_open(domains[[row]], time[[id]], attained[[id]])
+      value <- unname(entry[["value"]])
+      candidate <- value + traversal_time
+      if (is.na(value) || !.time_leq(candidate, upper)) next
+      relax(atoms$to[[row]], candidate, as.logical(entry[["attained"]]),
+            cost[[id]] + weight[[row]], hops[[id]] + 1L, id, row)
+    }
+    if (!is.null(abandon) && any(!settled) &&
+        abandon(vertex[settled], cost[settled], sum(settled))) {
+      return(list(
+        direction = "forward", source = source, origin = origin,
+        names = enc$names, n = n, anchor_valid = TRUE, abandoned = TRUE
+      ))
+    }
+  }
+  search <- list(
+    direction = "forward", source = source, origin = origin,
+    names = enc$names, n = n, atoms = atoms, anchor_valid = TRUE,
+    state = list(vertex = vertex, time = time, attained = attained,
+                 hops = hops, cost = cost, count = count,
+                 pred_state = pred_state, pred_atom = pred_atom)
+  )
+  .finalize_optimal_search(search, "shortest")
 }
 
 #' Whether a criterion minimises or maximises its cost
@@ -781,6 +947,7 @@
     min_hops = "minimum",
     foremost = "minimum",
     fastest = "minimum",
+    shortest = "minimum",
     latest_departure = "maximum",
     stop(errorCondition(sprintf("Unknown path criterion %s.",
                                 sQuote(criterion)),
@@ -1159,6 +1326,13 @@
       }
       prepared <- get(key, envir = table_cache, inherits = FALSE)
     }
+    if (identical(criterion, "shortest")) {
+      return(.shortest_path_search(
+        sub, source, origin, lower, upper, traversal_time,
+        prepared = prepared, origin_attained = origin_attained,
+        abandon = abandon
+      ))
+    }
     .optimal_path_search(
       sub, source, origin, direction, lower, upper, traversal_time, criterion,
       max_states = max_states, origin_attained = origin_attained,
@@ -1180,10 +1354,12 @@
     run(sub, session = label, erase_sessions = FALSE)
   }, groups, names(groups))
   forward <- identical(direction, "forward")
+  shortest <- identical(criterion, "shortest")
   n <- enc$n
   arrival <- rep(if (forward) Inf else -Inf, n)
   attained <- rep(FALSE, n)
   n_hops <- rep(NA_integer_, n)
+  path_cost <- rep(NA_real_, n)
   n_paths <- rep(0, n)
   best_sessions <- vector("list", n)
   for (endpoint in seq_len(n)) {
@@ -1191,6 +1367,15 @@
                      numeric(1L))
     finite <- is.finite(values)
     if (!any(finite)) next
+    if (shortest) {
+      # The optimum across sessions is the cheapest journey; among the
+      # sessions attaining it, the earliest arrival, as within one search.
+      costs <- vapply(per, function(result) result$path_cost[[endpoint]],
+                      numeric(1L))
+      cheapest <- min(costs[finite])
+      finite <- finite & .cost_eq(costs, cheapest)
+      path_cost[[endpoint]] <- cheapest
+    }
     best <- if (forward) min(values[finite]) else max(values[finite])
     candidates <- which(finite & values == best)
     arrival[[endpoint]] <- best
@@ -1224,6 +1409,7 @@
     arrival[[source]] <- origin
     attained[[source]] <- isTRUE(origin_attained)
     n_hops[[source]] <- 0L
+    if (shortest) path_cost[[source]] <- 0
     n_paths[[source]] <- 1
     best_sessions[[source]] <- integer(0)
   }
@@ -1231,6 +1417,7 @@
     direction = direction, source = source, origin = origin,
     names = enc$names, n = n, arrival = arrival, attained = attained,
     n_hops = n_hops, n_paths = n_paths, per_session = per,
+    path_cost = if (shortest) path_cost else NULL, criterion = criterion,
     best_sessions = best_sessions, session_names = names(per),
     anchor_valid = any(vapply(per, function(result) {
       result$anchor_valid
@@ -1876,6 +2063,10 @@
     n_paths = as.numeric(search$n_paths),
     stringsAsFactors = FALSE
   )
+  if (identical(search$criterion, "shortest")) {
+    cost <- search$path_cost %||% rep(NA_real_, search$n)
+    paths$path_cost <- ifelse(reachable, cost, NA_real_)
+  }
   if (!is.null(search$departure)) {
     paths <- data.frame(
       paths[c("node", "reachable", "arrival_time")],
@@ -2031,6 +2222,16 @@
 #'   instead of `at`.
 #' @param traversal_time Nonnegative duration charged for every hop, in the
 #'   network's time unit. A calendar network also accepts a scalar `difftime`.
+#' @param cost For `criterion = "shortest"` only: what a contact costs.
+#'   `"hops"` (the default) charges one per contact, which is exactly
+#'   `criterion = "min_hops"`. `"weight"` charges each contact its tie weight,
+#'   so the shortest journey is the one with the least summed weight, and the
+#'   table gains a `path_cost` column holding that sum. Every weight must be
+#'   positive and finite (`dynet_bad_weight` otherwise): a zero-cost cycle
+#'   would re-admit non-simple journeys. The weight is a cost only; when a
+#'   contact can be entered, and how long a hop takes, is unchanged. Two
+#'   overlapping spells of one pair are one contact, at the weight of the
+#'   earlier spell.
 #' @param max_states For `criterion = "foremost"` only: the largest number of
 #'   search states one source may expand before the family is declared too
 #'   large. Supplying it with any other criterion is an error.
@@ -2051,7 +2252,11 @@
 #'   hops, within that family). Under `criterion = "fastest"` the same two
 #'   columns hold the fastest journey's departure and its duration. In both
 #'   cases an unattained optimum keeps its limiting departure, arrival and
-#'   duration but has `n_hops = NA` and `n_paths = 0`. Bounded mode adds `path_session` and
+#'   duration but has `n_hops = NA` and `n_paths = 0`. Under
+#'   `criterion = "shortest"` a `path_cost` column follows `n_paths`: the
+#'   summed cost of the cheapest journey, `n_hops` is the fewest hops among
+#'   the cheapest journeys (`NA` when they differ), and `arrival_time` and
+#'   `n_paths` describe the cheapest journeys that arrive earliest. Bounded mode adds `path_session` and
 #'   `n_best_sessions`; separate mode adds `session` and `origin`. Use
 #'   `as.data.frame(x, what = "steps")` for every reconstructed optimal route;
 #'   its endpoint-local `path_id` distinguishes tied atom sequences.
@@ -2098,6 +2303,13 @@
 #' at `end`; the empty journey departs from `from` at `end` itself. The
 #' `optimality` attribute records `"maximum"` for this criterion and
 #' `"minimum"` for the others, and `deadline` records the resolved `end`.
+#'
+#' A shortest query with weight costs is solved by settling vertex
+#' appearances in order of accumulated cost (Wu et al., 2016): every cost is
+#' positive, so the cheapest open appearance is final when it is settled and
+#' every predecessor of an appearance is settled before it, which is what
+#' makes the journey count exact. Two journeys tie when their summed weights
+#' agree within a relative tolerance of `sqrt(.Machine$double.eps)`.
 #'
 #' A fastest query is a sweep over candidate departures: for a fixed
 #' source-ready time the problem is prefix-optimal again, so the minimum
@@ -2174,7 +2386,9 @@
 paths <- function(dn, from, at = NULL,
                       direction = c("forward", "backward"),
                       criterion = c("foremost_then_shortest", "min_hops",
-                                    "foremost", "fastest", "latest_departure"),
+                                    "foremost", "fastest", "latest_departure",
+                                    "shortest"),
+                      cost = c("hops", "weight"),
                       sessions = c("bounded", "collapse", "separate"),
                       start = NULL, end = NULL, traversal_time = 0,
                       max_states = 1e5, plot = FALSE) {
@@ -2183,8 +2397,18 @@ paths <- function(dn, from, at = NULL,
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
   criterion <- match.arg(criterion)
+  cost <- .resolve_path_cost(cost, !missing(cost), criterion, dn)
   latest <- identical(criterion, "latest_departure")
   fastest <- identical(criterion, "fastest")
+  if (identical(criterion, "shortest") && identical(direction, "backward")) {
+    stop(errorCondition(
+      "`criterion = \"shortest\"` is a forward query from `from`; it has no backward form yet.",
+      class = "dynet_bad_input", call = NULL
+    ))
+  }
+  # With hop costs the shortest journey is the fewest-hop one, and the
+  # existing search answers it exactly.
+  search_criterion <- .search_criterion(criterion, cost)
   if (fastest && identical(direction, "backward")) {
     stop(errorCondition(
       "`criterion = \"fastest\"` is a forward query from `from`; it has no backward form yet.",
@@ -2258,7 +2482,7 @@ paths <- function(dn, from, at = NULL,
           dn, enc, src, origin, direction, FALSE,
           lower = window$start, upper = window$end,
           traversal_time = traversal_time, activity_mode = "separate",
-          activity_session = label, criterion = criterion,
+          activity_session = label, criterion = search_criterion,
           max_states = max_states
         )
       }
@@ -2308,7 +2532,7 @@ paths <- function(dn, from, at = NULL,
         dn, enc, src, origin, direction, bounded,
         lower = window$start, upper = window$end,
         traversal_time = traversal_time, activity_mode = "collapse",
-        criterion = criterion, max_states = max_states
+        criterion = search_criterion, max_states = max_states
       )
     }
     path_mode <- if (bounded) "bounded" else "collapse"
@@ -2319,16 +2543,63 @@ paths <- function(dn, from, at = NULL,
     search_descriptor <- list(mode = path_mode, search = search)
   }
   rownames(out) <- NULL
+  # With hop costs the search was min_hops; the cost column it promises is
+  # the hop count.
+  if (identical(criterion, "shortest") && !"path_cost" %in% names(out)) {
+    out$path_cost <- as.numeric(out$n_hops)
+    after <- match("n_paths", names(out))
+    out <- out[, append(setdiff(names(out), "path_cost"), "path_cost", after),
+               drop = FALSE]
+  }
   result <- structure(out, class = c("dynet_paths", "data.frame"),
                       source = base_enc$names[src], direction = direction,
                       origin = origins, time_unit = dn$meta$time_unit,
                       traversal_time = traversal_time,
                       criterion = criterion,
+                      cost = if (identical(criterion, "shortest")) cost else NULL,
                       optimality = .criterion_optimality(criterion),
                       deadline = if (latest) deadlines else NULL,
                       path_mode = path_mode, optimal_search = search_descriptor,
                       tree_previous = tree_previous)
   .maybe_plot(.vertex_path_metadata(result, path_mode), plot)
+}
+
+#' Resolve the `cost` argument of a path query
+#'
+#' @param cost The value supplied, before matching.
+#' @param given Whether the caller named it.
+#' @param criterion The matched criterion.
+#' @param dn The network, whose tie weights are checked under `"weight"`.
+#' @return The matched cost; `dynet_bad_input` when it is named with any
+#'   criterion other than `"shortest"`, `dynet_bad_weight` when a weight
+#'   cannot be a cost.
+#' @noRd
+.resolve_path_cost <- function(cost, given, criterion, dn) {
+  cost <- match.arg(cost, c("hops", "weight"))
+  if (given && !identical(criterion, "shortest")) {
+    stop(errorCondition(
+      "`cost` applies only to `criterion = \"shortest\"`.",
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (identical(criterion, "shortest") && identical(cost, "weight")) {
+    .check_path_costs(dn$spells$weight)
+  }
+  cost
+}
+
+#' The criterion the search actually solves for a public criterion
+#'
+#' `"shortest"` with hop costs is `"min_hops"`; `"foremost"` reads the same
+#' arrival as the default; everything else is itself.
+#' @param criterion Public criterion.
+#' @param cost Matched cost.
+#' @return An internal criterion name.
+#' @noRd
+.search_criterion <- function(criterion, cost = "hops") {
+  if (identical(criterion, "shortest") && identical(cost, "hops")) {
+    return("min_hops")
+  }
+  criterion
 }
 
 #' Require a finite deadline for a latest-departure query

@@ -180,13 +180,19 @@
 #'   the count of every vertex-simple foremost journey, which is #P-hard
 #'   (Buss et al., 2024). `"fastest"` measures closeness by journey duration
 #'   rather than arrival, so a vertex that is reached late but quickly is
-#'   close; betweenness under it is not implemented. Reach and reach count
-#'   are identical under all.
+#'   close; betweenness under it is not implemented. `"shortest"` minimises
+#'   a summed cost per contact, `cost`: with hop costs it is `"min_hops"`,
+#'   with weight costs closeness is the inverse mean summed weight of the
+#'   cheapest journeys and betweenness counts those journeys. Reach and reach
+#'   count are identical under all.
+#' @param cost For `criterion = "shortest"` only: `"hops"` (one per contact)
+#'   or `"weight"` (the tie weight, which must be positive and finite). See
+#'   [paths()].
 #' @param traversal_time Nonnegative duration charged for every temporal-path
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
 #' @param top For temporal `measure = "closeness"` under
-#'   `criterion = "min_hops"` only: return the `top` most central vertices,
+#'   `criterion = "min_hops"` or `"shortest"` only: return the `top` most central vertices,
 #'   plus every vertex tied at the `top`-th value, computing only the searches
 #'   that ranking needs. Temporal closeness costs one full path search per
 #'   vertex; a source is dropped as soon as the closeness of what it has
@@ -539,7 +545,9 @@ dyn_centrality <- function(dn,
                            lambda = 1, groups = NULL,
                            beta = 0.1, decay = 0, transition = 1,
                            criterion = c("foremost_then_shortest",
-                                         "min_hops", "foremost", "fastest"),
+                                         "min_hops", "foremost", "fastest",
+                                         "shortest"),
+                           cost = c("hops", "weight"),
                            top = NULL,
                            plot = FALSE) {
   # Temporal PageRank's raw mass grows with the length of the stream, so its
@@ -551,6 +559,7 @@ dyn_centrality <- function(dn,
   criterion <- match.arg(criterion)
   .check_dynet(dn, sessions)
   scope <- match.arg(scope)
+  cost <- .resolve_path_cost(cost, !missing(cost), criterion, dn)
   if (identical(criterion, "foremost") && "betweenness" %in% measure) {
     .stop_intractable_criterion("betweenness")
   }
@@ -718,7 +727,7 @@ dyn_centrality <- function(dn,
     return(.temporal_centrality(
       dn, measure, sessions, start, end, traversal_time, beta, decay,
       criterion, damping = damping, transition = transition, rescale = rescale,
-      top = top
+      top = top, cost = cost
     ))
   }
 
@@ -1723,7 +1732,8 @@ dyn_centrality <- function(dn,
 #'   probabilities.
 #' @param rescale Whether temporal PageRank is normalized to sum one.
 #' @param top `NULL` for every vertex, or the number of leaders to return
-#'   under `measure = "closeness"` with `criterion = "min_hops"`.
+#'   under `measure = "closeness"` with a hop or weight cost criterion.
+#' @param cost What a contact costs under `criterion = "shortest"`.
 #' @return A `dynet_metric` at node level with no time column.
 #' @noRd
 .temporal_centrality <- function(dn, measure, sessions,
@@ -1732,10 +1742,17 @@ dyn_centrality <- function(dn,
                                  beta = 0.1, decay = 0,
                                  criterion = "foremost_then_shortest",
                                  damping = 0.85, transition = 1,
-                                 rescale = TRUE, top = NULL) {
+                                 rescale = TRUE, top = NULL, cost = "hops") {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   evaluated <- integer()
+  # Closeness reads only the earliest arrival, which is identical under
+  # "foremost" and "foremost_then_shortest"; only the family differs, and
+  # enumerating it is exhaustive. Betweenness under "foremost" is refused
+  # before this point. "shortest" with hop costs is "min_hops".
+  search_criterion <- if (identical(criterion, "foremost")) {
+    "foremost_then_shortest"
+  } else .search_criterion(criterion, cost)
   frames <- Map(function(enc, label) {
     walk <- .undirect_or_reverse(enc, dn$directed, "forward")
     encoding_range <- .encoding_time_range(dn, enc)
@@ -1749,13 +1766,6 @@ dyn_centrality <- function(dn,
     # Stream measures need no per-source search, so the trees are built only
     # when a path-based measure was actually asked for.
     needs_trees <- length(setdiff(measure, .stream_measures)) > 0L
-    # Closeness reads only the earliest arrival, which is identical under
-    # "foremost" and "foremost_then_shortest"; only the family differs, and
-    # enumerating it is exhaustive. Betweenness under "foremost" is refused
-    # before this point.
-    search_criterion <- if (identical(criterion, "foremost")) {
-      "foremost_then_shortest"
-    } else criterion
     search_one <- function(s, abandon = NULL) {
       if (identical(criterion, "fastest")) {
         .fastest_search(
@@ -1784,7 +1794,8 @@ dyn_centrality <- function(dn,
       }
     }
     if (!is.null(top)) {
-      ranked <- .top_closeness_search(walk, enc$n, search_one, top)
+      ranked <- .top_closeness_search(walk, enc$n, search_one, top,
+                                      search_criterion)
       evaluated[[label]] <<- ranked$evaluated
       keep <- ranked$keep
       return(data.frame(session = label, node = enc$names[keep],
@@ -1794,7 +1805,7 @@ dyn_centrality <- function(dn,
     trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), search_one)
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
-                        horizon$start, horizon$end, criterion,
+                        horizon$start, horizon$end, search_criterion,
                         damping, transition, rescale)), measure)
     data.frame(session = label, node = enc$names,
                measure = rep(measure, each = enc$n),
@@ -1817,14 +1828,17 @@ dyn_centrality <- function(dn,
   # for would describe the wrong measure.
   closeness_metadata <- list(
     criterion = criterion,
-    distance = switch(criterion,
+    cost = if (identical(criterion, "shortest")) cost else NULL,
+    distance = switch(search_criterion,
       min_hops = "hop_count",
+      shortest = "summed_weight",
       fastest = "journey_duration",
       "forward_latency"),
     normalization = "reachable_inverse_mean"
   )
   betweenness_metadata <- list(
     criterion = criterion,
+    cost = if (identical(criterion, "shortest")) cost else NULL,
     pair_domain = "forward_reachable_ordered",
     normalization = "none",
     path_identity = "canonical_atom_sequence"
@@ -1895,33 +1909,37 @@ dyn_centrality <- function(dn,
       "`top` applies only to `measure = \"closeness\"` at `scope = \"temporal\"`, on its own.",
       class = "dynet_bad_input", call = NULL))
   }
-  if (!identical(criterion, "min_hops")) {
+  if (!criterion %in% c("min_hops", "shortest")) {
     stop(errorCondition(paste0(
-      "`top` needs `criterion = \"min_hops\"`: only there is a partial search ",
-      "an upper bound on the final value, so only there can a source be ",
-      "dropped early without changing the answer."),
+      "`top` needs `criterion = \"min_hops\"` or `\"shortest\"`: only under a ",
+      "cost that grows along a journey is a partial search an upper bound on ",
+      "the final value, so only there can a source be dropped early without ",
+      "changing the answer."),
       class = "dynet_bad_input", call = NULL))
   }
   invisible(TRUE)
 }
 
-#' Upper bound on min-hops closeness from a partial search
+#' Upper bound on cost closeness from a partial search
 #'
-#' The vertices reached through the completed layers sit at their exact hop
-#' distance, every vertex found later lies above their mean, so the partial
-#' closeness `reached / summed hops` can only fall from here. It is the bound
-#' used for pruning, and it is attained when nothing more is reached.
+#' The vertices reached so far sit at their exact distance (the first hop
+#' layer, or the first settled cost, at which they appeared), every vertex
+#' found later lies above their mean, so the partial closeness
+#' `reached / summed distance` can only fall from here. It is the bound used
+#' for pruning, and it is attained when nothing more is reached.
 #'
-#' @param vertex,hops State vectors of a search in progress.
+#' @param vertex,distance State vectors of a search in progress: hop counts
+#'   under `min_hops`, settled costs under `shortest`.
 #' @param source Integer source vertex.
-#' @return One number; `0` when nothing but the source has been reached.
+#' @return One number; `Inf` when nothing but the source has been reached,
+#'   because a search that has settled nothing yet bounds nothing.
 #' @examples
 #' Dynet:::.min_hops_closeness_bound(c(1L, 2L, 3L, 2L), c(0L, 1L, 2L, 2L), 1L)
 #' @noRd
-.min_hops_closeness_bound <- function(vertex, hops, source) {
+.min_hops_closeness_bound <- function(vertex, distance, source) {
   other <- vertex != source
-  if (!any(other)) return(0)
-  first <- tapply(hops[other], vertex[other], min)
+  if (!any(other)) return(Inf)
+  first <- tapply(distance[other], vertex[other], min)
   length(first) / sum(first)
 }
 
@@ -1936,10 +1954,12 @@ dyn_centrality <- function(dn,
 #' @param n Number of vertices.
 #' @param search_one Function of `(source, abandon)` running one search.
 #' @param top The number of leaders wanted.
+#' @param criterion The search criterion, `"min_hops"` or `"shortest"`.
 #' @return A list: `values` (numeric, `NA` where a source was abandoned),
 #'   `keep` (logical, the rows to report), `evaluated` (searches completed).
 #' @noRd
-.top_closeness_search <- function(walk, n, search_one, top) {
+.top_closeness_search <- function(walk, n, search_one, top,
+                                  criterion = "min_hops") {
   values <- rep(NA_real_, n)
   evaluated <- 0L
   kth <- -Inf
@@ -1947,13 +1967,13 @@ dyn_centrality <- function(dn,
   # Sequential by nature: the threshold each search is pruned against is the
   # k-th best value among the searches before it.
   for (s in order(-tabulate(walk$from, n), seq_len(n))) {
-    abandon <- function(vertex, hops, depth) {
-      .min_hops_closeness_bound(vertex, hops, s) < kth - tol(kth)
+    abandon <- function(vertex, distance, depth) {
+      .min_hops_closeness_bound(vertex, distance, s) < kth - tol(kth)
     }
     tree <- search_one(s, abandon)
     if (isTRUE(tree$abandoned)) next
     evaluated <- evaluated + 1L
-    values[[s]] <- .temporal_closeness_values(list(tree), n, "min_hops")
+    values[[s]] <- .temporal_closeness_values(list(tree), n, criterion)
     done <- sort(values[!is.na(values)], decreasing = TRUE)
     if (length(done) >= top) kth <- done[[top]]
   }
@@ -2016,8 +2036,10 @@ dyn_centrality <- function(dn,
   suffix <- numeric(length(state$vertex))
   suffix[terminal] <- 1
   # A suffix count depends on every child one hop deeper, so descending hop
-  # order is a genuine sequential dependency.
-  for (child in order(state$hops, decreasing = TRUE)) {
+  # order is a genuine sequential dependency. A cost search settles parents
+  # strictly cheaper than children, and a merged equal-cost state can carry
+  # fewer hops than one of its parents, so there the order is by cost.
+  for (child in order(state$cost %||% state$hops, decreasing = TRUE)) {
     if (suffix[[child]] == 0 || !length(state$pred_state[[child]])) next
     parents <- state$pred_state[[child]]
     for (parent in parents) {
@@ -2053,8 +2075,9 @@ dyn_centrality <- function(dn,
   suffix <- numeric(length(state$vertex))
   suffix[terminal] <- 1
   # Suffix counts depend on every child one hop deeper, so descending hop order
-  # is a genuine sequential dependency, exactly as for the vertex form.
-  for (child in order(state$hops, decreasing = TRUE)) {
+  # is a genuine sequential dependency, exactly as for the vertex form (and by
+  # cost for a cost search, for the same reason).
+  for (child in order(state$cost %||% state$hops, decreasing = TRUE)) {
     if (suffix[[child]] == 0 || !length(state$pred_state[[child]])) next
     for (parent in state$pred_state[[child]]) {
       suffix[[parent]] <- .path_count_add(suffix[[parent]], suffix[[child]])
@@ -2313,6 +2336,8 @@ dyn_centrality <- function(dn,
     # while under foremost it carries inverse-time units.
     distance <- if (identical(criterion, "min_hops")) {
       as.numeric(tree$n_hops[target])
+    } else if (identical(criterion, "shortest")) {
+      tree$path_cost[target]
     } else if (identical(criterion, "fastest")) {
       # An unattained infimum is still the distance: no journey is that
       # fast, but journeys arbitrarily close to it exist.

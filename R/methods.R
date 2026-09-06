@@ -710,6 +710,10 @@ print.dynet_paths <- function(x, n = 12L, ...) {
     cat(sprintf("# traversal %s %s per hop\n",
                 format(traversal_time), attr(x, "time_unit")))
   }
+  if (identical(attr(x, "criterion"), "shortest")) {
+    cat(sprintf("# shortest by summed %s; path_cost is that sum\n",
+                if (identical(attr(x, "cost"), "weight")) "tie weight" else "hop count"))
+  }
   print(utils::head(as.data.frame(x), n), row.names = FALSE)
   if (nrow(x) > n) {
     suffix <- if (identical(mode, "collapse")) {

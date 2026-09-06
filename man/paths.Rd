@@ -10,7 +10,8 @@ paths(
   at = NULL,
   direction = c("forward", "backward"),
   criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest",
-    "latest_departure"),
+    "latest_departure", "shortest"),
+  cost = c("hops", "weight"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
@@ -57,6 +58,17 @@ error, because the target-pivoted latest departure is what a backward
 query already reports. These are different problems and can select
 different journeys; only reachability is identical across criteria.}
 
+\item{cost}{For \code{criterion = "shortest"} only: what a contact costs.
+\code{"hops"} (the default) charges one per contact, which is exactly
+\code{criterion = "min_hops"}. \code{"weight"} charges each contact its tie weight,
+so the shortest journey is the one with the least summed weight, and the
+table gains a \code{path_cost} column holding that sum. Every weight must be
+positive and finite (\code{dynet_bad_weight} otherwise): a zero-cost cycle
+would re-admit non-simple journeys. The weight is a cost only; when a
+contact can be entered, and how long a hop takes, is unchanged. Two
+overlapping spells of one pair are one contact, at the weight of the
+earlier spell.}
+
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
 \item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
@@ -88,7 +100,11 @@ the journeys that depart exactly then (earliest arrival, then fewest
 hops, within that family). Under \code{criterion = "fastest"} the same two
 columns hold the fastest journey's departure and its duration. In both
 cases an unattained optimum keeps its limiting departure, arrival and
-duration but has \code{n_hops = NA} and \code{n_paths = 0}. Bounded mode adds \code{path_session} and
+duration but has \code{n_hops = NA} and \code{n_paths = 0}. Under
+\code{criterion = "shortest"} a \code{path_cost} column follows \code{n_paths}: the
+summed cost of the cheapest journey, \code{n_hops} is the fewest hops among
+the cheapest journeys (\code{NA} when they differ), and \code{arrival_time} and
+\code{n_paths} describe the cheapest journeys that arrive earliest. Bounded mode adds \code{path_session} and
 \code{n_best_sessions}; separate mode adds \code{session} and \code{origin}. Use
 \code{as.data.frame(x, what = "steps")} for every reconstructed optimal route;
 its endpoint-local \code{path_id} distinguishes tied atom sequences.
@@ -152,6 +168,13 @@ particular each target inherits the backward anchor rule and must be active
 at \code{end}; the empty journey departs from \code{from} at \code{end} itself. The
 \code{optimality} attribute records \code{"maximum"} for this criterion and
 \code{"minimum"} for the others, and \code{deadline} records the resolved \code{end}.
+
+A shortest query with weight costs is solved by settling vertex
+appearances in order of accumulated cost (Wu et al., 2016): every cost is
+positive, so the cheapest open appearance is final when it is settled and
+every predecessor of an appearance is settled before it, which is what
+makes the journey count exact. Two journeys tie when their summed weights
+agree within a relative tolerance of \code{sqrt(.Machine$double.eps)}.
 
 A fastest query is a sweep over candidate departures: for a fixed
 source-ready time the problem is prefix-optimal again, so the minimum

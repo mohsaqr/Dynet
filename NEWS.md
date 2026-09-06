@@ -1,3 +1,14 @@
+# Dynet 0.4.5 (next)
+
+* `paths(criterion = "shortest", cost = "weight")` finds the journeys of
+  least summed tie weight, with a `path_cost` column; `cost = "hops"`, the
+  default, is `criterion = "min_hops"` under its new name. The weight is a
+  cost only: when a contact can be entered, and how long a hop takes, are
+  unchanged. Weights must be positive and finite (`dynet_bad_weight`).
+  `dyn_centrality()` takes the same `criterion` and `cost`, so temporal
+  closeness can be the inverse mean summed weight and betweenness can count
+  the cheapest journeys; `top` works there too.
+
 # Dynet 0.4.4 (next)
 
 * `dyn_centrality(measure = "closeness", scope = "temporal", criterion = "min_hops", top = k)`
