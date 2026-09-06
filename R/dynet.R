@@ -73,8 +73,9 @@
 #'   both selects the co-presence format.
 #' @param session Column name for a session or period grouping. Sessions act
 #'   as walls that time-respecting paths do not cross.
-#' @param weight Column name for event multiplicity. Defaults to one event per
-#'   row.
+#' @param weight Column name for event multiplicity. `NULL` auto-detects a
+#'   column named `weight`, `weights` or `strength` (and says so); with none,
+#'   every row counts once.
 #' @param nodes Optional data frame of vertex attributes. The vertex key is
 #'   auto-detected, or given as the first column.
 #' @param groups Name of a column in `nodes` to use as the vertex partition.
@@ -1141,13 +1142,6 @@ dynet <- function(data,
 # Shared assembly helpers
 # ---------------------------------------------------------------------------
 
-#' Resolve the per-event weight column
-#' @param data Source data frame.
-#' @param weight User-supplied column name or `NULL`.
-#' @param row_index Mapping from built rows back to `data`, or `NULL`.
-#' @param n Number of built rows.
-#' @return A numeric vector of length `n`.
-#' @noRd
 #' Carry the log's other columns into the spell table as tie attributes
 #'
 #' Every column of `data` that the builder did not consume (endpoints, times,
@@ -1188,14 +1182,31 @@ dynet <- function(data,
   e
 }
 
+#' Resolve the per-event weight column
+#' @param data Source data frame.
+#' @param weight User-supplied column name or `NULL`.
+#' @param row_index Mapping from built rows back to `data`, or `NULL`.
+#' @param n Number of built rows.
+#' @return A numeric vector of length `n`.
+#' @noRd
 .resolve_weight <- function(data, weight, row_index, n) {
-  if (is.null(weight)) return(rep(1, n))
+  if (is.null(weight)) {
+    # A column named like a weight is taken as one, and said so, rather than
+    # silently replaced by ones (review 2026-09-05, finding 4).
+    if (is.null(row_index)) return(rep(1, n))
+    detected <- .resolve_column(data, NULL, "weight")
+    if (is.null(detected)) return(rep(1, n))
+    message(sprintf("Using column `%s` as the tie weight; name `weight = ` to choose another or drop the column to count each row once.",
+                    detected))
+    weight <- detected
+  }
   if (is.null(row_index)) {
-    warning("`weight` is ignored for co-presence networks, where each pair counts once.",
-            call. = FALSE)
+    warning(warningCondition(
+      "`weight` is ignored for co-presence networks, where each pair counts once.",
+      class = "dynet_weight_ignored"), call. = FALSE)
     return(rep(1, n))
   }
-  w <- data[[.resolve_column(data, weight, "duration", arg = "weight")]]
+  w <- data[[.resolve_column(data, weight, "weight", arg = "weight")]]
   if (!is.numeric(w)) {
     stop(errorCondition("The weight column must be numeric.",
                         class = "dynet_bad_input", call = NULL))

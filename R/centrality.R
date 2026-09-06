@@ -191,6 +191,11 @@
 #' the noise of a sparse bin. The arguments match `tsna::tSnaStats()`, where
 #' they are called `time.interval` and `aggregate.dur`.
 #'
+#' `"eigenvector"`, `"hub"` and `"authority"` are certified the way eigenvector
+#' prestige is: a snapshot whose spectral radius is zero (no cycle) or whose
+#' Perron root is repeated (components of equal weight) has no single answer,
+#' and every vertex of that block is `NA` under a warning of class
+#' `dynet_eigen_undefined`.
 #' `"eigenvector"` is uniquely determined when the Perron eigenvalue has a
 #' one-dimensional eigenspace; strong connectivity is a sufficient condition.
 #' Disconnected snapshots with equally dominant components can have more than
@@ -524,6 +529,7 @@ dyn_centrality <- function(dn,
   jobs <- .measure_modes(measure, mode, dn$directed)
   spec <- .window_spec(dn, start, end, step, window)
   prestige_diagnostics <- list()
+  eigen_undefined <- 0L
   df <- .over_bins(dn, sessions, node_level = TRUE, spec = spec,
     snapshot = TRUE, fun = function(enc, act, bin, state) {
       binary_full <- .adjacency(enc, act, dn$directed, weighted = FALSE)
@@ -543,6 +549,9 @@ dyn_centrality <- function(dn,
             rescale, lambda
           )
         } else numeric()
+        if (isTRUE(attr(value, "undefined"))) {
+          eigen_undefined <<- eigen_undefined + 1L
+        }
         diagnostic <- attr(value, "prestige_diagnostic")
         if (!is.null(diagnostic)) {
           session_label <- if (identical(sessions, "separate")) {
@@ -815,6 +824,12 @@ dyn_centrality <- function(dn,
     } else {
       attr(out, "measure_metadata") <- list(prestige = metadata)
     }
+  }
+  if (eigen_undefined > 0L) {
+    warning(warningCondition(sprintf(
+      "Eigenvector, hub or authority centrality is undefined in %d reporting block(s): the snapshot's spectral radius is zero or its Perron root is repeated, so no single eigenvector exists; values are NA.",
+      eigen_undefined
+    ), class = "dynet_eigen_undefined", call = NULL))
   }
   if (length(prestige_diagnostics)) {
     diagnostics <- do.call(rbind, prestige_diagnostics)
