@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,7 +80,8 @@
 <span><span class="co"># Threaded log: a post stays active until its thread falls silent</span></span>
 <span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Co-presence log: actors sharing a group become connected</span></span>
+<span><span class="co"># Co-presence log: actors sharing a group become connected (every member</span></span>
+<span><span class="co"># pair, for the whole span of the group; attendance inside it is not used)</span></span>
 <span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span></code></pre></div>
 <p>Column names are matched case-insensitively against a table of aliases, so <code>Sender</code>/<code>Receiver</code>, <code>source</code>/<code>target</code> and <code>onset</code>/<code>terminus</code> all work without being spelled out. Times may be numeric, <code>Date</code>, <code>POSIXct</code> or character date-time strings; date-time input is converted to elapsed time in a unit chosen to suit the span, and the unit is reported.</p>
 <p>When the study window is known independently of the event log, declare it on construction:</p>
@@ -222,7 +223,7 @@
 <div class="section level3">
 <h3 id="snapshot-scope-and-temporal-scope">Snapshot scope and temporal scope<a class="anchor" aria-label="anchor" href="#snapshot-scope-and-temporal-scope"></a>
 </h3>
-<p><code>scope = "snapshot"</code> measures the network as it stands in each bin, giving a trajectory of ordinary centrality. <code>scope = "temporal"</code> measures the vertex against time-respecting paths across the whole window. The second has no static counterpart: it cannot travel backwards in time, so it is never inflated the way a flattened network is. Explicit vertex activity gates these temporal paths; an inactive source has zero temporal reach and closeness, while fixed node rows and fixed risk-set denominators are retained.</p>
+<p><code>scope = "snapshot"</code> measures the network as it stands in each bin, giving a trajectory of ordinary centrality. <code>scope = "temporal"</code> measures the vertex against time-respecting paths across the whole window. The second has no static counterpart: it cannot travel backwards in time, so it is never inflated the way a flattened network is. Temporal closeness is the inverse mean latency, so a source whose every reachable vertex is reached at zero latency (simultaneous contacts, common in contact logs) scores <code>Inf</code>; give <code>traversal_time</code> a positive value to score such data. Explicit vertex activity gates these temporal paths; an inactive source has zero temporal reach and closeness, while fixed node rows and fixed risk-set denominators are retained.</p>
 </div>
 <div class="section level3">
 <h3 id="when-the-network-is-measured">When the network is measured<a class="anchor" aria-label="anchor" href="#when-the-network-is-measured"></a>

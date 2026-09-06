@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,15 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.3" id="dynet-043">Dynet 0.4.3<a class="anchor" aria-label="anchor" href="#dynet-043"></a></h2>
+<ul><li>
+<code><a href="../reference/remove_ties.html">remove_ties()</a></code>, <code><a href="../reference/remove_arcs.html">remove_arcs()</a></code> and <code><a href="../reference/update_ties.html">update_ties()</a></code> take <code>ties</code> as a condition on the spell table (<code>ties = duration &gt; 2</code>), as <code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> already did; positions and masks still work.</li>
+<li>On an undirected network a tie keeps its row position through an edit: <code><a href="../reference/dynet.html">dynet()</a></code> now canonicalises endpoints before sorting, the order every rebuild uses, so <code>update_ties(ties = 1:2)</code> edits the rows the caller saw.</li>
+<li>Bonacich power and information centrality on a singular system return <code>NA</code> under a warning of class <code>dynet_kernel_singular</code> instead of silently; the spectral warning and this one share the parent class <code>dynet_measure_undefined</code>.</li>
+<li>The <code>sample</code> and <code>indegree</code>/<code>outdegree</code> deprecation warnings carry class <code>dynet_deprecated</code>; the duplicate-<code>nodes</code> warning carries <code>dynet_duplicate_nodes</code>.</li>
+<li>Documentation states what was previously only implemented: assortativity correlates total degree at both ends of every arc; closeness centralisation uses this package’s reachable-set closeness with maxima <code>n - 1</code> (directed) and <code>n - 2</code> (undirected); <code><a href="../reference/pshifts.html">pshifts()</a></code> orders simultaneous turns by speaker, group turn, then target in vertex order; temporal closeness is <code>Inf</code> when every reachable vertex is reached at zero latency; co-presence connects every member pair for the whole group span.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.2" id="dynet-042">Dynet 0.4.2<a class="anchor" aria-label="anchor" href="#dynet-042"></a></h2>
 <ul><li>

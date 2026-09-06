@@ -16,8 +16,10 @@ update_ties(dn, ties, data, loops = FALSE)
 
 - ties:
 
-  Integer row positions or a logical mask referring to
-  `as.data.frame(dn, what = "edges")`.
+  Which ties to update: a condition on the spell table, evaluated the
+  way [`subset()`](https://rdrr.io/r/base/subset.html) evaluates one,
+  over the columns `as.data.frame(dn)` returns; or integer row positions
+  or a logical mask over that table.
 
 - data:
 

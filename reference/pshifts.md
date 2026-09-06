@@ -38,8 +38,12 @@ pshifts(
 
 - group_events:
 
-  Infer one group-directed turn from simultaneous distinct recipients,
-  or retain every dyadic row.
+  Infer one group-directed turn from simultaneous distinct recipients
+  (`"simultaneous"`), or retain every dyadic row (`"none"`). Several
+  turns at one instant are ordered by speaker, then group turn before
+  dyadic turn, then target, each in the network's vertex order; the
+  classification of consecutive turns depends on that order, so under
+  `"none"` a batch of simultaneous replies is read in vertex order.
 
 - plot:
 

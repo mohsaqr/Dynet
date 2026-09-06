@@ -13,7 +13,7 @@ condition of class dynet_needs_directed."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,8 +73,11 @@ condition of class <code>dynet_needs_directed</code>.</p>
 
 
 <dt id="arg-ties">ties<a class="anchor" aria-label="anchor" href="#arg-ties"></a></dt>
-<dd><p>Optional integer positions or logical mask referring to the rows
-of <code>as.data.frame(dn, what = "edges")</code>.</p></dd>
+<dd><p>Which ties to remove: a condition on the spell table,
+evaluated the way <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> evaluates one – <code>duration &gt; 2</code>,
+<code>course == "g1"</code> – over the columns <code>as.data.frame(dn)</code> returns, tie
+attributes included; or integer positions or a logical mask over that
+table.</p></dd>
 
 
 <dt id="arg-from-to-start-end-session">from, to, start, end, session<a class="anchor" aria-label="anchor" href="#arg-from-to-start-end-session"></a></dt>

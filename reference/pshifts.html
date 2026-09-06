@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,7 +78,11 @@ sequence and never uses a predecessor outside the range.</p></dd>
 
 <dt id="arg-group-events">group_events<a class="anchor" aria-label="anchor" href="#arg-group-events"></a></dt>
 <dd><p>Infer one group-directed turn from simultaneous distinct
-recipients, or retain every dyadic row.</p></dd>
+recipients (<code>"simultaneous"</code>), or retain every dyadic row (<code>"none"</code>).
+Several turns at one instant are ordered by speaker, then group turn
+before dyadic turn, then target, each in the network's vertex order; the
+classification of consecutive turns depends on that order, so under
+<code>"none"</code> a batch of simultaneous replies is read in vertex order.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>

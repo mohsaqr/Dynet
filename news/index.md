@@ -1,5 +1,36 @@
 # Changelog
 
+## Dynet 0.4.3
+
+- [`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),
+  [`remove_arcs()`](https://mohsaqr.github.io/Dynet/reference/remove_arcs.md)
+  and
+  [`update_ties()`](https://mohsaqr.github.io/Dynet/reference/update_ties.md)
+  take `ties` as a condition on the spell table (`ties = duration > 2`),
+  as
+  [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md)
+  already did; positions and masks still work.
+- On an undirected network a tie keeps its row position through an edit:
+  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) now
+  canonicalises endpoints before sorting, the order every rebuild uses,
+  so `update_ties(ties = 1:2)` edits the rows the caller saw.
+- Bonacich power and information centrality on a singular system return
+  `NA` under a warning of class `dynet_kernel_singular` instead of
+  silently; the spectral warning and this one share the parent class
+  `dynet_measure_undefined`.
+- The `sample` and `indegree`/`outdegree` deprecation warnings carry
+  class `dynet_deprecated`; the duplicate-`nodes` warning carries
+  `dynet_duplicate_nodes`.
+- Documentation states what was previously only implemented:
+  assortativity correlates total degree at both ends of every arc;
+  closeness centralisation uses this package’s reachable-set closeness
+  with maxima `n - 1` (directed) and `n - 2` (undirected);
+  [`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md)
+  orders simultaneous turns by speaker, group turn, then target in
+  vertex order; temporal closeness is `Inf` when every reachable vertex
+  is reached at zero latency; co-presence connects every member pair for
+  the whole group span.
+
 ## Dynet 0.4.2
 
 - `eigenvector`, `hub` and `authority` are certified like eigenvector

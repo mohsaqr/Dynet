@@ -13,7 +13,7 @@ silent in week five."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -175,6 +175,18 @@ windows independently use the any-time vertex and edge unions before
 induction; <code>window = 0</code> evaluates the exact state. Density and census
 opportunities, components, isolate counts, largest-component shares, and
 Freeman denominators therefore use eligible rather than fixed order.</p>
+<p><code>"assortativity"</code> is Newman's degree assortativity computed with the
+<strong>total</strong> degree (in plus out) at both ends of every arc, on directed and
+undirected snapshots alike. It is not the directed out-degree-to-in-degree
+variant <code>igraph::assortativity_degree(directed = TRUE)</code> reports, and the
+two disagree on directed data.</p>
+<p><code>"centralization_closeness"</code> is a Freeman centralisation of this package's
+own closeness (reachable vertices divided by reachable distance, so it is
+defined on a disconnected snapshot), with the theoretical maximum of that
+score: <code>n - 1</code> for a directed snapshot (a single arc from the centre) and
+<code>n - 2</code> for an undirected one (one isolated dyad). It matches
+<code>sna::centralization(closeness)</code> on connected snapshots and not on
+disconnected ones, where sna's closeness is zero everywhere.</p>
 <p>Krackhardt's four indices – <code>"connectedness"</code>, <code>"efficiency"</code>,
 <code>"hierarchy"</code> and <code>"lubness"</code> – describe how far a directed network
 departs from a pure out-tree. <code>"hierarchy"</code> and <code>"lubness"</code> are undefined
