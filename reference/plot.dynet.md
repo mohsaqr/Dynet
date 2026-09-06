@@ -146,9 +146,12 @@ plot(
 
 - step:
 
-  For `"layers"`, `"heatmap"` and `"stack"`, the width of each time
-  slice. `NULL` uses the construction interval. At least two slices are
+  Width of one time bin, in the network's time unit. For `"timeline"`
+  and `"events"` it is the bin the activity is counted in (`1/24` on a
+  network measured in days is hourly); for `"layers"`, `"heatmap"` and
+  `"stack"` it is the width of each slice, and at least two slices are
   needed, so too wide a `step` is an error rather than a single panel.
+  `NULL` uses the construction interval.
 
 - omega:
 
@@ -158,7 +161,8 @@ plot(
 - bins:
 
   Number of equal time bins for `"timeline"` and `"events"`. `NULL` uses
-  the network's own interval.
+  the network's own interval. `step`, a width, takes precedence when
+  both are given.
 
 - link:
 

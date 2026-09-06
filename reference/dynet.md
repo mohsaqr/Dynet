@@ -25,6 +25,11 @@ inferred from the arguments you name:
   Two-mode attendance data. Actors sharing a group become connected for
   the span of that group. Name `actor` and `group`.
 
+Every other column of `data` is kept as a tie attribute: it appears in
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) and can
+be selected on with `induce_subgraph(ties = )`. Co-presence logs keep
+none, because their rows are memberships rather than ties.
+
 Column names are resolved case-insensitively from a table of aliases, so
 `Sender`/`Receiver`, `source`/`target` and `onset`/`terminus` are all
 understood without being spelled out. Times may be numeric, `Date`,
@@ -71,6 +76,7 @@ dynet(
   nodes = NULL,
   groups = NULL,
   format = c("auto", "interval", "contact", "threaded", "copresence"),
+  thread_clock = c("absolute", "relative"),
   directed = TRUE,
   interval = 1,
   time_unit = "auto",
@@ -146,6 +152,15 @@ dynet(
   One of `"auto"`, `"interval"`, `"contact"`, `"threaded"`,
   `"copresence"`. `"auto"` infers the format from the arguments you name
   and the columns present.
+
+- thread_clock:
+
+  For a threaded log, `"absolute"` (the default) keeps every post on the
+  calendar; `"relative"` puts each thread on its own clock, measured
+  from the thread's first post, so a tie opens at the time since its
+  thread began and closes when the thread ends. Threads are then
+  comparable by how they unfold rather than by when they happened, the
+  convention of the *Trees of Thought* study. Requires `thread`.
 
 - directed:
 

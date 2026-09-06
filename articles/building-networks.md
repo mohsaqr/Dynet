@@ -427,12 +427,12 @@ dynet(tiny, loops = TRUE)
 #> # 3 vertices | 5 edge spells | 5 distinct pairs
 #> # observed from 0 to 6 step, binned every 1
 #> 
-#>  from to start end duration weight
-#>     A  B     0   2        2      1
-#>     B  A     1   3        2      1
-#>     A  C     2   5        3      1
-#>     C  A     3   4        1      1
-#>     A  A     4   6        2      1
+#>  from to start end duration weight posts
+#>     A  B     0   2        2      1     3
+#>     B  A     1   3        2      1     1
+#>     A  C     2   5        3      1     2
+#>     C  A     3   4        1      1     5
+#>     A  A     4   6        2      1     1
 ```
 
 `interval` sets the default bin width used by every measurement verb, in

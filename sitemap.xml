@@ -10,6 +10,7 @@
 <url><loc>https://mohsaqr.github.io/Dynet/articles/index.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/authors.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/index.html</loc></url>
+<url><loc>https://mohsaqr.github.io/Dynet/news/index.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/Dynet-package.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/add_arcs.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/add_nodes.html</loc></url>
@@ -49,7 +50,9 @@
 <url><loc>https://mohsaqr.github.io/Dynet/reference/paths.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/pathways.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet.html</loc></url>
+<url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_collapsed.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_metric.html</loc></url>
+<url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_path_network.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_path_trajectories.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_paths.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/plot.dynet_pathways.html</loc></url>
@@ -95,6 +98,7 @@
 <url><loc>https://mohsaqr.github.io/Dynet/reference/summary.dynet_snapshot.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/synthdata.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/tail.dynet_metric.html</loc></url>
+<url><loc>https://mohsaqr.github.io/Dynet/reference/thought_chains.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/update_nodes.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/update_ties.html</loc></url>
 <url><loc>https://mohsaqr.github.io/Dynet/reference/update_vertex_spells.html</loc></url>

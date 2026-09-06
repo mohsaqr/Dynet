@@ -24,7 +24,8 @@ plot_path_trajectories(
   measure = c("frequency", "time", "predictability"),
   orientation = c("horizontal", "vertical"),
   min_count = 1L,
-  base_size = 11
+  base_size = 11,
+  palette = "okabe"
 )
 ```
 
@@ -59,6 +60,11 @@ plot_path_trajectories(
 - base_size:
 
   Base text size.
+
+- palette:
+
+  Palette for the vertex colours of the frequency view, as in
+  [`plot.dynet()`](https://mohsaqr.github.io/Dynet/reference/plot.dynet.md).
 
 ## Value
 

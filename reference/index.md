@@ -76,8 +76,12 @@
   : Most frequent time-respecting routes
 - [`plot(`*`<dynet>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet.md)
   : Draw a temporal network
+- [`plot(`*`<dynet_collapsed>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet_collapsed.md)
+  : Draw a collapsed temporal network
 - [`plot(`*`<dynet_metric>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet_metric.md)
   : Plot a temporal measure
+- [`plot(`*`<dynet_path_network>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet_path_network.md)
+  : Draw a path network
 - [`plot(`*`<dynet_path_trajectories>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet_path_trajectories.md)
   : Plot path trajectories
 - [`plot(`*`<dynet_paths>`*`)`](https://mohsaqr.github.io/Dynet/reference/plot.dynet_paths.md)
@@ -168,6 +172,8 @@
   : Synthetic code-transition network (Trees of Thought stand-in)
 - [`tail(`*`<dynet_metric>`*`)`](https://mohsaqr.github.io/Dynet/reference/tail.dynet_metric.md)
   : Last rows of a temporal measure
+- [`thought_chains`](https://mohsaqr.github.io/Dynet/reference/thought_chains.md)
+  : Trees of Thought reply links, anonymised
 - [`update_nodes()`](https://mohsaqr.github.io/Dynet/reference/update_nodes.md)
   : Update static node attributes
 - [`update_ties()`](https://mohsaqr.github.io/Dynet/reference/update_ties.md)
