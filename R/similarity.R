@@ -152,7 +152,9 @@ plot.dynet_similarity <- function(x, base_size = 12, ...) {
 #'   most similar other bin. The self-comparison is excluded throughout, so a
 #'   bin with no comparable neighbour reports `NaN` and `NA`.
 #' @examples
-#' summary(similarity(dynet(school_contacts), step = 5, window = 5))
+#' dn <- dynet(school_contacts)
+#' bin_similarity <- similarity(dn, step = 5, window = 5)
+#' summary(bin_similarity)
 #' @export
 summary.dynet_similarity <- function(object, ...) {
   flat <- as.data.frame(object)

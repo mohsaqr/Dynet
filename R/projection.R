@@ -365,7 +365,9 @@ print.dynet_projection <- function(x, ...) {
 #'   and the `identity_arcs` leaving it for the next slice. The final slice
 #'   emits no identity arcs, so its count is zero.
 #' @examples
-#' summary(projection(dynet(school_contacts), step = 5, window = 5))
+#' dn <- dynet(school_contacts)
+#' slices <- projection(dn, step = 5, window = 5)
+#' summary(slices)
 #' @export
 summary.dynet_projection <- function(object, ...) {
   vertices <- as.data.frame(object, what = "vertices")

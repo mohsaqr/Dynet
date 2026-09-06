@@ -290,7 +290,9 @@ pshifts <- function(
 #'   thirteen Gibson shift types are always present, including those with a
 #'   count of zero.
 #' @examples
-#' as.data.frame(pshifts(dynet(school_contacts)))
+#' dn <- dynet(school_contacts)
+#' shifts <- pshifts(dn)
+#' as.data.frame(shifts)
 #' @export
 as.data.frame.dynet_pshifts <- function(x, row.names = NULL, optional = FALSE,
                                         ...) {
@@ -328,7 +330,9 @@ print.dynet_pshifts <- function(x, ...) {
 #'   `top_shift`, the single most frequent shift type within it. `share` is
 #'   `NaN` when nothing was classified.
 #' @examples
-#' summary(pshifts(dynet(school_contacts)))
+#' dn <- dynet(school_contacts)
+#' shifts <- pshifts(dn)
+#' summary(shifts)
 #' @export
 summary.dynet_pshifts <- function(object, ...) {
   flat <- as.data.frame(object)
@@ -358,7 +362,9 @@ summary.dynet_pshifts <- function(object, ...) {
 #' @param ... Ignored.
 #' @return A `ggplot` object.
 #' @examples
-#' plot(pshifts(dynet(school_contacts)))
+#' dn <- dynet(school_contacts)
+#' shifts <- pshifts(dn)
+#' plot(shifts)
 #' @export
 plot.dynet_pshifts <- function(x, ...) {
   flat <- as.data.frame(x)

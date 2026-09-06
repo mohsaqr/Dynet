@@ -712,41 +712,48 @@ how often they are used; the plot places a point per vertex at the moment the
 route reaches it, so a horizontal gap is waiting time.
 
 ```{r result-pathways, fig.height=8, fig.width=12}
-plot(pathways(dn, top = 12))
+top_routes <- pathways(dn, top = 12)
+plot(top_routes)
 ```
 
 Similarity between every pair of half-day bins, as a heatmap:
 
 ```{r result-similarity, fig.height=7, fig.width=8}
-plot(similarity(dn, step = 0.5, window = 0.5))
+bin_similarity <- similarity(dn, step = 0.5, window = 0.5)
+plot(bin_similarity)
 ```
 
 Gibson's participation shifts, the thirteen ways one turn follows another:
 
 ```{r result-pshifts, fig.height=6, fig.width=10}
-plot(pshifts(dn))
+shifts <- pshifts(dn)
+plot(shifts)
 ```
 
 Burstiness and memory of each code's activity:
 
 ```{r result-burstiness, fig.height=6, fig.width=10}
-plot(burstiness(dn))
+bursts <- burstiness(dn)
+plot(bursts)
 ```
 
 Tie durations by pair, and reachability, both already tabulated above:
 
 ```{r result-durations, fig.height=8, fig.width=10}
-plot(durations(dn, unit = "pair", measure = "total"))
+pair_totals <- durations(dn, unit = "pair", measure = "total")
+plot(pair_totals)
 ```
 
 ```{r result-reachability, fig.height=6, fig.width=10}
-plot(dyn_reachability(dn))
+reach <- dyn_reachability(dn)
+plot(reach)
 ```
 
 Snapshots as a result object rather than a view:
 
 ```{r result-snapshots, fig.height=8, fig.width=12}
-plot(snapshots(dn, step = 1, window = 1))
+daily <- snapshots(dn, step = 1, window = 1)
+plot(daily)
 ```
 
 The three trajectory-tree colourings, horizontal and vertical, for the
@@ -762,7 +769,9 @@ plot_path_trajectories(inquiry, measure = "predictability")
 The path network of those same paths, as a cograph node-link drawing:
 
 ```{r result-path-network, fig.height=8}
-plot(path_network(paths(dn, from = "Inquiring")), layout = "oval")
+from_inquiring <- paths(dn, from = "Inquiring")
+inquiring_network <- path_network(from_inquiring)
+plot(inquiring_network, layout = "oval")
 ```
 
 # Course-group temporal subnetwork
@@ -797,11 +806,10 @@ plot(one_group, type = "snapshots", panels = 9)
 ```
 
 ```{r group-subnetwork-metrics}
-plot(metrics(
-  one_group,
-  measure = c("density", "edges", "reciprocity", "connectedness"),
-  step = 1 / 24, window = 1 / 24
-), type = "ridge")
+group_structure <- metrics(one_group,
+                           measure = c("density", "edges", "reciprocity", "connectedness"),
+                           step = 1 / 24, window = 1 / 24)
+plot(group_structure, type = "ridge")
 ```
 
 # Reproduction audit

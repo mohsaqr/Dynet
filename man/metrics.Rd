@@ -159,7 +159,8 @@ dn <- dynet(school_contacts)
 metrics(dn, measure = "density")
 metrics(dn, measure = c("density", "reciprocity", "transitivity"))
 metrics(dn, measure = "density", step = 1, window = 3)
-plot(metrics(dn, measure = c("mutual", "asymmetric")))
+dyads <- metrics(dn, measure = c("mutual", "asymmetric"))
+plot(dyads)
 
 }
 \references{

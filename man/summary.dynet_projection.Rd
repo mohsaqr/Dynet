@@ -21,5 +21,7 @@ emits no identity arcs, so its count is zero.
 Summarise a time projection
 }
 \examples{
-summary(projection(dynet(school_contacts), step = 5, window = 5))
+dn <- dynet(school_contacts)
+slices <- projection(dn, step = 5, window = 5)
+summary(slices)
 }

@@ -79,9 +79,10 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' as.data.frame(dyn_centrality(dn, measure = "degree"))
-#' as.data.frame(dyn_centrality(dn, measure = "degree"), layout = "wide")
-#' as.data.frame(dyn_centrality(dn, measure = "degree"), what = "diagnostics")
+#' degree <- dyn_centrality(dn, measure = "degree")
+#' as.data.frame(degree)
+#' as.data.frame(degree, layout = "wide")
+#' as.data.frame(degree, what = "diagnostics")
 #'
 #' @export
 as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
@@ -270,8 +271,9 @@ tail.dynet_metric <- function(x, n = 6L, ...) {
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' summary(dyn_centrality(dn, measure = "degree"))
-#' summary(dyn_centrality(dn, measure = "degree"), by = "time")
+#' degree <- dyn_centrality(dn, measure = "degree")
+#' summary(degree)
+#' summary(degree, by = "time")
 #'
 #' @export
 summary.dynet_metric <- function(object, by = NULL, ...) {
@@ -330,8 +332,9 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' plot(dyn_centrality(dn, measure = "degree"), top = 5)
-#' plot(dyn_centrality(dn, measure = "degree"), palette = "extended")
+#' degree <- dyn_centrality(dn, measure = "degree")
+#' plot(degree, top = 5)
+#' plot(degree, palette = "extended")
 #'
 #' @export
 plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),

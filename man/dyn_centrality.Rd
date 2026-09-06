@@ -314,7 +314,8 @@ dyn_centrality(few, measure = "reach", scope = "temporal",
 # A seven-day window, stepped one day at a time.
 dyn_centrality(dn, measure = "degree", step = 1, window = 7)
 
-summary(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+summary(degree)
 
 }
 \references{

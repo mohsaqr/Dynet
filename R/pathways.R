@@ -222,9 +222,10 @@ pathways <- function(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FAL
 #' @return A plain `data.frame` with the columns described in [pathways()],
 #'   most frequent first, or the per-step table when `what = "steps"`.
 #' @examples
-#' as.data.frame(pathways(dynet(school_contacts), from = "Ana"))
-#' as.data.frame(pathways(dynet(school_contacts), from = "Ana"),
-#'               what = "steps")
+#' dn <- dynet(school_contacts)
+#' routes <- pathways(dn, from = "Ana")
+#' as.data.frame(routes)
+#' as.data.frame(routes, what = "steps")
 #' @export
 as.data.frame.dynet_pathways <- function(x, row.names = NULL, optional = FALSE,
                                          what = c("routes", "steps"), ...) {
@@ -273,7 +274,9 @@ print.dynet_pathways <- function(x, n = 12L, ...) {
 #'   `min_hops` of the shortest, and `first_arrival`, the earliest time any
 #'   route lands there. Ordered by count.
 #' @examples
-#' summary(pathways(dynet(school_contacts), from = "Ana"))
+#' dn <- dynet(school_contacts)
+#' routes <- pathways(dn, from = "Ana")
+#' summary(routes)
 #' @export
 summary.dynet_pathways <- function(object, ...) {
   flat <- as.data.frame(object)
@@ -315,7 +318,9 @@ summary.dynet_pathways <- function(object, ...) {
 #' @param ... Ignored.
 #' @return A `ggplot` object.
 #' @examples
-#' plot(pathways(dynet(school_contacts), from = "Ana"))
+#' dn <- dynet(school_contacts)
+#' routes <- pathways(dn, from = "Ana")
+#' plot(routes)
 #' @export
 plot.dynet_pathways <- function(x, top = 12L, labels = TRUE, base_size = 12,
                                 ...) {

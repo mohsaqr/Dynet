@@ -35,7 +35,8 @@ most frequent first, or the per-step table when \code{what = "steps"}.
 Tidy data frame of ranked pathways
 }
 \examples{
-as.data.frame(pathways(dynet(school_contacts), from = "Ana"))
-as.data.frame(pathways(dynet(school_contacts), from = "Ana"),
-              what = "steps")
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+as.data.frame(routes)
+as.data.frame(routes, what = "steps")
 }

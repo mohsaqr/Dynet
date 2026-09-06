@@ -23,5 +23,7 @@ them.
 }
 \examples{
 dn <- dynet(school_contacts)
-plot(path_network(paths(dn, from = "Ana")), layout = "oval")
+routes <- paths(dn, from = "Ana")
+route_network <- path_network(routes)
+plot(route_network, layout = "oval")
 }

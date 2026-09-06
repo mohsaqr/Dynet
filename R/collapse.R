@@ -287,8 +287,9 @@ print.dynet_collapsed <- function(x, ...) {
 #'   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
 #'   session = c("s1", "s2")
 #' ), session = "session")
-#' as.data.frame(collapse_network(dn, sessions = "separate"))
-#' as.data.frame(collapse_network(dn, sessions = "separate"), session = "s1")
+#' by_session <- collapse_network(dn, sessions = "separate")
+#' as.data.frame(by_session)
+#' as.data.frame(by_session, session = "s1")
 #' @export
 as.data.frame.dynet_collapsed_list <- function(x, row.names = NULL,
                                                optional = FALSE,
@@ -352,7 +353,8 @@ print.dynet_collapsed_list <- function(x, ...) {
 #'   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
 #'   session = c("s1", "s2")
 #' ), session = "session")
-#' summary(collapse_network(dn, sessions = "separate"))
+#' by_session <- collapse_network(dn, sessions = "separate")
+#' summary(by_session)
 #' @export
 summary.dynet_collapsed_list <- function(object, ...) {
   parts <- lapply(names(object), function(label) {

@@ -134,7 +134,8 @@ backward supremum has zero because it has no maximizing journey.
 dn <- dynet(school_contacts)
 paths(dn, from = "Ana")
 paths(dn, from = "Ana", start = 0, end = 10)
-summary(paths(dn, from = "Ana"))
+routes <- paths(dn, from = "Ana")
+summary(routes)
 
 }
 \references{
