@@ -41,6 +41,7 @@
     mode      = mode,
     traversal_time = traversal_time,
     n_nodes   = nrow(dn$nodes),
+    nodes     = dn$nodes$name,
     directed  = dn$directed,
     net_format = dn$meta$format
   )
@@ -474,9 +475,21 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
     sub <- sprintf("%d largest of %d shown", top, n_row)
   }
 
+  # A node-level result colours each bar by its vertex, in the network's own
+  # order, so the bar carries the same colour the vertex has in every other
+  # view; the axis label names it, so colour is never the only channel. Pair
+  # and graph-level results have no vertex to follow and take one colour.
+  by_node <- "node" %in% names(df)
+  vertices <- attr(x, "nodes") %||% sort(unique(df$.row))
+  fill_scale <- if (by_node) {
+    ggplot2::scale_fill_manual(values = .vertex_colours(vertices, palette),
+                               guide = "none")
+  } else NULL
   ggplot2::ggplot(df, ggplot2::aes(x = value,
                                    y = stats::reorder(.row, value))) +
-    ggplot2::geom_col(fill = .dyn_palette(palette, 1L), width = 0.7) +
+    (if (by_node) ggplot2::geom_col(ggplot2::aes(fill = .row), width = 0.7)
+     else ggplot2::geom_col(fill = .dyn_palette(palette, 1L), width = 0.7)) +
+    fill_scale +
     ggplot2::facet_wrap(~measure, scales = "free_x") +
     ggplot2::labs(x = attr(x, "what"), y = NULL, subtitle = sub) +
     ggplot2::theme_minimal(base_size = base_size) +

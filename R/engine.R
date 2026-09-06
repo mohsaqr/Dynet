@@ -1019,15 +1019,63 @@
 #' @noRd
 .grid_for <- function(enc, dn, spec = NULL) {
   spec <- spec %||% .window_spec(dn)
-  if (!is.null(dn$meta$observations)) {
-    return(.observation_bins(dn, spec))
+  grid <- if (!is.null(dn$meta$observations)) {
+    .observation_bins(dn, spec)
+  } else if (isTRUE(dn$meta$observation_explicit)) {
+    .bins(dn$meta$observation[["start"]], dn$meta$observation[["end"]], spec)
+  } else {
+    .bins(min(enc$start), max(enc$end), spec)
   }
-  if (isTRUE(dn$meta$observation_explicit)) {
-    return(.bins(
-      dn$meta$observation[["start"]], dn$meta$observation[["end"]], spec
-    ))
+  .snap_grid(grid, enc, dn)
+}
+
+#' Snap window edges onto the spell boundaries they were meant to hit
+#'
+#' A grid is built arithmetically as `start + k * step`, and a step such as
+#' `1/24` (one hour on a network measured in days) is not representable, so
+#' the edge for hour 6 comes out as `0.24999999999999997` while the spell that
+#' starts at hour 6 was stored as the exact `0.25`. Every window predicate in
+#' the package compares times with plain `<` and `>=`, and that gap of one
+#' ulp is enough to place a spell that ends exactly at a window's start
+#' inside the window, or to drop one that starts exactly at its end. Rather
+#' than make each predicate tolerant, the grid itself is corrected once: an
+#' edge within `.time_tol()` of a boundary present in the data (a spell
+#' start or end, a raw event limit, or an observation limit) is replaced by
+#' that boundary, so the strict comparisons downstream are exact. An edge
+#' with no boundary nearby is left as it is. Reported `time` values follow
+#' `lo`, so a bin's time equals the data's own value of that instant.
+#'
+#' @param grid A window table from `.bins()` or `.observation_bins()`.
+#' @param enc Encoded edge list.
+#' @param dn Parent `dynet` object.
+#' @return `grid` with `lo`, `hi` and `time` snapped.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 5 / 24, end = 6 / 24))
+#' enc <- Dynet:::.encode(dn)
+#' grid <- data.frame(bin = 1:2, lo = (5:6) * (1 / 24), hi = (6:7) * (1 / 24),
+#'                    time = (5:6) * (1 / 24), closed = c(FALSE, TRUE))
+#' Dynet:::.snap_grid(grid, enc, dn)$hi[1] == 6 / 24
+#' @noRd
+.snap_grid <- function(grid, enc, dn) {
+  if (!nrow(grid)) return(grid)
+  observations <- .observation_table(dn)
+  anchors <- c(enc$start, enc$end, enc$raw_event_start, enc$raw_event_end,
+               observations$start, observations$end, dn$meta$time_range)
+  anchors <- sort(unique(anchors[is.finite(anchors)]))
+  if (!length(anchors)) return(grid)
+  snap <- function(x) {
+    # Nearest anchor on either side; take it when it lies within tolerance.
+    pos <- findInterval(x, anchors)
+    below <- anchors[pmax(pos, 1L)]
+    above <- anchors[pmin(pos + 1L, length(anchors))]
+    nearest <- ifelse(abs(x - below) <= abs(x - above), below, above)
+    hit <- abs(x - nearest) <= .time_tol(x, nearest)
+    ifelse(hit, nearest, x)
   }
-  .bins(min(enc$start), max(enc$end), spec)
+  grid$lo <- snap(grid$lo)
+  grid$hi <- snap(grid$hi)
+  grid$time <- grid$lo
+  grid
 }
 
 #' Resolve the default time range for one encoding

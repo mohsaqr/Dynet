@@ -217,3 +217,16 @@
   on_white <- 1.05 / (luminance + 0.05)
   ifelse(on_black >= on_white, "black", "white")
 }
+
+#' One colour per vertex, in the network's own vertex order
+#'
+#' Every view that colours by vertex draws from this, so a vertex keeps its
+#' colour from the events view to a bar chart to a trajectory tree.
+#'
+#' @param vertices Character vector of vertex names, in network order.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @return A named character vector of colours.
+#' @noRd
+.vertex_colours <- function(vertices, palette = "okabe") {
+  stats::setNames(.dyn_palette(palette, length(vertices)), vertices)
+}
