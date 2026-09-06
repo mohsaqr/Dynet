@@ -28,3 +28,4 @@
 ^TODO\.md$
 ^_pkgdown\.yml$
 ^pkgdown$
+^\.git$

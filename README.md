@@ -248,6 +248,10 @@ dn <- dynet(school_contacts)
 dyn_centrality(dn, measure = "degree")
 dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
+# Only the leaders: an exact top three under fewest hops, searching just
+# what the ranking needs
+dyn_centrality(dn, measure = "closeness", scope = "temporal",
+               criterion = "min_hops", top = 3)
 
 metrics(dn, measure = c("density", "reciprocity", "transitivity"))
 metrics(dn, measure = c("degree_mean", "concurrent_share", "two_paths"))

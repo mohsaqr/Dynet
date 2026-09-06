@@ -185,6 +185,19 @@
 #' @param traversal_time Nonnegative duration charged for every temporal-path
 #'   hop, in the network's time unit. A calendar network also accepts a scalar
 #'   `difftime`. Nonzero values require `scope = "temporal"`.
+#' @param top For temporal `measure = "closeness"` under
+#'   `criterion = "min_hops"` only: return the `top` most central vertices,
+#'   plus every vertex tied at the `top`-th value, computing only the searches
+#'   that ranking needs. Temporal closeness costs one full path search per
+#'   vertex; a source is dropped as soon as the closeness of what it has
+#'   reached so far, which can only fall as the search continues, is below
+#'   the `top`-th best value found. The answer is exact, the same rows and
+#'   values the full computation gives, and the result records how many
+#'   sources ran to completion as `sources_evaluated`. Under
+#'   `sessions = "separate"` the ranking is within each session; under
+#'   `sessions = "bounded"` on a network with sessions no source can be
+#'   dropped early, and the count says so. The remaining vertices are absent,
+#'   not `NA`, and the print header says they were not computed.
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
@@ -484,6 +497,9 @@
 #' dyn_centrality(few, measure = "closeness", scope = "temporal")
 #' dyn_centrality(few, measure = "reach", scope = "temporal",
 #'                start = 0, end = 10)
+#' # The leaders only, searching just what the ranking needs
+#' dyn_centrality(dn, measure = "closeness", scope = "temporal",
+#'                criterion = "min_hops", top = 3)
 #'
 #' # Stream measures need no path search, so they run on the whole network.
 #' dyn_centrality(dn, measure = "katz", scope = "temporal")
@@ -524,6 +540,7 @@ dyn_centrality <- function(dn,
                            beta = 0.1, decay = 0, transition = 1,
                            criterion = c("foremost_then_shortest",
                                          "min_hops", "foremost", "fastest"),
+                           top = NULL,
                            plot = FALSE) {
   # Temporal PageRank's raw mass grows with the length of the stream, so its
   # useful default is the normalized score. `rescale` therefore has a
@@ -542,6 +559,7 @@ dyn_centrality <- function(dn,
       "Temporal betweenness under criterion = \"fastest\" is not implemented; use \"foremost_then_shortest\" or \"min_hops\".",
       class = "dynet_bad_input", call = NULL))
   }
+  if (!is.null(top)) .check_top_closeness(top, measure, scope, criterion)
   mode  <- .resolve_modes(mode)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   window <- .legacy_sample(window, sample)
@@ -699,7 +717,8 @@ dyn_centrality <- function(dn,
     }
     return(.temporal_centrality(
       dn, measure, sessions, start, end, traversal_time, beta, decay,
-      criterion, damping = damping, transition = transition, rescale = rescale
+      criterion, damping = damping, transition = transition, rescale = rescale,
+      top = top
     ))
   }
 
@@ -1703,6 +1722,8 @@ dyn_centrality <- function(dn,
 #' @param damping,transition Temporal PageRank jumping and transition
 #'   probabilities.
 #' @param rescale Whether temporal PageRank is normalized to sum one.
+#' @param top `NULL` for every vertex, or the number of leaders to return
+#'   under `measure = "closeness"` with `criterion = "min_hops"`.
 #' @return A `dynet_metric` at node level with no time column.
 #' @noRd
 .temporal_centrality <- function(dn, measure, sessions,
@@ -1711,9 +1732,10 @@ dyn_centrality <- function(dn,
                                  beta = 0.1, decay = 0,
                                  criterion = "foremost_then_shortest",
                                  damping = 0.85, transition = 1,
-                                 rescale = TRUE) {
+                                 rescale = TRUE, top = NULL) {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
+  evaluated <- integer()
   frames <- Map(function(enc, label) {
     walk <- .undirect_or_reverse(enc, dn$directed, "forward")
     encoding_range <- .encoding_time_range(dn, enc)
@@ -1734,7 +1756,7 @@ dyn_centrality <- function(dn,
     search_criterion <- if (identical(criterion, "foremost")) {
       "foremost_then_shortest"
     } else criterion
-    trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), function(s) {
+    search_one <- function(s, abandon = NULL) {
       if (identical(criterion, "fastest")) {
         .fastest_search(
           dn, walk, s, horizon$start, horizon$end, bounded,
@@ -1757,10 +1779,19 @@ dyn_centrality <- function(dn,
             "collapse"
           },
           activity_session = if (identical(sessions, "separate")) label else NULL,
-          criterion = search_criterion
+          criterion = search_criterion, abandon = abandon
         )
       }
-    })
+    }
+    if (!is.null(top)) {
+      ranked <- .top_closeness_search(walk, enc$n, search_one, top)
+      evaluated[[label]] <<- ranked$evaluated
+      keep <- ranked$keep
+      return(data.frame(session = label, node = enc$names[keep],
+                        measure = "closeness", value = ranked$values[keep],
+                        stringsAsFactors = FALSE))
+    }
+    trees <- if (!needs_trees) NULL else lapply(seq_len(enc$n), search_one)
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
                         horizon$start, horizon$end, criterion,
@@ -1832,7 +1863,102 @@ dyn_centrality <- function(dn,
   }
   effective_mode <- if (identical(sessions, "bounded") &&
                         is.null(dn$meta$sessions)) "collapse" else sessions
-  .vertex_path_metadata(out, effective_mode)
+  out <- .vertex_path_metadata(out, effective_mode)
+  if (!is.null(top)) {
+    total <- sum(vapply(parts, function(enc) enc$n, integer(1L)))
+    attr(out, "top") <- as.integer(top)
+    attr(out, "sources_evaluated") <- sum(evaluated)
+    attr(out, "sources_total") <- total
+    attr(out, "selection") <- "exact_top_k_with_ties"
+    attr(out, "note") <- sprintf(paste0(
+      "top %d by closeness, ties kept: %d of %d vertices shown; %d of %d ",
+      "sources searched to completion; the other vertices were not computed"),
+      as.integer(top), nrow(out), total, sum(evaluated), total)
+  }
+  out
+}
+
+#' Validate `top` for the one call that supports it
+#'
+#' @param top The value supplied.
+#' @param measure,scope,criterion The other arguments, after matching.
+#' @return `TRUE`, invisibly; otherwise a classed error.
+#' @noRd
+.check_top_closeness <- function(top, measure, scope, criterion) {
+  .check(
+    "`top` must be a single positive whole number." =
+      is.numeric(top) && length(top) == 1L && is.finite(top) && top >= 1 &&
+        isTRUE(all.equal(top, round(top)))
+  )
+  if (!identical(scope, "temporal") || !identical(measure, "closeness")) {
+    stop(errorCondition(
+      "`top` applies only to `measure = \"closeness\"` at `scope = \"temporal\"`, on its own.",
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (!identical(criterion, "min_hops")) {
+    stop(errorCondition(paste0(
+      "`top` needs `criterion = \"min_hops\"`: only there is a partial search ",
+      "an upper bound on the final value, so only there can a source be ",
+      "dropped early without changing the answer."),
+      class = "dynet_bad_input", call = NULL))
+  }
+  invisible(TRUE)
+}
+
+#' Upper bound on min-hops closeness from a partial search
+#'
+#' The vertices reached through the completed layers sit at their exact hop
+#' distance, every vertex found later lies above their mean, so the partial
+#' closeness `reached / summed hops` can only fall from here. It is the bound
+#' used for pruning, and it is attained when nothing more is reached.
+#'
+#' @param vertex,hops State vectors of a search in progress.
+#' @param source Integer source vertex.
+#' @return One number; `0` when nothing but the source has been reached.
+#' @examples
+#' Dynet:::.min_hops_closeness_bound(c(1L, 2L, 3L, 2L), c(0L, 1L, 2L, 2L), 1L)
+#' @noRd
+.min_hops_closeness_bound <- function(vertex, hops, source) {
+  other <- vertex != source
+  if (!any(other)) return(0)
+  first <- tapply(hops[other], vertex[other], min)
+  length(first) / sum(first)
+}
+
+#' Rank sources by min-hops closeness, searching only what the ranking needs
+#'
+#' Sources are visited in descending contact out-degree so that the k-th best
+#' value rises early; each later search is abandoned as soon as its bound
+#' falls below that value. A tie at the k-th value cannot be pruned, since the
+#' bound is compared with a tolerance below it.
+#'
+#' @param walk The encoding being searched, for the ordering heuristic.
+#' @param n Number of vertices.
+#' @param search_one Function of `(source, abandon)` running one search.
+#' @param top The number of leaders wanted.
+#' @return A list: `values` (numeric, `NA` where a source was abandoned),
+#'   `keep` (logical, the rows to report), `evaluated` (searches completed).
+#' @noRd
+.top_closeness_search <- function(walk, n, search_one, top) {
+  values <- rep(NA_real_, n)
+  evaluated <- 0L
+  kth <- -Inf
+  tol <- function(x) sqrt(.Machine$double.eps) * max(1, abs(x))
+  # Sequential by nature: the threshold each search is pruned against is the
+  # k-th best value among the searches before it.
+  for (s in order(-tabulate(walk$from, n), seq_len(n))) {
+    abandon <- function(vertex, hops, depth) {
+      .min_hops_closeness_bound(vertex, hops, s) < kth - tol(kth)
+    }
+    tree <- search_one(s, abandon)
+    if (isTRUE(tree$abandoned)) next
+    evaluated <- evaluated + 1L
+    values[[s]] <- .temporal_closeness_values(list(tree), n, "min_hops")
+    done <- sort(values[!is.na(values)], decreasing = TRUE)
+    if (length(done) >= top) kth <- done[[top]]
+  }
+  keep <- !is.na(values) & values >= kth - tol(kth)
+  list(values = values, keep = keep, evaluated = evaluated)
 }
 
 #' Reduce a set of optimal forward searches to one temporal measure

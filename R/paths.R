@@ -475,6 +475,10 @@
 #'   so arrivals can be unattained infima, mirroring backward suprema.
 #' @param prepared Atom and domain tables from `.path_search_tables()`, which
 #'   a caller running many searches on one encoding computes once.
+#' @param abandon Optional function of `(vertex, hops, depth)`, the state
+#'   vectors after hop layer `depth` is complete, returning `TRUE` to stop the
+#'   search there. The result then carries `abandoned = TRUE` and no endpoint
+#'   arrays; a top-k search uses it to drop a source whose bound is beaten.
 #' @return An internal optimal-path search object.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -488,7 +492,7 @@
                                  traversal_time = 0,
                                  criterion = "foremost_then_shortest",
                                  max_states = 1e5, origin_attained = TRUE,
-                                 prepared = NULL) {
+                                 prepared = NULL, abandon = NULL) {
   direction <- match.arg(direction)
   prepared <- prepared %||% .path_search_tables(enc, traversal_time)
   atoms <- prepared$atoms
@@ -654,6 +658,15 @@
       }
     }
     if (!added && !any(hops == depth)) break
+    # A caller may stop a search whose outcome it can already bound; a layer
+    # that was the last possible one has already completed the search, so it
+    # is not abandoned.
+    if (!is.null(abandon) && depth < n - 1L && abandon(vertex, hops, depth)) {
+      return(list(
+        direction = direction, source = source, origin = origin,
+        names = enc$names, n = n, anchor_valid = TRUE, abandoned = TRUE
+      ))
+    }
   }
 
   search <- list(
@@ -1127,10 +1140,11 @@
                                     activity_session = NULL,
                                     criterion = "foremost_then_shortest",
                                     max_states = 1e5, origin_attained = TRUE,
-                                    table_cache = NULL) {
+                                    table_cache = NULL, abandon = NULL) {
   activity_mode <- match.arg(activity_mode)
   run <- function(sub, session = activity_session,
-                  erase_sessions = identical(activity_mode, "collapse")) {
+                  erase_sessions = identical(activity_mode, "collapse"),
+                  abandon = NULL) {
     sub <- .prepare_path_encoding(
       dn, sub, session = session, erase_sessions = erase_sessions
     )
@@ -1148,10 +1162,14 @@
     .optimal_path_search(
       sub, source, origin, direction, lower, upper, traversal_time, criterion,
       max_states = max_states, origin_attained = origin_attained,
-      prepared = prepared
+      prepared = prepared, abandon = abandon
     )
   }
-  if (!bounded || is.null(dn$meta$sessions)) return(run(enc))
+  # One search per source can be abandoned on a bound. A session-bounded
+  # search on a network with sessions merges one search per session by best
+  # endpoint, and a partial value from one session bounds nothing about the
+  # merged result, so those always run to completion.
+  if (!bounded || is.null(dn$meta$sessions)) return(run(enc, abandon = abandon))
   groups <- split(seq_along(enc$from), enc$session)
   missing <- setdiff(dn$meta$sessions, names(groups))
   if (length(missing)) groups <- c(

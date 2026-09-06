@@ -1390,7 +1390,7 @@ ship criterion-free against the current default if A1 slips.
 
 ---
 
-### B5 — Top-k temporal closeness (`top =` on `dyn_centrality`)
+### B5 — Top-k temporal closeness (`top =` on `dyn_centrality`) — DONE 2026-09-06 (0.4.4)
 
 **Why.** Temporal closeness costs `n` full path searches, which is why the
 package's own examples subset to eight vertices ("Temporal scope walks
@@ -1485,6 +1485,41 @@ every bundled dataset and every `k` from 1 to `n`.
   (one hub, many leaves), `sources_evaluated < n` — otherwise the branch and
   bound is not actually pruning and the item has no value.
 - Property: `top = n` is identical to `top = NULL`.
+
+**Feature record (written 2026-09-06, before the code).**
+
+- Equation. Temporal closeness under `min_hops` is `C(s) = |R_s| / Σ_{z∈R_s} h(s, z)`,
+  the inverse mean hop distance over the reachable set. `top = k` returns
+  every vertex whose `C` is at or above the k-th largest value, with ties.
+- **The bound proposed above is invalid and was not used.** Take `n = 3`, a
+  source that after layer 1 has reached one vertex at one hop and never
+  reaches the other: its true closeness is `1 / 1 = 1`, while
+  `(n - 1) / (S + U d_k) = 2 / (1 + 1 × 2) = 2/3 < 1`. The numerator
+  `n - 1` does not compensate for the denominator because Dynet's closeness
+  is a *mean*, not a sum over `n - 1`. Formally, with `a` vertices reached so
+  far at total distance `S` (each distance `≤ depth`) and `L` vertices to be
+  reached later (each `≥ depth + 1`), the final value `(a + L) / (S + Σ_later)`
+  is maximised at `L = 0`, because every later vertex lies above the current
+  mean `S / a`.
+- The bound actually used: `UB_k(s) = a_k / S_k`, the partial closeness on
+  the vertices reached through layer `k`. It is exact for those vertices
+  under `min_hops` (first appearance layer is the hop distance), attainable
+  (nothing more reached), and non-increasing in `k`. A source is abandoned
+  once `UB_k(s) < kth_best − tol`, so a tie at the k-th value can never be
+  pruned. Under an arrival criterion the reached vertices' final latencies
+  can still *fall* at later layers, so no such bound exists without
+  `traversal_time > 0`; `top` is therefore refused outside `min_hops`.
+- Sessions. Under `sessions = "bounded"` on a network with sessions a source
+  is one search per session merged by best endpoint, and a per-session
+  partial value bounds nothing about the merged one, so every source is
+  searched to completion there and `sources_evaluated = n` says so. Under
+  `"separate"` the ranking is within each session block.
+- `0`: a source reaching nothing. `NA`: never present; abandoned sources are
+  absent rows, not `NA` rows. `Inf`: impossible under `min_hops`.
+- Metadata: `top`, `sources_evaluated`, `sources_total`,
+  `selection = "exact_top_k_with_ties"`; the print note says the remaining
+  vertices were not computed. Row order is the network's vertex order, so
+  `top = n` is identical to the full result apart from those attributes.
 
 **Effort. M.** The bound derivation and its criterion restriction are the
 substance; the heap and the source ordering are routine. The exactness oracle

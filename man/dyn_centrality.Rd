@@ -26,6 +26,7 @@ dyn_centrality(
   decay = 0,
   transition = 1,
   criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest"),
+  top = NULL,
   plot = FALSE
 )
 }
@@ -144,6 +145,20 @@ the count of every vertex-simple foremost journey, which is #P-hard
 rather than arrival, so a vertex that is reached late but quickly is
 close; betweenness under it is not implemented. Reach and reach count
 are identical under all.}
+
+\item{top}{For temporal \code{measure = "closeness"} under
+\code{criterion = "min_hops"} only: return the \code{top} most central vertices,
+plus every vertex tied at the \code{top}-th value, computing only the searches
+that ranking needs. Temporal closeness costs one full path search per
+vertex; a source is dropped as soon as the closeness of what it has
+reached so far, which can only fall as the search continues, is below
+the \code{top}-th best value found. The answer is exact, the same rows and
+values the full computation gives, and the result records how many
+sources ran to completion as \code{sources_evaluated}. Under
+\code{sessions = "separate"} the ranking is within each session; under
+\code{sessions = "bounded"} on a network with sessions no source can be
+dropped early, and the count says so. The remaining vertices are absent,
+not \code{NA}, and the print header says they were not computed.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
@@ -385,6 +400,9 @@ few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
 dyn_centrality(few, measure = "closeness", scope = "temporal")
 dyn_centrality(few, measure = "reach", scope = "temporal",
                start = 0, end = 10)
+# The leaders only, searching just what the ranking needs
+dyn_centrality(dn, measure = "closeness", scope = "temporal",
+               criterion = "min_hops", top = 3)
 
 # Stream measures need no path search, so they run on the whole network.
 dyn_centrality(dn, measure = "katz", scope = "temporal")

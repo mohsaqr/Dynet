@@ -1,3 +1,15 @@
+# Dynet 0.4.4 (next)
+
+* `dyn_centrality(measure = "closeness", scope = "temporal", criterion = "min_hops", top = k)`
+  returns the `k` most central vertices, plus every vertex tied at the
+  `k`-th value, by branch and bound over sources: a source is abandoned
+  once the closeness of what it has reached so far, which can only fall as
+  its search continues, is below the `k`-th best value. The answer is the
+  same rows and values as the full computation; `sources_evaluated`
+  records how many searches ran to completion, and the print header says
+  the other vertices were not computed. `top` is refused under an
+  arrival-based criterion, where no such bound exists.
+
 # Dynet 0.4.3
 
 * `remove_ties()`, `remove_arcs()` and `update_ties()` take `ties` as a
