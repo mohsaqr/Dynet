@@ -1229,7 +1229,54 @@ and the overflow guard).
 
 ---
 
-### B3 — Temporal walk centrality (`measure = "walk"`, temporal scope)
+### B3 — Temporal walk centrality (`measure = "walk"`, temporal scope) — DONE 2026-09-06 (0.4.6)
+
+**Feature record (written 2026-09-06 from the paper, before the code).**
+Source read: Oettershagen, Mutzel & Kriege (2022), arXiv:2202.03706v1,
+Definitions 4.1–4.3, Algorithms 2 and 3, Section 5.2–5.3.
+
+- Model. Directed contacts `(u, v, t)`; a temporal walk is a contact sequence
+  with `t_i + δ ≤ t_{i+1}`. Dynet's stream measures already read contacts
+  strictly (equal timestamps form one batch and do not chain), which is the
+  paper's strict model in the limit `δ → 0⁺`: arrival at `t_i`, the next
+  contact strictly later. Undirected networks: each contact in both
+  directions with the same timestamp, as the paper does.
+- Walk weight (Def. 4.1): `τ(ω) = Π_{i=1}^{ℓ-1} Φ(t_i + δ, t_{i+1})`, and
+  `τ = 1` for walks of length one. Dynet takes `Φ_in = Φ_out = beta`
+  (the paper's example (1)), so a walk of `ℓ` contacts weighs
+  `beta^(ℓ-1)`: **a single contact weighs one**, each further contact
+  multiplies by `beta`. This differs from Dynet's temporal Katz, where a
+  contact alone weighs `beta` (`beta^ℓ`); the difference is a constant
+  factor per walk and is documented, not hidden. **The roadmap fixture
+  `c(B) = beta²` for the two-contact path assumed Katz weighting; under the
+  paper's definition it is 1.**
+- `W_in(v, t)` (Def. 4.2): summed weight of walks ending at `v` at `t`,
+  length ≥ 1, per Algorithm 2: `W_in(v, t) = Σ_{(u,v,t)} (1 + beta · Σ_{t' < t} W_in(u, t'))`.
+  `W_out(v, t)`: symmetric, over the reversed stream:
+  `W_out(v, t) = Σ_{(v,w,t)} (1 + beta · Σ_{t'' > t} W_out(w, t''))`.
+- Centrality (Def. 4.3): `C(v) = Σ_{t1, t2} W_in(v, t1) · W_out(v, t2) · Φ_m(t1, t2)`
+  over `t1 ≤ t2` in the paper's `δ > 0` model, where `t1` is an arrival
+  time `t_prev + δ`. In the `δ → 0⁺` limit that inequality is
+  `t_prev < t2`, so Dynet pairs **strictly**: an arrival and a departure at
+  the same instant are two contacts that cannot chain, and they are not
+  paired. Under `Φ_m ≡ 1` this makes `C(v)` the weighted count of pairs
+  (incoming walk, outgoing walk) that concatenate into a walk through `v`.
+- Waiting weight: `Φ_m(t1, t2) = exp(-decay · (t2 - t1))`, `decay = 0`
+  giving the paper's Algorithm 3 exactly. Computed per vertex by the stable
+  recurrence `R ← (R + W_in(t_prev)) · exp(-decay · (t - t_prev))`, every
+  factor at most one, so no time shift is needed and translation
+  invariance is exact.
+- Overflow: `dynet_walk_overflow` when an accumulator exceeds half the
+  double range, as Katz does. `0` for a vertex with no incoming or no
+  outgoing contact. Never `NA`.
+- Metadata: `attenuation = beta`, `decay`, `walk_weight = "beta_per_junction"`,
+  `waiting_weight = "exponential"`, `walk_rule = "strict"`,
+  `pairing = "arrival_strictly_before_departure"`.
+- Oracle: an independent enumeration of every strict temporal walk on a
+  small random contact network, evaluating Definitions 4.1–4.3 literally
+  (finite, because a strict walk uses at most one contact per timestamp),
+  compared with the streaming result. Plus the literal fixtures.
+
 
 **Why.** Walk centrality is the one measure in this family that scores a
 vertex on its *brokerage in time* — the ability to receive information early

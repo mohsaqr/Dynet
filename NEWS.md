@@ -1,3 +1,12 @@
+# Dynet 0.4.6 (next)
+
+* `dyn_centrality(measure = "walk", scope = "temporal")` is temporal walk
+  centrality (Oettershagen, Mutzel and Kriege, 2022): the walks arriving at
+  a vertex paired with the walks leaving it strictly later, weighted by
+  `beta` per further contact and by `exp(-decay * waiting time)` per
+  pairing. Two passes over the contact stream; verified against a literal
+  enumeration of every strict temporal walk.
+
 # Dynet 0.4.5 (next)
 
 * `paths(criterion = "shortest", cost = "weight")` finds the journeys of

@@ -39,7 +39,7 @@ dyn_centrality(
 \code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
 \code{"load"}, \code{"flow_betweenness"}, \code{"participation"} or \code{"diffusion"} for
 snapshot scope; \code{"closeness"}, \code{"betweenness"}, \code{"reach"},
-\code{"reach_count"}, \code{"katz"} or \code{"pagerank"} for temporal scope.}
+\code{"reach_count"}, \code{"katz"}, \code{"pagerank"} or \code{"walk"} for temporal scope.}
 
 \item{scope}{\code{"snapshot"} for a value per time bin, \code{"temporal"} for one
 value per vertex computed on time-respecting paths.}
@@ -121,11 +121,17 @@ neighbours, multiplied by \code{lambda}.}
 attribute, or one group label per vertex. Required for that measure and
 rejected for every other.}
 
-\item{beta}{For \code{measure = "katz"} only: walk attenuation in \verb{(0, 1]}.
-Each additional hop multiplies a walk's contribution by \code{beta}.}
+\item{beta}{For \code{measure = "katz"} and \code{"walk"} only: walk attenuation in
+\verb{(0, 1]}. Under \code{"katz"} a walk of \code{l} contacts weighs \code{beta^l}; under
+\code{"walk"} it weighs \code{beta^(l - 1)}, so a contact alone weighs one and
+each further contact multiplies by \code{beta} (Oettershagen, Mutzel and
+Kriege, 2022, Definition 4.1).}
 
-\item{decay}{For \code{measure = "katz"} only: exponential time-decay rate. Zero
-weights every past walk equally.}
+\item{decay}{For \code{measure = "katz"} and \code{"walk"} only: exponential
+time-decay rate. Under \code{"katz"} it discounts every past walk by the time
+elapsed; under \code{"walk"} it discounts each pairing of an arrival with a
+later departure by the waiting time between them. Zero weights every
+walk, or every pairing, equally.}
 
 \item{transition}{For temporal \code{measure = "pagerank"} only: the transition
 probability in \verb{(0, 1]}. A walk waiting at a vertex declines each passing
@@ -348,8 +354,22 @@ its mass. A vertex that never appears as a contact endpoint scores exactly
 zero, and a block with no eligible contact at all scores \code{NaN} throughout
 once rescaled.
 
-Simultaneous contacts are batched strictly for both stream measures,
-\code{"katz"} and \code{"pagerank"}: every contact sharing a timestamp reads the
+\code{"walk"} is temporal walk centrality (Oettershagen, Mutzel and Kriege,
+2022): a vertex scores by the walks that arrive at it and the walks that
+leave it afterwards, \verb{sum over t1 < t2 of W_in(v, t1) * W_out(v, t2) * exp(-decay * (t2 - t1))},
+where \code{W_in(v, t)} is the summed weight of temporal walks ending at \code{v}
+at \code{t} and \code{W_out(v, t)} of those starting there. It is the one measure
+of the family that scores brokerage in time, obtaining then
+distributing, rather than accumulated arrivals; it costs two passes over
+the contact stream. The pairing is strict: an arrival and a departure at
+the same instant are two contacts that cannot chain, so they are not
+paired. A vertex with no incoming or no outgoing contact scores zero. On
+an undirected network every contact runs both ways. The result records
+\code{attenuation}, \code{decay}, \code{walk_weight}, \code{waiting_weight}, \code{walk_rule} and
+\code{pairing}.
+
+Simultaneous contacts are batched strictly for the stream measures,
+\code{"katz"}, \code{"pagerank"} and \code{"walk"}: every contact sharing a timestamp reads the
 active mass as it stood before that instant, and the arrivals it produces
 are only available afterwards. This deliberately differs from \code{\link[=paths]{paths()}},
 which composes equal-time contacts at \code{traversal_time = 0}, and from a
@@ -414,6 +434,7 @@ dyn_centrality(dn, measure = "closeness", scope = "temporal",
 
 # Stream measures need no path search, so they run on the whole network.
 dyn_centrality(dn, measure = "katz", scope = "temporal")
+dyn_centrality(dn, measure = "walk", scope = "temporal", decay = 0.1)
 dyn_centrality(dn, measure = "pagerank", scope = "temporal")
 dyn_centrality(dn, measure = "pagerank", scope = "temporal",
                transition = 0.5)
@@ -426,6 +447,10 @@ summary(degree)
 
 }
 \references{
+Oettershagen, L., Mutzel, P., and Kriege, N. M. (2022). Temporal walk
+centrality: ranking nodes in evolving networks. \emph{Proceedings of the ACM
+Web Conference 2022}, 1640-1650. \doi{10.1145/3485447.3512210}
+
 Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
 519(3), 97-125.
 

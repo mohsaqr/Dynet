@@ -16,12 +16,12 @@
                           "diffusion", "participation")
 
 .temporal_measures <- c("closeness", "betweenness", "reach", "reach_count",
-                        "katz", "pagerank")
+                        "katz", "pagerank", "walk")
 
 # Temporal measures computed by streaming the contact sequence rather than by
 # searching for paths. They need no per-source tree, so the trees are built
 # only when a path-based measure is actually requested.
-.stream_measures <- c("katz", "pagerank")
+.stream_measures <- c("katz", "pagerank", "walk")
 
 #' Resolve the `mode` argument, which may name several directions at once
 #'
@@ -109,7 +109,7 @@
 #'   `"coreness"`, `"constraint"`, `"power"`, `"harary"`, `"information"`,
 #'   `"load"`, `"flow_betweenness"`, `"participation"` or `"diffusion"` for
 #'   snapshot scope; `"closeness"`, `"betweenness"`, `"reach"`,
-#'   `"reach_count"`, `"katz"` or `"pagerank"` for temporal scope.
+#'   `"reach_count"`, `"katz"`, `"pagerank"` or `"walk"` for temporal scope.
 #' @param scope `"snapshot"` for a value per time bin, `"temporal"` for one
 #'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
@@ -210,10 +210,16 @@
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
-#' @param beta For `measure = "katz"` only: walk attenuation in `(0, 1]`.
-#'   Each additional hop multiplies a walk's contribution by `beta`.
-#' @param decay For `measure = "katz"` only: exponential time-decay rate. Zero
-#'   weights every past walk equally.
+#' @param beta For `measure = "katz"` and `"walk"` only: walk attenuation in
+#'   `(0, 1]`. Under `"katz"` a walk of `l` contacts weighs `beta^l`; under
+#'   `"walk"` it weighs `beta^(l - 1)`, so a contact alone weighs one and
+#'   each further contact multiplies by `beta` (Oettershagen, Mutzel and
+#'   Kriege, 2022, Definition 4.1).
+#' @param decay For `measure = "katz"` and `"walk"` only: exponential
+#'   time-decay rate. Under `"katz"` it discounts every past walk by the time
+#'   elapsed; under `"walk"` it discounts each pairing of an arrival with a
+#'   later departure by the waiting time between them. Zero weights every
+#'   walk, or every pairing, equally.
 #' @param transition For temporal `measure = "pagerank"` only: the transition
 #'   probability in `(0, 1]`. A walk waiting at a vertex declines each passing
 #'   outgoing contact with probability `transition` and takes it otherwise, so
@@ -383,8 +389,22 @@
 #' zero, and a block with no eligible contact at all scores `NaN` throughout
 #' once rescaled.
 #'
-#' Simultaneous contacts are batched strictly for both stream measures,
-#' `"katz"` and `"pagerank"`: every contact sharing a timestamp reads the
+#' `"walk"` is temporal walk centrality (Oettershagen, Mutzel and Kriege,
+#' 2022): a vertex scores by the walks that arrive at it and the walks that
+#' leave it afterwards, `sum over t1 < t2 of W_in(v, t1) * W_out(v, t2) * exp(-decay * (t2 - t1))`,
+#' where `W_in(v, t)` is the summed weight of temporal walks ending at `v`
+#' at `t` and `W_out(v, t)` of those starting there. It is the one measure
+#' of the family that scores brokerage in time, obtaining then
+#' distributing, rather than accumulated arrivals; it costs two passes over
+#' the contact stream. The pairing is strict: an arrival and a departure at
+#' the same instant are two contacts that cannot chain, so they are not
+#' paired. A vertex with no incoming or no outgoing contact scores zero. On
+#' an undirected network every contact runs both ways. The result records
+#' `attenuation`, `decay`, `walk_weight`, `waiting_weight`, `walk_rule` and
+#' `pairing`.
+#'
+#' Simultaneous contacts are batched strictly for the stream measures,
+#' `"katz"`, `"pagerank"` and `"walk"`: every contact sharing a timestamp reads the
 #' active mass as it stood before that instant, and the arrivals it produces
 #' are only available afterwards. This deliberately differs from [paths()],
 #' which composes equal-time contacts at `traversal_time = 0`, and from a
@@ -407,6 +427,10 @@
 #' session outside a one-sided bound contributes zero-reach rows.
 #'
 #' @references
+#' Oettershagen, L., Mutzel, P., and Kriege, N. M. (2022). Temporal walk
+#' centrality: ranking nodes in evolving networks. *Proceedings of the ACM
+#' Web Conference 2022*, 1640-1650. \doi{10.1145/3485447.3512210}
+#'
 #' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
 #' 519(3), 97-125.
 #'
@@ -509,6 +533,7 @@
 #'
 #' # Stream measures need no path search, so they run on the whole network.
 #' dyn_centrality(dn, measure = "katz", scope = "temporal")
+#' dyn_centrality(dn, measure = "walk", scope = "temporal", decay = 0.1)
 #' dyn_centrality(dn, measure = "pagerank", scope = "temporal")
 #' dyn_centrality(dn, measure = "pagerank", scope = "temporal",
 #'                transition = 0.5)
@@ -643,7 +668,7 @@ dyn_centrality <- function(dn,
       "`transition` applies only to temporal `measure = \"pagerank\"`.",
       class = "dynet_bad_input", call = NULL))
   }
-  if ("katz" %in% measure) {
+  if (any(c("katz", "walk") %in% measure)) {
     .check(
       "`beta` must be a single number in (0, 1]." =
         length(beta) == 1L && is.numeric(beta) && is.finite(beta) &&
@@ -1857,6 +1882,16 @@ dyn_centrality <- function(dn,
       "none_established"
     }
   )
+  walk_metadata <- list(
+    attenuation = beta,
+    decay = decay,
+    # Oettershagen, Mutzel and Kriege (2022), Definition 4.1 with a constant
+    # weight function: a walk of `l` contacts weighs `beta^(l - 1)`.
+    walk_weight = "beta_per_junction",
+    waiting_weight = "exponential",
+    walk_rule = "strict",
+    pairing = "arrival_strictly_before_departure"
+  )
   direct <- function(x, record) {
     for (field in names(record)) attr(x, field) <- record[[field]]
     x
@@ -1867,6 +1902,8 @@ dyn_centrality <- function(dn,
     out <- direct(out, betweenness_metadata)
   } else if (identical(measure, "pagerank")) {
     out <- direct(out, pagerank_metadata)
+  } else if (identical(measure, "walk")) {
+    out <- direct(out, walk_metadata)
   } else {
     metadata <- list()
     if ("closeness" %in% measure) metadata$closeness <- closeness_metadata
@@ -1874,6 +1911,7 @@ dyn_centrality <- function(dn,
       metadata$betweenness <- betweenness_metadata
     }
     if ("pagerank" %in% measure) metadata$pagerank <- pagerank_metadata
+    if ("walk" %in% measure) metadata$walk <- walk_metadata
     if (length(metadata)) attr(out, "measure_metadata") <- metadata
   }
   effective_mode <- if (identical(sessions, "bounded") &&
@@ -2003,6 +2041,7 @@ dyn_centrality <- function(dn,
   n <- enc$n
   switch(m,
     katz = .temporal_katz_values(enc, dn, beta, decay, lower, upper),
+    walk = .temporal_walk_values(enc, dn, beta, decay, lower, upper),
     pagerank = .temporal_pagerank_values(enc, dn, damping, transition,
                                          rescale, lower, upper),
     reach = .temporal_reach_values(trees, n, m)[[1L]],
@@ -2211,6 +2250,130 @@ dyn_centrality <- function(dn,
     }
   }
   x * phi(upper - last)
+}
+
+#' Weighted incoming and outgoing temporal walks at every contact
+#'
+#' Definition 4.2 of Oettershagen, Mutzel and Kriege (2022) by their
+#' Algorithm 2 and its mirror image: a forward pass over the contact stream
+#' gives the weight of walks ending at each contact, a backward pass the
+#' weight of walks starting at it. A walk of `l` contacts weighs
+#' `beta^(l - 1)` (Definition 4.1 with a constant weight function), so a
+#' contact alone weighs one. Contacts sharing a timestamp form one batch and
+#' cannot chain, the strict model. An undirected network contributes each
+#' contact in both directions, as the paper does.
+#'
+#' @param enc An encoding from `.encode()`.
+#' @param dn The temporal network, for the observation test and direction.
+#' @param beta Walk attenuation, in `(0, 1]`.
+#' @param lower,upper The measurement window.
+#' @return A list with integer `from` and `to`, numeric `when`, and numeric
+#'   `w_in` and `w_out`: for each contact, the summed weight of walks whose
+#'   last contact it is, and of walks whose first contact it is.
+#' @noRd
+.temporal_walk_tables <- function(enc, dn, beta, lower, upper) {
+  stream <- .contact_stream(enc, dn, lower, upper)
+  from <- stream$from
+  to <- stream$to
+  when <- stream$when
+  if (!dn$directed && length(when)) {
+    both_from <- c(from, to)
+    both_to <- c(to, from)
+    both_when <- c(when, when)
+    ord <- order(both_when, both_from, both_to)
+    from <- both_from[ord]
+    to <- both_to[ord]
+    when <- both_when[ord]
+  }
+  m <- length(when)
+  w_in <- numeric(m)
+  w_out <- numeric(m)
+  if (!m) return(list(from = from, to = to, when = when, w_in = w_in, w_out = w_out))
+  n <- enc$n
+  starts <- c(TRUE, when[-1L] != when[-m])
+  batches <- split(seq_len(m), cumsum(starts))
+  cap <- .Machine$double.xmax / 2
+  overflow <- function() {
+    stop(errorCondition(sprintf(
+      "Temporal walk counts overflowed at beta = %g; lower `beta` or narrow the window.",
+      beta), class = "dynet_walk_overflow", call = NULL))
+  }
+  # A stream is sequential by definition: each batch reads the totals the
+  # earlier batches wrote. `acc_in[u]` is the weight of every walk that has
+  # ended at `u` strictly before the current instant.
+  acc_in <- numeric(n)
+  for (idx in batches) {
+    w_in[idx] <- 1 + beta * acc_in[from[idx]]
+    landed <- rowsum(w_in[idx], group = to[idx], reorder = FALSE)
+    target <- as.integer(rownames(landed))
+    acc_in[target] <- acc_in[target] + landed[, 1L]
+    if (any(acc_in > cap)) overflow()
+  }
+  # The mirror image: walks starting at a contact continue through every
+  # walk that starts at its receiver strictly later.
+  acc_out <- numeric(n)
+  for (idx in rev(batches)) {
+    w_out[idx] <- 1 + beta * acc_out[to[idx]]
+    left <- rowsum(w_out[idx], group = from[idx], reorder = FALSE)
+    source <- as.integer(rownames(left))
+    acc_out[source] <- acc_out[source] + left[, 1L]
+    if (any(acc_out > cap)) overflow()
+  }
+  list(from = from, to = to, when = when, w_in = w_in, w_out = w_out)
+}
+
+#' Temporal walk centrality by two passes over the contact stream
+#'
+#' Definition 4.3 of Oettershagen, Mutzel and Kriege (2022): a vertex is
+#' central when walks arrive at it and walks leave it afterwards. With
+#' `W_in(v, t)` the weight of walks ending at `v` at `t` and `W_out(v, t)`
+#' the weight of walks starting there,
+#' `C(v) = sum over t1 < t2 of W_in(v, t1) * W_out(v, t2) * exp(-decay * (t2 - t1))`.
+#' The pairing is strict because an arrival and a departure at one instant
+#' are two contacts that cannot chain. The sum runs per vertex through the
+#' recurrence `R <- (R + W_in(t_prev)) * exp(-decay * (t - t_prev))`, every
+#' factor at most one, so it neither overflows nor depends on where the
+#' clock starts; `decay = 0` is the paper's Algorithm 3.
+#'
+#' @param enc An encoding from `.encode()`.
+#' @param dn The temporal network, for the observation test and direction.
+#' @param beta Walk attenuation, in `(0, 1]`.
+#' @param decay Exponential decay rate of the waiting weight; zero weights
+#'   every pairing equally.
+#' @param lower,upper The measurement window.
+#' @return A numeric vector, one score per vertex.
+#' @noRd
+.temporal_walk_values <- function(enc, dn, beta, decay, lower, upper) {
+  n <- enc$n
+  out <- numeric(n)
+  tab <- .temporal_walk_tables(enc, dn, beta, lower, upper)
+  if (!length(tab$when)) return(out)
+  arrivals <- data.frame(vertex = tab$to, time = tab$when,
+                         w_in = tab$w_in, w_out = 0)
+  departures <- data.frame(vertex = tab$from, time = tab$when,
+                           w_in = 0, w_out = tab$w_out)
+  moments <- rbind(arrivals, departures)
+  totals <- stats::aggregate(cbind(w_in, w_out) ~ vertex + time, data = moments,
+                             FUN = sum)
+  totals <- totals[order(totals$vertex, totals$time), , drop = FALSE]
+  per_vertex <- split(totals, totals$vertex)
+  scores <- vapply(per_vertex, function(block) {
+    k <- nrow(block)
+    if (k < 2L) return(0)
+    # Sequential by nature: each step's waiting weight is the previous
+    # step's total decayed by the gap since then.
+    reached <- 0
+    score <- 0
+    for (i in seq_len(k)[-1L]) {
+      gap <- block$time[[i]] - block$time[[i - 1L]]
+      reached <- (reached + block$w_in[[i - 1L]]) *
+        (if (decay == 0) 1 else exp(-decay * gap))
+      score <- score + block$w_out[[i]] * reached
+    }
+    score
+  }, numeric(1L))
+  out[as.integer(names(per_vertex))] <- scores
+  out
 }
 
 #' The eligible contact stream of a temporal network, in canonical order

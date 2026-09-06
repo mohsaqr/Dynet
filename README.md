@@ -248,6 +248,8 @@ dn <- dynet(school_contacts)
 dyn_centrality(dn, measure = "degree")
 dyn_centrality(dn, measure = c("degree", "betweenness"))
 dyn_centrality(dn, measure = "closeness", scope = "temporal")
+# Brokerage in time: walks that arrive, then walks that leave
+dyn_centrality(dn, measure = "walk", scope = "temporal", decay = 0.1)
 # Only the leaders: an exact top three under fewest hops, searching just
 # what the ranking needs
 dyn_centrality(dn, measure = "closeness", scope = "temporal",
