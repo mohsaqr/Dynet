@@ -130,7 +130,8 @@ rejected because T01 owns instant fractions.
 \examples{
 dn <- dynet(school_contacts)
 events(dn)
-plot(events(dn, measure = c("formation", "dissolution")))
+turnover <- events(dn, measure = c("formation", "dissolution"))
+plot(turnover)
 events(dn, measure = "formation_fraction", start = 1, end = 1,
            window = 0)
 events(dn, measure = "dissolution_fraction", start = 1, end = 1,

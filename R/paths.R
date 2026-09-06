@@ -1793,7 +1793,8 @@
 #' @return A list per endpoint; each element contains every best-session route.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' as.data.frame(paths(dn, from = "Ana"), what = "steps")
+#' routes <- paths(dn, from = "Ana")
+#' as.data.frame(routes, what = "steps")
 #' @noRd
 .path_routes <- function(bfs, n, direction) {
   direction <- match.arg(direction, c("forward", "backward"))
@@ -1835,7 +1836,8 @@
 #' @return A list with tidy `paths` and `steps` data frames.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' as.data.frame(paths(dn, from = "Ana"), what = "steps")
+#' routes <- paths(dn, from = "Ana")
+#' as.data.frame(routes, what = "steps")
 #' @noRd
 .paths_tables <- function(enc, bfs, direction,
                           mode = c("collapse", "bounded", "separate"),
@@ -2380,7 +2382,8 @@
 #'              format = "contact", directed = TRUE)
 #' paths(few, from = "A", criterion = "foremost")
 #' paths(few, from = "A", criterion = "fastest")
-#' summary(paths(dn, from = "Ana"))
+#' routes <- paths(dn, from = "Ana")
+#' summary(routes)
 #'
 #' @export
 paths <- function(dn, from, at = NULL,

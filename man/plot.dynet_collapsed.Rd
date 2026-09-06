@@ -22,5 +22,6 @@ Dynet's rendering defaults; any \code{cograph::splot()} argument overrides them.
 }
 \examples{
 dn <- dynet(school_contacts)
-plot(collapse_network(dn), layout = "oval")
+flat <- collapse_network(dn)
+plot(flat, layout = "oval")
 }

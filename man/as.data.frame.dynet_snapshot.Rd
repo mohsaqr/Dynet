@@ -22,5 +22,8 @@ A plain \code{data.frame} with the same rows and columns.
 Tidy table of snapshot edges
 }
 \examples{
-head(as.data.frame(snapshots(dynet(school_contacts))))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+bins_table <- as.data.frame(bins)
+head(bins_table)
 }

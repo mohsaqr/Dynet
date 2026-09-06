@@ -25,5 +25,8 @@ Depth zero is the queried vertex itself and has no parent, so its
 Summarise path trajectories
 }
 \examples{
-summary(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+summary(trajectories)
 }

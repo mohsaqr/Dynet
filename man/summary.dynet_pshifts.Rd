@@ -21,5 +21,7 @@ A plain \code{data.frame}, one row per shift family: \code{family}, its
 Summarise participation shifts by family
 }
 \examples{
-summary(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+summary(shifts)
 }

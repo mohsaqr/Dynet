@@ -25,5 +25,7 @@ count of zero.
 Tidy data frame of participation shift counts
 }
 \examples{
-as.data.frame(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+as.data.frame(shifts)
 }

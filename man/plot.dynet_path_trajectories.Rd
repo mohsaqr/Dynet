@@ -20,5 +20,8 @@ what \code{\link[=plot_path_trajectories]{plot_path_trajectories()}} draws; that
 the appearance arguments are documented.
 }
 \examples{
-plot(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+plot(trajectories)
 }

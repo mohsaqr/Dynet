@@ -21,5 +21,7 @@ route lands there. Ordered by count.
 Summarise ranked pathways
 }
 \examples{
-summary(pathways(dynet(school_contacts), from = "Ana"))
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+summary(routes)
 }

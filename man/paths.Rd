@@ -222,7 +222,8 @@ few <- dynet(data.frame(from = c("A", "A", "B", "C"),
              format = "contact", directed = TRUE)
 paths(few, from = "A", criterion = "foremost")
 paths(few, from = "A", criterion = "fastest")
-summary(paths(dn, from = "Ana"))
+routes <- paths(dn, from = "Ana")
+summary(routes)
 
 }
 \references{

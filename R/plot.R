@@ -1221,7 +1221,8 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
 #' @return `x`, invisibly.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' plot(collapse_network(dn), layout = "oval")
+#' flat <- collapse_network(dn)
+#' plot(flat, layout = "oval")
 #' @export
 plot.dynet_collapsed <- function(x, palette = "okabe", ...) {
   .need_cograph()
@@ -1241,7 +1242,9 @@ plot.dynet_collapsed <- function(x, palette = "okabe", ...) {
 #' @return `x`, invisibly.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' plot(path_network(paths(dn, from = "Ana")), layout = "oval")
+#' routes <- paths(dn, from = "Ana")
+#' route_network <- path_network(routes)
+#' plot(route_network, layout = "oval")
 #' @export
 plot.dynet_path_network <- function(x, palette = "okabe", ...) {
   .need_cograph()

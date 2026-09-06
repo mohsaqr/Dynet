@@ -20,5 +20,7 @@ are distinguished by a direct axis grouping as well as by fill, so the
 figure does not rely on colour alone.
 }
 \examples{
-plot(pshifts(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+plot(shifts)
 }

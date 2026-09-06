@@ -21,5 +21,7 @@ bin with no comparable neighbour reports \code{NaN} and \code{NA}.
 Summarise snapshot similarity
 }
 \examples{
-summary(similarity(dynet(school_contacts), step = 5, window = 5))
+dn <- dynet(school_contacts)
+bin_similarity <- similarity(dn, step = 5, window = 5)
+summary(bin_similarity)
 }

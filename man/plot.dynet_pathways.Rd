@@ -36,5 +36,7 @@ share to the right of each. Fill marks the endpoint, which the row already
 names, so colour never carries a distinction alone.
 }
 \examples{
-plot(pathways(dynet(school_contacts), from = "Ana"))
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+plot(routes)
 }

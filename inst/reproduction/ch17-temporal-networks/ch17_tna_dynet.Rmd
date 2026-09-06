@@ -100,7 +100,8 @@ plot(dn, type = "snapshots", panels = 4)
 What those panels hold:
 
 ```{r snapshot-counts}
-summary(snapshots(dn, start = 1, end = 22, step = 7, window = 7))
+weekly <- snapshots(dn, start = 1, end = 22, step = 7, window = 7)
+summary(weekly)
 ```
 
 Activity over time.
@@ -112,8 +113,9 @@ plot(dn, type = "timeline", top = 25)
 Tie formation and dissolution.
 
 ```{r turnover}
-plot(events(dn, measure = c("formation", "dissolution"),
-            start = 0, end = 72, step = 1, window = 1))
+turnover <- events(dn, measure = c("formation", "dissolution"),
+                   start = 0, end = 72, step = 1, window = 1)
+plot(turnover)
 ```
 
 Proximity timeline.
@@ -127,7 +129,8 @@ plot(dn, type = "proximity", slices = 20)
 A seven-day rolling density.
 
 ```{r density}
-plot(metrics(dn, measure = "density", start = 14, end = 60, step = 1, window = 7))
+weekly_density <- metrics(dn, measure = "density", start = 14, end = 60, step = 1, window = 7)
+plot(weekly_density)
 ```
 
 Density over the whole period, and the time-integrated density.
@@ -139,23 +142,26 @@ metrics(dn, measure = c("density", "temporal_density", "edges"), window = "all")
 Reciprocity, on the full network as in the chapter.
 
 ```{r recip}
-plot(metrics(dn_full, measure = "reciprocity",
-             start = 1, end = 73, step = 1, window = 1))
+reciprocity <- metrics(dn_full, measure = "reciprocity",
+                       start = 1, end = 73, step = 1, window = 1)
+plot(reciprocity)
 ```
 
 The dyad census. `window = 0` samples at each instant, which is what
 `tSnaStats()` does by default.
 
 ```{r dyads}
-plot(metrics(dn, measure = c("mutual", "asymmetric", "null"),
-             start = 0, end = 72, step = 1, window = 0))
+dyad_census <- metrics(dn, measure = c("mutual", "asymmetric", "null"),
+                       start = 0, end = 72, step = 1, window = 0)
+plot(dyad_census)
 ```
 
 Degree centralization.
 
 ```{r centralization}
-plot(metrics(dn, measure = "centralization_degree",
-             start = 1, end = 73, step = 1, window = 1))
+centralization <- metrics(dn, measure = "centralization_degree",
+                          start = 1, end = 73, step = 1, window = 1)
+plot(centralization)
 ```
 
 ## 6. Node-level measures
@@ -170,20 +176,23 @@ summary(degree_series)
 ```
 
 ```{r degree-plot, fig.height = 4.5}
-plot(dyn_centrality(dn, measure = "degree", start = 1, end = 73,
-                    step = 1, window = 1))
+degree <- dyn_centrality(dn, measure = "degree", start = 1, end = 73,
+                         step = 1, window = 1)
+plot(degree)
 ```
 
 Closeness, betweenness and eigenvector.
 
 ```{r other-centrality}
-summary(dyn_centrality(dn, measure = c("closeness", "betweenness", "eigenvector"),
-                       start = 1, end = 73, step = 1, window = 1))
+other_centrality <- dyn_centrality(dn, measure = c("closeness", "betweenness", "eigenvector"),
+                                   start = 1, end = 73, step = 1, window = 1)
+summary(other_centrality)
 ```
 
 ```{r betweenness-plot, fig.height = 4.5}
-plot(dyn_centrality(dn, measure = "betweenness",
-                    start = 1, end = 73, step = 1, window = 1))
+betweenness <- dyn_centrality(dn, measure = "betweenness",
+                              start = 1, end = 73, step = 1, window = 1)
+plot(betweenness)
 ```
 
 Aggregate centrality sits on the vertex table, so it can be read or filtered
@@ -287,34 +296,39 @@ same <- dynet(data.frame(from = chapter_spells$sender, to = chapter_spells$recei
 active_nd <- get.inducedSubgraph(nd, v = which(sna::degree(nd) > 20))
 active_dn <- induce_subgraph(same, degree > 20)
 
+active_density <- metrics(active_dn, "density", window = "all")
+active_density_table <- as.data.frame(active_density)
+density_diff <- abs(active_density_table$value - gden(active_nd))
+
+active_mutual <- metrics(active_dn, "mutual", start = 1, end = 73,
+                         step = 1, window = 1)
+active_mutual_table <- as.data.frame(active_mutual)
+tsna_mutual <- tSnaStats(active_nd, "mutuality", start = 1, end = 73,
+                         time.interval = 1, aggregate.dur = 1)
+mutual_diff <- max(abs(active_mutual_table$value - as.numeric(tsna_mutual)))
+
+ref <- tSnaStats(active_nd, "degree", start = 1, end = 73,
+                 time.interval = 1, aggregate.dur = 1, cmode = "freeman")
+active_degree <- dyn_centrality(active_dn, "degree", start = 1,
+                                end = 73, step = 1, window = 1)
+got <- as.data.frame(active_degree)
+m <- matrix(NA_real_, 73, ncol(ref), dimnames = list(NULL, colnames(ref)))
+m[cbind(match(got$time, sort(unique(got$time))),
+        match(got$node, colnames(ref)))] <- got$value
+degree_diff <- max(abs(m[seq_len(72), ] - as.matrix(ref)[seq_len(72), ]))
+
+tp <- tPath(active_nd, v = 44, direction = "fwd")
+active_paths <- paths(active_dn, from = "444")
+dp <- as.data.frame(active_paths)
+a <- setNames(tp$tdist, as.character(network.vertex.names(active_nd)))
+b <- setNames(dp$latency, dp$node)[names(a)]
+ok <- is.finite(a) & is.finite(b)
+arrival_diff <- max(abs(a[ok] - b[ok]))
+
 data.frame(
   quantity = c("aggregate density", "mutual dyads per day",
                "degree per node per day", "earliest arrival time"),
-  max_abs_diff = c(
-    abs(as.data.frame(metrics(active_dn, "density", window = "all"))$value -
-        gden(active_nd)),
-    max(abs(as.data.frame(metrics(active_dn, "mutual", start = 1, end = 73,
-                                  step = 1, window = 1))$value -
-            as.numeric(tSnaStats(active_nd, "mutuality", start = 1, end = 73,
-                                 time.interval = 1, aggregate.dur = 1)))),
-    {
-      ref <- tSnaStats(active_nd, "degree", start = 1, end = 73,
-                       time.interval = 1, aggregate.dur = 1, cmode = "freeman")
-      got <- as.data.frame(dyn_centrality(active_dn, "degree", start = 1,
-                                          end = 73, step = 1, window = 1))
-      m <- matrix(NA_real_, 73, ncol(ref), dimnames = list(NULL, colnames(ref)))
-      m[cbind(match(got$time, sort(unique(got$time))),
-              match(got$node, colnames(ref)))] <- got$value
-      max(abs(m[seq_len(72), ] - as.matrix(ref)[seq_len(72), ]))
-    },
-    {
-      tp <- tPath(active_nd, v = 44, direction = "fwd")
-      dp <- as.data.frame(paths(active_dn, from = "444"))
-      a <- setNames(tp$tdist, as.character(network.vertex.names(active_nd)))
-      b <- setNames(dp$latency, dp$node)[names(a)]
-      ok <- is.finite(a) & is.finite(b)
-      max(abs(a[ok] - b[ok]))
-    }))
+  max_abs_diff = c(density_diff, mutual_diff, degree_diff, arrival_diff))
 ```
 
 ```{r session}

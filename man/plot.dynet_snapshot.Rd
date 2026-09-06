@@ -22,5 +22,7 @@ A \code{ggplot} object.
 Plot how many ties each snapshot holds
 }
 \examples{
-plot(snapshots(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+plot(bins)
 }

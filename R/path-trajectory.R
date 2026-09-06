@@ -568,7 +568,10 @@ plot_path_trajectories <- function(
 #'   Depth zero is the queried vertex itself and has no parent, so its
 #'   `mean_branching` is `NA`.
 #' @examples
-#' summary(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' trajectories <- path_trajectories(routes)
+#' summary(trajectories)
 #' @export
 summary.dynet_path_trajectories <- function(object, ...) {
   flat <- as.data.frame(object)
@@ -596,7 +599,10 @@ summary.dynet_path_trajectories <- function(object, ...) {
 #' @param ... Passed to [plot_path_trajectories()].
 #' @return A `ggplot` object.
 #' @examples
-#' plot(path_trajectories(paths(dynet(school_contacts), from = "Ana")))
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' trajectories <- path_trajectories(routes)
+#' plot(trajectories)
 #' @export
 plot.dynet_path_trajectories <- function(x, ...) {
   plot_path_trajectories(x, ...)

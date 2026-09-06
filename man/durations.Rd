@@ -134,6 +134,7 @@ durations(dn, unit = "spell", measure = "duration")
 durations(dn, unit = "vertex_activity")
 durations(dn, unit = "vertex_spell")
 durations(dn, unit = "node_ties", mode = "all")
-summary(durations(dn), by = "measure")
+tie_durations <- durations(dn)
+summary(tie_durations, by = "measure")
 
 }

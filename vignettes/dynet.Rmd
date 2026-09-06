@@ -81,7 +81,8 @@ to reach into an object with `$` or to subset a result before it is readable.
 Both are visible in a single call:
 
 ```{r commitments}
-head(dyn_centrality(dn, measure = "degree"))
+degree <- dyn_centrality(dn, measure = "degree")
+head(degree)
 ```
 
 One row per node per time point, vertices named, a `value` column you can plot
@@ -89,7 +90,9 @@ directly. The printed header is a courtesy; the object underneath is an
 ordinary data frame.
 
 ```{r tidy}
-str(as.data.frame(metrics(dn, measure = "density")))
+density <- metrics(dn, measure = "density")
+density_table <- as.data.frame(density)
+str(density_table)
 ```
 
 Because results are already tidy, the tidying rituals you would normally write
@@ -103,18 +106,18 @@ Start with the graph-level view. `metrics()` computes a structural measure once
 per time bin.
 
 ```{r density}
-head(metrics(dn, measure = "density"))
+head(density)
 ```
 
 ```{r density-summary}
-summary(metrics(dn, measure = "density"))
+summary(density)
 ```
 
 The busiest single instant links about one pair in six; on average it is closer
 to one in twelve. Plotted, the classroom breathes.
 
 ```{r density-plot, fig.width = 7, fig.height = 4}
-plot(metrics(dn, measure = "density"), palette = "okabe")
+plot(density, palette = "okabe")
 ```
 
 If those snapshots were all you had, you would conclude that this classroom is
@@ -147,7 +150,8 @@ Four columns carry the temporal content:
 `summary()` aggregates the whole reachable set.
 
 ```{r paths-summary}
-summary(paths(dn, from = "Ana"))
+from_ana <- paths(dn, from = "Ana")
+summary(from_ana)
 ```
 
 So Ana reaches every one of the other thirteen pupils, in at most four hops —
@@ -168,7 +172,8 @@ reached Ana rather than whom Ana can reach — the question you want when you ar
 tracing an exposure backwards rather than forwards.
 
 ```{r paths-backward}
-summary(paths(dn, from = "Ana", direction = "backward"))
+into_ana <- paths(dn, from = "Ana", direction = "backward")
+summary(into_ana)
 ```
 
 ## Seeing the journeys
@@ -218,7 +223,8 @@ one row per tree node, with the route as a readable string, its `parent`,
 parent, and the bare `vertex` and `time`.
 
 ```{r trajectories}
-head(path_trajectories(journeys))
+trajectories <- path_trajectories(journeys)
+head(trajectories)
 ```
 
 ## A tour of the measurement verbs
@@ -232,11 +238,11 @@ At `scope = "snapshot"` a centrality is recomputed in every bin, so `summary()`
 gives you each pupil's trajectory in one table, including when they peaked.
 
 ```{r centrality}
-summary(dyn_centrality(dn, measure = "degree"))
+summary(degree)
 ```
 
 ```{r centrality-plot, fig.width = 7, fig.height = 4.5}
-plot(dyn_centrality(dn, measure = "degree"), type = "heatmap", palette = "okabe")
+plot(degree, type = "heatmap", palette = "okabe")
 ```
 
 At `scope = "temporal"` the measure is computed on time-respecting paths across
@@ -246,7 +252,8 @@ reaches, so a high score means "gets to the rest of the class quickly" rather
 than "has many neighbours right now".
 
 ```{r centrality-temporal}
-head(dyn_centrality(dn, measure = "closeness", scope = "temporal"))
+closeness <- dyn_centrality(dn, measure = "closeness", scope = "temporal")
+head(closeness)
 ```
 
 ### `metrics()` — graph-level structure over time
@@ -256,7 +263,8 @@ useful contrast: it discounts pairs that are adjacent in a snapshot but never
 in a time-respecting order.
 
 ```{r metrics-temporal}
-head(metrics(dn, measure = "temporal_density"))
+temporal_density <- metrics(dn, measure = "temporal_density")
+head(temporal_density)
 ```
 
 ### `events()` — ties appearing and disappearing
@@ -264,11 +272,13 @@ head(metrics(dn, measure = "temporal_density"))
 Structure is a stock; formation and dissolution are the flows that produce it.
 
 ```{r events}
-head(events(dn, measure = "formation"))
+formation <- events(dn, measure = "formation")
+head(formation)
 ```
 
 ```{r events-dissolution}
-head(events(dn, measure = "dissolution"))
+dissolution <- events(dn, measure = "dissolution")
+head(dissolution)
 ```
 
 ### `burstiness()` — is contact regular or clumped?
@@ -278,7 +288,8 @@ gaps between a vertex's events against the exponential reference: `1` is the
 bursty limit, `0` is Poisson, `-1` is perfectly regular.
 
 ```{r burstiness}
-head(burstiness(dn))
+bursts <- burstiness(dn)
+head(bursts)
 ```
 
 ### `durations()` — how long ties actually last
@@ -288,7 +299,8 @@ average length of a spell, and `unit` moves the question from pairs to spells
 or to vertex activity.
 
 ```{r durations}
-head(durations(dn, measure = "mean"))
+mean_durations <- durations(dn, measure = "mean")
+head(mean_durations)
 ```
 
 ### `mixing()` — who connects across which groups

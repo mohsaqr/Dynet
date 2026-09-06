@@ -77,8 +77,9 @@
 #'
 #' @examples
 #' dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-#' mixing(dn, attribute = "role")
-#' plot(mixing(dn, attribute = "role"))
+#' role_mixing <- mixing(dn, attribute = "role")
+#' role_mixing
+#' plot(role_mixing)
 #'
 #' @export
 mixing <- function(dn, attribute,
@@ -343,7 +344,10 @@ snapshots <- function(dn, at = NULL,
 #' @param ... Ignored.
 #' @return A plain `data.frame` with the same rows and columns.
 #' @examples
-#' head(as.data.frame(snapshots(dynet(school_contacts))))
+#' dn <- dynet(school_contacts)
+#' bins <- snapshots(dn)
+#' bins_table <- as.data.frame(bins)
+#' head(bins_table)
 #' @export
 as.data.frame.dynet_snapshot <- function(x, row.names = NULL,
                                          optional = FALSE, ...) {
@@ -388,7 +392,9 @@ print.dynet_snapshot <- function(x, n = 10L, ...) {
 #' @return A plain `data.frame` with one row per bin and columns `session`
 #'   (when present), `time`, `ties`, `nodes` and `weight`.
 #' @examples
-#' summary(snapshots(dynet(school_contacts)))
+#' dn <- dynet(school_contacts)
+#' bins <- snapshots(dn)
+#' summary(bins)
 #' @export
 summary.dynet_snapshot <- function(object, ...) {
   flat <- as.data.frame(object)
@@ -419,7 +425,9 @@ summary.dynet_snapshot <- function(object, ...) {
 #' @param ... Ignored.
 #' @return A `ggplot` object.
 #' @examples
-#' plot(snapshots(dynet(school_contacts)))
+#' dn <- dynet(school_contacts)
+#' bins <- snapshots(dn)
+#' plot(bins)
 #' @export
 plot.dynet_snapshot <- function(x, base_size = 12, palette = "okabe", ...) {
   counts <- summary(x)

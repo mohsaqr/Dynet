@@ -19,5 +19,7 @@ A plain \code{data.frame} with one row per bin and columns \code{session}
 Summarise snapshot edges by time bin
 }
 \examples{
-summary(snapshots(dynet(school_contacts)))
+dn <- dynet(school_contacts)
+bins <- snapshots(dn)
+summary(bins)
 }

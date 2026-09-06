@@ -35,6 +35,7 @@ dn <- dynet(data.frame(
   from = c("A", "A"), to = c("B", "B"), start = c(0, 0), end = c(2, 3),
   session = c("s1", "s2")
 ), session = "session")
-as.data.frame(collapse_network(dn, sessions = "separate"))
-as.data.frame(collapse_network(dn, sessions = "separate"), session = "s1")
+by_session <- collapse_network(dn, sessions = "separate")
+as.data.frame(by_session)
+as.data.frame(by_session, session = "s1")
 }

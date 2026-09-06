@@ -90,8 +90,9 @@ eligible isolates contribute no dyad.
 }
 \examples{
 dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-mixing(dn, attribute = "role")
-plot(mixing(dn, attribute = "role"))
+role_mixing <- mixing(dn, attribute = "role")
+role_mixing
+plot(role_mixing)
 
 }
 \references{
