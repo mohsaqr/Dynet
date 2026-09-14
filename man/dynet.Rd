@@ -62,15 +62,21 @@ column named \code{weight}, \code{weights} or \code{strength} (and says so); wit
 every row counts once.}
 
 \item{nodes}{Optional data frame of vertex attributes. The vertex key is
-auto-detected, or given as the first column.}
+auto-detected (\code{node}, \code{vertex.id}, \code{id}, \code{name}, ...), or given as the
+first column. When the key is not \code{name} and the table also has a
+\code{name} column, the vertices are named by \code{name}: edge endpoints and
+vertex spells given by key are translated, and the key stays on the
+node table as an attribute. A key with no row in \code{nodes} keeps the key
+as its name, with a \code{dynet_unnamed_nodes} warning.}
 
 \item{groups}{Name of a column in \code{nodes} to use as the vertex partition.
 Written into the places cograph looks for it, so \code{cograph::splot()}
-colours and groups by it without further argument.}
+colours and groups by it without further argument. A name that is not a
+column of \code{nodes} raises a condition of class \code{dynet_unknown_attribute}.}
 
-\item{format}{One of \code{"auto"}, \code{"interval"}, \code{"contact"}, \code{"threaded"},
-\code{"copresence"}. \code{"auto"} infers the format from the arguments you name
-and the columns present.}
+\item{format}{One of \code{"auto"} (the default), \code{"interval"}, \code{"contact"},
+\code{"threaded"}, \code{"copresence"}. \code{"auto"} infers the format from the
+arguments you name and the columns present.}
 
 \item{thread_clock}{For a threaded log, \code{"absolute"} (the default) keeps
 every post on the calendar; \code{"relative"} puts each thread on its own
@@ -79,14 +85,15 @@ time since its thread began and closes when the thread ends. Threads are
 then comparable by how they unfold rather than by when they happened,
 the convention of the \emph{Trees of Thought} study. Requires \code{thread}.}
 
-\item{directed}{Whether edges are directed. Co-presence networks are always
-undirected.}
+\item{directed}{Whether edges are directed, \code{TRUE} by default. Co-presence
+networks are always undirected.}
 
-\item{interval}{Width of one time bin, in the network's time unit.}
+\item{interval}{Width of one time bin, in the network's time unit. Defaults
+to \code{1}.}
 
 \item{time_unit}{Unit for converting \code{Date}/\code{POSIXct}/character times:
-\code{"auto"}, \code{"seconds"}, \code{"minutes"}, \code{"hours"}, \code{"days"} or \code{"weeks"}.
-Numeric times are left alone and reported as \code{"step"}.}
+\code{"auto"} (the default), \code{"seconds"}, \code{"minutes"}, \code{"hours"}, \code{"days"} or
+\code{"weeks"}. Numeric times are left alone and reported as \code{"step"}.}
 
 \item{observation_start, observation_end}{Optional bounds of the continuous
 observation interval. Supply numeric values in the network's internal
@@ -96,24 +103,32 @@ used. Positive spells are measured on their half-open intersection with
 this interval; instantaneous events are retained at either boundary.
 Raw spell endpoints returned by \code{\link[=as.data.frame]{as.data.frame()}} are never changed.}
 
-\item{observation_spells}{Optional data frame with \code{start} and \code{end} columns
-defining discontinuous observed support. Overlapping and adjacent positive
-intervals are merged; isolated points are retained. This is mutually
-exclusive with \code{observation_start} and \code{observation_end}.}
+\item{observation_spells}{Optional data frame with exactly two columns,
+\code{start} and \code{end}, defining discontinuous observed support. Overlapping
+and adjacent positive intervals are merged; isolated points are retained.
+This is mutually exclusive with \code{observation_start} and
+\code{observation_end}; supplying both raises a condition of class
+\code{dynet_conflicting_observation}.}
 
-\item{loops}{Whether to keep self-loops. \code{FALSE} drops them with a message,
-which is almost always what relational logs need.}
+\item{loops}{Whether to keep self-loops. \code{FALSE}, the default, drops them
+with a message, which is almost always what relational logs need; \code{TRUE}
+keeps them and reports how many, but they are still excluded from degree.}
 
 \item{onset_censored, terminus_censored}{Optional logical column names for
 explicit raw interval-boundary censor state. These selectors are available
 only for interval input, are never auto-detected, and may not flag a
 zero-duration point.}
 
-\item{vertex_spells}{Optional tidy vertex-activity table with exact columns
-\code{node}, \code{start}, and \code{end}, plus optional \code{session}, \code{onset_censored}, and
-\code{terminus_censored}. Positive spells use \verb{[start,end)} and points are exact.
-Overlapping and adjacent positive spells are unioned independently by node
-and session. A vertex absent from this table remains active at all times.}
+\item{vertex_spells}{Optional tidy vertex-activity table: one row per
+period in which a vertex is present, with a node column (\code{node},
+\code{vertex.id}, \code{name}, ...) and a start and end column (\code{start}/\code{end},
+\code{onset}/\code{terminus}, ...), resolved through the same alias table as
+\code{data}, plus optional exact columns \code{session}, \code{onset_censored}, and
+\code{terminus_censored}. Any other column is ignored, so a node table that
+carries entry and exit times can be passed as it is. Positive spells
+use \verb{[start,end)} and points are exact. Overlapping and adjacent
+positive spells are unioned independently by node and session. A
+vertex absent from this table remains active at all times.}
 }
 \value{
 An object of class \code{c("dynet", "netobject", "cograph_network")}.

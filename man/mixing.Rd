@@ -19,9 +19,14 @@ mixing(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}} built with vertex attributes.}
 
-\item{attribute}{Name of a column in the vertex table.}
+\item{attribute}{Name of a column in the vertex table. A name the network
+does not carry raises an error of class \code{dynet_unknown_attribute} that
+lists the attributes it does have.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}. \code{"separate"}
+needs a network built with a session column and raises
+\code{dynet_no_sessions} otherwise.}
 
 \item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
 \code{"window"} uses the current positive/default window.}
@@ -48,11 +53,14 @@ the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric} at graph level with one row per time point and
-group pair. Directed \code{measure} labels use \code{"A -> B"}; undirected labels
-use \code{"A -- B"}. \code{value} is the active binary-dyad count, and the
-authoritative \code{from_group} and \code{to_group} columns identify the cell.
-Attributes record unit, pair-domain, normalization, weight, loop,
-missing-group, and session-aggregation conventions.
+group pair. The columns are \code{session} (only under
+\code{sessions = "separate"}, the one mode that keeps session labels apart),
+\code{time}, \code{measure}, \code{value}, \code{from_group} and \code{to_group}. Directed
+\code{measure} labels use \code{"A -> B"}; undirected labels use \code{"A -- B"}.
+\code{value} is the active binary-dyad count, and the authoritative
+\code{from_group} and \code{to_group} columns identify the cell. Attributes record
+unit, pair-domain, normalisation, weight, loop, missing-group, and
+session-aggregation conventions.
 }
 \description{
 How much each kind of vertex interacted with each other kind, in every time
@@ -76,7 +84,7 @@ Undirected networks report one lexicographically canonical cell for each
 unordered group pair, with display labels such as \code{"A -- B"}. A within-group
 edge or loop contributes once to its diagonal cell. The group stub margin is
 \deqn{d_a=2M_{aa}+\sum_{b\ne a}M_{\min(a,b),\max(a,b)},}
-so the margins sum to twice the table total. These are unnormalized counts,
+so the margins sum to twice the table total. These are unnormalised counts,
 not Newman's mixing proportions.
 
 Missing attribute values are retained as a collision-safe explicit group
@@ -88,6 +96,19 @@ Declared vertex activity first induces the endpoint-valid snapshot. The
 complete group-cell universe remains fixed, but inactive vertices and
 eligible isolates contribute no dyad.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_unknown_attribute} (no such vertex attribute),
+\code{dynet_no_sessions} (\code{sessions = "separate"} without a session column),
+\code{dynet_outside_observation} (the requested range misses observed support;
+it also carries \code{dynet_bad_input}),
+and \code{dynet_bad_input} for every other broken contract -- \code{dn} not a
+\code{dynet}, an \code{attribute} that is not a single column name, and an
+out-of-range \code{start}, \code{end}, \code{step} or \code{window}.
+
+Warning: \code{dynet_deprecated} for the retired \code{sample} argument.
+}
+
 \examples{
 dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
 role_mixing <- mixing(dn, attribute = "role")

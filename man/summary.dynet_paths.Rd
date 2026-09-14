@@ -23,3 +23,8 @@ for each session.
 \description{
 Summarise time-respecting paths
 }
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+summary(routes)
+}

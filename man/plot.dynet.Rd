@@ -58,8 +58,9 @@
 \arguments{
 \item{x}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{type}{One of \code{"timeline"}, \code{"events"}, \code{"activity"}, \code{"network"},
-\code{"snapshots"}, \code{"layers"}, \code{"heatmap"}, \code{"stack"} or \code{"proximity"}.}
+\item{type}{One of \code{"timeline"} (the default), \code{"events"}, \code{"activity"},
+\code{"network"}, \code{"snapshots"}, \code{"layers"}, \code{"heatmap"}, \code{"stack"} or
+\code{"proximity"}.}
 
 \item{at}{For \code{"network"}, the time to draw. \code{NULL} draws the whole window
 flattened.}
@@ -68,7 +69,8 @@ flattened.}
 may be \code{NULL}, which keeps that side of the observed range. Every view is
 windowed, and an empty window is an error rather than an empty panel.}
 
-\item{top}{For the timeline, draw only the \code{top} busiest vertex pairs.}
+\item{top}{For the timeline, draw only the \code{top} busiest vertex pairs.
+Defaults to 40.}
 
 \item{step}{Width of one time bin, in the network's time unit. For
 \code{"timeline"} and \code{"events"} it is the bin the activity is counted in
@@ -78,40 +80,44 @@ two slices are needed, so too wide a \code{step} is an error rather than a
 single panel. \code{NULL} uses the construction interval.}
 
 \item{omega}{For \code{"layers"}, the weight on the identity arcs carrying a
-vertex between adjacent slices, that is, the interlayer coupling.}
+vertex between adjacent slices, that is, the interlayer coupling. One
+non-negative number, \code{1} by default.}
 
 \item{bins}{Number of equal time bins for \code{"timeline"} and \code{"events"}.
 \code{NULL} uses the network's own interval. \code{step}, a width, takes
 precedence when both are given.}
 
-\item{link}{Link glyph for \code{"events"}: \code{"hook"} (default), \code{"arc"},
+\item{link}{Link glyph for \code{"events"}: \code{"hook"} (the default), \code{"arc"},
 \code{"chevron"}, \code{"wave"} or \code{"bracket"}.}
 
-\item{time}{Time axis for \code{"events"}. \code{"bin"} groups onsets into equal
-windows and keeps duration honest, \code{"event"} gives one evenly spaced
-column per distinct onset, \code{"clock"} uses true positions.}
+\item{time}{Time axis for \code{"events"}. \code{"bin"}, the default, groups onsets
+into equal windows and keeps duration honest, \code{"event"} gives one evenly
+spaced column per distinct onset, \code{"clock"} uses true positions.}
 
 \item{aggregate}{For \code{"events"}, fold repeat firings of one pair inside one
-column into a single link. Binning merges distinct onsets, and without
-this they stack as parallel bows carrying no extra reading.}
+column into a single link, \code{TRUE} by default. Binning merges distinct
+onsets, and without this they stack as parallel bows carrying no extra
+reading.}
 
-\item{nest}{For \code{"events"}, which links are fanned apart. \code{"pair"} fans
-only links joining the same two rows in the same column; \code{"column"} fans
-every link sharing a column.}
+\item{nest}{For \code{"events"}, which links are fanned apart. \code{"pair"}, the
+default, fans only links joining the same two rows in the same column;
+\code{"column"} fans every link sharing a column.}
 
 \item{split}{For \code{"events"}, the share of each link that keeps its source
 colour before switching to its target's, so direction reads without
-arrowheads.}
+arrowheads. One number between 0 and 1, \code{0.8} by default.}
 
 \item{blend}{For \code{"events"}, fade between the two endpoint colours instead
-of switching at a boundary.}
+of switching at a boundary. \code{FALSE} by default.}
 
 \item{weight}{For \code{"events"}, scale alpha and width by how often the pair
 occurs across the network, so one-off links recede and habitual ones
-stand out.}
+stand out. \code{TRUE} by default.}
 
 \item{node_size, node_shape, node_fill, node_border_color, node_border_width, node_alpha}{Node aesthetics, named as in \code{cograph::splot()}. \code{NULL} uses the view's
-own default. For the node-link views these are forwarded to splot.}
+own default. They are honoured by the \code{"network"}, \code{"snapshots"} and
+\code{"events"} views; the \code{"layers"}, \code{"heatmap"}, \code{"stack"} and
+\code{"proximity"} views take their renderer's own arguments through \code{...}.}
 
 \item{edge_color, edge_alpha, edge_width, edge_width_range, edge_style}{Link
 aesthetics, named as in \code{cograph::splot()}. An \code{edge_color} overrides the
@@ -124,42 +130,50 @@ straight links; \code{curve_pivot} slides where the bow peaks.}
 \item{label_size, label_color, label_fontface}{Axis label aesthetics, named as
 in \code{cograph::splot()}.}
 
-\item{panels}{For snapshots, the maximum number of panels to draw. Bins are
-sampled evenly across the window and the choice is reported.}
+\item{panels}{For snapshots, the maximum number of panels to draw, 9 by
+default. Bins are sampled evenly across the window and the choice is
+reported.}
 
 \item{measure}{For the proximity view, the node-level measure that line
-thickness follows. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts at snapshot
-scope; the temporal-scope-only measures \code{"reach"} and \code{"reach_count"}
-are not available here, because the view redraws the measure over many
-short slices.}
+thickness follows, \code{"degree"} by default. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}}
+accepts at snapshot scope; the temporal-scope-only measures \code{"reach"} and
+\code{"reach_count"} are not available here, because the view redraws the
+measure over many short slices.}
 
 \item{phases}{For the proximity view, how many phases to split the window
 into for the network panels. \code{NULL} uses the network's sessions when it
 has them and three phases otherwise.}
 
-\item{networks}{Whether the proximity view draws a network panel per phase.}
+\item{networks}{Whether the proximity view draws a network panel per phase,
+\code{TRUE} by default.}
 
-\item{events}{Whether the proximity view marks the times edges formed.}
+\item{events}{Whether the proximity view marks the times edges formed,
+\code{TRUE} by default.}
 
-\item{labels}{Whether vertices are named in place of a legend: at the
-right-hand end of each line in the proximity view, and beside each node
-in the \code{"layers"} and \code{"stack"} views.}
+\item{labels}{Whether vertices are named, \code{TRUE} by default: beside each
+node in the \code{"network"}, \code{"snapshots"}, \code{"layers"} and \code{"stack"} views,
+and at the right-hand end of each line in the proximity view in place of
+a legend. The \code{"timeline"}, \code{"events"}, \code{"activity"} and \code{"heatmap"}
+views name their axes rather than their vertices and ignore it. \code{FALSE}
+is the readable choice for a network of more than a few dozen vertices.}
 
 \item{highlight}{Vertex names to draw in colour in the proximity view, with
-the rest in grey.}
+the rest in grey. \code{NULL}, the default, colours every vertex.}
 
 \item{slices}{How many times the proximity view measures the network across
-the window. Smoothness comes from measuring often, never from
-interpolation. \code{NULL} measures once per time bin.}
+the window, 120 by default. Smoothness comes from measuring often, never
+from interpolation. \code{NULL} measures once per time bin, and anything else
+must be at least two.}
 
 \item{window}{Width of each proximity slice. \code{NULL} uses a sixth of the
 observation window, or the bin width if that is wider: scaling is only
 meaningful on a slice whose network is connected, and over one narrow bin
 most vertices are isolated.}
 
-\item{flow}{How much to round the corners of each proximity line. Rounding
-only ever takes convex combinations of measurements, so it softens the
-joints without letting the curve overshoot one. \code{0} leaves them sharp.}
+\item{flow}{How many corner-cutting passes round each proximity line, 2 by
+default. Rounding only ever takes convex combinations of measurements, so
+it softens the joints without letting the curve overshoot one. \code{0} leaves
+them sharp.}
 
 \item{palette}{Colours for vertices and lines: \code{"okabe"} (the default,
 nine colour-blind safe colours, recycled), \code{"extended"} (hue varied with
@@ -168,21 +182,30 @@ number, not colour-blind safe), your own vector of colours, or a function
 of \code{n} returning \code{n} colours.}
 
 \item{default_dist}{Distance assumed between vertices with no path between
-them, in the proximity view.}
+them, in the proximity view. \code{2} by default.}
 
-\item{base_size}{Base font size for the ggplot views.}
+\item{base_size}{Base font size for the \code{"timeline"}, \code{"events"} and
+\code{"activity"} views, 12 by default. The \code{"heatmap"} view is also a ggplot
+but is sized by its own renderer.}
 
-\item{style}{A base-graphics style list from \code{.dyn_style()}, used by the
-proximity view.}
+\item{style}{Style constants for the proximity view's base-graphics panel:
+a list holding \code{cex}, \code{grid}, \code{background}, \code{grid_color}, \code{axis_color},
+\code{text_color} and \code{frame_color}. The default is the package's own.}
 
-\item{...}{Passed to \code{cograph::splot()} for the network, snapshot and
-proximity views.}
+\item{...}{Passed to the renderer the chosen view uses: \code{cograph::splot()}
+for \code{"network"}, \code{"snapshots"} and \code{"proximity"}, \code{cograph::plot_mlna()}
+for \code{"layers"}, \code{cograph::plot_ml_heatmap()} for \code{"heatmap"} and
+\code{cograph::plot_temporal()} for \code{"stack"}. The remaining views take no
+further drawing arguments, and a name no view can read is an error rather
+than a silently ignored argument.}
 }
 \value{
 For \code{"timeline"}, \code{"events"}, \code{"activity"} and \code{"heatmap"}, a
 \code{ggplot} object, which prints itself when the call is not assigned. For
 \code{"network"}, \code{"snapshots"}, \code{"layers"}, \code{"stack"} and \code{"proximity"}, the
-figure is drawn on the current device and \code{x} is returned invisibly.
+figure is drawn on the current device and the network is returned
+invisibly -- \code{x} itself, or the windowed network when \code{start} or \code{end}
+was given.
 }
 \description{
 Nine views, each answering a different question.
@@ -221,6 +244,21 @@ through time. Clusters appear as bands of lines travelling together.}
 All node-link rendering is cograph's. A \code{dynet} object is a cograph
 netobject, so \code{cograph::splot(dn)} works directly and every one of its
 rendering arguments is available here through \code{...}.
+}
+\details{
+The node-link views set a few of \code{cograph::splot()}'s defaults before
+handing over: they draw no edge labels and no edge-colour legend
+(\code{legend_edge_colors = FALSE}, against \code{cograph::splot()}'s own \code{TRUE}),
+colour edges a neutral grey, and size nodes and arrowheads from the vertex
+count. Naming any of those through \code{...} overrides it.
+
+Failures are classed conditions. \code{dynet_bad_input} covers every malformed
+argument, \code{dynet_unknown_plot_arg} a name in \code{...} no view can read,
+\code{dynet_bad_palette} an unusable \code{palette}, and \code{dynet_empty_result} a
+window, an \code{at} or a \code{step} that leaves nothing to draw. The proximity view
+adds \code{dynet_unknown_measure} and \code{dynet_needs_directed}. With cograph
+absent, the node-link views raise \code{dynet_needs_cograph} and the
+\code{"layers"}, \code{"heatmap"} and \code{"stack"} views \code{dynet_missing_package}.
 }
 \examples{
 dn <- dynet(school_contacts)

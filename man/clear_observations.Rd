@@ -10,9 +10,20 @@ clear_observations(dn)
 \item{dn}{A temporal network.}
 }
 \value{
-A new \code{dynet} object observed continuously from its earliest raw
-start through its latest raw end.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, observed continuously from
+its earliest raw start through its latest raw end. Every explicit
+observation field is dropped from the metadata and the bin count is
+recomputed over the raw range; spells and attributes are untouched. Safe
+on a network that never had explicit observations, which is returned with
+only its recorded call changed.
 }
 \description{
 Restore implicit observation support
+}
+\examples{
+dn <- dynet(school_contacts)
+first_week <- set_observations(dn, start = 0, end = 7)
+restored <- clear_observations(first_week)
+restored
 }

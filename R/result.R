@@ -46,6 +46,28 @@
     net_format = dn$meta$format
   )
 }
+#' Rank vertices by their mean measured value
+#'
+#' A vertex outside its activity spell, or a bin the grid never defined,
+#' contributes a missing value rather than a measured zero. `sort()` drops
+#' those silently, which made `top =` return fewer vertices than asked for --
+#' and none at all when every vertex had one undefined bin. Rank over the
+#' defined values only, exactly as `summary.dynet_metric()` does, and keep a
+#' vertex with nothing defined in the ordering, last, so the count stays
+#' honest.
+#' @param value Numeric measured values.
+#' @param node Vertex name for each value.
+#' @return A named numeric vector of mean values, largest first, with
+#'   `NA_real_` entries last. One element per distinct vertex.
+#' @noRd
+.node_rank <- function(value, node) {
+  means <- vapply(split(value, node), function(v) {
+    defined <- v[!is.na(v)]
+    if (length(defined)) mean(defined) else NA_real_
+  }, numeric(1L))
+  sort(means, decreasing = TRUE, na.last = TRUE)
+}
+
 
 #' Tidy data frame of a temporal measure
 #'
@@ -55,7 +77,9 @@
 #' @param layout `"long"` gives one row per observation, which is the default
 #'   and the shape every other verb expects. `"wide"` spreads time across
 #'   columns, giving one row per vertex (or per measure for graph-level
-#'   quantities), which is convenient for exporting a table.
+#'   quantities), which is convenient for exporting a table. A measure with
+#'   no time axis, such as reachability, is spread by measure instead: one
+#'   row per vertex with one column per measure.
 #' @param what `"values"`, the default, gives the measured values.
 #'   `"diagnostics"` gives the record a prestige computation keeps when it
 #'   cannot produce a value, which is what the accompanying warning refers to:
@@ -65,30 +89,64 @@
 #'   row-column scaling step, and `spectral_radius`, `eigenspace_dimension`
 #'   and `eigen_residual` for the eigen step. A result with nothing to report
 #'   gives a zero-row frame of those same columns rather than `NULL`.
+#' @param top Keep only the `top` vertices with the largest mean value, and
+#'   order the result from largest to smallest. A single positive number;
+#'   `NULL`, the default, keeps every row in the measure's own order. It
+#'   selects vertices, so it applies to `what = "values"` on a measure that
+#'   has a `node` column; anything else raises a `dynet_bad_input` error.
 #' @param ... Ignored.
 #'
 #' @return A plain `data.frame`. Long layout carries `measure` and `value`
 #'   with one row per observation, alongside whichever columns say what was
 #'   measured: `session` when the network has sessions, `time` for anything
 #'   measured on a grid of bins, `node` for a vertex-level quantity, `from`
-#'   and `to` for a pair-level one, `vertex_spell` and `implicit` for
-#'   per-spell vertex durations from [durations()], and `from_group` and
-#'   `to_group` for [mixing()]. A graph-level series carries `time`,
-#'   `measure` and `value` alone. In wide layout the identifying columns come
-#'   first and the remaining columns are the time points, one per bin.
+#'   and `to` for a pair-level one, `raw_spell` for per-spell edge durations
+#'   and `vertex_spell` with `implicit` for per-spell vertex durations from
+#'   [durations()], and `from_group` and `to_group` for [mixing()]. A
+#'   graph-level series carries `time`, `measure` and `value` alone.
+#'
+#'   Wide layout puts the identifying columns first and spreads what varies
+#'   across the rest. A measure taken on a grid of bins spreads time: one
+#'   column per bin, named `t` followed by the bin's time, leaving one row per
+#'   vertex and measure. A measure with no time axis, such as reachability,
+#'   spreads the measures instead: one column per measure, leaving one row per
+#'   vertex. A measure with no time axis and only one measure is already wide
+#'   and comes back unchanged.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
 #' degree <- dyn_centrality(dn, measure = "degree")
 #' as.data.frame(degree)
 #' as.data.frame(degree, layout = "wide")
+#' as.data.frame(degree, top = 5)
 #' as.data.frame(degree, what = "diagnostics")
 #'
 #' @export
 as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
                                        layout = c("long", "wide"),
-                                       what = c("values", "diagnostics"), ...) {
+                                       what = c("values", "diagnostics"),
+                                       top = NULL, ...) {
   layout <- match.arg(layout)
+  if (!is.null(top)) {
+    .check("`top` must be one positive number." =
+             length(top) == 1L && is.numeric(top) && is.finite(top) && top >= 1)
+    frame <- as.data.frame(x, layout = "long", what = what)
+    if (!"node" %in% names(frame)) {
+      stop(errorCondition("`top` selects vertices, so it needs a node-level measure.",
+                          class = "dynet_bad_input", call = NULL))
+    }
+    rank <- .node_rank(frame$value, frame$node)
+    keep <- names(rank)[seq_len(min(top, length(rank)))]
+    trimmed <- x[frame$node %in% keep, , drop = FALSE]
+    attributes(trimmed) <- c(attributes(trimmed),
+                             attributes(x)[setdiff(names(attributes(x)),
+                                                   names(attributes(trimmed)))])
+    class(trimmed) <- class(x)
+    out <- as.data.frame(trimmed, layout = layout, what = what)
+    out <- out[order(match(out$node, keep)), , drop = FALSE]
+    rownames(out) <- NULL
+    return(out)
+  }
   what <- match.arg(what)
   if (identical(what, "diagnostics")) {
     found <- attr(x, "prestige_diagnostics")
@@ -114,7 +172,18 @@ as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
   attributes(df) <- list(names = names(x), row.names = seq_len(nrow(x)),
                          class = "data.frame")
   if (identical(layout, "long")) return(df)
-  if (!"time" %in% names(df)) return(df)
+  if (!"time" %in% names(df)) {
+    # No time axis: one column per measure instead.
+    if (length(unique(df$measure)) < 2L) return(df)
+    id_cols <- intersect(c("session", "node", "from", "to"), names(df))
+    wide <- stats::reshape(
+      df[, c(id_cols, "measure", "value"), drop = FALSE],
+      idvar = id_cols, timevar = "measure", direction = "wide", sep = "_"
+    )
+    names(wide) <- sub("^value_", "", names(wide))
+    rownames(wide) <- NULL
+    return(wide)
+  }
 
   id_cols <- intersect(c("session", "node", "from", "to", "measure"), names(df))
   wide <- stats::reshape(
@@ -132,6 +201,11 @@ as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
 #' @param n Number of rows to show. Defaults to twelve.
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' degree
+#' print(degree, n = 4)
 #' @export
 print.dynet_metric <- function(x, n = 12L, ...) {
   what <- attr(x, "what")
@@ -227,10 +301,14 @@ print.dynet_metric <- function(x, n = 12L, ...) {
 #' rows` line records the truncation.
 #'
 #' @param x A `dynet_metric`.
-#' @param n Number of rows to keep.
+#' @param n Number of rows to keep. Defaults to six.
 #' @param ... Passed to the default method.
 #' @return A `dynet_metric` with at most `n` rows, carrying the source counts
 #'   so its header stays true to the series.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' head(degree)
 #' @export
 head.dynet_metric <- function(x, n = 6L, ...) {
   .metric_fragment(x, NextMethod(), "first")
@@ -242,10 +320,14 @@ head.dynet_metric <- function(x, n = 6L, ...) {
 #' series and a `last n of N rows` line records the truncation.
 #'
 #' @param x A `dynet_metric`.
-#' @param n Number of rows to keep.
+#' @param n Number of rows to keep. Defaults to six.
 #' @param ... Passed to the default method.
 #' @return A `dynet_metric` with at most `n` rows, carrying the source counts
 #'   so its header stays true to the series.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' tail(degree)
 #' @export
 tail.dynet_metric <- function(x, n = 6L, ...) {
   .metric_fragment(x, NextMethod(), "last")
@@ -259,8 +341,13 @@ tail.dynet_metric <- function(x, n = 6L, ...) {
 #' question a temporal network is being asked.
 #'
 #' @param object A `dynet_metric`.
-#' @param by Grouping for the summary: `"node"` (the default for node-level
-#'   measures), `"time"`, or `"measure"`.
+#' @param by Grouping for the summary: `"node"`, `"time"` or `"measure"`. The
+#'   default, `NULL`, groups by `"node"` when the measure has a `node` column
+#'   and by `"measure"` otherwise. A `session` column, when the measure has
+#'   one, and `measure` itself are always part of the grouping as well. A
+#'   grouping the measure has no column for -- `"node"` on a graph-level
+#'   series, say -- is dropped rather than raising, leaving the grouping the
+#'   measure does carry.
 #' @param ... Ignored.
 #'
 #' @return A `data.frame` with the grouping columns plus `n`, `mean`, `sd`,
@@ -316,19 +403,30 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 #' per vertex; graph-level measures as one line per measure. Distinctions are
 #' carried by colour and line type together, never by colour alone.
 #'
+#' A measure with no time axis, such as reachability or [durations()], has no
+#' trajectory to draw and is shown as a bar panel instead, one bar per vertex
+#' or pair and one facet per measure. `type` and `highlight` have nothing to
+#' act on there and are ignored.
+#'
 #' @param x A `dynet_metric`.
 #' @param type `"line"` for trajectories over time, `"heatmap"` for a
 #'   vertex-by-time tile plot, `"ridge"` for small multiples per measure.
+#'   Ignored for a measure with no time axis.
 #' @param highlight Optional character vector of vertex names to draw in
 #'   colour, with everything else in grey. Useful when there are many
-#'   vertices.
-#' @param top Draw only the `top` vertices by mean value. `NULL` draws all.
+#'   vertices. Ignored for a measure with no time axis.
+#' @param top How many rows to draw. For a measure taken over time, the `top`
+#'   vertices with the largest mean value; `NULL`, the default, draws every
+#'   vertex. For a measure with no time axis, the `top` rows with the largest
+#'   absolute value, defaulting to `30`, with a subtitle naming how many of
+#'   how many are shown.
 #' @param palette Colours for the series: `"okabe"` (the default),
 #'   `"extended"`, `"many"`, your own vector of colours, or a function of `n`.
 #' @param base_size Base font size.
 #' @param ... Ignored.
 #'
-#' @return A `ggplot` object.
+#' @return A `ggplot` object. Drawing happens when that object is printed, so
+#'   the plot is the return value here rather than a side effect.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -344,13 +442,14 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
   .dyn_palette(palette, 1L)
   df <- as.data.frame(x)
   if (!"time" %in% names(df)) {
-    return(.plot_no_time(df, x, base_size, palette = palette))
+    return(.plot_no_time(df, x, base_size, top = top %||% 30L,
+                         palette = palette))
   }
   has_node <- "node" %in% names(df)
 
   if (has_node && !is.null(top)) {
-    keep <- names(sort(vapply(split(df$value, df$node), mean, numeric(1L)),
-                       decreasing = TRUE))[seq_len(min(top, length(unique(df$node))))]
+    rank <- .node_rank(df$value, df$node)
+    keep <- names(rank)[seq_len(min(top, length(rank)))]
     df <- df[df$node %in% keep, , drop = FALSE]
   }
 
@@ -400,6 +499,12 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 }
+
+#' Strip label for a measure name
+#' @param measure Character measure names such as `forward_reach_count`.
+#' @return The names with underscores as spaces.
+#' @noRd
+.measure_strip <- function(measure) gsub("_", " ", measure, fixed = TRUE)
 
 #' Heatmap panel for a temporal measure
 #' @param df Long data frame.
@@ -452,7 +557,8 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 #' @param df Long data frame.
 #' @param x The originating metric, for labels.
 #' @param base_size Base font size.
-#' @param top Largest number of rows to draw.
+#' @param top Largest number of rows to draw, ranked by the largest absolute
+#'   value each row reaches. A row holding an infinite value ranks first.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @return A `ggplot` object.
 #' @noRd
@@ -493,7 +599,8 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
     (if (by_node) ggplot2::geom_col(ggplot2::aes(fill = .row), width = 0.7)
      else ggplot2::geom_col(fill = .dyn_palette(palette, 1L), width = 0.7)) +
     fill_scale +
-    ggplot2::facet_wrap(~measure, scales = "free_x") +
+    ggplot2::facet_wrap(~measure, scales = "free_x",
+                        labeller = ggplot2::as_labeller(.measure_strip)) +
     ggplot2::labs(x = attr(x, "what"), y = NULL, subtitle = sub) +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())

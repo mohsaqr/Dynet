@@ -84,8 +84,8 @@
 
 #' Project a temporal network into directed vertex-time states
 #'
-#' `projection()` discretizes a temporal network into snapshot slices and
-#' connects each vertex state to its realization in the next slice. Within a
+#' `projection()` discretises a temporal network into snapshot slices and
+#' connects each vertex state to its realisation in the next slice. Within a
 #' slice it uses the same independently aggregated, endpoint-induced snapshot
 #' as [snapshots()]. Identity arcs always point forward and carry the coupling
 #' weight `omega`. The result is a tidy projection object rather than a bare
@@ -107,9 +107,10 @@
 #' same value.
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param sessions Session handling. `"collapse"` erases labels. For a
-#'   sessioned network, `"bounded"` and `"separate"` both preserve disjoint
-#'   session-local projection blocks so identity arcs never cross a wall.
+#' @param sessions Session handling: `"bounded"` (the default), `"collapse"`
+#'   or `"separate"`. `"collapse"` erases labels. For a sessioned network,
+#'   `"bounded"` and `"separate"` both preserve disjoint session-local
+#'   projection blocks so identity arcs never cross a wall.
 #' @param start,end First and last slice times. Defaults to observed support.
 #' @param step Spacing between slice starts. `NULL` uses the construction
 #'   interval.
@@ -118,8 +119,9 @@
 #'   single slice, closed on the right.
 #' @param omega Weight on the identity arcs that carry a vertex from one slice
 #'   to the next, that is, the interlayer coupling of the time-expanded
-#'   network. One keeps an identity arc as heavy as a unit contact; zero
-#'   leaves the slices uncoupled. Must be a single non-negative number.
+#'   network. One, the default, keeps an identity arc as heavy as a unit
+#'   contact; zero leaves the slices uncoupled. Must be a single finite
+#'   non-negative number, or a `dynet_bad_input` error is raised.
 #'
 #' @return An object of class `dynet_projection`. Use
 #'   `as.data.frame(x, what = "vertices")` for vertex states and
@@ -317,8 +319,8 @@ projection <- function(
 #' @param x A projection returned by [projection()].
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
-#' @param what `"vertices"` returns vertex-time states and `"edges"` returns
-#'   directed within-slice and identity arcs.
+#' @param what `"vertices"`, the default, returns vertex-time states, and
+#'   `"edges"` returns directed within-slice and identity arcs.
 #' @param ... Ignored.
 #' @return A plain data frame. Vertex rows contain `state`, optional `session`
 #'   and `observation`, `slice`, `time`, `start`, `end`, `closed`, `node`,
@@ -326,6 +328,11 @@ projection <- function(
 #'   `to_state`, `from_node`, `to_node`, optional `session`, `from_slice`,
 #'   `to_slice`, `from_time`, `to_time`, `edge_type`, `weight`, `n_spells`,
 #'   and `lag`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' projected <- projection(dn, step = 4, window = 4)
+#' as.data.frame(projected)
+#' as.data.frame(projected, what = "edges")
 #' @export
 as.data.frame.dynet_projection <- function(
     x, row.names = NULL, optional = FALSE,
@@ -342,6 +349,10 @@ as.data.frame.dynet_projection <- function(
 #' @param x A projection returned by [projection()].
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' projected <- projection(dn, step = 4, window = 4)
+#' projected
 #' @export
 print.dynet_projection <- function(x, ...) {
   cat(sprintf(

@@ -15,7 +15,9 @@
 \item{optional}{Ignored; present for compatibility with the generic.}
 
 \item{session}{Optional session name. Supply one to get that session's
-table alone, without the \code{session} key; the default stacks them all.}
+table alone, without the \code{session} key; the default, \code{NULL}, stacks them
+all. A name that is not one of the collapsed sessions raises a
+\code{dynet_unknown_session} error.}
 
 \item{...}{Ignored.}
 }

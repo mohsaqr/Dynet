@@ -7,18 +7,25 @@
 #' @param x A temporal network from [dynet()].
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
-#' @param what `"edges"` for raw edge spells, `"observed_edges"` for derived
-#'   observation fragments, `"observations"` for canonical observed support,
-#'   `"vertex_spells"` for canonical declared vertex activity, `"nodes"` for
-#'   the vertex table, `"bins"` for the measurement grid, or `"network"` for
-#'   the aggregate edge list cograph renders.
+#' @param what Which table to return: `"edges"`, the default, for raw edge
+#'   spells, `"observed_edges"` for derived observation fragments,
+#'   `"observations"` for canonical observed support, `"vertex_spells"` for
+#'   canonical declared vertex activity, `"nodes"` for the vertex table,
+#'   `"bins"` for the measurement grid, or `"network"` for the aggregate edge
+#'   list cograph renders.
 #' @param measure Optional centrality measures to annotate the vertex table
 #'   with, valid only for `what = "nodes"`. Each becomes one column holding the
 #'   value over the whole observed period, so the vertex table can be filtered
 #'   or ranked without a second call. Any measure [dyn_centrality()] accepts at
-#'   snapshot scope is allowed, plus `"indegree"` and `"outdegree"`.
-#' @param sessions,start,end Passed to [dyn_centrality()] when `measure` is
-#'   given, and ignored otherwise.
+#'   snapshot scope is allowed, plus `"indegree"` and `"outdegree"`; anything
+#'   else raises a `dynet_unknown_measure` error, and a `measure` that is not a
+#'   character vector raises `dynet_bad_input`. Naming it for any other `what`
+#'   raises a `dynet_bad_input` error too.
+#' @param sessions How sessions are treated while `measure` is computed:
+#'   `"bounded"` (the default), `"collapse"` or `"separate"`, as in
+#'   [dyn_centrality()]. Ignored when `measure` is not given.
+#' @param start,end Measurement bounds passed to [dyn_centrality()] when
+#'   `measure` is given, and ignored otherwise. Default to the observed range.
 #' @param ... Ignored.
 #'
 #' @return A plain `data.frame`, one row per whatever `what` names.
@@ -36,8 +43,9 @@
 #'   `"observed_edges"`: one row per derived observation fragment, with
 #'   `raw_spell`, `observation` and `fragment` locating it, `from`, `to`,
 #'   `start`, `end` (clipped to the observation), `raw_start`, `raw_end` (as
-#'   supplied), `weight`, `instant`, `duration`, and the strict
-#'   `left_observation_censored` and `right_observation_censored` flags.
+#'   supplied), `weight`, `instant`, the strict
+#'   `left_observation_censored` and `right_observation_censored` flags, and
+#'   `duration`.
 #'   `session` and the explicit `onset_censored`/`terminus_censored` flags are
 #'   copied unchanged from the raw spell when the network carries them.
 #'
@@ -60,7 +68,8 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' head(as.data.frame(dn))
+#' spells <- as.data.frame(dn)
+#' head(spells)
 #' as.data.frame(dn, what = "nodes")
 #' as.data.frame(dn, what = "vertex_spells")
 #'
@@ -196,6 +205,9 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
 #' @param x A temporal network from [dynet()].
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' dn
 #' @export
 print.dynet <- function(x, ...) {
   m <- x$meta
@@ -675,9 +687,14 @@ summary.dynet <- function(object, ...) {
 #' Print time-respecting paths
 #'
 #' @param x A `dynet_paths` from [paths()].
-#' @param n Number of rows to show.
+#' @param n Number of rows to show. Defaults to twelve.
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' routes
+#' print(routes, n = 4)
 #' @export
 print.dynet_paths <- function(x, n = 12L, ...) {
   mode <- attr(x, "path_mode") %||% "collapse"
@@ -721,10 +738,15 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #' @param x A `dynet_paths`.
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
-#' @param what `"paths"` for the endpoint summary or `"steps"` for the tidy
-#'   reconstructed optimal routes. The latter includes endpoint-local
-#'   `path_id` values for tied contact sequences.
+#' @param what `"paths"`, the default, for the endpoint summary, or `"steps"`
+#'   for the tidy reconstructed optimal routes. The latter includes
+#'   endpoint-local `path_id` values for tied contact sequences.
 #' @param ... Ignored.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' reach <- paths(dn, from = "Ana")
+#' as.data.frame(reach)
+#' as.data.frame(reach, what = "steps")
 #' @return A plain `data.frame`. For `"paths"`, one row per endpoint vertex,
 #'   the source included, with the columns [paths()] documents: `node`,
 #'   `reachable`, `arrival_time`, `attained`, `latency`, `n_hops` and
@@ -763,6 +785,10 @@ as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
 #'   is excluded from every count and share. Under `sessions = "separate"` a
 #'   leading `session` column is added and the eight properties are repeated
 #'   for each session.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' summary(routes)
 #' @export
 summary.dynet_paths <- function(object, ...) {
   summarize_block <- function(block) {

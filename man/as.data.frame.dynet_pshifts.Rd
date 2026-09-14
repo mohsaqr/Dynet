@@ -16,10 +16,13 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per shift type: \code{shift}, \code{family} and
-\code{count}, preceded by \code{session} when the result is session-local. The
-thirteen Gibson shift types are always present, including those with a
-count of zero.
+A plain \code{data.frame} carrying the same rows and columns as \code{x}. For
+a result built with \code{output = "final"} that is one row per shift type --
+\code{shift}, \code{family} and \code{count} -- preceded by \code{session} when the result is
+session-local; the thirteen Gibson shift types are always present,
+including those with a count of zero. For \code{output = "cumulative"} it is
+thirteen rows per classified turn, adding \code{sequence}, \code{event}, \code{time},
+\code{speaker}, \code{target} and \code{group} ahead of \code{shift}, \code{family} and \code{count}.
 }
 \description{
 Tidy data frame of participation shift counts

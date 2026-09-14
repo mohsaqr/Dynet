@@ -15,9 +15,11 @@ burstiness(
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
 \item{measure}{One or more of \code{"burstiness"}, \code{"memory"}, \code{"events"} and
-\code{"mean_gap"}.}
+\code{"mean_gap"}. Defaults to the first three. Anything else raises a
+\code{dynet_unknown_measure} error.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions: \code{"bounded"} (the default),
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns

@@ -25,3 +25,6 @@ inst/reproduction/**/*.html
 
 # Submission notes, local-only
 cran-comments.md
+# Rendered pkgdown articles and the files their chunks write
+vignettes/articles/*.html
+vignettes/articles/animating_files/

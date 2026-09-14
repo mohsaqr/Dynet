@@ -323,3 +323,25 @@ test_that("non-collapsed path plots reject a false single-tree rendering", {
   expect_s3_class(plot(paths(dn, from = "S", sessions = "bounded")), "ggplot")
   expect_s3_class(plot(paths(dn, from = "S", sessions = "separate")), "ggplot")
 })
+
+test_that("a bounded search reconstructs steps through its per-session results", {
+  # The session envelope built by `.optimal_bounded_search()` has no
+  # `selected_states` of its own -- the routes live in the per-session
+  # results it delegates to. A guard that asked the envelope for them
+  # returned no routes at all, so every bounded search came back with a
+  # correct primary table and a silently empty steps table.
+  spells <- data.frame(
+    from = c("S", "A"), to = c("A", "B"), time = c(1, 6),
+    session = c("s1", "s1"), stringsAsFactors = FALSE
+  )
+  dn <- quiet_dynet(spells, session = "session")
+  bounded <- paths(dn, from = "S", at = 0, sessions = "bounded")
+
+  reached <- as.data.frame(bounded)
+  steps <- as.data.frame(bounded, what = "steps")
+  expect_gt(nrow(steps), 0L)
+
+  # The invariant: every vertex the primary table calls reachable has at
+  # least one reconstructed route, and no unreachable vertex has one.
+  expect_setequal(unique(steps$endpoint), reached$node[reached$reachable])
+})

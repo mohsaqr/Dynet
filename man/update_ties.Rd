@@ -18,11 +18,25 @@ over that table.}
 may be canonical tie fields or arbitrary atomic spell attributes.}
 
 \item{loops}{Whether an endpoint update may introduce a new self-loop.
-Existing loops may always be retained.}
+Existing loops may always be retained. Default \code{FALSE}.}
 }
 \value{
-A new internally consistent \code{dynet} object.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, holding the unselected
+spells unchanged and the selected spells with the supplied values
+substituted. Because the edited spells are rebuilt together with the
+rest, spell order and the canonical spell identifiers may change. Raises
+\code{dynet_loop_not_allowed} when an endpoint update would create a new
+self-loop without \code{loops = TRUE}, and \code{dynet_bad_input} when the
+selection or \code{data} is malformed, or names the read-only derived columns
+\code{duration} or \code{.raw_spell}.
 }
 \description{
 Update temporal ties and their attributes
+}
+\examples{
+dn <- dynet(school_contacts)
+marked <- update_ties(dn, ties = end - start > 1,
+                      data = data.frame(kind = "long"))
+marked
 }

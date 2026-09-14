@@ -6,10 +6,16 @@
 
 #' Bonacich power centrality
 #'
-#' `c = rowSums((I - beta A)^-1 A)`, scaled so the sum of squares equals the
-#' vertex count. Matches `sna::bonpow()`.
+#' `c = rowSums((I - beta B)^-1 B)`, scaled so the sum of squares equals the
+#' vertex count, where `B` is the binarised, loop-free adjacency. An all-zero
+#' score has no scale to take and is left unscaled.
 #'
-#' @param a Adjacency matrix.
+#' Matches `sna::bonpow()` on a binary network. It does **not** match it on a
+#' weighted one: `sna::bonpow()` uses the weights as given, while this
+#' binarises first, as every kernel in this file does.
+#'
+#' @param a Adjacency matrix. Binarised before use, so edge weights do not
+#'   enter the score.
 #' @param directed Whether to respect direction.
 #' @param exponent The attenuation factor `beta`. Positive rewards being
 #'   connected to well-connected others; negative rewards the opposite, which
@@ -38,16 +44,22 @@
 
 #' Diffusion degree centrality
 #'
-#' Sums a vertex's selected degree and the selected degrees of its distinct
-#' one-step neighbours, then applies a scalar multiplier. This is the binary,
-#' loop-free definition used by `centiserve::diffusion.degree()` under matching
-#' direction and loop conventions.
+#' `D(i) = lambda (k(i) + sum_{j in N(i)} k(j))`, where `k` is the degree the
+#' `mode` selects and `N(i)` is the set of distinct one-step neighbours in
+#' that direction -- so a reciprocated pair contributes one neighbour under
+#' `"all"`, while `k` itself counts it twice, following `.margin()`. This is
+#' the binary, loop-free definition used by `centiserve::diffusion.degree()`
+#' under matching direction and loop conventions.
 #'
-#' @param a Adjacency matrix.
+#' @param a Adjacency matrix. Binarised before use.
 #' @param directed Whether to respect direction.
-#' @param mode One of `"all"`, `"out"`, or `"in"`.
-#' @param lambda Nonnegative multiplier.
+#' @param mode One of `"all"` (the default), `"out"`, or `"in"`.
+#' @param lambda Nonnegative multiplier, `1` by default.
 #' @return A named numeric vector.
+#' @references Pal, S. K., Kundu, S., & Murthy, C. A. (2014). Centrality
+#'   measures, upper bound, and influence maximization in large scale directed
+#'   social networks. *Fundamenta Informaticae*, 130(3), 317-342.
+#'   \doi{10.3233/FI-2014-994}
 #' @noRd
 .diffusion_degree <- function(a, directed = TRUE,
                               mode = c("all", "out", "in"), lambda = 1) {
@@ -63,11 +75,14 @@
 
 #' Harary graph centrality
 #'
-#' The reciprocal of eccentricity: one over the distance to the furthest
-#' reachable vertex. A vertex that cannot reach everything scores zero, since
-#' its eccentricity is infinite. Matches `sna::graphcent()`.
+#' `G(i) = 1 / max_j d(i, j)`, the reciprocal of eccentricity: one over the
+#' distance to the furthest reachable vertex. A vertex that cannot reach
+#' everything scores zero, since its eccentricity is infinite. Matches
+#' `sna::graphcent()` on every graph of two or more vertices; on a graph of
+#' one, whose eccentricity is zero, this reports zero where `sna::graphcent()`
+#' divides by it and reports `Inf`.
 #'
-#' @param a Adjacency matrix.
+#' @param a Adjacency matrix. Binarised before use.
 #' @param directed Whether to respect direction.
 #' @param mode `"out"` measures reach outward, `"in"` inward, `"all"` ignores
 #'   direction.
@@ -85,12 +100,20 @@
 
 #' Stephenson and Zelen information centrality
 #'
-#' The harmonic mean length of all paths ending at a vertex, computed from the
-#' inverse of the matrix whose off-diagonal is `1 - x` and whose diagonal is
-#' `1 + degree`. Isolates score zero. Matches `sna::infocent()`.
+#' The harmonic mean length of all paths ending at a vertex:
+#' `I(i) = 1 / (C_ii + (tr C - 2 R_i) / n)`, where `C` is the inverse of the
+#' matrix whose off-diagonal is `1 - B` and whose diagonal is `1 + degree`,
+#' `R_i` is that inverse's `i`th row sum and `n` the full vertex count,
+#' isolates included. Isolates score zero. Matches `sna::infocent()` wherever
+#' sna is defined; on input sna cannot invert it reports the flagged `NA`
+#' vector below rather than stopping as `sna::infocent()` does.
 #'
-#' @param a Adjacency matrix.
-#' @return A named numeric vector.
+#' @param a Adjacency matrix. Symmetrised weakly and binarised, since
+#'   information centrality is defined on an undirected graph.
+#' @return A named numeric vector. When the information matrix is singular --
+#'   a disconnected network -- an all-`NA` vector carrying
+#'   `attr(, "undefined") = TRUE` is returned instead, so the calling verb can
+#'   report the fact once.
 #' @references Stephenson, K., & Zelen, M. (1989). Rethinking centrality.
 #'   *Social Networks*, 11(1), 1-37.
 #' @noRd
@@ -128,10 +151,11 @@
 #' gap is not a constant offset once shortest paths branch. Goh's definition,
 #' which counts only relayed load, is the one implemented here.
 #'
-#' @param a Adjacency matrix.
+#' @param a Adjacency matrix. Binarised before use.
 #' @param directed Whether to respect direction. Undirected graphs still count
 #'   ordered source-target pairs, matching NetworkX's unnormalised definition.
-#' @return A named numeric vector.
+#' @return A named numeric vector; zero throughout on fewer than three
+#'   vertices.
 #' @references Goh, K.-I., Kahng, B., & Kim, D. (2001). Universal behavior of
 #'   load distribution in scale-free networks. *Physical Review Letters*,
 #'   87(27), 278701.
@@ -178,9 +202,15 @@
 
 #' Maximum flow between two vertices, by Edmonds and Karp
 #'
+#' Ford-Fulkerson augmentation with the shortest augmenting path chosen first,
+#' which is what bounds the work at `O(V E^2)`.
+#'
 #' @param cap Capacity matrix.
 #' @param s,t Source and sink vertex indices.
 #' @return A single number.
+#' @references Edmonds, J., & Karp, R. M. (1972). Theoretical improvements in
+#'   algorithmic efficiency for network flow problems. *Journal of the ACM*,
+#'   19(2), 248-264.
 #' @noRd
 .max_flow <- function(cap, s, t) {
   n <- nrow(cap)
@@ -222,7 +252,9 @@
 #' Cost grows with the cube of the vertex count times the cost of one max-flow
 #' computation. It is by a wide margin the most expensive measure here.
 #'
-#' @param a Adjacency matrix, used as capacities.
+#' @param a Adjacency matrix. Binarised before use, so every arc carries unit
+#'   capacity; `sna::flowbet()` instead reads a valued matrix as capacities,
+#'   and the two therefore agree on a binary network only.
 #' @param directed Whether to respect direction.
 #' @return A named numeric vector.
 #' @references Freeman, L. C., Borgatti, S. P., & White, D. R. (1991).
@@ -258,11 +290,14 @@
 
 #' Krackhardt connectedness
 #'
-#' The share of vertex pairs that are weakly connected. One for a graph in a
-#' single component, zero for a graph with no edges at all.
+#' `sum_c n_c (n_c - 1) / (n (n - 1))` over weak components of size `n_c`:
+#' the share of ordered vertex pairs that are weakly connected. One for a
+#' graph in a single component, zero for a graph with no edges at all, and one
+#' by convention for a graph of a single vertex. Matches
+#' `sna::connectedness()`.
 #'
 #' @param a Adjacency matrix.
-#' @return A single number.
+#' @return A single number in `[0, 1]`.
 #' @references Krackhardt, D. (1994). Graph theoretical dimensions of informal
 #'   organizations. In *Computational Organization Theory* (pp. 89-111).
 #' @noRd
@@ -276,11 +311,17 @@
 #' Krackhardt efficiency
 #'
 #' One minus the share of edges beyond the minimum needed to hold each
-#' component together.
+#' component together: `1 - (sum(B) - sum_c (n_c - 1)) / sum_c (n_c - 1)^2`,
+#' over weak components of size `n_c`, where `B` is the binarised adjacency.
+#' `directed = FALSE` symmetrises `B`, so each undirected edge contributes
+#' twice, and the arc count is the one `sna::efficiency()` uses; the two agree
+#' on directed and symmetrised input alike.
 #'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @return A single number; `NaN` when no component admits a surplus edge.
+#' @references Krackhardt, D. (1994). Graph theoretical dimensions of informal
+#'   organizations. In *Computational Organization Theory* (pp. 89-111).
 #' @noRd
 .efficiency <- function(a, directed = TRUE) {
   b <- .binary(a, directed)
@@ -293,12 +334,17 @@
 
 #' Krackhardt hierarchy
 #'
-#' One minus the share of connected pairs that reach each other both ways. A
-#' perfect out-tree scores one; a graph whose reachability is symmetric
-#' throughout scores zero.
+#' One minus the share of connected pairs that reach each other both ways:
+#' `1 - |{i < j : i -> j and j -> i}| / |{i < j : i -> j or j -> i}|` over the
+#' reachability closure. A perfect out-tree scores one; a graph whose
+#' reachability is symmetric throughout scores zero. Matches
+#' `sna::hierarchy(measure = "krackhardt")`, not its default
+#' `measure = "reciprocity"`.
 #'
 #' @param a Adjacency matrix.
 #' @return A single number; `NaN` when no pair is connected at all.
+#' @references Krackhardt, D. (1994). Graph theoretical dimensions of informal
+#'   organizations. In *Computational Organization Theory* (pp. 89-111).
 #' @noRd
 .krackhardt_hierarchy <- function(a) {
   reach <- is.finite(.geodesic(a, directed = TRUE))
@@ -311,13 +357,18 @@
 
 #' Krackhardt least-upper-boundedness
 #'
-#' The share of vertex pairs that have a least upper bound: a vertex reaching
-#' both, which in turn reaches every other vertex reaching both. Undefined,
-#' and reported as `NaN`, when no weak component holds three vertices.
-#' Matches `sna::lubness()`.
+#' `1 - V / sum_c (n_c - 1)(n_c - 2) / 2`, where `V` counts the vertex pairs
+#' with no least upper bound and the denominator is the largest `V` a set of
+#' weak components of sizes `n_c` could produce. A least upper bound of a pair
+#' is a vertex reaching both which in turn reaches every other vertex reaching
+#' both. Only components of three or more vertices are counted, since a
+#' smaller one can hold no violation; undefined, and reported as `NaN`, when
+#' no component is that large. Matches `sna::lubness()`.
 #'
 #' @param a Adjacency matrix.
-#' @return A single number.
+#' @return A single number, one when every pair has a least upper bound.
+#' @references Krackhardt, D. (1994). Graph theoretical dimensions of informal
+#'   organizations. In *Computational Organization Theory* (pp. 89-111).
 #' @noRd
 .lubness <- function(a) {
   reach <- is.finite(.geodesic(a, directed = TRUE))

@@ -9,10 +9,14 @@ A \code{data.frame} with 101 rows and 5 columns:
 \describe{
 \item{from}{Character. Code of the replying message.}
 \item{to}{Character. Code of the message replied to.}
-\item{start}{Numeric. When the spell opens.}
-\item{end}{Numeric. When it closes.}
-\item{weight}{Integer. Message pairs the spell represents.}
+\item{start}{Numeric. When the spell opens, 0 to 2.10.}
+\item{end}{Numeric. When it closes, 0.03 to 5.80.}
+\item{weight}{Numeric, whole-valued. Message pairs the spell represents,
+1 to 5881.}
 }
+The ten codes are \code{Acceptance}, \code{Argument}, \code{Composing}, \code{Disagreement},
+\code{Evaluation}, \code{Group_regulation}, \code{Question}, \code{Sharing}, \code{Socioemotional}
+and \code{T.Regulation}; 14 rows are self-loops.
 }
 \source{
 Synthesised from the \emph{Trees of Thought} code-transition network by

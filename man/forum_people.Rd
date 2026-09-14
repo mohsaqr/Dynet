@@ -9,10 +9,15 @@ A \code{data.frame} with 20 rows and 3 columns:
 \describe{
 \item{name}{Character. Matches the sender and receiver names in
 \link{forum_posts}.}
-\item{role}{Character. \code{"Student"}, \code{"Teacher"} or \code{"Facilitator"}.}
+\item{role}{Character. \code{"Student"} (16), \code{"Teacher"} (3) or
+\code{"Facilitator"} (1).}
 \item{achievement}{Character. \code{"High"}, \code{"Middle"} or \code{"Low"} for
-students; \code{NA} for staff.}
+students; \code{NA} for the four staff.}
 }
+}
+\source{
+Simulated, not observed. Generated deterministically under a fixed
+seed by \code{data-raw/make-data.R}.
 }
 \usage{
 forum_people

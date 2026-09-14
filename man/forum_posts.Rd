@@ -9,9 +9,14 @@ A \code{data.frame} with 241 rows and 4 columns:
 \describe{
 \item{sender}{Character. Who wrote the post.}
 \item{receiver}{Character. Who the post replied to.}
-\item{timestamp}{\code{POSIXct}. When the post was made.}
-\item{thread}{Character. The discussion thread it belongs to.}
+\item{timestamp}{\code{POSIXct} (UTC). When the post was made. Posts run from
+2024-09-02 to 2024-10-27, just under eight weeks.}
+\item{thread}{Character. The discussion thread it belongs to; 62 threads.}
 }
+}
+\source{
+Simulated, not observed. Generated deterministically under a fixed
+seed by \code{data-raw/make-data.R}.
 }
 \usage{
 forum_posts

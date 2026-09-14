@@ -19,9 +19,9 @@
 
 \item{optional}{Ignored; present for compatibility with the generic.}
 
-\item{what}{\code{"paths"} for the endpoint summary or \code{"steps"} for the tidy
-reconstructed optimal routes. The latter includes endpoint-local
-\code{path_id} values for tied contact sequences.}
+\item{what}{\code{"paths"}, the default, for the endpoint summary, or \code{"steps"}
+for the tidy reconstructed optimal routes. The latter includes
+endpoint-local \code{path_id} values for tied contact sequences.}
 
 \item{...}{Ignored.}
 }
@@ -40,4 +40,10 @@ reached) and \code{attained}.
 }
 \description{
 Tidy data frame of time-respecting paths
+}
+\examples{
+dn <- dynet(school_contacts)
+reach <- paths(dn, from = "Ana")
+as.data.frame(reach)
+as.data.frame(reach, what = "steps")
 }

@@ -12,8 +12,9 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per depth: \code{depth}, the number of
-distinct \code{branches} reaching it, the \code{vertices} they land on, the summed
+A plain \code{data.frame}, one row per depth in increasing order:
+\code{depth}, the number of distinct \code{branches} reaching it, the number of
+distinct \code{vertices} they land on, the summed
 \code{count} of routes through it, and \code{mean_branching}, the average branching
 fraction of those routes. Note \code{probability} in the underlying table is
 CONDITIONAL on each parent, so it is averaged rather than summed: adding

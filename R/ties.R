@@ -2,12 +2,14 @@
 # Immutable temporal-tie mutation
 # ===========================================================================
 
-#' Normalize new temporal tie rows against an existing Dynet clock
+#' Normalise new temporal tie rows against an existing Dynet clock
 #' @param dn Existing temporal network.
 #' @param data Data frame supplied to [add_ties()].
 #' @param loops Whether new self-loops are permitted.
-#' @return A canonical spell table. Attribute `censor_explicit` records whether
-#'   either censor column was supplied.
+#' @return A canonical spell data frame, one row per added tie, with `from`,
+#'   `to`, `start`, `end`, `weight`, `session`, `onset_censored`,
+#'   `terminus_censored` and any supplied tie attributes. Attribute
+#'   `censor_explicit` records whether either censor column was supplied.
 #' @noRd
 .normalize_added_ties <- function(dn, data, loops) {
   .check("`data` must be a nonempty data frame." =
@@ -261,7 +263,8 @@
 #' Bind new node rows while preserving the public attribute schema
 #' @param existing Existing public node table.
 #' @param added New node rows.
-#' @return The combined node table.
+#' @return The combined node table, one row per vertex, carrying the union of
+#'   both column sets with typed `NA` where a table did not supply one.
 #' @noRd
 .bind_added_nodes <- function(existing, added) {
   columns <- union(names(existing), names(added))
@@ -281,6 +284,12 @@
   out
 }
 
+#' Bind new tie rows while preserving the public spell schema
+#' @param existing Existing canonical spell table.
+#' @param added New canonical spell rows.
+#' @return The combined spell table, carrying the union of both column sets
+#'   with typed `NA` where a table did not supply one.
+#' @noRd
 .bind_added_ties <- function(existing, added) {
   columns <- union(names(existing), names(added))
   fill <- function(x, prototype) {
@@ -302,12 +311,14 @@
 #' @param dn A temporal network from [dynet()].
 #' @param data A character vector of new node names or a data frame containing
 #'   a `name` column and optional static attributes.
-#' @return A new `dynet` object with the added nodes represented as implicit
-#'   always-active isolates until ties or vertex activity are supplied.
+#' @return A new `dynet` object, of the same class and structure as the input,
+#'   with the added nodes represented as implicit always-active isolates until
+#'   ties or vertex activity are supplied. The input is unchanged.
 #' @details Existing nodes and attributes are unchanged. Missing attribute
 #'   values are filled with typed `NA`. If the source has a cograph grouping,
-#'   each new node must supply its group through `groups` or through the source
-#'   attribute from which that grouping was derived.
+#'   each new node must supply its group through a `groups` column in `data`
+#'   or through the source attribute from which that grouping was derived;
+#'   otherwise a condition of class `dynet_missing_group` is raised.
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
 #' add_nodes(dn, "C")
@@ -374,8 +385,12 @@ add_nodes <- function(dn, data) {
 #' @param dn A temporal network from [dynet()].
 #' @param nodes Character node names.
 #' @param cascade Whether to remove every incident temporal tie and vertex
-#'   activity spell. The safe default rejects nodes that are not isolates.
-#' @return A new internally consistent `dynet` object.
+#'   activity spell. The safe default, `FALSE`, rejects nodes that are not
+#'   isolates with a condition of class `dynet_node_not_isolate`.
+#' @return A new internally consistent `dynet` object, of the same class and
+#'   structure as the input, without the named vertices and -- under
+#'   `cascade = TRUE` -- without their ties and vertex-activity spells. At
+#'   least one temporal tie must remain.
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
 #' dn <- add_nodes(dn, "C")
@@ -425,9 +440,11 @@ remove_nodes <- function(dn, nodes, cascade = FALSE) {
 #' @param data A nonempty data frame with `from`, `to`, `start`, and `end`.
 #'   Optional columns are `weight`, `session`, `onset_censored`, and
 #'   `terminus_censored`. Endpoints must already exist in `dn`.
-#' @param loops Whether added self-loops are permitted.
-#' @return A new `dynet` object. The input is unchanged; canonical temporal
-#'   ties and every flattened cograph field are rebuilt together.
+#' @param loops Whether added self-loops are permitted. `FALSE`, the default,
+#'   raises a condition of class `dynet_loop_not_allowed`.
+#' @return A new `dynet` object, of the same class and structure as the input.
+#'   The input is unchanged; canonical temporal ties and every flattened
+#'   cograph field are rebuilt together.
 #' @details Added times use the existing network clock. A sessioned network
 #' requires an existing session label on every row; mutation does not create a
 #' new session scheme. Implicit observation support expands to include the new
@@ -468,8 +485,10 @@ add_ties <- function(dn, data, loops = FALSE) {
 #'   When `ties` is supplied, these selectors must be omitted. On undirected
 #'   networks `from` and `to` must be supplied together and their order is
 #'   ignored.
-#' @return A new internally consistent `dynet` object. At least one temporal
-#'   tie must remain.
+#' @return A new internally consistent `dynet` object, of the same class and
+#'   structure as the input, without the matched spells. At least one temporal
+#'   tie must remain. A request that matches nothing raises a condition of
+#'   class `dynet_tie_not_found`.
 #' @examples
 #' dn <- dynet(data.frame(
 #'   from = c("A", "B"), to = c("B", "C"),

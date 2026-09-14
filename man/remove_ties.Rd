@@ -29,8 +29,10 @@ networks \code{from} and \code{to} must be supplied together and their order is
 ignored.}
 }
 \value{
-A new internally consistent \code{dynet} object. At least one temporal
-tie must remain.
+A new internally consistent \code{dynet} object, of the same class and
+structure as the input, without the matched spells. At least one temporal
+tie must remain. A request that matches nothing raises a condition of
+class \code{dynet_tie_not_found}.
 }
 \description{
 Remove temporal ties

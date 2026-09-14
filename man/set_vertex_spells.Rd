@@ -10,14 +10,34 @@ set_vertex_spells(dn, data = NULL)
 \item{dn}{A temporal network.}
 
 \item{data}{A vertex-spell data frame with \code{node}, \code{start}, and \code{end}, plus
-optional \code{session}, \code{onset_censored}, and \code{terminus_censored}. \code{NULL}
-clears explicit activity, making every retained node implicitly active.}
+optional \code{session}, \code{onset_censored}, and \code{terminus_censored}; or the
+string \code{"ties"}, which declares each vertex present from the start of
+its first tie spell to the end of its last, so that a vertex is absent
+before it has had a tie and after it has had its last. Default
+\code{NULL}, which clears explicit activity, making every retained node
+implicitly active over observation support.}
 }
 \value{
-A new \code{dynet} object. Overlapping or adjacent spells are
-canonicalized exactly as in \code{\link[=dynet]{dynet()}}. Canonical spell identifiers may
-therefore change.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, whose declared vertex
+activity is exactly \code{data} and whose edge spells, node attributes and
+metadata are those of \code{dn}. Overlapping or adjacent spells are
+canonicalised exactly as in \code{\link[=dynet]{dynet()}}, so canonical spell identifiers may
+change. Read the result back with
+\code{as.data.frame(x, what = "vertex_spells")}. Raises \code{dynet_unknown_node}
+when \code{data} names a vertex the network does not have, and
+\code{dynet_bad_input} for a string other than \code{"ties"}.
 }
 \description{
 Replace declared vertex activity
+}
+\examples{
+dn <- dynet(school_contacts)
+present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+enrolled <- set_vertex_spells(dn, present)
+as.data.frame(enrolled, what = "vertex_spells")
+
+# Present from the first contact to the last, vertex by vertex.
+spanned <- set_vertex_spells(dn, "ties")
+as.data.frame(spanned, what = "vertex_spells")
 }

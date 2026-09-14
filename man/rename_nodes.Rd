@@ -10,13 +10,25 @@ rename_nodes(dn, mapping)
 \item{dn}{A temporal network.}
 
 \item{mapping}{A named character vector whose names are old node names and
-values are replacements, or a two-column data frame named \code{old} and
-\code{new}.}
+values are replacements, a two-column data frame named \code{old} and \code{new},
+or the name of one vertex attribute (given through \code{dynet(nodes = )})
+whose values become the node names. The attribute must be complete and
+unique.}
 }
 \value{
-A new \code{dynet} object with edge endpoints, node attributes, vertex
-activity, cograph labels, and groups renamed together.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with edge endpoints, node
+attributes, vertex activity, cograph labels, and groups renamed together.
+Raises \code{dynet_unknown_node} when an old name is not a vertex,
+\code{dynet_duplicate_node} when a replacement collides with a name that is
+being kept, \code{dynet_unknown_attribute} when \code{mapping} names a column that
+is not a vertex attribute, and \code{dynet_bad_input} otherwise.
 }
 \description{
 Rename nodes everywhere in a temporal network
+}
+\examples{
+dn <- dynet(school_contacts)
+renamed <- rename_nodes(dn, c(Ana = "Anna", Ben = "Benjamin"))
+renamed
 }

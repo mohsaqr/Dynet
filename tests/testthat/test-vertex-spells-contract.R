@@ -344,8 +344,11 @@ test_that("V01 raw storage stays non-destructive after V03 derived views", {
   expect_gt(nrow(snapshots(legacy, at = 3, window = 0)), 0)
   explicit_paths <- as.data.frame(paths(explicit, from = "A"))
   legacy_paths <- as.data.frame(paths(legacy, from = "A"))
-  expect_false(any(explicit_paths$reachable))
-  expect_true(all(explicit_paths$n_paths == 0))
+  # A is anchored at its own entry (t = 1); B is never present while A is,
+  # so nothing beyond the source itself is reachable.
+  others <- explicit_paths$node != "A"
+  expect_false(any(explicit_paths$reachable[others]))
+  expect_true(all(explicit_paths$n_paths[others] == 0))
   expect_true(all(legacy_paths$reachable))
   expect_equal(as.data.frame(events(
     explicit, measure = c("formation", "dissolution", "active", "new_pairs")
@@ -435,8 +438,16 @@ test_that("V01 validates its fixed schema, values, flags, and sessions", {
                class = "dynet_bad_vertex_spells")
   expect_error(dynet(edges, vertex_spells = data.frame(node = "A", start = 0)),
                class = "dynet_missing_column")
-  expect_error(dynet(edges, vertex_spells = transform(good, attribute = 1)),
-               class = "dynet_bad_vertex_spells")
+  # Other columns are attributes of a node table and are ignored (0.4.5).
+  with_attribute <- dynet(edges, vertex_spells = transform(good, attribute = 1))
+  expect_identical(as.data.frame(with_attribute, what = "vertex_spells"),
+                   as.data.frame(dynet(edges, vertex_spells = good),
+                                 what = "vertex_spells"))
+  aliased <- data.frame(vertex.id = "A", onset = 0, terminus = 1, region = "x")
+  expect_identical(as.data.frame(dynet(edges, vertex_spells = aliased),
+                                 what = "vertex_spells"),
+                   as.data.frame(dynet(edges, vertex_spells = good),
+                                 what = "vertex_spells"))
   duplicate_names <- good
   names(duplicate_names)[3] <- "start"
   expect_error(dynet(edges, vertex_spells = duplicate_names),
@@ -467,4 +478,35 @@ test_that("V01 validates its fixed schema, values, flags, and sessions", {
                  transform(good, session = NA_character_))
   expect_error(dynet(session_edges, session = "wave", vertex_spells = mixed),
                class = "dynet_bad_vertex_spells")
+})
+
+test_that("set_vertex_spells(\"ties\") spans each vertex from first tie to last", {
+  dn <- quiet_dynet(school_contacts)
+  spanned <- set_vertex_spells(dn, "ties")
+  declared <- as.data.frame(spanned, what = "vertex_spells")
+  ties <- as.data.frame(dn)
+
+  # One spell per vertex that has a tie, from its earliest start to its
+  # latest end, checked vertex by vertex against the tie table.
+  expect_identical(sort(unique(declared$node)),
+                   sort(unique(c(ties$from, ties$to))))
+  expect_false(anyDuplicated(declared$node) > 0)
+  hand <- vapply(declared$node, function(v) {
+    own <- ties[ties$from == v | ties$to == v, , drop = FALSE]
+    c(min(own$start), max(own$end))
+  }, numeric(2L))
+  expect_equal(declared$start, unname(hand[1L, ]))
+  expect_equal(declared$end, unname(hand[2L, ]))
+
+  # The invariant: declaring spans can only remove presence, never add it,
+  # and the ties themselves are untouched.
+  before <- summary(snapshots(dn, step = 4, window = 4))
+  after <- summary(snapshots(spanned, step = 4, window = 4))
+  expect_true(all(after$nodes <= before$nodes))
+  expect_identical(after$ties, before$ties)
+  expect_identical(as.data.frame(spanned), as.data.frame(dn))
+
+  expect_error(set_vertex_spells(dn, "everything"), class = "dynet_bad_input")
+  # Every vertex of a dynet has a tie, so every vertex gets a span.
+  expect_identical(nrow(declared), nrow(dn$nodes))
 })

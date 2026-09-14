@@ -17,3 +17,7 @@
 \description{
 Print a temporal network
 }
+\examples{
+dn <- dynet(school_contacts)
+dn
+}

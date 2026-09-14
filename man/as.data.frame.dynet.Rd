@@ -24,20 +24,28 @@
 
 \item{optional}{Ignored; present for compatibility with the generic.}
 
-\item{what}{\code{"edges"} for raw edge spells, \code{"observed_edges"} for derived
-observation fragments, \code{"observations"} for canonical observed support,
-\code{"vertex_spells"} for canonical declared vertex activity, \code{"nodes"} for
-the vertex table, \code{"bins"} for the measurement grid, or \code{"network"} for
-the aggregate edge list cograph renders.}
+\item{what}{Which table to return: \code{"edges"}, the default, for raw edge
+spells, \code{"observed_edges"} for derived observation fragments,
+\code{"observations"} for canonical observed support, \code{"vertex_spells"} for
+canonical declared vertex activity, \code{"nodes"} for the vertex table,
+\code{"bins"} for the measurement grid, or \code{"network"} for the aggregate edge
+list cograph renders.}
 
 \item{measure}{Optional centrality measures to annotate the vertex table
 with, valid only for \code{what = "nodes"}. Each becomes one column holding the
 value over the whole observed period, so the vertex table can be filtered
 or ranked without a second call. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts at
-snapshot scope is allowed, plus \code{"indegree"} and \code{"outdegree"}.}
+snapshot scope is allowed, plus \code{"indegree"} and \code{"outdegree"}; anything
+else raises a \code{dynet_unknown_measure} error, and a \code{measure} that is not a
+character vector raises \code{dynet_bad_input}. Naming it for any other \code{what}
+raises a \code{dynet_bad_input} error too.}
 
-\item{sessions, start, end}{Passed to \code{\link[=dyn_centrality]{dyn_centrality()}} when \code{measure} is
-given, and ignored otherwise.}
+\item{sessions}{How sessions are treated while \code{measure} is computed:
+\code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}, as in
+\code{\link[=dyn_centrality]{dyn_centrality()}}. Ignored when \code{measure} is not given.}
+
+\item{start, end}{Measurement bounds passed to \code{\link[=dyn_centrality]{dyn_centrality()}} when
+\code{measure} is given, and ignored otherwise. Default to the observed range.}
 
 \item{...}{Ignored.}
 }
@@ -57,8 +65,9 @@ a co-presence log.
 \code{"observed_edges"}: one row per derived observation fragment, with
 \code{raw_spell}, \code{observation} and \code{fragment} locating it, \code{from}, \code{to},
 \code{start}, \code{end} (clipped to the observation), \code{raw_start}, \code{raw_end} (as
-supplied), \code{weight}, \code{instant}, \code{duration}, and the strict
-\code{left_observation_censored} and \code{right_observation_censored} flags.
+supplied), \code{weight}, \code{instant}, the strict
+\code{left_observation_censored} and \code{right_observation_censored} flags, and
+\code{duration}.
 \code{session} and the explicit \code{onset_censored}/\code{terminus_censored} flags are
 copied unchanged from the raw spell when the network carries them.
 
@@ -84,7 +93,8 @@ Tidy tables from a temporal network
 }
 \examples{
 dn <- dynet(school_contacts)
-head(as.data.frame(dn))
+spells <- as.data.frame(dn)
+head(spells)
 as.data.frame(dn, what = "nodes")
 as.data.frame(dn, what = "vertex_spells")
 

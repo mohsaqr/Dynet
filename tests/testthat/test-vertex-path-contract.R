@@ -160,8 +160,10 @@ test_that("V03 backward activity boundaries preserve supremum attainment", {
   expect_true(open$reachable)
   expect_equal(open$arrival_time, 4)
   expect_false(open$attained)
-  expect_true(is.na(open$n_hops))
-  expect_equal(open$n_paths, 0)
+  # The vertex leaves at 4 on a half-open spell, so its latest departure is a
+  # supremum. The route family survives; `attained` carries the distinction.
+  expect_equal(open$n_hops, 1L)
+  expect_equal(open$n_paths, 1)
 
   closed <- v03_row(paths(
     make(TRUE), "T", direction = "backward", start = 0, end = 5
@@ -195,10 +197,13 @@ test_that("V03 paths reachability and temporal centrality share activity gates",
   expect_equal(central$value[
     central$node == "S" & central$measure == "reach_count"
   ], expected)
-  expect_equal(reach$value[reach$node == "A"], 0)
+  # A first appears at t = 1, after the window opens at 0. It is anchored
+  # at its own entry, not at the window start, so it reaches T through the
+  # contact at t = 3 (0.4.5; before that a late entrant scored zero).
+  expect_equal(reach$value[reach$node == "A"], 1)
   expect_equal(central$value[
     central$node == "A" & central$measure == "reach_count"
-  ], 0)
+  ], 1)
   expect_equal(central$value[
     central$node == "S" & central$measure == "closeness"
   ], 1 / mean(c(1, 3)))

@@ -13,11 +13,13 @@ add_ties(dn, data, loops = FALSE)
 Optional columns are \code{weight}, \code{session}, \code{onset_censored}, and
 \code{terminus_censored}. Endpoints must already exist in \code{dn}.}
 
-\item{loops}{Whether added self-loops are permitted.}
+\item{loops}{Whether added self-loops are permitted. \code{FALSE}, the default,
+raises a condition of class \code{dynet_loop_not_allowed}.}
 }
 \value{
-A new \code{dynet} object. The input is unchanged; canonical temporal
-ties and every flattened cograph field are rebuilt together.
+A new \code{dynet} object, of the same class and structure as the input.
+The input is unchanged; canonical temporal ties and every flattened
+cograph field are rebuilt together.
 }
 \description{
 Add temporal ties

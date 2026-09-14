@@ -17,3 +17,8 @@
 \description{
 Print a time-projected network
 }
+\examples{
+dn <- dynet(school_contacts)
+projected <- projection(dn, step = 4, window = 4)
+projected
+}

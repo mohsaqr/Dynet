@@ -19,13 +19,17 @@ snapshots(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{at}{Optional numeric time, narrowing the result to the bins that
-cover it. With the default disjoint tiling that is one bin; with an
+\item{at}{Optional single time, narrowing the result to the bins that
+cover it. A network built from dates may be addressed with a date.
+With the default disjoint tiling that is one bin; with an
 overlapping \code{window} every bin containing the time is returned. A time
 outside every bin falls back to the nearest bin rather than an empty
 result, so \code{at} never returns zero rows on a nonempty network.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}. \code{"separate"}
+needs a network built with a session column and raises
+\code{dynet_no_sessions} otherwise.}
 
 \item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
 \code{"window"} uses the current positive/default window.}
@@ -69,6 +73,18 @@ The edges alive in each time bin, as one tidy table. Useful for exporting a
 slice, for feeding a layout routine, or for checking by eye what the metric
 verbs are seeing.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_no_sessions} (\code{sessions = "separate"} without a session
+column), \code{dynet_outside_observation} (the requested range misses observed
+support; it also carries \code{dynet_bad_input}), and \code{dynet_bad_input} for
+every other broken contract -- \code{dn} not
+a \code{dynet}, an \code{at}, \code{start} or \code{end} that is not a single finite time, and
+an out-of-range \code{step} or \code{window}.
+
+Warning: \code{dynet_deprecated} for the retired \code{sample} argument.
+}
+
 \examples{
 dn <- dynet(school_contacts)
 snapshots(dn, at = 3)

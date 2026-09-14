@@ -18,5 +18,7 @@
 Print participation shift counts
 }
 \examples{
-pshifts(dynet(school_contacts))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+shifts
 }

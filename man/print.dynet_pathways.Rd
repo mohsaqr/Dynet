@@ -14,11 +14,15 @@
 \item{...}{Ignored.}
 }
 \value{
-\code{x}, invisibly.
+\code{x}, invisibly. Called for the side effect of printing a header
+giving the number of distinct routes and of optimal routes counted,
+followed by the first \code{n} rows.
 }
 \description{
 Print ranked pathways
 }
 \examples{
-pathways(dynet(school_contacts), from = "Ana")
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+print(routes)
 }

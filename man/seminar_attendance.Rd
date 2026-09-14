@@ -7,10 +7,14 @@
 \format{
 A \code{data.frame} with 104 rows and 3 columns:
 \describe{
-\item{student}{Character. Student identifier.}
-\item{seminar}{Character. Which weekly seminar.}
-\item{date}{\code{Date}. When the seminar was held.}
+\item{student}{Character. Student identifier, \code{s01} to \code{s24}.}
+\item{seminar}{Character. Which weekly seminar, \code{week_01} to \code{week_12}.}
+\item{date}{\code{Date}. When the seminar was held, 2024-09-03 to 2024-11-19.}
 }
+}
+\source{
+Simulated, not observed. Generated deterministically under a fixed
+seed by \code{data-raw/make-data.R}.
 }
 \usage{
 seminar_attendance

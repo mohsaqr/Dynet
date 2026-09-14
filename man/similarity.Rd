@@ -21,14 +21,19 @@ similarity(
 \item{method}{One of \code{"jaccard"} (the default), \code{"overlap"}, \code{"hamming"},
 \code{"cosine"} or \code{"pearson"}.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions: \code{"bounded"} (the default),
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
 \item{start, end}{First and last time to measure. Default to the observed
 range.}
 
-\item{step, window}{How often to measure and how much time each measurement
-covers. Default to the interval the network was built with. \code{window = "all"} is rejected here, because a similarity matrix of one bin against
-itself says nothing.}
+\item{step}{How often to measure. Defaults to the interval the network was
+built with.}
+
+\item{window}{How much time each measurement covers. Defaults to \code{step}.
+\code{window = "all"} measures the whole observed period as a single bin and so
+leaves nothing to compare; it raises \code{dynet_empty_result}, as does any
+other grid that yields fewer than two bins.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
@@ -42,7 +47,11 @@ time bins and columns \code{time}, \code{other}, \code{measure} and \code{value}
 diagonal is included and is one for every coefficient except
 \code{"hamming"}, where identical layers differ in nothing and score zero.
 \code{"pearson"} reaches one only to floating-point accuracy, so compare it
-with a tolerance rather than with \code{==}.
+with a tolerance rather than with \code{==}. The frame is returned invisibly
+when \code{plot = TRUE} has drawn the figure.
+
+The coefficients come from cograph, which is a hard dependency of Dynet;
+a namespace that cannot be loaded raises \code{dynet_needs_cograph}.
 }
 \description{
 Compares the edge set at every time bin with the edge set at every other,

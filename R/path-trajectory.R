@@ -27,7 +27,8 @@
 #' are never merged across a distinction the path result draws.
 #'
 #' @param x A result from [paths()].
-#' @return A list of character vectors, one per optimal route.
+#' @return A list of character vectors, one per optimal route. A path result
+#'   whose steps table is empty raises `dynet_empty_result`.
 #' @noRd
 .path_route_sequences <- function(x) {
   steps <- as.data.frame(x, what = "steps")
@@ -119,7 +120,11 @@
 #'
 #' @param sequences A list of character vectors of tokens.
 #' @param min_count Minimum prefix frequency to retain.
-#' @return A data frame with `node`, `parent`, `depth`, `count` and `last`.
+#' @return A data frame with `node`, `parent`, `depth`, `count` and `last`,
+#'   one row per retained prefix plus the synthetic `(start)` root. A
+#'   malformed `sequences` or `min_count` raises `dynet_bad_input`; no
+#'   sequences at all, or no prefix reaching `min_count`, raises
+#'   `dynet_empty_result`.
 #' @noRd
 .path_prefix_tree <- function(sequences, min_count = 1L) {
   .check(
@@ -206,8 +211,9 @@
 #' smoothstep carries each branch from parent to child so it leaves and
 #' arrives along the depth axis rather than as a right-angle elbow.
 #'
-#' @param layout A placed tree with `node`, `x`, `y` and `count` columns.
-#' @param n_pt Number of vertices per branch polyline.
+#' @param layout A placed tree with `node`, `parent`, `x`, `y` and `count`
+#'   columns.
+#' @param n_pt Number of vertices per branch polyline. Defaults to forty.
 #' @return A data frame with `edge`, `x`, `y` and `count` columns.
 #' @noRd
 .path_tree_edges <- function(layout, n_pt = 40L) {
@@ -254,15 +260,26 @@
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
 #' @return A `dynet_path_trajectories` data frame with one row per tree node
-#'   and columns `node`, `parent`, `depth`, `count`, `probability`, `vertex`,
+#'   and columns `node` (the route prefix, written as `vertex@time` steps
+#'   joined by arrows), `parent`, `depth`, `count`, `probability`, `vertex`,
 #'   `time`, `session` and `branch`. `depth` is the hop number from the
 #'   queried vertex, `probability` is the branching fraction of the parent's
-#'   routes that continue along this branch, and `branch` is the node's
-#'   placement across the tree.
+#'   routes that continue along this branch and is missing at the root, which
+#'   has no parent, and `branch` is the node's
+#'   placement across the tree. The synthetic `(start)` root is dropped when
+#'   it has a single child, which is the usual case; it is kept when it
+#'   genuinely branches, as under `sessions = "separate"`, where it carries
+#'   one subtree per session, has no `vertex` or `time`, a missing
+#'   `probability`, and pushes every other node one hop deeper.
+#'
+#'   A result that is not from [paths()], or a `min_count` that is not one
+#'   positive whole number, raises `dynet_bad_input`; a path result with no
+#'   route step, or a `min_count` no prefix reaches, raises
+#'   `dynet_empty_result`.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- paths(dn, from = "Ana")
-#' path_trajectories(paths)
+#' routes <- paths(dn, from = "Ana")
+#' path_trajectories(routes)
 #' @seealso [plot_path_trajectories()] to draw the tree, [path_network()] for
 #'   the route union as a network.
 #' @export
@@ -312,7 +329,13 @@ path_trajectories <- function(x, min_count = 1L, plot = FALSE) {
 #' @param x A result from [path_trajectories()].
 #' @param row.names,optional Ignored.
 #' @param ... Ignored.
-#' @return A plain data frame with one row per tree node.
+#' @return A plain data frame with one row per tree node, with the columns
+#'   described in [path_trajectories()] and none of its attributes.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' trajectories <- path_trajectories(routes)
+#' as.data.frame(trajectories)
 #' @export
 as.data.frame.dynet_path_trajectories <- function(
     x, row.names = NULL, optional = FALSE, ...) {
@@ -328,7 +351,14 @@ as.data.frame.dynet_path_trajectories <- function(
 #' Print a temporal trajectory tree
 #' @param x A result from [path_trajectories()].
 #' @param ... Passed to the data frame print method.
-#' @return `x`, invisibly.
+#' @return `x`, invisibly. Called for the side effect of printing a header
+#'   naming the direction, anchor, node count, depth and number of routes,
+#'   followed by the tidy table.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' trajectories <- path_trajectories(routes)
+#' print(trajectories)
 #' @export
 print.dynet_path_trajectories <- function(x, ...) {
   cat(sprintf("# %s temporal trajectory tree %s %s\n",
@@ -349,10 +379,12 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' stacked in depth-first order, parents centred on their children, and
 #' branches carried by a cosine smoothstep. Nodes follow that package's
 #' horizontal phylogram rather than its capsule style -- a count-sized filled
-#' circle with its label set below it. Branch width
-#' always shows how many optimal routes use a branch; node fill shows the
-#' chosen `measure`, and every node also prints its value, so nothing is
-#' encoded by colour alone.
+#' circle with its label set below it. Node size and branch width always show
+#' how many optimal routes use a branch. Every node also prints the value of
+#' the chosen `measure` beside its vertex name, so nothing is encoded by
+#' colour alone: the default frequency view is free to fill each node with its
+#' vertex's own colour, while the `"time"` and `"predictability"` views fill
+#' from a ramp with a colour bar.
 #'
 #' Forward paths grow away from the queried source. Backward paths are
 #' flipped so the queried target is the root and possible senders branch away
@@ -360,23 +392,30 @@ print.dynet_path_trajectories <- function(x, ...) {
 #' temporal history.
 #'
 #' @param x A result from [paths()] or from [path_trajectories()].
-#' @param measure Node fill. `"frequency"` is the number of optimal routes
-#'   through the branch, `"time"` is the attained time at the node, and
-#'   `"predictability"` is the branching fraction of the parent's routes that
-#'   continue along the branch.
+#' @param measure What each node reports, and what fills it. `"frequency"`,
+#'   the default, is the number of optimal routes through the branch and fills
+#'   by vertex, since node size already carries the count; `"time"` is the
+#'   attained time at the node and `"predictability"` the branching fraction
+#'   of the parent's routes that continue along the branch, both filled from a
+#'   ramp.
 #' @param orientation `"horizontal"` grows the tree left to right with hop
 #'   number on the x axis; `"vertical"` grows it top to bottom.
 #' @param min_count Draw only branches used by at least this many optimal
-#'   routes. Ignored when `x` is already a [path_trajectories()] result.
-#' @param base_size Base text size.
+#'   routes. Defaults to `1`, the complete family. Ignored when `x` is already
+#'   a [path_trajectories()] result.
+#' @param base_size Base text size, as in [ggplot2::theme_minimal()]. Defaults
+#'   to eleven.
 #' @param palette Palette for the vertex colours of the frequency view, as in
-#'   [plot.dynet()].
-#' @return A `ggplot` object.
+#'   [plot.dynet()]. Defaults to `"okabe"`.
+#' @return A `ggplot` object. A tree with no branch to draw raises
+#'   `dynet_empty_result`; an `x` that is neither a [paths()] nor a
+#'   [path_trajectories()] result, or a `base_size` that is not one positive
+#'   number, raises `dynet_bad_input`.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths <- paths(dn, from = "Ana")
-#' plot_path_trajectories(paths)
-#' plot_path_trajectories(paths, measure = "time", orientation = "vertical")
+#' routes <- paths(dn, from = "Ana")
+#' plot_path_trajectories(routes)
+#' plot_path_trajectories(routes, measure = "time", orientation = "vertical")
 #' @seealso [path_trajectories()] for the tidy tree behind the plot.
 #' @export
 plot_path_trajectories <- function(
@@ -559,8 +598,9 @@ plot_path_trajectories <- function(
 #'
 #' @param object A `dynet_path_trajectories` result.
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per depth: `depth`, the number of
-#'   distinct `branches` reaching it, the `vertices` they land on, the summed
+#' @return A plain `data.frame`, one row per depth in increasing order:
+#'   `depth`, the number of distinct `branches` reaching it, the number of
+#'   distinct `vertices` they land on, the summed
 #'   `count` of routes through it, and `mean_branching`, the average branching
 #'   fraction of those routes. Note `probability` in the underlying table is
 #'   CONDITIONAL on each parent, so it is averaged rather than summed: adding

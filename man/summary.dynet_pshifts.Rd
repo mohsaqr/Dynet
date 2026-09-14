@@ -12,10 +12,12 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per shift family: \code{family}, its
-\code{count}, the \code{share} of all classified transitions it accounts for, and
-\code{top_shift}, the single most frequent shift type within it. \code{share} is
-\code{NaN} when nothing was classified.
+A plain \code{data.frame}, one row per shift family, ordered by
+descending \code{count}: \code{family}, its \code{count}, the \code{share} of all classified
+transitions it accounts for, and \code{top_shift}, the single most frequent
+shift type within it. \code{share} is \code{NaN} when nothing was classified. The
+family totals are sums of the \code{count} column as it stands, so they are
+transition counts for an \code{output = "final"} result.
 }
 \description{
 Summarise participation shifts by family

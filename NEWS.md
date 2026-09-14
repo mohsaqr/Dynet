@@ -1,3 +1,99 @@
+# Dynet 0.4.6
+
+* New verb `animate()`: the measurement grid as a film, written to a
+  GIF (`gifski`) or an mp4 or webm video (`av`), chosen by the extension of
+  `file`. It takes the same four grid arguments as every measuring verb, so
+  an animation shows exactly what `snapshots()` tabulates and what
+  `plot(dn, type = "snapshots")` draws as a filmstrip, and a test pins that
+  the three agree bin for bin.
+
+  Each bin is drawn `tween` times, six by default. Between bins the vertices
+  glide along the smoothstep curve, a tie about to appear fades in dotted
+  and green, one about to vanish fades out dashed and vermilion, and with
+  `measure = ` node size follows a snapshot measure from `dyn_centrality()`
+  on the same grid. Tie width follows weight on one scale fixed across the
+  whole animation, so the same weight has the same width in every frame. A
+  vertex not present in a bin is drawn as `absent` says: faded in place,
+  parked out of sight at the edge of the layout and gliding in when it
+  arrives and out when it leaves, or hidden; a present vertex with no tie
+  is drawn as `isolates` says. A timeline strip under the network shows
+  the grid, a marker at the current time, and the key; both the tie
+  states and the strip can be turned off.
+
+  Five layouts and a coordinate table. `"spring"`, the default, lays out
+  the union of every bin once; `"circle"`, `"oval"` and `"groups"` are
+  rings; `"relaxed"` re-runs `cograph::layout_spring()` per bin, seeded
+  from the bin before it and held within `max_displacement`, then smooths
+  every vertex's path with a centred triangular kernel, which halved the
+  direction reversals between consecutive moves on `school_contacts` at a
+  two per cent cost in structure. Under every layout but `"relaxed"` a
+  vertex never moves, and every layout covers the whole vertex set, so a
+  vertex never changes place because its neighbours came and went.
+
+  The file goes to `tempfile()` unless `file` says otherwise, so nothing
+  reaches the working directory by accident. `gifski` and `av` are
+  Suggests; without the one the extension needs the verb raises
+  `dynet_needs_gifski` or `dynet_needs_av`, and an extension it cannot
+  write raises `dynet_unknown_format`. A bin holding nothing to draw is
+  skipped with a message that counts the skipped bins. The tidy bin table
+  comes back invisibly, one row per bin with `time`, `nodes`, `ties`,
+  `forming`, `dissolving` and the bin's first rendered `frame`, as class
+  `dynet_animation` with `print()`, `summary()` and `as.data.frame()`;
+  `as.data.frame(x, what = "frames")` maps every rendered frame to its
+  time.
+
+* New website article *Animating a temporal network*, a tutorial on
+  `animate()` over the classroom and the MOOC forum data.
+
+* `set_vertex_spells(dn, "ties")` declares each vertex present from the
+  start of its first tie spell to the end of its last, so a network built
+  from a tie log alone can say when each vertex arrived and left.
+
+* New vignette `ch17-temporal-networks`: chapter 17 of *Learning Analytics
+  Methods and Tutorials* (Saqr, 2024), "Temporal network analysis:
+  Introduction, methods and analysis with R", re-run with Dynet's verbs in
+  the chapter's own order -- build, active subnetwork, visualisation,
+  graph-level and node-level measures, reachability, mixing. Its data is
+  bundled as `mooc_posts` (2529 posts across 338 discussion threads of a
+  MOOC forum, April to June 2013) and `mooc_people` (445 participants with
+  their experience level), so the vignette reaches no network at render
+  time. The two places where the chapter's own code changes its numbers --
+  the thread spell rule, and ties admitted before single-post discussions
+  are dropped -- are named and measured rather than reproduced.
+
+* Backward routes on interval spells keep the route family of an
+  unattained supremum. An interval spell is half-open, so the latest
+  departure into a target is a supremum no journey reaches exactly.
+  `paths(direction = "backward")` used to report `NA` hops, zero paths and
+  no steps for such a vertex, which left every backward trajectory tree on
+  interval data drawing only its source. The family that approaches the
+  supremum is now reported in full -- hops, exact path count and
+  reconstructed steps -- and `attained` is what records that the instant
+  itself is not realised. Route reconstruction under `sessions = "bounded"`
+  and `sessions = "separate"` is unchanged.
+
+* Reachability is anchored at each vertex's own presence. With vertex
+  spells declared, `dyn_reachability()`, `dyn_centrality(scope =
+  "temporal")` and the default origin of `paths()` start a vertex's
+  forward search at its first appearance inside the window and its
+  backward search at its last, instead of at the window bound. A vertex
+  that entered the network late no longer scores zero; a backward search
+  may anchor at the instant a vertex leaves. An explicit `at` is still
+  used exactly.
+
+* `dynet(nodes = )` names the vertices from a node table whose key is not
+  `name` but which has a `name` column, as `network(vertex.attrnames = )`
+  does: edge endpoints and vertex spells given by the key are translated,
+  and the key stays on the node table as an attribute. `vertex.id`,
+  `node`, `vertex` and `node.id` are recognised as vertex keys.
+
+* `dynet(vertex_spells = )` resolves its node, start and end columns
+  through the alias table and ignores other columns, so a node table with
+  `onset` and `terminus` columns is accepted as it is.
+
+* `rename_nodes()` takes the name of a vertex attribute whose values
+  become the node names.
+
 # Dynet 0.4.4
 
 * Every example, the README, both vignettes and the reproductions are

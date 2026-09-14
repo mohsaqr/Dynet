@@ -10,14 +10,29 @@ set_observations(dn, data = NULL, start = NULL, end = NULL)
 \item{dn}{A temporal network.}
 
 \item{data}{Optional data frame with \code{start} and \code{end} observation
-components. Overlapping and adjacent positive components are merged.}
+components. Overlapping and adjacent positive components are merged.
+Default \code{NULL}.}
 
-\item{start, end}{Optional scalar continuous bounds used instead of \code{data}.}
+\item{start, end}{Optional scalar continuous bounds used instead of \code{data},
+each defaulting to \code{NULL}. Supply exactly one of \code{data} or the
+\code{start}/\code{end} pair; supplying both, or neither, is an error.}
 }
 \value{
-A new \code{dynet} object. Raw edge and vertex spells are unchanged;
-only the non-destructive measurement view is replaced.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}. Raw edge and vertex spells
+are unchanged -- \code{as.data.frame(x)} still returns the originals -- and
+only the non-destructive measurement view is replaced, so every verb now
+clips exposure and path horizons to this support. Read the components
+back with \code{as.data.frame(x, what = "observations")}, one row per
+component with \code{observation}, \code{start}, \code{end}, \code{duration} and \code{instant}.
+Raises \code{dynet_bad_input} when neither or both of \code{data} and the bounds
+are given.
 }
 \description{
 Replace observation support
+}
+\examples{
+dn <- dynet(school_contacts)
+first_week <- set_observations(dn, start = 0, end = 7)
+as.data.frame(first_week, what = "observations")
 }

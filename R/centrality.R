@@ -8,6 +8,12 @@
                     "coreness", "constraint", "power", "harary",
                     "information", "load", "flow_betweenness", "diffusion")
 
+# The measures that read a direction off the adjacency and are therefore
+# undefined on an undirected network. `dyn_centrality()` and the proximity
+# plot both gate on this, so it is named once rather than spelled out twice.
+.directed_only_measures <- c("indegree", "outdegree", "prestige",
+                             "hub", "authority")
+
 # The measures for which "out" and "in" mean something. Every other measure
 # has a single directional definition and ignores `mode`, as in igraph.
 .mode_aware_measures <- c("degree", "indegree", "outdegree", "strength",
@@ -103,10 +109,21 @@
 #'   `"load"`, `"flow_betweenness"`, or `"diffusion"` for snapshot scope;
 #'   `"closeness"`,
 #'   `"betweenness"`, `"reach"` or `"reach_count"` for temporal scope.
-#' @param scope `"snapshot"` for a value per time bin, `"temporal"` for one
+#'   Snapshot scope also still accepts the deprecated names `"indegree"` and
+#'   `"outdegree"`, which warn with class `dynet_deprecated` and are replaced
+#'   by `measure = "degree"` with `mode = "in"` or `mode = "out"`. Defaults to
+#'   `"degree"`. Any other
+#'   name raises an error of class `dynet_unknown_measure`; the directed-only
+#'   measures `"prestige"`, `"hub"`, `"authority"` and the two deprecated
+#'   names `"indegree"` and `"outdegree"` raise `dynet_needs_directed` on an
+#'   undirected network.
+#' @param scope `"snapshot"` (the default) for a value per time bin,
+#'   `"temporal"` for one
 #'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
-#'   directions, `"out"` outgoing only, `"in"` incoming only. Name several at
+#'   directions, `"out"` outgoing only, `"in"` incoming only. Defaults to
+#'   `"all"`; any other string raises an error of class `dynet_bad_input`.
+#'   Name several at
 #'   once -- `mode = c("all", "in", "out")` -- to get degree, in-degree and
 #'   out-degree from a single call; the extra directions are then labelled
 #'   `degree_in` and `degree_out` in the `measure` column, while a call naming
@@ -117,9 +134,11 @@
 #'   entirely on an undirected network. In-degree is therefore
 #'   `mode = "in"`. The old `"indegree"` and `"outdegree"` measure names
 #'   remain as deprecated aliases.
-#' @param sessions How to treat sessions: `"bounded"` keeps paths inside a
+#' @param sessions How to treat sessions: `"bounded"` (the default) keeps
+#'   paths inside a
 #'   session, `"collapse"` ignores sessions, `"separate"` reports each session
-#'   on its own rows.
+#'   on its own rows. `"separate"` on a network built without a session column
+#'   raises an error of class `dynet_no_sessions`.
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
 #' @param start,end First and last time at which to measure. Default to the
@@ -134,14 +153,18 @@
 #'   right so an event at the final instant is inside it; it cannot be combined
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
-#' @param damping Damping factor for PageRank.
-#' @param exponent Attenuation factor for Bonacich `"power"`. Positive rewards
+#' @param damping Damping factor for PageRank; a single number strictly
+#'   between zero and one, `0.85` by default.
+#' @param exponent Attenuation factor for Bonacich `"power"`, a single finite
+#'   number, `1` by default. Positive rewards
 #'   being connected to well-connected others; negative rewards the opposite,
 #'   which is the bargaining reading.
-#' @param lambda Nonnegative multiplier for `"diffusion"`. Diffusion degree is
+#' @param lambda Nonnegative multiplier for `"diffusion"`, `1` by default.
+#'   Diffusion degree is
 #'   the sum of the selected degree of a vertex and all of its one-step
 #'   neighbours, multiplied by `lambda`.
-#' @param prestige Prestige definition. `"indegree"` counts distinct active
+#' @param prestige Prestige definition, `"indegree"` by default.
+#'   `"indegree"` counts distinct active
 #'   incoming dyads. `"indegree.rownorm"` first gives every active sender one
 #'   unit split equally across its distinct outgoing dyads, then sums the
 #'   received mass. `"indegree.rowcolnorm"` balances a total-support binary
@@ -158,12 +181,16 @@
 #'   and balances binary adjacency to doubly stochastic form. Prestige is
 #'   directed and snapshot-only.
 #' @param rescale Whether to divide prestige by its total independently
-#'   inside every reported time/session block. Zero-total count/proximity
+#'   inside every reported time/session block; `FALSE` by default. Zero-total
+#'   count/proximity
 #'   definitions return `NaN`; structurally undefined spectral definitions
-#'   return `NA`. This argument requires `measure = "prestige"`.
+#'   return `NA`. This argument requires `measure = "prestige"`, and raises
+#'   `dynet_bad_input` otherwise.
 #' @param traversal_time Nonnegative duration charged for every temporal-path
-#'   hop, in the network's time unit. A calendar network also accepts a scalar
-#'   `difftime`. Nonzero values require `scope = "temporal"`.
+#'   hop, in the network's time unit; `0` by default. A calendar network also
+#'   accepts a scalar
+#'   `difftime`. Nonzero values require `scope = "temporal"`, and raise
+#'   `dynet_bad_input` otherwise.
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
@@ -171,8 +198,9 @@
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric`: a tidy data frame with one row per vertex, time
-#'   point and measure. Columns are `session` (only when the network has
-#'   sessions), `time` (snapshot scope only), `node`, `measure` and `value`.
+#'   point and measure. Columns are `session` (only under
+#'   `sessions = "separate"`, which is the only mode that keeps session labels
+#'   apart), `time` (snapshot scope only), `node`, `measure` and `value`.
 #'   Print it, [summary()] it, [plot()] it, or take the plain frame with
 #'   [as.data.frame()]. A closeness- or betweenness-only temporal result stores
 #'   its mathematical choices as direct attributes; a mixed temporal result
@@ -180,8 +208,8 @@
 #'   the same direct-versus-scoped metadata convention. When a prestige
 #'   variant is structurally undefined or fails to converge, the affected
 #'   values are `NA`, a warning says how many reporting blocks were affected,
-#'   and a `prestige_diagnostics` record naming the stage and reason for each
-#'   is attached to the result.
+#'   and a record naming the stage and reason for each comes out through
+#'   `as.data.frame(x, what = "diagnostics")`.
 #'
 #' @details
 #' `step` and `window` are separate on purpose. `step` is how often you look;
@@ -190,6 +218,22 @@
 #' window, which keeps the resolution of the smaller step while smoothing over
 #' the noise of a sparse bin. The arguments match `tsna::tSnaStats()`, where
 #' they are called `time.interval` and `aggregate.dur`.
+#'
+#' Snapshot `"degree"` counts distinct active binary dyads, so duplicate,
+#' split and overlapping spells do not multiply it; `mode = "all"` on a
+#' directed snapshot is in-degree plus out-degree. `"strength"` is the same
+#' margin taken over summed spell weights rather than over binary dyads.
+#'
+#' Snapshot `"closeness"` is **not** Freeman's \eqn{1 / \sum_z d_{sz}}, which
+#' is
+#' undefined once a snapshot is disconnected -- and a time bin almost always
+#' is. It is the reciprocal of the mean geodesic distance to the vertices a
+#' vertex can actually reach: with \eqn{R_s} the reachable nonself set,
+#' \deqn{C(s) = |R_s| / \sum_{z \in R_s} d_{sz},}
+#' which is zero for an isolate and equals Freeman's normalised closeness
+#' \eqn{(n - 1) / \sum_z d_{sz}} on a connected snapshot. `"harary"` is the
+#' reciprocal of
+#' eccentricity, zero for a vertex that cannot reach everything.
 #'
 #' `"eigenvector"`, `"hub"` and `"authority"` are certified the way eigenvector
 #' prestige is: a snapshot whose spectral radius is zero (no cycle) or whose
@@ -209,7 +253,7 @@
 #' With `rescale = TRUE`, the column sums are divided by their block total. A
 #' zero total is mathematically undefined and is returned as literal `NaN`.
 #'
-#' Row-normalized indegree prestige first converts every nonzero binary
+#' Row-normalised indegree prestige first converts every nonzero binary
 #' adjacency row to sum one; zero rows remain all zero. Its column sums are the
 #' received sender-nomination mass, so their total is the number of active
 #' senders. `rescale = TRUE` divides again by that block total. This closed-form
@@ -217,7 +261,7 @@
 #' binary matrices. Dynet deliberately ignores edge weights, whereas `sna`
 #' uses their magnitudes on valued matrices.
 #'
-#' Row-column-normalized prestige uses deterministic Sinkhorn--Knopp scaling
+#' Row-column-normalised prestige uses deterministic Sinkhorn--Knopp scaling
 #' only when the full binary vertex matrix has total support: every active dyad
 #' must belong to a perfect matching. It preserves all binary dyads and does
 #' not remove isolates or unsupported edges. Infeasible blocks return `NA` for
@@ -226,7 +270,7 @@
 #' prestige uniformly `1 / n`; this definition is a transform diagnostic, not
 #' a vertex ranking. Dynet uses fixed-order sweeps, maximum absolute row/column
 #' residual `1e-12`, and at most 10,000 sweeps. It never returns a partial
-#' iterate. This deliberately differs from the randomized loose-tolerance
+#' iterate. This deliberately differs from the randomised loose-tolerance
 #' annealer in `sna` 2.8.
 #'
 #' Domain prestige is incoming indegree in the directed reachability graph
@@ -243,7 +287,7 @@
 #' the sum of its finite distances into `j`. The score is zero when `r[j] = 0`
 #' and otherwise `r[j]^2 / ((n - 1) * s[j])`: the incoming domain fraction
 #' divided by mean hop distance. Unreachable vertices are omitted before the
-#' distance sum. This deliberately fixes an arithmetic artifact in `sna` 2.8,
+#' distance sum. This deliberately fixes an arithmetic artefact in `sna` 2.8,
 #' whose `FALSE * Inf` operation incorrectly zeros partial nonempty domains.
 #'
 #' Eigenvector prestige solves `t(B) %*% p = rho * p` for the nonnegative
@@ -256,25 +300,25 @@
 #' `1e-10`, orients the ray as nonnegative, and never applies elementwise
 #' absolute value.
 #'
-#' Row-normalized eigenvector prestige first forms binary adjacency `B` and
+#' Row-normalised eigenvector prestige first forms binary adjacency `B` and
 #' divides each nonzero sender row by its number of distinct outgoing dyads;
 #' zero rows remain exactly zero. It then solves the certified incoming Perron
 #' equation for the transpose of that row-stochastic matrix. Thus each active
 #' sender distributes one unit of recursive nomination mass, with no
 #' teleportation or dangling-row imputation. Binary session union and retained
-#' loop policy occur before row normalization. The positive-radius, geometric-
+#' loop policy occur before row normalisation. The positive-radius, geometric-
 #' uniqueness, nonnegative-sign, L2/sum-scale, warning, and diagnostic rules
 #' are otherwise exactly those of ordinary eigenvector prestige.
 #'
-#' Column-normalized eigenvector prestige divides each nonzero binary receiver
+#' Column-normalised eigenvector prestige divides each nonzero binary receiver
 #' column by its number of distinct incoming dyads; zero columns remain zero.
 #' It solves the incoming Perron equation only after that transform. If every
 #' vertex has positive indegree, the transformed transpose is row-stochastic
 #' and every certified score is necessarily uniform. Nonuniform defined scores
 #' therefore require a zero-indegree vertex. Binary union and retained-loop
-#' policy precede normalization; certification and scaling remain those above.
+#' policy precede normalisation; certification and scaling remain those above.
 #'
-#' Row-column-normalized eigenvector prestige composes the total-support and
+#' Row-column-normalised eigenvector prestige composes the total-support and
 #' deterministic Sinkhorn--Knopp contract with the certified Perron contract.
 #' Infeasible support and nonconvergent balancing terminate before the spectral
 #' solve. A completed doubly stochastic transform always has the all-ones
@@ -289,14 +333,16 @@
 #' vertex receives the fraction of those journeys that contain it. Sources and
 #' targets receive no endpoint credit. This ordered-pair convention also
 #' applies to undirected contacts because temporal reach is generally
-#' asymmetric. The result is not normalized; its fixed range is
+#' asymmetric. The result is not normalised; its fixed range is
 #' `[0, (n - 1) * (n - 2)]`.
 #'
 #' Temporal closeness is inverse mean forward latency over reachable vertices:
 #' if \eqn{R_s} is the set of reachable vertices other than source \eqn{s},
-#' \deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - L),}
-#' where \eqn{a_z} is the foremost arrival time and \eqn{L} is the traversal
-#' window's lower bound. Every reachable endpoint is included once, regardless
+#' \deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - o_s),}
+#' where \eqn{a_z} is the foremost arrival time and \eqn{o_s} is the source's
+#' resolved origin: the traversal window's lower bound, or -- when vertex
+#' activity was declared -- the source's first presence inside that window.
+#' Every reachable endpoint is included once, regardless
 #' of how many optimal paths reach it. A source with no reachable nonself
 #' endpoints has value zero. If all reachable endpoints have zero latency, the
 #' value is `Inf`; zero-latency endpoints remain in the numerator when mixed
@@ -314,6 +360,28 @@
 #' `"reach_count"` is their number. The source is excluded from both and a
 #' singleton proportion is defined as zero. In separate-session output, a
 #' session outside a one-sided bound contributes zero-reach rows.
+#'
+#' @section Conditions:
+#' Errors: `dynet_unknown_measure` (a measure this scope does not offer),
+#' `dynet_needs_directed` (`"prestige"`, `"hub"`, `"authority"`,
+#' `"indegree"` or `"outdegree"` on an undirected network),
+#' `dynet_no_sessions` (`sessions = "separate"` without a session column),
+#' `dynet_outside_observation` (the requested range misses observed support;
+#' it also carries `dynet_bad_input`),
+#' and `dynet_bad_input` for every other broken contract -- `dn` not a
+#' `dynet`, an unknown `mode`, an out-of-range `damping`, `exponent`,
+#' `lambda`, `prestige`, `rescale`, `start`, `end`, `step`, `window` or
+#' `traversal_time`, `rescale = TRUE` without `measure = "prestige"`, a
+#' nonzero `traversal_time` at snapshot scope, and `mode`, `step` or `window`
+#' at temporal scope.
+#'
+#' Warnings: `dynet_deprecated` (`measure = "indegree"`/`"outdegree"`, or the
+#' retired `sample` argument), `dynet_eigen_undefined` and
+#' `dynet_kernel_singular` (both also carrying `dynet_measure_undefined`) when
+#' a snapshot's eigenvector, hub, authority, Bonacich power or information
+#' kernel has no unique answer, and `dynet_prestige_infeasible`,
+#' `dynet_prestige_nonconvergence` and `dynet_prestige_eigen_undefined` when a
+#' prestige variant is structurally undefined or fails to converge.
 #'
 #' @references
 #' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
@@ -338,6 +406,10 @@
 #'
 #' Lin, N. (1976). *Foundations of Social Research*. McGraw-Hill.
 #'
+#' Freeman, L. C. (1979). Centrality in social networks: conceptual
+#' clarification. *Social Networks*, 1(3), 215-239.
+#' \doi{10.1016/0378-8733(78)90021-7}
+#'
 #' Brandes, U. (2001). A faster algorithm for betweenness centrality.
 #' *Journal of Mathematical Sociology*, 25(2), 163-177.
 #'
@@ -356,6 +428,25 @@
 #'
 #' Freeman, L. C., Borgatti, S. P., & White, D. R. (1991). Centrality in
 #' valued graphs. *Social Networks*, 13(2), 141-154.
+#'
+#' Page, L., Brin, S., Motwani, R., & Winograd, T. (1999). *The PageRank
+#' citation ranking: bringing order to the web*. Technical Report 1999-66,
+#' Stanford InfoLab.
+#'
+#' Kleinberg, J. M. (1999). Authoritative sources in a hyperlinked
+#' environment. *Journal of the ACM*, 46(5), 604-632.
+#' doi:10.1145/324133.324140.
+#'
+#' Seidman, S. B. (1983). Network structure and minimum degree. *Social
+#' Networks*, 5(3), 269-287. doi:10.1016/0378-8733(83)90028-X.
+#'
+#' Burt, R. S. (1992). *Structural Holes: The Social Structure of
+#' Competition*. Harvard University Press.
+#'
+#' Kundu, S., Murthy, C. A., & Pal, S. K. (2011). A new centrality measure for
+#' influence maximization in social networks. In *Pattern Recognition and
+#' Machine Intelligence*, Lecture Notes in Computer Science 6744 (pp. 242-247).
+#' Springer. doi:10.1007/978-3-642-21786-9_40.
 #'
 #' Bonacich, P. (1972). Factoring and weighting approaches to status scores
 #' and clique identification. *Journal of Mathematical Sociology*, 2, 113-120.
@@ -488,13 +579,11 @@ dyn_centrality <- function(dn,
       class = "dynet_deprecated", call = NULL))
   }
   if (!dn$directed) {
-    undirected_only <- intersect(measure,
-                                 c("indegree", "outdegree", "hub", "authority",
-                                   "prestige"))
-    if (length(undirected_only) > 0L) {
+    directed_only <- intersect(measure, .directed_only_measures)
+    if (length(directed_only) > 0L) {
       stop(errorCondition(
         sprintf("%s needs a directed network; this one is undirected.",
-                paste(sQuote(undirected_only), collapse = ", ")),
+                paste(sQuote(directed_only), collapse = ", ")),
         class = "dynet_needs_directed", call = NULL))
     }
   }
@@ -874,7 +963,7 @@ dyn_centrality <- function(dn,
 #' @param mode Which edges count: `"all"`, `"out"` or `"in"`.
 #' @param exponent Attenuation factor for Bonacich power.
 #' @param prestige Prestige definition.
-#' @param rescale Whether to normalize prestige by its block total.
+#' @param rescale Whether to normalise prestige by its block total.
 #' @param lambda Diffusion-degree multiplier.
 #' @return A numeric vector, one value per vertex.
 #' @noRd
@@ -1050,7 +1139,7 @@ dyn_centrality <- function(dn,
 #' or column margin error controls termination. No partial result is approved
 #' after the iteration cap.
 #'
-#' @param a Square adjacency or support matrix; positive values are binarized.
+#' @param a Square adjacency or support matrix; positive values are binarised.
 #' @param tol Positive maximum permitted absolute margin error.
 #' @param max_iter Positive integer cap on complete row-plus-column sweeps.
 #' @return A list containing `matrix`, `status`, `reason`, `iterations`, and
@@ -1255,9 +1344,9 @@ dyn_centrality <- function(dn,
 #' Incoming binary Perron prestige with uniqueness certification
 #'
 #' For binary directed adjacency `B`, ordinary eigenvector prestige solves
-#' `t(B) %*% p = rho(B) * p`. The row-normalized definition first forms
+#' `t(B) %*% p = rho(B) * p`. The row-normalised definition first forms
 #' `P[i,j] = B[i,j] / sum(B[i,])` for positive row totals, leaving zero rows
-#' exactly zero. The column-normalized definition analogously forms
+#' exactly zero. The column-normalised definition analogously forms
 #' `Q[i,j] = B[i,j] / sum(B[,j])` and leaves zero columns zero. The row-column
 #' definition first certifies total support and balances binary `B` to doubly
 #' stochastic form. Each then solves the transposed Perron equation on its
@@ -1269,10 +1358,10 @@ dyn_centrality <- function(dn,
 #'
 #' @param a Directed adjacency matrix for one snapshot block. Positive values
 #'   are treated as binary dyads; retained loops remain on the diagonal.
-#' @param rescale Whether to normalize the feasible Perron vector to sum one.
+#' @param rescale Whether to normalise the feasible Perron vector to sum one.
 #' @param definition Ordinary `"eigenvector"`, `"eigenvector.rownorm"`,
-#'   which row-normalizes binary adjacency, `"eigenvector.colnorm"`, which
-#'   column-normalizes it, or `"eigenvector.rowcolnorm"`, which requires total
+#'   which row-normalises binary adjacency, `"eigenvector.colnorm"`, which
+#'   column-normalises it, or `"eigenvector.rowcolnorm"`, which requires total
 #'   support and deterministic doubly stochastic balancing before transpose
 #'   and eigensolving.
 #' @param tol Fixed relative tolerance for root, nullity, sign, and residual
@@ -1491,8 +1580,15 @@ dyn_centrality <- function(dn,
       default_end = encoding_range[["end"]],
       clamp_missing = identical(sessions, "separate")
     )
-    t0 <- horizon$start
-    trees <- lapply(seq_len(enc$n), function(s)
+    activity <- .prepare_path_encoding(
+      dn, walk,
+      session = if (identical(sessions, "separate")) label else NULL,
+      erase_sessions = !identical(sessions, "separate")
+    )$path_activity
+    trees <- lapply(seq_len(enc$n), function(s) {
+      t0 <- .presence_anchor(activity, s, "forward", horizon$start,
+                             horizon$end)
+      if (is.na(t0)) return(.absent_search(enc$n, s, "forward"))
       .optimal_bounded_search(
         dn, walk, s, t0, "forward", bounded,
         lower = horizon$start, upper = horizon$end,
@@ -1503,7 +1599,8 @@ dyn_centrality <- function(dn,
           "collapse"
         },
         activity_session = if (identical(sessions, "separate")) label else NULL
-      ))
+      )
+    })
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc)), measure)
     data.frame(session = label, node = enc$names,

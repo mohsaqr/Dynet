@@ -49,7 +49,14 @@
 #' @param dn A temporal network.
 #' @param data A nonempty data frame with a `name` key and one or more
 #'   attributes to add or replace. Only named nodes are changed.
-#' @return A new internally consistent `dynet` object.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with the same spells,
+#'   vertex activity and metadata as `dn` and the supplied attributes added to
+#'   or replaced on the named vertices. Unnamed vertices keep their existing
+#'   values, gaining `NA` in any column the network did not already have.
+#'   Raises `dynet_unknown_node` when a name is not a vertex, and
+#'   `dynet_bad_input` when `data` is malformed or names a cograph structural
+#'   column (`id`, `label`, `x`, `y`).
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
 #' update_nodes(dn, data.frame(name = "A", role = "initiator"))
@@ -106,22 +113,45 @@ update_nodes <- function(dn, data) {
 #'
 #' @param dn A temporal network.
 #' @param mapping A named character vector whose names are old node names and
-#'   values are replacements, or a two-column data frame named `old` and
-#'   `new`.
-#' @return A new `dynet` object with edge endpoints, node attributes, vertex
-#'   activity, cograph labels, and groups renamed together.
+#'   values are replacements, a two-column data frame named `old` and `new`,
+#'   or the name of one vertex attribute (given through `dynet(nodes = )`)
+#'   whose values become the node names. The attribute must be complete and
+#'   unique.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with edge endpoints, node
+#'   attributes, vertex activity, cograph labels, and groups renamed together.
+#'   Raises `dynet_unknown_node` when an old name is not a vertex,
+#'   `dynet_duplicate_node` when a replacement collides with a name that is
+#'   being kept, `dynet_unknown_attribute` when `mapping` names a column that
+#'   is not a vertex attribute, and `dynet_bad_input` otherwise.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' renamed <- rename_nodes(dn, c(Ana = "Anna", Ben = "Benjamin"))
+#' renamed
 #' @export
 rename_nodes <- function(dn, mapping) {
   .check_dynet(dn, "bounded")
   if (is.data.frame(mapping) && all(c("old", "new") %in% names(mapping))) {
     old <- as.character(mapping$old)
     new <- as.character(mapping$new)
+  } else if (is.character(mapping) && length(mapping) == 1L &&
+             is.null(names(mapping))) {
+    nodes <- as.data.frame(dn, what = "nodes")
+    if (!mapping %in% setdiff(names(nodes), "name")) {
+      stop(errorCondition(
+        sprintf("`%s` is not a vertex attribute. Supply it through `dynet(nodes = )`.",
+                mapping),
+        class = c("dynet_unknown_attribute", "dynet_bad_input"), call = NULL
+      ))
+    }
+    old <- as.character(nodes$name)
+    new <- as.character(nodes[[mapping]])
   } else if (is.character(mapping) && !is.null(names(mapping))) {
     old <- names(mapping)
     new <- as.character(mapping)
   } else {
     stop(errorCondition(
-      "`mapping` must be a named character vector or an old/new data frame.",
+      "`mapping` must be a named character vector, an old/new data frame, or one vertex attribute name.",
       class = "dynet_bad_input", call = NULL
     ))
   }
@@ -173,8 +203,21 @@ rename_nodes <- function(dn, mapping) {
 #' @param data A data frame with one row or one row per selected tie. Columns
 #'   may be canonical tie fields or arbitrary atomic spell attributes.
 #' @param loops Whether an endpoint update may introduce a new self-loop.
-#'   Existing loops may always be retained.
-#' @return A new internally consistent `dynet` object.
+#'   Existing loops may always be retained. Default `FALSE`.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, holding the unselected
+#'   spells unchanged and the selected spells with the supplied values
+#'   substituted. Because the edited spells are rebuilt together with the
+#'   rest, spell order and the canonical spell identifiers may change. Raises
+#'   `dynet_loop_not_allowed` when an endpoint update would create a new
+#'   self-loop without `loops = TRUE`, and `dynet_bad_input` when the
+#'   selection or `data` is malformed, or names the read-only derived columns
+#'   `duration` or `.raw_spell`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' marked <- update_ties(dn, ties = end - start > 1,
+#'                       data = data.frame(kind = "long"))
+#' marked
 #' @export
 update_ties <- function(dn, ties, data, loops = FALSE) {
   ties <- .select_ties(dn, substitute(ties), parent.frame())
@@ -337,16 +380,27 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #'   `room == "A" & betweenness > 0` -- with any centrality it names computed
 #'   over the whole observed period; or a character vector of names, a factor,
 #'   a logical mask, or any data frame carrying a `name` or `node` column. Only
-#'   ties whose two endpoints are in this set are eligible.
+#'   ties whose two endpoints are in this set are eligible. Default `NULL`,
+#'   meaning every vertex.
 #' @param ties Which ties to keep. Either a condition on the spell table,
 #'   evaluated the way [subset()] evaluates one -- `course == "g1"`,
 #'   `duration > 2 & weight >= 1` -- over the columns `as.data.frame(dn)`
 #'   returns, tie attributes included; or integer row positions or a logical
 #'   mask over that same table, in that order, a mask having exactly as many
-#'   elements as there are spells.
+#'   elements as there are spells. Default `NULL`, meaning every tie. At least
+#'   one of `nodes` and `ties` must be supplied.
 #' @param keep_isolates Whether named nodes without a selected tie remain.
-#' @return A new `dynet` object with selected ties, nodes, vertex activity, and
-#'   all static attributes retained.
+#'   Default `FALSE`; it has an effect only when `nodes` is supplied.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, carrying only the selected
+#'   spells, the vertices they touch (plus any isolate named in `nodes` when
+#'   `keep_isolates = TRUE`), those vertices' activity spells, and all static
+#'   node and tie attributes. Metadata is rebuilt, so the observed range and
+#'   the canonical spell identifiers describe the subgraph, not the parent.
+#'   Raises `dynet_unknown_node` for a name that is not a vertex,
+#'   `dynet_empty_network` when the selection leaves no vertex or no tie, and
+#'   `dynet_bad_input` when neither `nodes` nor `ties` is supplied or a
+#'   selection is malformed.
 #' @examples
 #' dn <- dynet(school_contacts)
 #'

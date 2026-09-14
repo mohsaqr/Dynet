@@ -16,7 +16,9 @@
 \item{...}{Ignored.}
 }
 \value{
-A \code{ggplot} object.
+A \code{ggplot} object, faceted by session when the result carries one.
+A result in which no tie is active raises an error of class
+\code{dynet_empty_result} rather than drawing an empty panel.
 }
 \description{
 Plot how many ties each snapshot holds

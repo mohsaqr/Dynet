@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A \code{dynet_paths} from \code{\link[=paths]{paths()}}.}
 
-\item{n}{Number of rows to show.}
+\item{n}{Number of rows to show. Defaults to twelve.}
 
 \item{...}{Ignored.}
 }
@@ -18,4 +18,10 @@
 }
 \description{
 Print time-respecting paths
+}
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+routes
+print(routes, n = 4)
 }

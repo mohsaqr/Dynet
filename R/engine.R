@@ -19,7 +19,7 @@
 #' Default value for `NULL`
 #'
 #' Identical in behaviour to the `%||%` that base R gained in 4.4.0. It is
-#' defined here so the package's 93 call sites can keep using the operator
+#' defined here so the package's 99 call sites can keep using the operator
 #' while the dependency floor stays at the 4.1 the native pipe requires;
 #' without it, `Depends: R (>= 4.4)` would exclude every R older than
 #' April 2024 for the sake of one operator. On R 4.4 and later this
@@ -94,7 +94,8 @@
 
 #' Validate a dynet object and its session argument
 #' @param dn Object to check.
-#' @param sessions Session handling mode.
+#' @param sessions Session handling mode, matched against `"bounded"`,
+#'   `"collapse"` and `"separate"`. Default `"bounded"`.
 #' @return The matched session mode, invisibly.
 #' @noRd
 .check_dynet <- function(dn, sessions = "bounded") {
@@ -273,7 +274,8 @@
 
 #' Encode observed vertex activity against the fixed vertex universe
 #' @param dn A `dynet` object.
-#' @param names Fixed vertex names.
+#' @param names Fixed vertex names, in the order the integer codes are to
+#'   follow. Defaults to `dn$nodes$name`.
 #' @return Collision-safe integer activity rows and a declared-vertex mask.
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2))
@@ -338,7 +340,7 @@
 
 #' Intersect raw spells with canonical observed support
 #' @param dn A `dynet` object.
-#' @param spells Raw canonical spell rows.
+#' @param spells Raw canonical spell rows. Defaults to `dn$spells`.
 #' @return Tidy observed fragments with raw provenance.
 #' @noRd
 .observed_fragments <- function(dn, spells = dn$spells) {
@@ -810,9 +812,11 @@
 #'
 #' @param enc Encoded edge list from `.encode()`.
 #' @param lo,hi Window boundaries.
-#' @param last Whether the window is closed on the right.
-#' @param window The window width, which selects the rule.
-#' @return A logical vector, one element per edge.
+#' @param last Whether the window is closed on the right. Default `FALSE`.
+#' @param window The window width, which selects the rule. Default `NULL`,
+#'   which takes the positive-window rule.
+#' @return A logical vector, one element per encoded observation fragment in
+#'   `enc`.
 #' @noRd
 .active <- function(enc, lo, hi, last = FALSE, window = NULL) {
   inst <- enc$instant
@@ -836,9 +840,10 @@
 #' @param activity Encoded activity from `.encode_vertex_activity()`.
 #' @param bin One row from the measurement grid.
 #' @param window Reporting-window width.
-#' @param session Optional session label. `NULL` applies global rows; a label
-#'   applies global rows and matching session rows.
+#' @param session Optional session label, default `NULL`, which applies global
+#'   rows; a label applies global rows and matching session rows.
 #' @param erase_sessions Whether all session labels are calendar-unioned.
+#'   Default `FALSE`.
 #' @return A fixed-order logical vector.
 #' @examples
 #' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 2),
@@ -978,7 +983,8 @@
 #' @param enc Encoded edge list.
 #' @param active Logical vector selecting active edges.
 #' @param directed Whether to keep edge direction.
-#' @param weighted Whether cells hold summed weights or spell counts.
+#' @param weighted Whether cells hold summed weights or spell counts. Default
+#'   `FALSE`, meaning spell counts.
 #' @return A square numeric matrix with vertex names on both margins.
 #' @noRd
 .adjacency <- function(enc, active, directed, weighted = FALSE) {
@@ -1059,7 +1065,7 @@
 #' enc <- Dynet:::.encode(dn)
 #' grid <- data.frame(bin = 1:2, lo = (5:6) * (1 / 24), hi = (6:7) * (1 / 24),
 #'                    time = (5:6) * (1 / 24), closed = c(FALSE, TRUE))
-#' Dynet:::.snap_grid(grid, enc, dn)$hi[1] == 6 / 24
+#' Dynet:::.snap_grid(grid, enc, dn)
 #' @noRd
 .snap_grid <- function(grid, enc, dn) {
   if (!nrow(grid)) return(grid)
@@ -1111,10 +1117,12 @@
 #' @param sessions Session mode.
 #' @param fun Function of `(enc, active, bin)`, plus `state` when `snapshot`
 #'   is true.
-#' @param spec A resolved measurement grid from `.window_spec()`.
-#' @param node_level Whether `fun` returns one value per vertex.
+#' @param spec A resolved measurement grid from `.window_spec()`. Default
+#'   `NULL`, which resolves the network's own default grid.
+#' @param node_level Whether `fun` returns one value per vertex. Default
+#'   `FALSE`.
 #' @param snapshot Whether to apply declared vertex eligibility and pass the
-#'   resulting snapshot state to `fun`.
+#'   resulting snapshot state to `fun`. Default `FALSE`.
 #' @return A long data frame with `session`, `time`, optionally `node`, plus
 #'   `measure` and `value`.
 #' @examples

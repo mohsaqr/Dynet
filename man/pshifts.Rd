@@ -15,17 +15,26 @@ pshifts(
 )
 }
 \arguments{
-\item{dn}{A directed temporal network from \code{\link[=dynet]{dynet()}}.}
+\item{dn}{A directed temporal network from \code{\link[=dynet]{dynet()}}. An undirected network
+raises an error of class \code{dynet_needs_directed}.}
 
-\item{sessions}{Session aggregation policy.}
+\item{sessions}{Session aggregation policy: \code{"bounded"} (the default) reads
+each session as its own turn sequence and pools the counts, \code{"collapse"}
+erases session labels and reads one calendar-ordered sequence, and
+\code{"separate"} reports each session on its own rows. \code{"separate"} needs a
+network built with a session column and raises \code{dynet_no_sessions}
+otherwise.}
 
-\item{output}{Return final class totals or cumulative rows.}
+\item{output}{\code{"final"} (the default) for one row per shift class,
+\code{"cumulative"} for the running class vector at every turn.}
 
 \item{start, end}{Optional inclusive query limits; each query is a fresh
-sequence and never uses a predecessor outside the range.}
+sequence and never uses a predecessor outside the range. A network built
+from dates may be addressed with dates.}
 
 \item{group_events}{Infer one group-directed turn from simultaneous distinct
-recipients (\code{"simultaneous"}), or retain every dyadic row (\code{"none"}).
+recipients (\code{"simultaneous"}, the default), or retain every dyadic row
+(\code{"none"}).
 Several turns at one instant are ordered by speaker, then group turn
 before dyadic turn, then target, each in the network's vertex order; the
 classification of consecutive turns depends on that order, so under
@@ -46,7 +55,11 @@ Gibson label), \code{family} (the label's group) and \code{count}.
 per classified turn, with \code{sequence} and \code{event} locating the turn in its
 sequence, \code{time}, \code{speaker}, \code{target} and \code{group} describing the turn,
 and \code{shift}, \code{family} and \code{count} carrying the running total of that
-class up to and including the turn.
+class up to and including the turn. Either shape gains a leading
+\code{session} column under \code{sessions = "separate"}, which reports each
+session on its own rows; \code{"bounded"} and \code{"collapse"} carry no session
+column. Print it, \code{\link[=summary]{summary()}} it, \code{\link[=plot]{plot()}} it, or take the plain frame
+with \code{\link[=as.data.frame]{as.data.frame()}}.
 }
 \description{
 Gibson participation shifts from raw temporal turns
@@ -60,6 +73,19 @@ duplicate multiplicity, and simultaneous-recipient group inference are
 retained in metadata. \code{output = "final"} emits one typed row per class;
 \code{output = "cumulative"} emits the running class vector for each turn.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_needs_directed} (an undirected network; the class vector is
+\code{c("dynet_needs_directed", "dynet_bad_input")}), \code{dynet_no_sessions}
+(\code{sessions = "separate"} without a session column),
+\code{dynet_outside_observation} (the requested range misses observed support;
+it also carries \code{dynet_bad_input}),
+and \code{dynet_bad_input} for every other broken contract -- \code{dn} not a
+\code{dynet}, and a \code{start} or \code{end} that is not a single finite time. An
+unmatched \code{sessions}, \code{output} or \code{group_events} is rejected by
+\code{\link[=match.arg]{match.arg()}} and is a plain error, not a classed one.
+}
+
 \examples{
 dn <- dynet(data.frame(
   from = c("A", "B"), to = c("B", "A"), start = c(1, 2), end = c(1, 2)

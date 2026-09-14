@@ -14,20 +14,31 @@ table, evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{
 \code{room == "A" & betweenness > 0} -- with any centrality it names computed
 over the whole observed period; or a character vector of names, a factor,
 a logical mask, or any data frame carrying a \code{name} or \code{node} column. Only
-ties whose two endpoints are in this set are eligible.}
+ties whose two endpoints are in this set are eligible. Default \code{NULL},
+meaning every vertex.}
 
 \item{ties}{Which ties to keep. Either a condition on the spell table,
 evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{course == "g1"},
 \code{duration > 2 & weight >= 1} -- over the columns \code{as.data.frame(dn)}
 returns, tie attributes included; or integer row positions or a logical
 mask over that same table, in that order, a mask having exactly as many
-elements as there are spells.}
+elements as there are spells. Default \code{NULL}, meaning every tie. At least
+one of \code{nodes} and \code{ties} must be supplied.}
 
-\item{keep_isolates}{Whether named nodes without a selected tie remain.}
+\item{keep_isolates}{Whether named nodes without a selected tie remain.
+Default \code{FALSE}; it has an effect only when \code{nodes} is supplied.}
 }
 \value{
-A new \code{dynet} object with selected ties, nodes, vertex activity, and
-all static attributes retained.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, carrying only the selected
+spells, the vertices they touch (plus any isolate named in \code{nodes} when
+\code{keep_isolates = TRUE}), those vertices' activity spells, and all static
+node and tie attributes. Metadata is rebuilt, so the observed range and
+the canonical spell identifiers describe the subgraph, not the parent.
+Raises \code{dynet_unknown_node} for a name that is not a vertex,
+\code{dynet_empty_network} when the selection leaves no vertex or no tie, and
+\code{dynet_bad_input} when neither \code{nodes} nor \code{ties} is supplied or a
+selection is malformed.
 }
 \description{
 Extract an induced temporal subgraph

@@ -19,30 +19,36 @@ durations(
 
 \item{measure}{For pair unit, one or more of \code{"events"} (number of spells),
 \code{"total"} (summed duration), \code{"union"} (binary pair occupancy), \code{"mean"},
-\code{"median"}, \code{"first"}, and \code{"last"}. For spell unit, one or more of
+\code{"median"}, \code{"first"}, and \code{"last"}; its default is
+\code{c("events", "total", "mean")}. For spell unit, one or more of
 \code{"duration"}, \code{"first"}, and \code{"last"}; its default is \code{"duration"}.
 Vertex-activity unit allows the pair-like measures and defaults to
 \code{"events"}, \code{"total"}, and \code{"union"}; vertex-spell unit allows the same
 measures as edge spell and defaults to \code{"duration"}.
 Node-ties unit allows \code{"events"} (incident raw-spell endpoint stubs),
 \code{"total"} (their summed endpoint-valid duration), and \code{"union"} (binary
-incident calendar exposure), defaulting to events and total.}
+incident calendar exposure), defaulting to events and total. A measure
+the chosen unit does not offer raises a \code{dynet_unknown_measure} error.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions: \code{"bounded"} (the default),
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
-\item{censored}{Whether to \code{"include"} known follow-up or \code{"exclude"} an
-entire edge raw spell or canonical vertex component with either explicit
-outer censor flag. Administrative observation cuts never cause exclusion.}
+\item{censored}{Whether to \code{"include"} known follow-up, the default, or
+\code{"exclude"} an entire edge raw spell or canonical vertex component with
+either explicit outer censor flag. Administrative observation cuts never
+cause exclusion.}
 
-\item{unit}{\code{"pair"} retains the existing pair summary and adds union
-duration; \code{"spell"} returns one row per retained raw edge-spell identity;
-\code{"vertex_activity"} returns fixed-node aggregates; \code{"vertex_spell"}
-returns retained canonical V01 activity identities; \code{"node_ties"} returns
-fixed-node incident-tie quantities.}
+\item{unit}{\code{"pair"}, the default, retains the existing pair summary and
+adds union duration; \code{"spell"} returns one row per retained raw
+edge-spell identity; \code{"vertex_activity"} returns fixed-node aggregates;
+\code{"vertex_spell"} returns retained canonical V01 activity identities;
+\code{"node_ties"} returns fixed-node incident-tie quantities.}
 
-\item{mode}{For \code{unit = "node_ties"}, \code{"out"}, \code{"in"}, or \code{"all"} endpoint
-incidence. Undirected networks normalize every request to \code{"all"}. An
-explicitly supplied mode is invalid for every other duration unit.}
+\item{mode}{For \code{unit = "node_ties"}, \code{"out"} (the default), \code{"in"}, or
+\code{"all"} endpoint incidence. Undirected networks normalise every request
+to \code{"all"}. Supplying \code{mode} explicitly for any other duration unit
+raises a \code{dynet_incompatible_duration_mode} error; leaving it at its
+default is what makes the other units legal.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
@@ -111,7 +117,7 @@ both endpoint stubs. A retained loop therefore contributes once to out,
 once to in, and twice to additive all-mode events/total; undirected results
 use the same two-stub rule. In contrast, node-tie \code{union} Boolean-unions all
 positive incident fragments, so loops, reciprocal overlap, duplicate rows,
-and simultaneous neighbors occupy calendar time only once. Consequently
+and simultaneous neighbours occupy calendar time only once. Consequently
 \code{union <= total}, and directed all equals out plus in only for events and
 total. Formally, for endpoint-stub multiplicity \code{c[v,i,m]}, retained raw
 identity duration \code{d[i]}, and positive support \code{F[i]}, node-tie events are

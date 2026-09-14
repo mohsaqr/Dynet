@@ -85,9 +85,11 @@
 #' sequence necessarily share an arrival time, and a test asserts it.
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param from Optional source vertex. One name gives the routes leaving that
-#'   vertex. The default pools every vertex, which is the network-wide
-#'   question, and adds a `from` column naming each route's source.
+#' @param from Optional source vertex. A name gives the routes leaving that
+#'   vertex, and several names give the routes leaving each of them. The
+#'   default, `NULL`, pools every vertex, which is the network-wide question,
+#'   and is the only case that adds a `from` column naming each route's source;
+#'   a named source is already the first step of every `route` string.
 #' @param top Optional number of routes to keep, most frequent first. The
 #'   default keeps all of them.
 #' @param min_hops Shortest route to report. Defaults to one, which drops the
@@ -103,9 +105,18 @@
 #' @return An object of class `dynet_pathways`, a data frame with one row per
 #'   distinct route, most frequent first: `route`, the vertex sequence joined
 #'   by arrows; `endpoint`, where it lands; `count`, how many optimal routes
-#'   follow it; `share`, its fraction of the counted total; `n_hops`; and
-#'   `arrival_time`. Pooling over every source adds `from` as the first
-#'   column. Use `as.data.frame()` for a plain frame.
+#'   follow it; `share`, its fraction of every counted route, so the shares of
+#'   a result limited by `top` do not sum to one; `n_hops`; and
+#'   `arrival_time`, the earliest time the route lands. Pooling over every
+#'   source adds `from` as the first column. Use `as.data.frame()` for a plain
+#'   frame and `as.data.frame(x, what = "steps")` for the per-hop timing of
+#'   the routes that were kept.
+#'
+#'   An unknown `from` raises `dynet_unknown_node`; a `top` or `min_hops` that
+#'   is not one finite number in range raises `dynet_bad_input`; and a query
+#'   that leaves no route of at least `min_hops` hops raises
+#'   `dynet_empty_result`. Conditions raised by [paths()] on the arguments
+#'   passed through `...` reach the caller unchanged.
 #'
 #' @seealso [paths()] for reachability, [path_trajectories()] for the prefix
 #'   tree those routes share.
@@ -242,9 +253,13 @@ as.data.frame.dynet_pathways <- function(x, row.names = NULL, optional = FALSE,
 #' @param x A `dynet_pathways` result.
 #' @param n Number of routes to show. Defaults to twelve.
 #' @param ... Ignored.
-#' @return `x`, invisibly.
+#' @return `x`, invisibly. Called for the side effect of printing a header
+#'   giving the number of distinct routes and of optimal routes counted,
+#'   followed by the first `n` rows.
 #' @examples
-#' pathways(dynet(school_contacts), from = "Ana")
+#' dn <- dynet(school_contacts)
+#' routes <- pathways(dn, from = "Ana")
+#' print(routes)
 #' @export
 print.dynet_pathways <- function(x, n = 12L, ...) {
   total <- attr(x, "distinct")
@@ -315,8 +330,10 @@ summary.dynet_pathways <- function(object, ...) {
 #' @param labels Whether to name the vertex at each step. `TRUE` by default;
 #'   turn it off for a dense figure where the shape is the point.
 #' @param base_size Base font size, as in [ggplot2::theme_minimal()].
+#'   Defaults to twelve.
 #' @param ... Ignored.
-#' @return A `ggplot` object.
+#' @return A `ggplot` object. A `top`, `labels` or `base_size` that is not one
+#'   valid value raises `dynet_bad_input`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' routes <- pathways(dn, from = "Ana")

@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A \code{dynet_snapshot} from \code{\link[=snapshots]{snapshots()}}.}
 
-\item{n}{Number of rows to show.}
+\item{n}{Number of rows to show; ten by default.}
 
 \item{...}{Ignored.}
 }
@@ -20,5 +20,7 @@
 Print snapshot edges
 }
 \examples{
-snapshots(dynet(school_contacts), at = 3)
+dn <- dynet(school_contacts)
+bins <- snapshots(dn, at = 3)
+bins
 }

@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A \code{dynet_metric}.}
 
-\item{n}{Number of rows to keep.}
+\item{n}{Number of rows to keep. Defaults to six.}
 
 \item{...}{Passed to the default method.}
 }
@@ -20,4 +20,9 @@ so its header stays true to the series.
 \description{
 The counterpart of \code{\link[=head.dynet_metric]{head.dynet_metric()}}; the header still describes the
 series and a \verb{last n of N rows} line records the truncation.
+}
+\examples{
+dn <- dynet(school_contacts)
+degree <- dyn_centrality(dn, step = 4, window = 4)
+tail(degree)
 }
