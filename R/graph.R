@@ -80,6 +80,19 @@
 #'   with `step`, and under `sessions = "separate"` or discontinuous
 #'   observation it gives one window per session or observed component.
 #'
+#' @param basis For `"temporal_efficiency"` and `"temporal_diameter"` only:
+#'   what a temporal distance counts. `"hops"`, the default, counts contacts,
+#'   so a reciprocal is always in `(0, 1]` and efficiency is finite.
+#'   `"latency"` counts elapsed time from the source, which at
+#'   `traversal_time = 0` can be exactly zero for a journey completed within
+#'   one instant; efficiency is then infinite, and a `dynet_zero_latency`
+#'   warning says so rather than the value being clamped away. Naming it
+#'   without a path measure raises `dynet_bad_input`.
+#' @param traversal_time For `"temporal_efficiency"` and
+#'   `"temporal_diameter"` only: nonnegative duration charged for every
+#'   temporal-path hop, in the network's time unit; `0` by default. A calendar
+#'   network also accepts a scalar `difftime`. Naming it without a path
+#'   measure raises `dynet_bad_input`.
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the

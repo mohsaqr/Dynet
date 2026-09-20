@@ -66,6 +66,21 @@ right so an event at the final instant is inside it; it cannot be combined
 with \code{step}, and under \code{sessions = "separate"} or discontinuous
 observation it gives one window per session or observed component.}
 
+\item{basis}{For \code{"temporal_efficiency"} and \code{"temporal_diameter"} only:
+what a temporal distance counts. \code{"hops"}, the default, counts contacts,
+so a reciprocal is always in \verb{(0, 1]} and efficiency is finite.
+\code{"latency"} counts elapsed time from the source, which at
+\code{traversal_time = 0} can be exactly zero for a journey completed within
+one instant; efficiency is then infinite, and a \code{dynet_zero_latency}
+warning says so rather than the value being clamped away. Naming it
+without a path measure raises \code{dynet_bad_input}.}
+
+\item{traversal_time}{For \code{"temporal_efficiency"} and
+\code{"temporal_diameter"} only: nonnegative duration charged for every
+temporal-path hop, in the network's time unit; \code{0} by default. A calendar
+network also accepts a scalar \code{difftime}. Naming it without a path
+measure raises \code{dynet_bad_input}.}
+
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
 its tidy table, invisibly when it has drawn, so \code{plot = TRUE} saves the
