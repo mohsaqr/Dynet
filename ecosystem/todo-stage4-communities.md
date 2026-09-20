@@ -399,6 +399,15 @@ real work. Roughly 120 lines of R and 200 of tests.
 
 ## 3. Detect temporal communities by generalized Louvain
 
+> **From honets (2026-09-06, TODO.md H2), additive.** `temporal_communities()`
+> already runs `seeds` with `method = "louvain" | "consensus"` and reports
+> `stability_ari`. Add `method = "medoid"`: the run with the largest summed
+> adjusted mutual information to every other run (honets
+> `R/hypergraph_communities.R`, `hg_communities()` lines 148-180). Then a
+> `compare_communities(...)` verb shaped like `hg_compare_communities()`:
+> summary, similarity (AMI/ARI/NMI), sizes and quality tables reached with
+> `what =`, and a similarity heatmap through `cograph::plot_heatmap()`.
+
 **Why.** This is the hole: no R package optimises the Mucha quality function
 over a time-expanded network. `multinet::glouvain_ml()` reaches it only by
 pretending time bins are unordered aspect-layers, and the aspect-layer

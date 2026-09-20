@@ -225,6 +225,12 @@ the two column layouts, and the tests. No new mathematics, no new numerical risk
 
 # A2 — `persistence()`: node-level topological overlap and the temporal correlation coefficient
 
+> **From honets (2026-09-06).** A ready significance step: honets'
+> `hg_null_test(statistic = "repeated_pairs", method = "assignment")`
+> (`R/hypergraph_null.R`) is the repeated-collaboration test of Coupette et
+> al. (2024, footnote 7). The same statistic against `randomise()` is the
+> natural `significance()` companion to persistence and turnover.
+
 **Title.** Add a `persistence()` verb reporting per-vertex topological overlap
 between consecutive slices, its per-vertex mean, and the network-level temporal
 correlation coefficient.
@@ -577,6 +583,13 @@ place where the cograph-Hamming scale mismatch will bite anyone who copies from
 
 # A1 — Temporal efficiency and temporal diameter as `metrics()` measures
 
+> **From honets (2026-09-06, TODO.md H3).** For the static per-window diameter
+> and the component table, lift `.thg_diameter()` / `.thg_components()` /
+> `.thg_component_table()` from honets `R/hypergraph_series.R`: the
+> reachability power `(reach %*% (A + I) > 0)` iterated to a fixed point,
+> no per-node BFS (15 ms vs 84 ms per 200-node snapshot). The temporal
+> diameter over journeys still comes from `paths()` as specified below.
+
 **Title.** Add `"temporal_efficiency"` and `"temporal_diameter"` to `metrics()`,
 computed from all-pairs time-respecting paths inside each reporting window.
 
@@ -867,6 +880,15 @@ attempted alone**, because it would have to build the distance matrix itself.
 ---
 
 # C1 — `motifs()`: a δ-temporal three-node motif census
+
+> **From honets (2026-09-06, TODO.md H1).** Build the null side on honets'
+> scaffolding, not from scratch: `R/hypergraph_null.R` `.thg_assignment_draw()`
+> (degree-ordered assignment without replacement, the null that reproduced
+> Coupette et al.'s z-scores where stub matching overshot by 2x), the swap
+> chain, z-scores with draws kept, and the `honets_motifs` result class with
+> its draws accessor and plot (`R/hypergraph_motifs.R`). The Y/T/O census
+> itself is static hypergraph code and stays there; the δ-temporal census
+> specified below goes inside that skeleton.
 
 **Title.** Add a `motifs()` verb counting Paranjape δ-temporal three-edge,
 up-to-three-node motifs, globally and per vertex.

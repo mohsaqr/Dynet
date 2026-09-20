@@ -46,19 +46,86 @@ is an improvement, not a prerequisite.
 ## Item order
 
 ```
-1  layout_sequence()            ── no dependencies
-2  animate()                    ── needs 1
+1  layout_sequence()            ── extraction + alignment + stress (re-scoped)
+2  animate()                    ── DONE (0.4.6); built its own chain, so it
+                                   never waited for 1
 3  stable layout in static views ── needs 1
 4  time-varying node attributes ── no dependencies
 5  event_graph()                ── no dependencies
 6  export / interop verbs       ── TEA half needs 4
 ```
 
-Items 4, 5 and 6 are independent of 1–3 and can be worked in parallel.
+The stated dependency 1 -> 2 inverted in practice: item 2 shipped first with a
+private layout chain, so item 1 is now partly an extraction of it and carries
+the obligation to make `animate()` consume the result. Item 3 becomes cheaper
+for the same reason — the machinery exists, it is only unexported.
+
+Items 4, 5 and 6 are independent of 1-3 and can be worked in parallel.
 
 ---
 
 # 1. Compute a stable layout sequence, one position per vertex per slice
+
+> **Re-scoped 2026-09-20, after `animate()` arrived from `main`.**
+>
+> This item was written when nothing in the package chained a layout across
+> slices. `main`'s 0.4.6 shipped `animate()` (item 2) first, and it built a
+> private layout chain to do it. Item 1 is therefore no longer a build from
+> nothing: it is an **extraction and generalisation** of `R/animate.R`, plus
+> the half that animate never needed. Measured in the merged tree on
+> 2026-09-20.
+>
+> **Already built, inside `R/animate.R`, unexported:**
+>
+> | Spec step | Where it lives | Note |
+> |---|---|---|
+> | 2. Fixed vertex universe | `animate()` body, `n_vertices <- nrow(dn$nodes)` | Every frame carries all vertices in `dn$nodes` order, so chained seeding is positionally safe by construction. The spec asked for name-based selection to get the same guarantee. |
+> | 3. Deterministic seeding | `.with_seed()`, `seed = 42L` | `.with_seed()` now lives in `R/random.R` after the merge. |
+> | 4. `method = "spring"` (chained) | `.relaxed_layouts()` | The fold the spec describes: each frame seeded with `initial = previous`. |
+> | 4. `method = "fixed"` | `.animation_layouts()`, `layout = "spring"` | One `layout_spring()` over `.union_netobject(frames)`, repeated. `"circle"`, `"oval"` and `"groups"` are three more zero-motion baselines the spec did not list. |
+> | Custom coordinates | `.custom_layout()` | Matches **by name** (`match(x$nodes$name, given)`), validates completeness and finiteness, raises `dynet_missing_column` / `dynet_unknown_node`. Reusable as-is. |
+>
+> **Not built, and still the real work:**
+>
+> - **Alignment, in full.** `grep -n "svd(\|procrustes\|centroid" R/animate.R`
+>   returns nothing. Neither `"procrustes"` nor `"translate"` exists anywhere in
+>   the package. This is step 5 of the algorithm above and the item's main
+>   claim; `animate()` gets its continuity from chained seeding alone.
+> - **Stress majorization** (`method = "stress"`), and with it the
+>   `dynet_no_converge` warning and the `converged` column.
+> - **`method = "attribute"`.** `.custom_layout()` takes a coordinate *table*,
+>   not the names of two vertex columns.
+> - **Global normalisation** across the whole sequence. `.scale_to()` is a
+>   generic rescaler used at draw time, not a one-pass global box.
+> - **`displacement`**, and every diagnostic built on it — the `summary()`
+>   row per slice, the `plot()` curve.
+> - **The public surface**: the verb, the `dynet_layout` class, and its
+>   `print` / `summary` / `plot` / `as.data.frame` methods.
+>
+> **Two things `animate()` has that this spec never proposed**, and that need a
+> decision before extraction:
+>
+> 1. `max_displacement` and `anchor_strength`, passed through to
+>    `cograph::layout_spring()`. They constrain motion directly, which is a
+>    different lever on the same problem as alignment. Does
+>    `layout_sequence()` expose them, or does alignment supersede them?
+> 2. `.smooth_positions()` — a 1-2-1 binomial smoother over each vertex's
+>    position across frames, applied after the fold. It **conflicts with step
+>    7** as written: the spec computes `displacement` after alignment and
+>    normalisation so that it measures what the viewer sees, but a smoother
+>    moves vertices *after* the layout solved for their positions. Either
+>    smoothing becomes an argument and step 7 runs after it, or `animate()`
+>    keeps smoothing as a render-time concern and `layout_sequence()` returns
+>    unsmoothed positions. Not decided.
+>
+> **Refactor obligation.** When this lands, `animate()` must consume
+> `layout_sequence()` instead of keeping `.animation_layouts()` and
+> `.relaxed_layouts()`. Two layout engines in one package will drift, and the
+> animation is the thing that proves the sequence is right.
+>
+> **Effort — still L**, but the balance has moved: less plumbing, and the
+> algorithmic core (Procrustes, SMACOF) is untouched and unchanged.
+
 
 **Why.** Every one of Dynet's nine plot types either draws one moment or draws
 every moment on one page; none of them can say where a vertex *went*. A layout
@@ -247,6 +314,22 @@ seedable; `svd()`, `.geodesic()` and the rest are base R and existing internals.
 ---
 
 # 2. Render the layout sequence as an animation
+
+> **DONE — shipped on `main` as 0.4.6, merged into `next` 2026-09-20.**
+>
+> `animate()` exists and goes past this spec: GIF via `gifski` and mp4/webm via
+> `av` chosen by file extension, `tween` frames per bin with interpolated
+> positions and sizes, `ease` as a dwell or a continuous Catmull-Rom path,
+> forming / persisting / dissolving ties styled by line type and colour, tie
+> width on one weight scale across the whole film, vertex area proportional to
+> a `dyn_centrality()` name or result or a numeric attribute, `absent` and
+> `isolates` policies, a timeline strip with a key, and a bin table with
+> `summary()` turnover and `as.data.frame(what = "frames")`.
+>
+> It does **not** depend on item 1, because it carries its own layout chain.
+> See the re-scope note on item 1: closing that gap means `animate()` gives
+> the chain up and consumes the verb.
+
 
 **Why.** This is the largest visible gap against ndtv, the field's benchmark.
 Dynet has nine static views and nothing that moves, so the one thing a temporal
@@ -446,6 +529,14 @@ explicitly **not** proposed.
 ---
 
 # 3. Give the static views the stable layout, and add a time-prism view
+
+> **Cheaper than written, 2026-09-20.** `animate()` already computes a chained
+> layout per bin and already draws bins through `cograph::splot()` with
+> per-frame vertex positions. The static views need the same positions without
+> the film. Once item 1 exports the sequence, this is wiring, not algorithm --
+> the part that was expensive (a layout that does not jump between slices)
+> exists and is proven by the animation.
+
 
 **Why.** `.splot_snapshots()` currently pins one `cograph::layout_oval()` across
 every panel: comparable, but structurally blind — every panel is the same ring

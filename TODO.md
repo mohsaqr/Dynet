@@ -41,7 +41,7 @@ interval, which the project's own standards forbid.
 | 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **DONE** (all 14) |
 | 3 | Global temporal measures, inter-event times, motifs | 7 | 2 / 3 / 2 | Stage 2 for path-dependent items |
 | 4 | Temporal communities and phases | 7 | 1 / 5 / 1 | **DONE** (items 1-7) |
-| 5 | Animation, representation, interop | 6 | 0 / 3 / 3 | nothing |
+| 5 | Animation, representation, interop | 6 | 0 / 3 / 3 | item 2 **DONE** (`animate()`, 0.4.6); items 1 and 3 re-scoped |
 | | **Total** | **45** | **11 / 24 / 10** | |
 
 ```
@@ -94,6 +94,30 @@ must be verified against, the specific tests required, and an effort estimate.
 - Stage 3 — `ecosystem/todo-stage3-measures.md`
 - Stage 4 — `ecosystem/todo-stage4-communities.md`
 - Stage 5 — `ecosystem/todo-stage5-visual.md`
+
+## Taken from honets (added 2026-09-06)
+
+`honets` (`../hypernets`, 0.3.2) reproduced Coupette, Hartung & Katz (2024)
+and in doing so built three pieces of machinery Dynet's roadmap still lacks.
+They are hypergraph code and are **not** copied across as verbs; what carries
+over is the scaffolding, filed against the items it serves. Every reference
+below was read in the honets tree on 2026-09-06.
+
+| # | Take | Serves | From (honets) |
+|---|---|---|---|
+| H1 | The null-model scaffolding: the degree-ordered **assignment** null (the one that reproduced the paper's z-scores where stub matching gave 2x), the degree-preserving swap chain, z-scores with the draws kept, and a result class with a draws accessor and a plot. Not the Y/T/O census itself, which is static and hypergraph-specific. | Stage 3 C1 `motifs()`, Stage 1 A2 `significance()` (`method = "assignment"`) | `R/hypergraph_null.R` `.thg_assignment_draw()`, `hg_null_test(method = "assignment")`; `R/hypergraph_motifs.R` `hg_motifs()`, `honets_motifs` class, `as.data.frame()` draws accessor, `plot.honets_motifs()` |
+| H2 | The **medoid rule** for a multi-seed partition (the run with the largest summed adjusted mutual information to every other run) and the `compare_communities()` shape: summary, similarity, sizes and quality tables from one call, with a similarity heatmap. Dynet already runs several seeds with `method = "consensus"` and `stability_ari`; this adds the medoid as a third `method` and the comparison verb. | Stage 4 item 3 `temporal_communities()` (additive), Stage 4 `compare_communities()` | `R/hypergraph_communities.R` `hg_communities()` lines 148-180, `hg_compare_communities()` |
+| H3 | The **reachability-power diameter** and per-window component sweep: `(reach %*% (A + I) > 0)` iterated until it stops changing gives eccentricities without a per-node BFS (15 ms against 84 ms per 200-node snapshot; a 1,077-snapshot sweep went from 67 s to 7 s). | Stage 3 A1 `metrics(temporal_diameter)` and the per-window component table | `R/hypergraph_series.R` `.thg_diameter()`, `.thg_components()`, `.thg_component_table()`, `hg_growth()` |
+
+Worth a look, not a port: the repeated-pairs statistic against the assignment
+null (`hg_null_test(statistic = "repeated_pairs")`) is a ready significance
+step for Stage 3 A2 `persistence()` and A3 `turnover()`.
+
+Nothing to take from `temporal_hypergraph()` or the s-line-graph edge
+centrality; those sit on honets' side of the boundary (Dynet owns pairwise
+temporal ties, honets owns hyperedges). The open item there runs the other
+way: honets should adopt Dynet's constructor vocabulary and time parsing,
+filed in the honets prompt of 2026-09-06.
 
 No item anywhere proposes a new `Imports` dependency. The only addition
 proposed at all is `jsonlite` in `Suggests`, used solely in a guarded test.
