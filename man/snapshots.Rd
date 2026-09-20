@@ -23,8 +23,9 @@ snapshots(
 cover it. A network built from dates may be addressed with a date.
 With the default disjoint tiling that is one bin; with an
 overlapping \code{window} every bin containing the time is returned. A time
-outside every bin falls back to the nearest bin rather than an empty
-result, so \code{at} never returns zero rows on a nonempty network.}
+outside every bin falls back to the nearest bin rather than failing, but
+that bin may itself hold no active tie, in which case the result is a
+zero-row frame with the documented columns.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
 \code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}. \code{"separate"}

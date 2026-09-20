@@ -322,7 +322,8 @@ the centrality kernel's ordinary static result. At temporal scope, declared
 vertex activity gates the exact source anchor and every hop. Waiting after a
 valid anchor may cross inactivity; interval traversal requires both endpoints
 through completion, while a point trigger requires the receiver again after
-any traversal delay. Fixed node rows and pre-V04 denominators are retained.
+any traversal delay. Fixed node rows and full-network denominators are
+retained.
 }
 \section{Conditions}{
 

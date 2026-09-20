@@ -47,7 +47,8 @@ as_dynet.dynet <- function(x, ...) {
 #' Dynamic edge attributes other than activity itself are not part of the
 #' `networkDynamic` spell-list interface and are therefore not imported.
 #' Ordinary per-edge attributes are repeated onto every imported spell of the
-#' corresponding aggregate edge.
+#' corresponding aggregate edge, matched on the canonical endpoint order
+#' [dynet()] stores, so an undirected pair carries its own attributes.
 #'
 #' @param x A `networkDynamic` object.
 #' @param name_attribute Optional vertex attribute holding the public node
@@ -324,8 +325,18 @@ as_dynet.networkDynamic <- function(
     vertex_spells = vertex_spells
   )
   if (length(extras)) {
-    ordering <- order(imported$start, imported$end, imported$from, imported$to)
-    for (attribute in extras) out$spells[[attribute]] <- imported[[attribute]][ordering]
+    # `dynet()` canonicalises an undirected pair with pmin/pmax (R/dynet.R:313)
+    # BEFORE it sorts (R/dynet.R:318). Ordering on the raw tail and head here
+    # produced a different permutation, so each extra attribute landed on the
+    # wrong spell whenever the two disagreed -- silently, and only when
+    # undirected.
+    directed <- network::is.directed(x)
+    key_from <- if (directed) imported$from else pmin(imported$from, imported$to)
+    key_to <- if (directed) imported$to else pmax(imported$from, imported$to)
+    ordering <- order(imported$start, imported$end, key_from, key_to)
+    out$spells[extras] <- lapply(extras, function(attribute) {
+      imported[[attribute]][ordering]
+    })
   }
   out$meta$source <- "networkDynamic"
   out$meta$legacy_source <- "networkDynamic"

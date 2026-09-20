@@ -28,8 +28,9 @@ metrics(
 \code{"centralization_degree"}, \code{"centralization_betweenness"},
 \code{"centralization_closeness"}, \code{"triads"}, \code{"connectedness"},
 \code{"efficiency"}, \code{"hierarchy"}, \code{"lubness"}. \code{"triads"} expands to the
-sixteen triad classes; the last four are Krackhardt's indices of
-hierarchy. Lightweight structural summaries are \code{"degree_mean"},
+sixteen triad classes; those four are Krackhardt's indices of how far a
+directed network departs from a pure out-tree, only one of which is
+hierarchy itself. Lightweight structural summaries are \code{"degree_mean"},
 \code{"degree_variance"}, \code{"degree_min"}, \code{"degree_max"},
 \code{"mean_degree"}, \code{"indegree_1_5"}, \code{"outdegree_1_5"}, \code{"triangles"},
 \code{"concurrent_nodes"}, \code{"concurrent_share"}, \code{"in_2stars"},

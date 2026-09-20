@@ -24,6 +24,10 @@ attributes included; or integer positions or a logical mask over that
 table.}
 
 \item{from, to, start, end, session}{Optional selectors combined by conjunction.
+\code{start} and \code{end} match a spell's own boundary, compared with the
+package's magnitude-relative time tolerance rather than exactly, so a
+selector written \code{0.3} still matches a spell that accumulated as
+\code{0.1 + 0.1 + 0.1}.
 When \code{ties} is supplied, these selectors must be omitted. On undirected
 networks \code{from} and \code{to} must be supplied together and their order is
 ignored.}

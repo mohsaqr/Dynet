@@ -94,7 +94,7 @@
 #' Every fixed-universe vertex receives one state in every emitted slice.
 #' `active` records whether the vertex was eligible in that slice. Identity
 #' arcs are retained through inactive slices because Dynet permits waiting
-#' through vertex inactivity; inactive states simply have no incident
+#' through vertex inactivity; inactive states have no incident
 #' endpoint-induced within-slice edge. Consecutive observed slices are also
 #' linked across an observation gap, matching Dynet's calendar-time waiting
 #' convention.

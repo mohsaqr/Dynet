@@ -20,8 +20,11 @@
 #' @param dn A temporal network from [dynet()].
 #' @param method One of `"jaccard"` (the default), `"overlap"`, `"hamming"`,
 #'   `"cosine"` or `"pearson"`.
-#' @param sessions How to treat sessions: `"bounded"` (the default),
-#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
+#' @param sessions How to treat sessions when the layers are built:
+#'   `"bounded"` (the default) and `"collapse"` differ in whether a session
+#'   wall gates a tie into its bin. Unlike [dyn_centrality()], `"separate"`
+#'   adds no `session` column here: layers are keyed on time alone, so two
+#'   session-local bins sharing a time are compared as one layer.
 #' @param start,end First and last time to measure. Default to the observed
 #'   range.
 #' @param step How often to measure. Defaults to the interval the network was

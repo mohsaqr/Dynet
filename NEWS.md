@@ -1,3 +1,55 @@
+# Dynet 0.4.7
+
+## Breaking changes
+
+* `add_vertex_spells()` and `update_vertex_spells()` now refuse input they
+  cannot honour instead of accepting it silently. Supplying `session` to a
+  network with no session scheme raises `dynet_incompatible_vertex_spells`
+  rather than dropping the label; `add_vertex_spells()` used to discard it and
+  return normally while `update_vertex_spells()` already errored on the same
+  input. Supplying a column outside the vertex-spell schema to
+  `update_vertex_spells()` raises `dynet_unknown_column` rather than returning
+  the object unchanged, so a misspelled field is no longer a silent no-op.
+
+## Bug fixes
+
+* `as_dynet()` placed per-edge attributes on the wrong spell when importing an
+  **undirected** `networkDynamic`. `dynet()` canonicalises an undirected pair
+  before sorting its spells, and the importer derived its ordering from the raw
+  tail and head, so the two permutations disagreed whenever the endpoints were
+  stored in the other order. Attributes now follow the canonical endpoints.
+
+* `remove_ties()` matched the `start` and `end` selectors with exact equality
+  on doubles, so a spell that accumulated as `0.1 + 0.1 + 0.1` could not be
+  removed by naming `0.3`. Times are now compared with the same
+  magnitude-relative tolerance the rest of the package uses.
+
+* `dyn_centrality(measure = "closeness", scope = "temporal")` returned `Inf`
+  without a word when every reachable vertex was joined within one instant.
+  `Inf` is still returned, since it is the honest limit, but a
+  `dynet_zero_latency` warning now accompanies it.
+
+## Documentation
+
+* Five statements that contradicted the code are corrected: kept self-loops
+  **are** counted by degree and contribute two, `snapshots(at = )` can return
+  zero rows when the nearest bin holds no active tie, `animate(seed = NULL)`
+  leaves the caller's random state advanced rather than restored,
+  `similarity(sessions = "separate")` adds no session column, and only one of
+  the four Krackhardt indices is an index of hierarchy.
+
+* `set_tie_sessions()` now documents that a full-length vector is matched
+  positionally against the **sorted spell table**, not against the data frame
+  the network was built from. Derive labels from `as.data.frame(dn)`.
+
+* `dynet()` now documents that canonical spell column names -- `duration`,
+  `weight`, `session`, `thread`, `onset_censored`, `terminus_censored` -- are
+  dropped from tie attributes even when never named as arguments.
+
+* Internal specification identifiers that had leaked into the manual pages
+  with no definition anywhere are replaced by the measure names they referred
+  to.
+
 # Dynet 0.4.6
 
 * New verb `animate()`: the measurement grid as a film, written to a

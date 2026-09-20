@@ -381,22 +381,23 @@
 #' adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
 #' and administrative observation/activity boundaries do not create transitions.
 #' Collapse erases labels, bounded unions authorised session-local states, and
-#' separate reports local rows. Positive windows are rejected because T04 owns
+#' separate reports local rows. Positive windows are rejected because
+#' `"dissolution_rate"` owns
 #' dissolution rates.
 #'
 #' Dissolution rate is the active-risk dual over a positive window. Its
-#' numerator sums confirmed T02 binary pair dissolutions at included timestamp
+#' numerator sums confirmed binary pair dissolutions at included timestamp
 #' batches; its denominator integrates exact eligible active nonloop pair-time
 #' over observation, vertex, edge, and window change cells. Right-censored
 #' termini retain state and exposure but do not confirm an event, while one
 #' known duplicate suffices. Zero active exposure returns `NA_real_`; positive
 #' exposure without a confirmed dissolution is zero. The unit is inverse
 #' network time. It is not raw terminus intensity, spell-duration sum, or an
-#' average of instantaneous fractions; positive windows are required and T04
-#' owns this rate.
+#' average of instantaneous fractions; positive windows are required, and this
+#' is the rate `"dissolution_rate"` reports.
 #'
 #' Formation rate is the positive-window counterpart. Its numerator sums the
-#' confirmed T01 binary pair formations at each included timestamp, while its
+#' confirmed binary pair formations at each included timestamp, while its
 #' denominator integrates exact inactive eligible nonloop pair-time over
 #' change-point cells cut by the window, observation components, vertex
 #' activity, and edge state. It is not an average of instantaneous fractions,
@@ -405,8 +406,9 @@
 #' zero. The unit is inverse network time and scales inversely with positive
 #' time scaling. Points have zero exposure, onset censoring suppresses only
 #' confirmation, and gap/boundary, duplicate, overlap, adjacency, loop,
-#' weight, and session rules follow the exact T01 ledger. `window = 0` is
-#' rejected because T01 owns instant fractions.
+#' weight, and session rules follow the same ledger as
+#' `"formation_fraction"`. `window = 0` is rejected because that measure owns
+#' the instantaneous fractions.
 #'
 #' @references
 #' Andersen, P. K., & Gill, R. D. (1982). Cox's regression model for counting
@@ -469,7 +471,7 @@ events <- function(dn,
     stop(errorCondition(
       paste0(
         "transition fractions require `window = 0`; positive windows need ",
-        "the formation/dissolution rates defined by T03/T04."
+        "the formation and dissolution rate measures."
       ),
       class = c("dynet_transition_requires_instant", "dynet_bad_input"),
       call = NULL
@@ -901,7 +903,7 @@ events <- function(dn,
 }
 
 #' Expand retained edge fragments into node-incidence fragments
-#' @param fragments Endpoint-valid raw edge fragments from D01.
+#' @param fragments Endpoint-valid raw edge fragments.
 #' @param nodes Fixed vertex names.
 #' @param directed Whether endpoint orientation is directed.
 #' @param mode Requested directed incidence mode.
@@ -943,7 +945,7 @@ events <- function(dn,
 #' Pair unit returns one row per vertex pair and measure, summarising every
 #' retained raw spell they shared. Spell unit returns each retained raw edge
 #' identity. Vertex-activity unit returns fixed-universe vertex summaries;
-#' vertex-spell unit returns canonical V01 activity components. Duration is
+#' vertex-spell unit returns canonical vertex-activity components. Duration is
 #' what separates an interval network from a contact network: a pair that met
 #' fifty times briefly and a pair that met once at length have the same edge
 #' weight in a static network and nothing else in common.
@@ -970,7 +972,7 @@ events <- function(dn,
 #' @param unit `"pair"`, the default, retains the existing pair summary and
 #'   adds union duration; `"spell"` returns one row per retained raw
 #'   edge-spell identity; `"vertex_activity"` returns fixed-node aggregates;
-#'   `"vertex_spell"` returns retained canonical V01 activity identities;
+#'   `"vertex_spell"` returns retained canonical vertex-activity identities;
 #'   `"node_ties"` returns fixed-node incident-tie quantities.
 #' @param mode For `unit = "node_ties"`, `"out"` (the default), `"in"`, or
 #'   `"all"` endpoint incidence. Undirected networks normalise every request
@@ -998,7 +1000,7 @@ events <- function(dn,
 #' are eligible. Genuine eligible point contacts are retained with duration
 #' zero. Pair `total` sums these raw-spell durations, so overlapping identities
 #' intentionally multiply time; pair `union` counts binary calendar occupancy
-#' once. Consequently `union <= total`, and union cannot exceed the pair's V04
+#' once. Consequently `union <= total`, and union cannot exceed the pair's
 #' eligible opportunity time. Pair `events` counts retained raw identities.
 #' Formally, if retained raw spell `i` has endpoint-valid fragments
 #' `F[i]`, then `duration[i] = sum((b - a) for [a,b) in F[i])`.
@@ -1040,7 +1042,7 @@ events <- function(dn,
 #' identity duration `d[i]`, and positive support `F[i]`, node-tie events are
 #' `sum(c[v,i,m])`, total is `sum(c[v,i,m] * d[i])`, and union is the measure
 #' of the calendar union of all `F[i]` having positive multiplicity. These
-#' union values cannot exceed the corresponding D02 eligible vertex-activity
+#' union values cannot exceed the corresponding eligible vertex-activity
 #' union. Isolates, inactive vertices, and loopless singletons receive exact
 #' zeros for every node-tie measure. The additive quantities match
 #' `tsna::tiedDuration()` only for continuous observation, static eligible

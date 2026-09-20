@@ -107,22 +107,23 @@ but an all-censored disappearance is unconfirmed. Duplicate, overlapping,
 adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
 and administrative observation/activity boundaries do not create transitions.
 Collapse erases labels, bounded unions authorised session-local states, and
-separate reports local rows. Positive windows are rejected because T04 owns
+separate reports local rows. Positive windows are rejected because
+\code{"dissolution_rate"} owns
 dissolution rates.
 
 Dissolution rate is the active-risk dual over a positive window. Its
-numerator sums confirmed T02 binary pair dissolutions at included timestamp
+numerator sums confirmed binary pair dissolutions at included timestamp
 batches; its denominator integrates exact eligible active nonloop pair-time
 over observation, vertex, edge, and window change cells. Right-censored
 termini retain state and exposure but do not confirm an event, while one
 known duplicate suffices. Zero active exposure returns \code{NA_real_}; positive
 exposure without a confirmed dissolution is zero. The unit is inverse
 network time. It is not raw terminus intensity, spell-duration sum, or an
-average of instantaneous fractions; positive windows are required and T04
-owns this rate.
+average of instantaneous fractions; positive windows are required, and this
+is the rate \code{"dissolution_rate"} reports.
 
 Formation rate is the positive-window counterpart. Its numerator sums the
-confirmed T01 binary pair formations at each included timestamp, while its
+confirmed binary pair formations at each included timestamp, while its
 denominator integrates exact inactive eligible nonloop pair-time over
 change-point cells cut by the window, observation components, vertex
 activity, and edge state. It is not an average of instantaneous fractions,
@@ -131,8 +132,9 @@ returns \code{NA_real_}; positive exposure with no confirmed formation returns
 zero. The unit is inverse network time and scales inversely with positive
 time scaling. Points have zero exposure, onset censoring suppresses only
 confirmation, and gap/boundary, duplicate, overlap, adjacency, loop,
-weight, and session rules follow the exact T01 ledger. \code{window = 0} is
-rejected because T01 owns instant fractions.
+weight, and session rules follow the same ledger as
+\code{"formation_fraction"}. \code{window = 0} is rejected because that measure owns
+the instantaneous fractions.
 }
 \examples{
 dn <- dynet(school_contacts)

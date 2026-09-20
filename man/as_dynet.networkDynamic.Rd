@@ -68,7 +68,8 @@ replaced by a complete unique vertex attribute. By default Dynet tries
 Dynamic edge attributes other than activity itself are not part of the
 \code{networkDynamic} spell-list interface and are therefore not imported.
 Ordinary per-edge attributes are repeated onto every imported spell of the
-corresponding aggregate edge.
+corresponding aggregate edge, matched on the canonical endpoint order
+\code{\link[=dynet]{dynet()}} stores, so an undirected pair carries its own attributes.
 }
 \examples{
 if (requireNamespace("networkDynamic", quietly = TRUE) &&

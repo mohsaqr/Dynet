@@ -21,7 +21,9 @@ activity and \code{data} canonicalised together, so an added spell that
 overlaps or abuts an existing one for the same vertex is merged into it
 and canonical spell identifiers may change. Raises \code{dynet_unknown_node}
 for a vertex the network does not have, and \code{dynet_bad_input} when \code{data}
-is not a nonempty data frame.
+is not a nonempty data frame, and \code{dynet_incompatible_vertex_spells} when
+\code{session} is supplied to a network with no session scheme -- the same
+refusal \code{\link[=update_vertex_spells]{update_vertex_spells()}} makes, rather than dropping the label.
 }
 \description{
 Add declared vertex-activity spells

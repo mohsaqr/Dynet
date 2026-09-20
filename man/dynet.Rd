@@ -112,7 +112,9 @@ This is mutually exclusive with \code{observation_start} and
 
 \item{loops}{Whether to keep self-loops. \code{FALSE}, the default, drops them
 with a message, which is almost always what relational logs need; \code{TRUE}
-keeps them and reports how many, but they are still excluded from degree.}
+keeps them and reports how many. A kept loop \strong{is} counted by degree, and
+contributes two to it, since both of its endpoint stubs are incident to
+the same vertex.}
 
 \item{onset_censored, terminus_censored}{Optional logical column names for
 explicit raw interval-boundary censor state. These selectors are available
@@ -158,6 +160,11 @@ connected for the span of that group. Name \code{actor} and \code{group}.}
 
 Every other column of \code{data} is kept as a tie attribute: it appears in
 \code{as.data.frame()} and can be selected on with \code{induce_subgraph(ties = )}.
+The exceptions are the canonical spell fields themselves -- \code{duration},
+\code{weight}, \code{session}, \code{thread}, \code{onset_censored} and \code{terminus_censored} --
+which are dropped even when they were never named as arguments, because the
+spell table owns those names. A non-atomic column raises
+\code{dynet_bad_tie_attribute}, and a factor is carried as character.
 Co-presence logs keep none, because their rows are memberships rather than
 ties.
 

@@ -9,6 +9,7 @@ articles:
   contents:
   - dynet
   - building-networks
+  - articles/function-catalogue
 
 - title: Tutorials
   desc: >
@@ -28,3 +29,89 @@ articles:
   - ch17-temporal-networks
   - articles/ch17-published-data
   - articles/thought-chains
+
+reference:
+- title: Construction
+  desc: >
+    One constructor for four log shapes, and the two verbs that read a network
+    back out as a time series.
+  contents:
+  - dynet
+  - as_dynet
+  - events
+  - snapshots
+
+- title: Editing
+  desc: >
+    Rewrite the spell and vertex tables without breaking time. Every verb
+    returns a new network and leaves the input unchanged.
+  contents:
+  - add_nodes
+  - add_ties
+  - add_arcs
+  - add_vertex_spells
+  - remove_nodes
+  - remove_ties
+  - remove_arcs
+  - remove_vertex_spells
+  - update_nodes
+  - update_ties
+  - update_vertex_spells
+  - rename_nodes
+  - rename_sessions
+  - set_observations
+  - set_tie_sessions
+  - set_vertex_spells
+  - clear_observations
+
+- title: Measurement
+  desc: >
+    The measuring verbs. All take the same four grid arguments - start, end,
+    step, window - and return a tidy one-row-per-observation table.
+  contents:
+  - dyn_centrality
+  - dyn_reachability
+  - metrics
+  - mixing
+  - pshifts
+  - burstiness
+  - durations
+  - similarity
+
+- title: Paths
+  desc: >
+    Time-respecting paths, and the four ways of looking at what they found.
+  contents:
+  - paths
+  - pathways
+  - path_network
+  - path_trajectories
+  - plot_path_trajectories
+
+- title: Structure
+  desc: >
+    Turn a temporal network into another object: a time-expanded projection, a
+    static weighted network, or a subgraph.
+  contents:
+  - projection
+  - collapse_network
+  - induce_subgraph
+
+- title: Animation
+  contents:
+  - animate
+
+- title: Data
+  desc: Bundled logs used throughout the documentation and examples.
+  contents:
+  - has_keyword("datasets")
+
+- title: Methods
+  desc: >
+    Print, summary, plot and as.data.frame for every result class.
+  contents:
+  - has_keyword("internal")
+  - starts_with("print.")
+  - starts_with("summary.")
+  - starts_with("plot.")
+  - starts_with("as.data.frame.")

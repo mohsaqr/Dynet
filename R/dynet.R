@@ -23,6 +23,11 @@
 #'
 #' Every other column of `data` is kept as a tie attribute: it appears in
 #' `as.data.frame()` and can be selected on with `induce_subgraph(ties = )`.
+#' The exceptions are the canonical spell fields themselves -- `duration`,
+#' `weight`, `session`, `thread`, `onset_censored` and `terminus_censored` --
+#' which are dropped even when they were never named as arguments, because the
+#' spell table owns those names. A non-atomic column raises
+#' `dynet_bad_tie_attribute`, and a factor is carried as character.
 #' Co-presence logs keep none, because their rows are memberships rather than
 #' ties.
 #'
@@ -112,7 +117,9 @@
 #'   `dynet_conflicting_observation`.
 #' @param loops Whether to keep self-loops. `FALSE`, the default, drops them
 #'   with a message, which is almost always what relational logs need; `TRUE`
-#'   keeps them and reports how many, but they are still excluded from degree.
+#'   keeps them and reports how many. A kept loop **is** counted by degree, and
+#'   contributes two to it, since both of its endpoint stubs are incident to
+#'   the same vertex.
 #' @param onset_censored,terminus_censored Optional logical column names for
 #'   explicit raw interval-boundary censor state. These selectors are available
 #'   only for interval input, are never auto-detected, and may not flag a
@@ -265,7 +272,7 @@ dynet <- function(data,
   is_loop <- e$from == e$to
   if (any(is_loop)) {
     if (loops) {
-      message(sprintf("Keeping %d self-loop event(s); they are excluded from degree.",
+      message(sprintf("Keeping %d self-loop event(s); each adds two to its vertex's degree.",
                       sum(is_loop)))
     } else {
       message(sprintf("Dropped %d self-loop event(s). Use loops = TRUE to keep them.",

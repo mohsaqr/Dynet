@@ -245,8 +245,9 @@ mixing <- function(dn, attribute,
 #'   cover it. A network built from dates may be addressed with a date.
 #'   With the default disjoint tiling that is one bin; with an
 #'   overlapping `window` every bin containing the time is returned. A time
-#'   outside every bin falls back to the nearest bin rather than an empty
-#'   result, so `at` never returns zero rows on a nonempty network.
+#'   outside every bin falls back to the nearest bin rather than failing, but
+#'   that bin may itself hold no active tie, in which case the result is a
+#'   zero-row frame with the documented columns.
 #' @param sessions How to treat sessions, as in [dyn_centrality()]:
 #'   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
 #'   needs a network built with a session column and raises

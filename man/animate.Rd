@@ -117,8 +117,9 @@ or \code{cooling}. Empty by default. A larger \code{repulsion} opens a dense
 core.}
 
 \item{seed}{Seed for the spring layouts, so \code{"spring"} and \code{"relaxed"} are
-reproducible; \code{42} by default, \code{NULL} to draw from the current random
-state. The caller's random state is restored on exit either way.}
+reproducible; \code{42} by default. Under a seed the caller's random state is
+restored on exit. \code{NULL} draws from the current random state instead and
+leaves it advanced, which is what makes successive unseeded calls differ.}
 
 \item{...}{Passed to \code{cograph::splot()} for every frame, so the whole
 drawing surface of \code{\link[=plot.dynet]{plot.dynet()}}'s network view is available. \code{labels}

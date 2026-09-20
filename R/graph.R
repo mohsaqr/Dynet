@@ -41,8 +41,9 @@
 #'   `"centralization_degree"`, `"centralization_betweenness"`,
 #'   `"centralization_closeness"`, `"triads"`, `"connectedness"`,
 #'   `"efficiency"`, `"hierarchy"`, `"lubness"`. `"triads"` expands to the
-#'   sixteen triad classes; the last four are Krackhardt's indices of
-#'   hierarchy. Lightweight structural summaries are `"degree_mean"`,
+#'   sixteen triad classes; those four are Krackhardt's indices of how far a
+#'   directed network departs from a pure out-tree, only one of which is
+#'   hierarchy itself. Lightweight structural summaries are `"degree_mean"`,
 #'   `"degree_variance"`, `"degree_min"`, `"degree_max"`,
 #'   `"mean_degree"`, `"indegree_1_5"`, `"outdegree_1_5"`, `"triangles"`,
 #'   `"concurrent_nodes"`, `"concurrent_share"`, `"in_2stars"`,

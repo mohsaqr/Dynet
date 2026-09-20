@@ -21,8 +21,11 @@ similarity(
 \item{method}{One of \code{"jaccard"} (the default), \code{"overlap"}, \code{"hamming"},
 \code{"cosine"} or \code{"pearson"}.}
 
-\item{sessions}{How to treat sessions: \code{"bounded"} (the default),
-\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions when the layers are built:
+\code{"bounded"} (the default) and \code{"collapse"} differ in whether a session
+wall gates a tie into its bin. Unlike \code{\link[=dyn_centrality]{dyn_centrality()}}, \code{"separate"}
+adds no \code{session} column here: layers are keyed on time alone, so two
+session-local bins sharing a time are compared as one layer.}
 
 \item{start, end}{First and last time to measure. Default to the observed
 range.}

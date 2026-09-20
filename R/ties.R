@@ -482,6 +482,10 @@ add_ties <- function(dn, data, loops = FALSE) {
 #'   attributes included; or integer positions or a logical mask over that
 #'   table.
 #' @param from,to,start,end,session Optional selectors combined by conjunction.
+#'   `start` and `end` match a spell's own boundary, compared with the
+#'   package's magnitude-relative time tolerance rather than exactly, so a
+#'   selector written `0.3` still matches a spell that accumulated as
+#'   `0.1 + 0.1 + 0.1`.
 #'   When `ties` is supplied, these selectors must be omitted. On undirected
 #'   networks `from` and `to` must be supplied together and their order is
 #'   ignored.
@@ -560,8 +564,19 @@ remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
     }
     selected_start <- convert_selector_time(start, "start")
     selected_end <- convert_selector_time(end, "end")
-    if (!is.null(selected_start)) remove <- remove & dn$spells$start %in% selected_start
-    if (!is.null(selected_end)) remove <- remove & dn$spells$end %in% selected_end
+    # `%in%` is exact equality on doubles. Times are compared with the
+    # package's magnitude-relative tolerance everywhere else, and a selector
+    # typed as 0.3 must still match a spell that arrived as 0.1 + 0.1 + 0.1.
+    matches_any_time <- function(times, wanted) {
+      Reduce(`|`, lapply(wanted, function(one) .time_eq(times, one)),
+             init = rep(FALSE, length(times)))
+    }
+    if (!is.null(selected_start)) {
+      remove <- remove & matches_any_time(dn$spells$start, selected_start)
+    }
+    if (!is.null(selected_end)) {
+      remove <- remove & matches_any_time(dn$spells$end, selected_end)
+    }
     if (!is.null(session)) remove <- remove & dn$spells$session %in% as.character(session)
   }
   if (!any(remove)) {

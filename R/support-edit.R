@@ -98,7 +98,9 @@ set_vertex_spells <- function(dn, data = NULL) {
 #'   overlaps or abuts an existing one for the same vertex is merged into it
 #'   and canonical spell identifiers may change. Raises `dynet_unknown_node`
 #'   for a vertex the network does not have, and `dynet_bad_input` when `data`
-#'   is not a nonempty data frame.
+#'   is not a nonempty data frame, and `dynet_incompatible_vertex_spells` when
+#'   `session` is supplied to a network with no session scheme -- the same
+#'   refusal [update_vertex_spells()] makes, rather than dropping the label.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
@@ -132,7 +134,19 @@ add_vertex_spells <- function(dn, data) {
   existing <- bind_vertex(existing, data)
   added <- bind_vertex(data, existing)
   combined <- rbind(existing, added)
-  if (is.null(dn$meta$sessions)) combined$session <- NULL
+  if (is.null(dn$meta$sessions)) {
+    # Silently dropping the label would accept a declaration the network
+    # cannot represent and return something the caller did not ask for. The
+    # sibling `update_vertex_spells()` already refuses the same input.
+    if ("session" %in% names(data) && any(!is.na(data$session))) {
+      stop(errorCondition(
+        paste0("`session` was supplied, but this network has no session ",
+               "scheme; build it with `session = ` or drop the column."),
+        class = c("dynet_incompatible_vertex_spells", "dynet_bad_vertex_spells",
+                  "dynet_bad_input"), call = NULL))
+    }
+    combined$session <- NULL
+  }
   set_vertex_spells(dn, combined)
 }
 
@@ -171,7 +185,9 @@ remove_vertex_spells <- function(dn, spells) {
 #'   activity, as returned by `as.data.frame(dn, what = "vertex_spells")`.
 #' @param data A data frame with one row, or one row per selected component,
 #'   containing the fields to replace: `node`, `start`, `end`, `session`,
-#'   `onset_censored` or `terminus_censored`.
+#'   `onset_censored` or `terminus_censored`. Any other column name raises
+#'   `dynet_unknown_column`, so a misspelled field is refused rather than
+#'   quietly doing nothing.
 #' @return A new `dynet` object, class
 #'   `c("dynet", "netobject", "cograph_network")`. Updated components are
 #'   canonicalised with the retained components, so overlaps can merge and
@@ -211,7 +227,23 @@ update_vertex_spells <- function(dn, spells, data) {
     data <- data[rep(1L, length(index)), , drop = FALSE]
   }
   current <- .vertex_spells_input(dn$vertex_spells)
-  for (attribute in names(data)) current[[attribute]][index] <- data[[attribute]]
+  # Assigning an unrecognised name would create a column the vertex-spell
+  # schema discards, so a misspelled field used to be a silent no-op.
+  unknown <- setdiff(names(data), c("node", "start", "end", "session",
+                                    "onset_censored", "terminus_censored"))
+  if (length(unknown)) {
+    stop(errorCondition(
+      sprintf(paste0("Not vertex-spell fields: %s. Available: node, start, ",
+                     "end, session, onset_censored, terminus_censored."),
+              paste(sQuote(unknown), collapse = ", ")),
+      class = c("dynet_unknown_column", "dynet_bad_input"), call = NULL))
+  }
+  # A fold over the named fields, not a loop: each writes one column.
+  current[names(data)] <- lapply(names(data), function(attribute) {
+    replaced <- current[[attribute]]
+    replaced[index] <- data[[attribute]]
+    replaced
+  })
   set_vertex_spells(dn, current)
 }
 
@@ -332,6 +364,13 @@ clear_observations <- function(dn) {
 #'   raw tie count; a length-one value labels every spell. Default `NULL`,
 #'   which removes all tie-session walls and erases session labels on vertex
 #'   activity.
+#'
+#'   **A vector of the full length is matched positionally against the spell
+#'   table, not against the data frame the network was built from.**
+#'   [dynet()] sorts spells by `start`, `end`, `from` and `to`, so the two
+#'   orders coincide only when the input was already in that order. Derive the
+#'   labels from `as.data.frame(dn)`, which is the spell table itself, rather
+#'   than from the original log.
 #' @return A new `dynet` object, class
 #'   `c("dynet", "netobject", "cograph_network")`, with a `session` column on
 #'   the spell table and the session scheme recorded in its metadata, or with

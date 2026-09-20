@@ -761,8 +761,9 @@
 #'   or `cooling`. Empty by default. A larger `repulsion` opens a dense
 #'   core.
 #' @param seed Seed for the spring layouts, so `"spring"` and `"relaxed"` are
-#'   reproducible; `42` by default, `NULL` to draw from the current random
-#'   state. The caller's random state is restored on exit either way.
+#'   reproducible; `42` by default. Under a seed the caller's random state is
+#'   restored on exit. `NULL` draws from the current random state instead and
+#'   leaves it advanced, which is what makes successive unseeded calls differ.
 #' @param ... Passed to `cograph::splot()` for every frame, so the whole
 #'   drawing surface of [plot.dynet()]'s network view is available. `labels`
 #'   may also be the name of a vertex attribute supplied through

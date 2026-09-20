@@ -14,7 +14,9 @@ activity, as returned by \code{as.data.frame(dn, what = "vertex_spells")}.}
 
 \item{data}{A data frame with one row, or one row per selected component,
 containing the fields to replace: \code{node}, \code{start}, \code{end}, \code{session},
-\code{onset_censored} or \code{terminus_censored}.}
+\code{onset_censored} or \code{terminus_censored}. Any other column name raises
+\code{dynet_unknown_column}, so a misspelled field is refused rather than
+quietly doing nothing.}
 }
 \value{
 A new \code{dynet} object, class

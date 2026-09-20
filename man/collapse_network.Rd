@@ -34,7 +34,7 @@ per session.}
 
 \item{censored}{Whether raw edge and vertex identities carrying an explicit
 censor flag are \code{"include"}d, the default, or \code{"exclude"}d. Exclusion
-drops the whole raw identity, never just one observed fragment.}
+drops the whole raw identity, never one observed fragment alone.}
 }
 \value{
 A \code{dynet_collapsed} cograph netobject, whose two tidy tables are

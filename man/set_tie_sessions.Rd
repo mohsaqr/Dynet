@@ -12,7 +12,14 @@ set_tie_sessions(dn, session = NULL)
 \item{session}{A complete, nonempty character vector of length one or the
 raw tie count; a length-one value labels every spell. Default \code{NULL},
 which removes all tie-session walls and erases session labels on vertex
-activity.}
+activity.
+
+\strong{A vector of the full length is matched positionally against the spell
+table, not against the data frame the network was built from.}
+\code{\link[=dynet]{dynet()}} sorts spells by \code{start}, \code{end}, \code{from} and \code{to}, so the two
+orders coincide only when the input was already in that order. Derive the
+labels from \code{as.data.frame(dn)}, which is the spell table itself, rather
+than from the original log.}
 }
 \value{
 A new \code{dynet} object, class

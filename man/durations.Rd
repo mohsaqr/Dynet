@@ -41,7 +41,7 @@ cause exclusion.}
 \item{unit}{\code{"pair"}, the default, retains the existing pair summary and
 adds union duration; \code{"spell"} returns one row per retained raw
 edge-spell identity; \code{"vertex_activity"} returns fixed-node aggregates;
-\code{"vertex_spell"} returns retained canonical V01 activity identities;
+\code{"vertex_spell"} returns retained canonical vertex-activity identities;
 \code{"node_ties"} returns fixed-node incident-tie quantities.}
 
 \item{mode}{For \code{unit = "node_ties"}, \code{"out"} (the default), \code{"in"}, or
@@ -71,7 +71,7 @@ and \code{value} (plus \code{session} only for separate mode).
 Pair unit returns one row per vertex pair and measure, summarising every
 retained raw spell they shared. Spell unit returns each retained raw edge
 identity. Vertex-activity unit returns fixed-universe vertex summaries;
-vertex-spell unit returns canonical V01 activity components. Duration is
+vertex-spell unit returns canonical vertex-activity components. Duration is
 what separates an interval network from a contact network: a pair that met
 fifty times briefly and a pair that met once at length have the same edge
 weight in a static network and nothing else in common.
@@ -81,7 +81,7 @@ Positive spell duration is the observed time during which both endpoints
 are eligible. Genuine eligible point contacts are retained with duration
 zero. Pair \code{total} sums these raw-spell durations, so overlapping identities
 intentionally multiply time; pair \code{union} counts binary calendar occupancy
-once. Consequently \code{union <= total}, and union cannot exceed the pair's V04
+once. Consequently \code{union <= total}, and union cannot exceed the pair's
 eligible opportunity time. Pair \code{events} counts retained raw identities.
 Formally, if retained raw spell \code{i} has endpoint-valid fragments
 \code{F[i]}, then \verb{duration[i] = sum((b - a) for [a,b) in F[i])}.
@@ -123,7 +123,7 @@ total. Formally, for endpoint-stub multiplicity \code{c[v,i,m]}, retained raw
 identity duration \code{d[i]}, and positive support \code{F[i]}, node-tie events are
 \code{sum(c[v,i,m])}, total is \code{sum(c[v,i,m] * d[i])}, and union is the measure
 of the calendar union of all \code{F[i]} having positive multiplicity. These
-union values cannot exceed the corresponding D02 eligible vertex-activity
+union values cannot exceed the corresponding eligible vertex-activity
 union. Isolates, inactive vertices, and loopless singletons receive exact
 zeros for every node-tie measure. The additive quantities match
 \code{tsna::tiedDuration()} only for continuous observation, static eligible

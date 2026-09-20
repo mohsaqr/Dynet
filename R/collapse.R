@@ -223,7 +223,7 @@
 #'   per session.
 #' @param censored Whether raw edge and vertex identities carrying an explicit
 #'   censor flag are `"include"`d, the default, or `"exclude"`d. Exclusion
-#'   drops the whole raw identity, never just one observed fragment.
+#'   drops the whole raw identity, never one observed fragment alone.
 #' @return A `dynet_collapsed` cograph netobject, whose two tidy tables are
 #'   reached with `as.data.frame(x, what = "edges")` and
 #'   `as.data.frame(x, what = "nodes")`. With `sessions = "separate"`, a named
