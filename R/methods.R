@@ -247,6 +247,12 @@ print.dynet <- function(x, ...) {
 #' before their duration is counted.
 #'
 #' @param object A temporal network from [dynet()].
+#' @param temporal_density Whether to compute the temporal-density row.
+#'   `FALSE`, the default, reports `"not computed"` for it. The quantity
+#'   integrates exact occupancy over every eligible ordered pair, so its cost
+#'   grows with the square of the vertex count: on a 442-vertex forum network
+#'   it takes about 32 seconds, while every other row in the table is
+#'   immediate. Pass `TRUE` when the number is wanted.
 #' @param ... Ignored.
 #'
 #' @return A `data.frame` with columns `property` and `value`, one row per
@@ -283,8 +289,16 @@ print.dynet <- function(x, ...) {
 #' dn <- dynet(school_contacts)
 #' summary(dn)
 #'
+#' # The temporal density is opt-in, since it is quadratic in the vertex count.
+#' summary(dn, temporal_density = TRUE)
+#'
 #' @export
-summary.dynet <- function(object, ...) {
+summary.dynet <- function(object, temporal_density = FALSE, ...) {
+  .check(
+    "`temporal_density` must be a single TRUE or FALSE." =
+      length(temporal_density) == 1L && is.logical(temporal_density) &&
+        !is.na(temporal_density)
+  )
   m <- object$meta
   e <- object$spells
   n <- nrow(object$nodes)
@@ -307,7 +321,12 @@ summary.dynet <- function(object, ...) {
       format(span), format(m$interval),
       format(m$n_bins),
       format(round(mean(snap$value), 4)),
-      format(round(.temporal_density(object), 4)),
+      # Exact occupancy over every eligible ordered pair: O(n^2) change-point
+      # integration, which is tens of seconds once the vertex count reaches a
+      # few hundred. Off by default so describing a network stays immediate.
+      if (temporal_density) {
+        format(round(.temporal_density(object), 4))
+      } else "not computed",
       if (is.null(m$sessions)) "none" else format(length(m$sessions)),
       {
         a <- setdiff(names(object$nodes), c("id", "label", "name", "x", "y"))

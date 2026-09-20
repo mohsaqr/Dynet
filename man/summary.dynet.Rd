@@ -4,10 +4,17 @@
 \alias{summary.dynet}
 \title{Describe a temporal network}
 \usage{
-\method{summary}{dynet}(object, ...)
+\method{summary}{dynet}(object, temporal_density = FALSE, ...)
 }
 \arguments{
 \item{object}{A temporal network from \code{\link[=dynet]{dynet()}}.}
+
+\item{temporal_density}{Whether to compute the temporal-density row.
+\code{FALSE}, the default, reports \code{"not computed"} for it. The quantity
+integrates exact occupancy over every eligible ordered pair, so its cost
+grows with the square of the vertex count: on a 442-vertex forum network
+it takes about 32 seconds, while every other row in the table is
+immediate. Pass \code{TRUE} when the number is wanted.}
 
 \item{...}{Ignored.}
 }
@@ -43,6 +50,9 @@ in \verb{[0, 1]} when the same relation has overlapping or duplicated spells.
 \examples{
 dn <- dynet(school_contacts)
 summary(dn)
+
+# The temporal density is opt-in, since it is quadratic in the vertex count.
+summary(dn, temporal_density = TRUE)
 
 }
 \references{

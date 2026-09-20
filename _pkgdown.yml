@@ -13,10 +13,11 @@ articles:
 
 - title: Tutorials
   desc: >
-    Longer walks through one verb. Website-only: the animation tutorial
-    writes GIF and video files, which need gifski and av.
+    Longer walks through one verb or one dataset. Website-only: the animation
+    tutorial writes GIF and video files, which need gifski and av.
   contents:
   - articles/animating
+  - articles/mooc-posts
 
 - title: Reproductions
   desc: >

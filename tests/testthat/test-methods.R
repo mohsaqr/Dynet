@@ -38,7 +38,7 @@ test_that("temporal density counts observed duration against possible duration",
                      start = c(0, 10), end = c(5, 10),
                      stringsAsFactors = FALSE)
   dn <- quiet_dynet(half)
-  s <- summary(dn)
+  s <- summary(dn, temporal_density = TRUE)
   expect_equal(as.numeric(s$value[s$property == "temporal density"]), 0.25)
 })
 

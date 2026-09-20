@@ -12,7 +12,7 @@ test_that("V04 temporal density integrates eligible directed pair-time", {
   expect_equal(Dynet:::.temporal_density(directed), 1 / 2)
   expect_equal(Dynet:::.temporal_density(undirected), 1)
   summary_value <- as.numeric(subset(
-    summary(directed), property == "temporal density"
+    summary(directed, temporal_density = TRUE), property == "temporal density"
   )$value)
   expect_equal(summary_value, .5)
 })

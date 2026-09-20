@@ -86,3 +86,30 @@ test_that("an undirected networkDynamic import keeps attributes on their own spe
   expect_identical(ab, "k1")
   expect_identical(ac, "k2")
 })
+
+test_that("summary() leaves the quadratic row out unless it is asked for", {
+  # Temporal density integrates exact occupancy over every eligible ordered
+  # pair, so it is quadratic in the vertex count: about 32 s on a 442-vertex
+  # network, against milliseconds for every other row.
+  dn <- quiet_dynet(school_contacts)
+
+  quick <- summary(dn)
+  expect_identical(quick$value[quick$property == "temporal density"],
+                   "not computed")
+
+  full <- summary(dn, temporal_density = TRUE)
+  computed <- full$value[full$property == "temporal density"]
+  expect_false(identical(computed, "not computed"))
+  expect_false(is.na(suppressWarnings(as.numeric(computed))))
+
+  # Every other row is identical either way.
+  other <- quick$property != "temporal density"
+  expect_identical(quick$value[other], full$value[other])
+})
+
+test_that("summary() refuses a non-logical temporal_density", {
+  dn <- quiet_dynet(school_contacts)
+  expect_error(summary(dn, temporal_density = "yes"), class = "dynet_bad_input")
+  expect_error(summary(dn, temporal_density = c(TRUE, FALSE)),
+               class = "dynet_bad_input")
+})

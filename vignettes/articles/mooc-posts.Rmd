@@ -1,0 +1,128 @@
+---
+title: "The MOOC forum data"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", warning = FALSE,
+                      message = FALSE)
+package_root <- normalizePath(file.path(dirname(knitr::current_input(dir = TRUE)),
+                                        "../.."), mustWork = FALSE)
+if (dir.exists(package_root) && requireNamespace("devtools", quietly = TRUE)) {
+  devtools::load_all(package_root, quiet = TRUE)
+} else {
+  library(Dynet)
+}
+```
+
+`mooc_posts` records 2,529 posts to the discussion forum of a massive open
+online course, and `mooc_people` records the 445 participants who wrote or
+received them. The two tables are the data behind chapter 17 of *Learning
+Analytics Methods and Tutorials*, and they are the package's worked example of a
+**threaded** log: a forum post is not an interval with a stated end, and it is
+not an instantaneous contact either. A post stays relevant until its thread
+falls silent.
+
+This article builds the network from those posts and reports what it holds.
+
+## The log
+
+```{r log}
+head(mooc_posts)
+```
+
+Each row is one post: who wrote it, who it replied to, when, and which
+discussion it belongs to. There are 338 distinct discussions.
+
+```{r people}
+head(mooc_people)
+```
+
+`experience` is the self-reported level the chapter recodes into expert,
+student and teacher.
+
+## Building the network
+
+`dynet()` reads the log as threaded because `thread =` is named. An edge from a
+post stays active until the last post in the same discussion, so a reply late in
+a thread extends every earlier tie in it.
+
+```{r build}
+dn <- dynet(mooc_posts, from = "sender", to = "receiver",
+            time = "timestamp", thread = "discussion")
+dn
+```
+
+The network has 442 vertices and 2,443 spells. Three of the 445 participants in
+`mooc_people` never appear as a sender or a receiver, so they are absent from
+the network the log implies.
+
+Times are read as dates and converted to an offset in days from the first post,
+which is what `time_unit` reports.
+
+## What the forum looked like over time
+
+`metrics()` measures graph-level structure on the grid. Over the whole observed
+period the network's density is:
+
+```{r density}
+density <- metrics(dn, measure = "density", window = "all")
+density
+```
+
+Measured day by day instead, activity is concentrated rather than even:
+
+```{r edges-per-day}
+per_day <- metrics(dn, measure = "edges", step = 7, window = 7)
+per_day
+```
+
+Each row is one week of the course. The counts show where the forum was busy
+and where it went quiet.
+
+## Who was central
+
+`dyn_centrality()` measures each vertex on the same grid. Over the whole period,
+the ten participants with the highest degree are:
+
+```{r degree}
+degree <- dyn_centrality(dn, measure = "degree", window = "all")
+head(degree, 10)
+```
+
+## Mixing between experience levels
+
+`mooc_people` supplies the attribute the chapter mixes on. The network is built
+with that table attached, and `mixing()` then reports how much tie activity ran
+within and between levels.
+
+```{r mixing}
+labelled <- dynet(mooc_posts, from = "sender", to = "receiver",
+                  time = "timestamp", thread = "discussion",
+                  nodes = mooc_people)
+role_mixing <- mixing(labelled, attribute = "experience", window = "all")
+role_mixing
+```
+
+Each row is an ordered pair of levels. `value` is the share of tie activity
+running from the first group to the second, so the rows where `from_group`
+equals `to_group` measure how much the forum kept conversation inside an
+experience level.
+
+## Cost
+
+`summary()` on this network takes about 28 seconds, because it measures every
+graph-level statistic on all 74 daily bins. `print()` is immediate, and a single
+measure on a stated grid — as used throughout this article — costs a few
+hundredths of a second. Reach for `metrics()` with the measure you want rather
+than `summary()` when the network is this size.
+
+## Source
+
+Kaliisa, R., Gudmundsdottir, G. B., & Jahn, T. (2022). The MOOC forum data used
+in chapter 17 of *Learning Analytics Methods and Tutorials*. The bundled tables
+are the anonymised sender, receiver, timestamp and discussion columns of that
+log, with participant identifiers replaced by integers.

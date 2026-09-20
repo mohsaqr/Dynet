@@ -1,5 +1,8 @@
 .temporal_density_value <- function(dn) {
-  row <- subset(summary(dn), property == "temporal density", select = value)
+  # Temporal density is opt-in: it is quadratic in the vertex count, so
+  # summary() reports "not computed" for it unless asked.
+  row <- subset(summary(dn, temporal_density = TRUE),
+                property == "temporal density", select = value)
   if (trimws(row$value) == "NA") return(NA_real_)
   as.numeric(row$value)
 }

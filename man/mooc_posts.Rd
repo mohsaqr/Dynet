@@ -38,9 +38,12 @@ Only the four columns the chapter's analysis reads are kept; the category
 hierarchy and comment identifiers of the published file are dropped.
 }
 \examples{
+# summary() measures every graph-level statistic on all 74 daily bins and
+# takes about 28 seconds on this network; print() is immediate. The article
+# `vignette("mooc-posts")` walks through the data with stated grids.
 dn <- dynet(mooc_posts, from = "sender", to = "receiver",
             time = "timestamp", thread = "discussion")
-summary(dn)
+dn
 }
 \seealso{
 \link{mooc_people} for the participants, and

@@ -54,20 +54,20 @@
     Code
       print(summary(dn), row.names = FALSE)
     Output
-                    property    value
-                      format interval
-                    directed      yes
-                    vertices        5
-                 edge spells        4
-              distinct pairs        4
-                   time unit     step
-               observed from        1
-                 observed to        5
-                        span        4
-                   bin width        1
-                   time bins        4
-       mean snapshot density     0.05
-            temporal density     0.05
-                    sessions     none
-           vertex attributes     none
+                    property        value
+                      format     interval
+                    directed          yes
+                    vertices            5
+                 edge spells            4
+              distinct pairs            4
+                   time unit         step
+               observed from            1
+                 observed to            5
+                        span            4
+                   bin width            1
+                   time bins            4
+       mean snapshot density         0.05
+            temporal density not computed
+                    sessions         none
+           vertex attributes         none
 

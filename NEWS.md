@@ -11,6 +11,15 @@
   `update_vertex_spells()` raises `dynet_unknown_column` rather than returning
   the object unchanged, so a misspelled field is no longer a silent no-op.
 
+## Performance
+
+* `summary()` gains `temporal_density`, `FALSE` by default. That one row
+  integrates exact occupancy over every eligible ordered pair, so its cost is
+  quadratic in the vertex count: on a 442-vertex forum network it alone took
+  about 32 seconds, while the other fourteen rows were immediate. It now reads
+  `"not computed"` unless asked for, and `summary()` on that network takes
+  0.3 seconds. Pass `temporal_density = TRUE` for the number.
+
 ## Bug fixes
 
 * `as_dynet()` placed per-edge attributes on the wrong spell when importing an
