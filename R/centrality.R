@@ -1764,7 +1764,7 @@ dyn_centrality <- function(dn,
 #' Dynet:::.temporal_closeness_values(trees, 3L)
 #' @noRd
 .temporal_closeness_values <- function(trees, n) {
-  vapply(trees, function(tree) {
+  values <- vapply(trees, function(tree) {
     target <- seq_len(n) != tree$source & is.finite(tree$arrival)
     if (!any(target)) return(0)
     latency <- tree$arrival[target] - tree$origin
@@ -1774,6 +1774,17 @@ dyn_centrality <- function(dn,
     )
     1 / mean(latency)
   }, numeric(1L))
+  # A mean latency of exactly zero is reachable: every vertex joined within one
+  # instant, which `traversal_time = 0` permits. 1/0 is Inf, and Inf is the
+  # honest limit -- instantaneous reach -- but returning it without a word is a
+  # silent failure. Warn, and still return it.
+  if (any(is.infinite(values))) {
+    warning(warningCondition(
+      paste0("Zero-latency reachable sets make temporal closeness infinite; ",
+             "set a positive `traversal_time`."),
+      class = "dynet_zero_latency"))
+  }
+  values
 }
 
 #' Reduce temporal search trees to source-excluding reach measures

@@ -11,8 +11,11 @@ test_that("the temporal closeness reducer includes zero latency and excludes sel
     list(arrival = c(Inf, 0, Inf), source = 2L, origin = 0),
     list(arrival = c(0, 0, 0), source = 3L, origin = 0)
   )
-  expect_identical(Dynet:::.temporal_closeness_values(trees, 3L),
-                   c(1, 0, Inf))
+  expect_warning(
+    values <- Dynet:::.temporal_closeness_values(trees, 3L),
+    class = "dynet_zero_latency"
+  )
+  expect_identical(values, c(1, 0, Inf))
 
   extreme <- list(list(
     arrival = c(0, 1e308, 1e308), source = 1L, origin = 0
@@ -24,7 +27,10 @@ test_that("zero-latency endpoints are included explicitly", {
   simultaneous <- quiet_dynet(data.frame(
     from = c("S", "A"), to = c("A", "B"), time = c(0, 0)
   ))
-  value <- closeness_values(simultaneous, start = 0, end = 0)
+  expect_warning(
+    value <- closeness_values(simultaneous, start = 0, end = 0),
+    class = "dynet_zero_latency"
+  )
   expect_identical(unname(value[c("S", "A", "B")]), c(Inf, Inf, 0))
 
   mixed <- quiet_dynet(data.frame(
@@ -173,13 +179,36 @@ test_that("temporal closeness publishes its mathematical metadata", {
   expect_identical(attr(result, "normalization"),
                    "reachable_inverse_mean")
 
-  mixed <- dyn_centrality(
-    quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
-    measure = c("closeness", "reach"), scope = "temporal"
+  expect_warning(
+    mixed <- dyn_centrality(
+      quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
+      measure = c("closeness", "reach"), scope = "temporal"
+    ),
+    class = "dynet_zero_latency"
   )
   expect_null(attr(mixed, "distance"))
   expect_identical(
     attr(mixed, "measure_metadata")$closeness$distance,
     "forward_latency"
   )
+})
+
+test_that("a zero-latency reachable set is reported, not returned in silence", {
+  # 1/mean(latency) with a mean of exactly zero is Inf. Inf is the honest
+  # limit -- instantaneous reach -- but it used to arrive without a word.
+  inst <- quiet_dynet(
+    data.frame(from = c("A", "A"), to = c("B", "C"), time = c(0, 0)),
+    format = "contact", directed = TRUE
+  )
+  expect_warning(
+    out <- dyn_centrality(inst, measure = "closeness", scope = "temporal"),
+    class = "dynet_zero_latency"
+  )
+  expect_true(any(is.infinite(as.data.frame(out)$value)))
+})
+
+test_that("an ordinary network raises no zero-latency condition", {
+  dn <- quiet_dynet(school_contacts, format = "contact")
+  expect_no_warning(dyn_centrality(dn, measure = "closeness",
+                                   scope = "temporal"))
 })
