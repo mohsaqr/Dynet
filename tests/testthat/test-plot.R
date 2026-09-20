@@ -67,8 +67,13 @@ test_that("infinite temporal closeness survives default bar selection", {
   dn <- quiet_dynet(data.frame(
     from = rep("ZZZ", length(targets)), to = targets, time = 0
   ))
-  closeness <- dyn_centrality(
-    dn, measure = "closeness", scope = "temporal", start = 0, end = 0
+  # Every target is reached at latency zero, so closeness is genuinely
+  # infinite and the verb says so before returning it.
+  expect_warning(
+    closeness <- dyn_centrality(
+      dn, measure = "closeness", scope = "temporal", start = 0, end = 0
+    ),
+    class = "dynet_zero_latency"
   )
   panel <- plot(closeness)
   expect_true("ZZZ" %in% panel$data$.row)

@@ -296,6 +296,36 @@
   if (is.na(anchor)) bound else anchor
 }
 
+#' Clear the route family of an endpoint whose optimum no journey realises
+#'
+#' `criterion = "fastest"` and `"latest_departure"` report an optimum that is
+#' a limit: a duration no journey achieves, or a departure instant on an
+#' excluded terminus. For those two the endpoint is reachable and keeps its
+#' `arrival`, `departure` and `duration`, but has no realising journey, so it
+#' reports no hop count, no path count and no steps. The foremost/shortest
+#' family is different -- there a backward supremum still has the routes that
+#' approach it -- which is why this is applied by criterion rather than in the
+#' shared selection block.
+#'
+#' @param search A search result carrying endpoint-parallel fields.
+#' @return The same search, with unattained endpoints emptied of their family.
+#' @noRd
+.clear_unattained_family <- function(search) {
+  # The flag travels with the search because the routes of these criteria live
+  # in `per_target`, which `.optimal_endpoint_routes()` delegates to before it
+  # ever looks at `selected_states`; emptying the top level alone would leave
+  # the steps table untouched.
+  search$unattained_empty <- TRUE
+  unattained <- which(!is.na(search$attained) & !search$attained)
+  if (!length(unattained)) return(search)
+  search$n_hops[unattained] <- NA_integer_
+  search$n_paths[unattained] <- 0
+  if (!is.null(search$selected_states)) {
+    search$selected_states[unattained] <- vector("list", length(unattained))
+  }
+  search
+}
+
 #' Search result for a vertex never present in the window
 #' @param n Number of vertices.
 #' @param source Integer vertex ID.
@@ -830,10 +860,10 @@
     # backward supremum or a forward infimum with no realising journey.
     has_optimum <- any(state$attained[ids])
     attained[[endpoint]] <- has_optimum
-    # On half-open interval spells the latest departure is a supremum that
-    # no journey attains exactly. The route family that approaches it is
-    # still the answer: keep its hops, count and predecessors, and let
-    # `attained` say that the instant itself is not realised.
+    # On half-open interval spells the latest departure is a supremum that no
+    # journey attains exactly. Under the foremost/shortest family the routes
+    # that approach it are still the answer, so keep their hops, count and
+    # predecessors and let `attained` carry the distinction.
     if (has_optimum) ids <- ids[state$attained[ids]]
     if (!is.null(rule$secondary)) {
       secondary <- state[[rule$secondary]][ids]
@@ -1139,7 +1169,7 @@
   family <- .family_from_targets(per_target, n, attained)
   departure[!reachable] <- NA_real_
   duration <- family$arrival - departure
-  list(
+  .clear_unattained_family(list(
     direction = "forward", source = source, origin = lower,
     deadline = upper, names = enc$names, n = n,
     arrival = family$arrival, departure = departure, duration = duration,
@@ -1148,7 +1178,7 @@
     best_sessions = family$best_sessions,
     session_names = backward[[1L]]$session_names,
     anchor_valid = any(reachable)
-  )
+  ))
 }
 
 #' Read one endpoint's family off its own forward search
@@ -1374,7 +1404,7 @@
            departure_attained[[target]])
   })
   family <- .family_from_targets(per_target, n, attained)
-  list(
+  .clear_unattained_family(list(
     direction = "forward", source = source, origin = lower,
     names = enc$names, n = n,
     arrival = family$arrival, departure = departure,
@@ -1383,7 +1413,7 @@
     per_target = per_target, best_sessions = family$best_sessions,
     session_names = per_target[[source]]$session_names,
     anchor_valid = any(reachable), n_searches = n_searches
-  )
+  ))
 }
 
 #' Run an optimal path search with optional session walls
@@ -2122,8 +2152,14 @@
 .optimal_endpoint_routes <- function(search, endpoint) {
   # A reachable endpoint whose optimum is a supremum (backward searches on
   # half-open spells) still has its route family; `attained` on each state
-  # records that the instant itself is not realised.
+  # records that the instant itself is not realised. Criteria whose optimum is
+  # a limit no journey realises -- fastest and latest_departure -- clear the
+  # family themselves, in `.clear_unattained_family()`.
   if (!is.finite(search$arrival[[endpoint]])) return(list())
+  if (isTRUE(search$unattained_empty) &&
+      !isTRUE(search$attained[[endpoint]])) {
+    return(list())
+  }
   if (!is.null(search$per_target)) {
     return(.optimal_endpoint_routes(search$per_target[[endpoint]], endpoint))
   }

@@ -1,6 +1,33 @@
 # Stage 3 — implementation TODOs: genuinely temporal measures, inter-event
 # times, and temporal motifs
 
+> **ALL SEVEN ITEMS IMPLEMENTED 2026-09-20.** `gaps()`, `persistence()`,
+> `turnover()`, `metrics(temporal_efficiency, temporal_diameter)`,
+> `dyn_centrality(measure = "efficiency", scope = "temporal")`, `motifs()` and
+> `segregation()` all exist, with contract tests and live-verified reference
+> values. Four corrections to this document, each found by running the oracle
+> rather than reading about it:
+>
+> 1. **A3's scipy shim needs two stubs, not one.** `kulsinski` *and*
+>    `matching` are both absent from scipy >= 1.11; teneto builds its whole
+>    distance table eagerly so both must resolve.
+> 2. **A1's entry counts are wrong.** `shortest_temporal_path` on the fixture
+>    yields 48 entries, 42 finite and **6** non-finite, not "42 / 22".
+> 3. **C1's Invariant 2 is wrong.** raphtory's *global* census already counts
+>    a two-node motif once per endpoint, so local and global reconcile **1:1**
+>    for two-node motifs, not 2:1. Measured: star 1:1, two-node 1:1,
+>    triangle 3:1.
+> 4. **A5's reference is per-bin, not overall.** teneto's
+>    `sid(calc = 'overtime')` returns one value for each time bin;
+>    `[0.5, 2.0, 0.5, -0.5]` is a series of four. That is this verb's
+>    `scope = "pertime"`.
+>
+> Everything else in this document was confirmed as written, including the
+> `1/mean(d)` versus `mean(1/d)` divergence, the self-inconsistency of
+> teneto's `shortest_temporal_path`, the zero-latency hazard, and the default
+> grid's closed final bin.
+
+
 Target: `Dynet` 0.3.53. Written 2026-08-28. **Spec only — no package code was
 written or changed.**
 

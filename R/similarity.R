@@ -71,17 +71,7 @@ similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
       "Similarity needs at least two time bins; widen the range or lower `step`.",
       class = "dynet_empty_result", call = NULL))
   }
-  nodes <- dn$nodes$name
-  layers <- lapply(times, function(t) {
-    at <- snaps[snaps$time == t, , drop = FALSE]
-    m <- matrix(0, length(nodes), length(nodes),
-                dimnames = list(nodes, nodes))
-    if (nrow(at)) {
-      m[cbind(match(at$from, nodes), match(at$to, nodes))] <- 1
-    }
-    if (!dn$directed) m <- pmax(m, t(m))
-    m
-  })
+  layers <- .binary_layers(dn, snaps, times)
   grid <- expand.grid(i = seq_along(times), j = seq_along(times))
   value <- vapply(seq_len(nrow(grid)), function(k) {
     cograph::layer_similarity(layers[[grid$i[[k]]]], layers[[grid$j[[k]]]],
@@ -196,4 +186,38 @@ summary.dynet_similarity <- function(object, ...) {
   out$max[!is.finite(out$max)] <- NA_real_
   rownames(out) <- NULL
   out
+}
+
+#' Binary adjacency layers, one per time bin
+#'
+#' Shared by `similarity()` and `persistence()` so the two read the same
+#' network. A cell is 1 when the pair is tied in that bin, whatever its weight
+#' or spell count: both measures are defined on the edge set, not on strength.
+#'
+#' @param dn A `dynet` object, for the vertex universe and directedness.
+#' @param snaps The tidy frame from `snapshots()`, with `time`, `from`, `to`.
+#' @param times Bin midpoints to build, in order.
+#' @param symmetrise Whether to fold the matrix onto its transpose. Defaults to
+#'   folding exactly when the network is undirected; `persistence()` passes
+#'   `TRUE` regardless, because topological overlap is defined on undirected
+#'   neighbourhoods.
+#' @return A list of square numeric matrices, one per bin, with the full vertex
+#'   universe as dimnames in `dn$nodes$name` order.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' snaps <- as.data.frame(snapshots(dn))
+#' str(Dynet:::.binary_layers(dn, snaps, sort(unique(snaps$time))[1:2]))
+#' @noRd
+.binary_layers <- function(dn, snaps, times, symmetrise = !dn$directed) {
+  nodes <- dn$nodes$name
+  lapply(times, function(t) {
+    at <- snaps[snaps$time == t, , drop = FALSE]
+    m <- matrix(0, length(nodes), length(nodes),
+                dimnames = list(nodes, nodes))
+    if (nrow(at)) {
+      m[cbind(match(at$from, nodes), match(at$to, nodes))] <- 1
+    }
+    if (symmetrise) m <- pmax(m, t(m))
+    m
+  })
 }

@@ -243,9 +243,14 @@ test_that("bounded sessions keep the fastest journey inside one session", {
 
 test_that("closeness under fastest uses durations; betweenness is refused", {
   dn <- three_journeys()
-  fast <- as.data.frame(dyn_centrality(dn, measure = "closeness",
-                                       scope = "temporal",
-                                       criterion = "fastest"))
+  # Under `fastest` the distance is the journey duration, and a duration of
+  # exactly zero makes closeness infinite; the condition is part of that.
+  expect_warning(
+    fast <- as.data.frame(dyn_centrality(dn, measure = "closeness",
+                                         scope = "temporal",
+                                         criterion = "fastest")),
+    class = "dynet_zero_latency"
+  )
   table <- as.data.frame(paths(dn, from = "A", criterion = "fastest"))
   others <- subset(table, node != "A" & reachable)
   expect_equal(subset(fast, node == "A")$value, 1 / mean(others$duration))

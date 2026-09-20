@@ -333,8 +333,11 @@ test_that("node size follows a measure computed on the animation's grid", {
   enc <- Dynet:::.encode(dn)
   spec <- Dynet:::.window_spec(dn, NULL, NULL, 4, 4)
   grid <- Dynet:::.grid_for(enc, dn, spec)
-  values <- Dynet:::.animation_measure(dn, "degree", grid, "bounded",
+  # `.animation_measure()` returns the matrix beside its axis label, which is
+  # what animate() consumes; the matrix itself is `$values`.
+  measured <- Dynet:::.animation_measure(dn, "degree", grid, "bounded",
     NULL, NULL, 4, 4)
+  values <- measured$values
   expect_identical(dim(values), c(nrow(grid), nrow(dn$nodes)))
   # Each cell is the measure the verb reports for that bin and vertex.
   reported <- dyn_centrality(dn, measure = "degree", step = 4, window = 4)
@@ -523,9 +526,13 @@ test_that("bins nobody is present in are skipped with a message", {
   skip_if_no_gif()
   log <- data.frame(from = c("A", "C"), to = c("B", "D"),
     start = c(0, 8), end = c(2, 10))
-  nodes <- data.frame(name = c("A", "B", "C", "D"),
+  # Presence is declared through `vertex_spells`, not through the node table:
+  # onset/terminus columns on `nodes` are ordinary attributes and leave every
+  # vertex active at all times, so nothing would be skipped.
+  spells <- data.frame(name = c("A", "B", "C", "D"),
     onset = c(0, 0, 8, 8), terminus = c(2, 2, 10, 10))
-  dn <- quiet_dynet(log, nodes = nodes)
+  dn <- quiet_dynet(log, nodes = data.frame(name = c("A", "B", "C", "D")),
+    vertex_spells = spells)
   expect_message(
     frames <- animate(dn, start = 0, end = 10, step = 2, window = 2,
       tween = 1, file = out_path()),

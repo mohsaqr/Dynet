@@ -39,7 +39,7 @@ interval, which the project's own standards forbid.
 | 0 | Defects in shipped code | 3 | 3 / 0 / 0 | **DONE** (D1 withdrawn, D2+D3 fixed) |
 | 1 | Null models and generators | 8 | 3 / 4 / 1 | **DONE** (A0-A5, B1-B2) |
 | 2 | Path criteria and temporal centrality depth | 14 | 2 / 9 / 3 | **DONE** (all 14) |
-| 3 | Global temporal measures, inter-event times, motifs | 7 | 2 / 3 / 2 | Stage 2 for path-dependent items |
+| 3 | Global temporal measures, inter-event times, motifs | 7 | 2 / 3 / 2 | **DONE** (B1, A2, A3, A1, A4, C1, A5) |
 | 4 | Temporal communities and phases | 7 | 1 / 5 / 1 | **DONE** (items 1-7) |
 | 5 | Animation, representation, interop | 6 | 0 / 3 / 3 | item 2 **DONE** (`animate()`, 0.4.6); items 1 and 3 re-scoped |
 | | **Total** | **45** | **11 / 24 / 10** | |

@@ -1478,14 +1478,20 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
 #' session walls out of both the pooled gaps and the pooled adjacent-gap pairs.
 #'
 #' @param sequences List of numeric event-time vectors.
-#' @return A list containing the event count, pooled gaps, and a two-column
-#'   table of within-sequence adjacent-gap pairs.
+#' @return A list containing the event count, pooled gaps, a two-column table
+#'   of within-sequence adjacent-gap pairs, the sorted sequences themselves,
+#'   and the per-sequence gap vectors. The last two exist so `gaps()` can place
+#'   each gap at the instant it closed without diffing a second time.
 #' @examples
 #' Dynet:::.burst_primitives(list(c(0, 1, 2), c(100, 102, 106)))
 #' @noRd
 .burst_primitives <- function(sequences) {
   sequences <- lapply(sequences, sort)
   gaps_by_sequence <- lapply(sequences, diff)
+  # `gaps()` needs the gap *and* the instant it closed at, which the pooled
+  # vector cannot carry. Returning the sorted sequences beside it keeps one
+  # implementation: a second `diff()` elsewhere is how two verbs that must
+  # agree start disagreeing.
   pair_tables <- lapply(gaps_by_sequence, function(one) {
     if (length(one) < 2L) return(NULL)
     data.frame(left = one[-length(one)], right = one[-1L])
@@ -1499,7 +1505,9 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
   list(
     events = sum(lengths(sequences)),
     gaps = unlist(gaps_by_sequence, use.names = FALSE),
-    pairs = pairs
+    pairs = pairs,
+    sorted = sequences,
+    gaps_by_sequence = gaps_by_sequence
   )
 }
 
@@ -1554,4 +1562,231 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
     }
   }
   out
+}
+
+# ===========================================================================
+# gaps()
+# ===========================================================================
+
+#' Gap rows for one ordered event sequence group
+#'
+#' Shares `.burst_primitives()` so a gap here is the same number
+#' `burstiness()` averages. Each supplied sequence is sorted and differenced
+#' independently, which is what keeps a session wall out of the gaps, and the
+#' gap is placed at the onset of the *later* event so the row plots at the
+#' moment the gap closed.
+#'
+#' @param sequences List of numeric event-time vectors, one per session under
+#'   `sessions = "bounded"` and one in total otherwise.
+#' @return A data frame with `time`, `index` and `value`, zero rows when no
+#'   sequence holds two events. `index` restarts at one in each sequence.
+#' @examples
+#' Dynet:::.gap_rows(list(c(0, 1, 3), c(10, 14)))
+#' @noRd
+.gap_rows <- function(sequences) {
+  primitive <- .burst_primitives(sequences)
+  frames <- Map(function(sorted, value) {
+    # `diff()` on a sequence of fewer than two events is numeric(0), which is
+    # the right answer: such a vertex contributes no row at all, never an NA.
+    if (!length(value)) return(NULL)
+    data.frame(time = sorted[-1L], index = seq_along(value), value = value,
+               stringsAsFactors = FALSE)
+  }, primitive$sorted, primitive$gaps_by_sequence)
+  frames <- Filter(Negate(is.null), frames)
+  if (!length(frames)) {
+    return(data.frame(time = numeric(), index = integer(), value = numeric(),
+                      stringsAsFactors = FALSE))
+  }
+  out <- do.call(rbind, frames)
+  rownames(out) <- NULL
+  out
+}
+
+#' Split one group's event times into the sequences a session policy allows
+#' @param times Numeric event times of the group.
+#' @param session Session label of each event.
+#' @param bounded Whether session walls apply.
+#' @param levels Session levels, in network order.
+#' @return A list of numeric vectors.
+#' @noRd
+.gap_sequences <- function(times, session, bounded, levels) {
+  if (!bounded) return(list(times))
+  split(times, factor(session, levels = levels))
+}
+
+#' Inter-event gaps
+#'
+#' @description
+#' Every interval between one event and the next, as a tidy table with one row
+#' per gap. `burstiness()` computes these gaps to reach `B` and `M` and then
+#' reports only their mean; this returns the distribution itself, so it can be
+#' plotted, fitted, or tested against a Poisson null.
+#'
+#' @param dn A temporal network from [dynet()].
+#' @param unit `"node"`, the default, for the gaps between the events incident
+#'   to each vertex, a loop counting once and direction ignored; `"pair"` for
+#'   the gaps between the events of each ordered pair, or each unordered dyad
+#'   on an undirected network. Loops are excluded from `"pair"`, matching
+#'   [durations()].
+#' @param sessions How to treat sessions, as in [burstiness()]. `"bounded"`,
+#'   the default, forms gaps inside each session so no gap spans a session
+#'   wall; `"collapse"` erases the labels and pools one calendar sequence;
+#'   `"separate"` reports each session on its own rows and needs a network
+#'   built with a session column.
+#' @param censored `"exclude"`, the default, drops events whose onset is
+#'   censored, which is what [burstiness()] does, so the mean of these gaps is
+#'   its `"mean_gap"`. `"include"` keeps them, at the cost of gaps measured
+#'   from an onset that was never observed. Note the default is the opposite
+#'   of [durations()], whose `"include"` default is about retaining spells
+#'   rather than trusting their onsets.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn.
+#'
+#' @return A `dynet_metric` data frame with one row per gap and no
+#'   aggregation, `level = "node"` under `unit = "node"` and `level = "edge"`
+#'   under `unit = "pair"`. Columns are `time`, the onset of the later event of
+#'   the pair, so the row sits at the moment the gap closed; `node`, or `from`
+#'   and `to` under `unit = "pair"`; `index`, the 1-based rank of the gap
+#'   within that vertex's or pair's ordered sequence, restarting at one in each
+#'   session under `"bounded"` and `"separate"`; `measure`, the constant
+#'   `"gap"`; and `value`, the gap in the network's time unit. A leading
+#'   `session` column is present under `sessions = "separate"`. A vertex or
+#'   pair with fewer than two usable events contributes no rows rather than a
+#'   missing one. Print it, [summary()] it, [plot()] it, or take the plain
+#'   frame with [as.data.frame()].
+#'
+#' @details
+#' A gap of exactly zero is legitimate and is kept: it is the signature of two
+#' distinct raw spells incident to the same vertex at one instant. Dropping
+#' those would silently raise the mean above the `"mean_gap"` that
+#' [burstiness()] reports from the same numbers.
+#'
+#' @section Conditions:
+#' Errors: `dynet_bad_input` when `dn` is not a `dynet`, and
+#' `dynet_no_sessions` when `sessions = "separate"` is asked of a network with
+#' no session column. An unmatched `unit`, `sessions` or `censored` is
+#' rejected by [match.arg()] and is a plain error, not a classed one.
+#'
+#' @references
+#' Goh, K.-I., & Barabasi, A.-L. (2008). Burstiness and memory in complex
+#' systems. *Europhysics Letters*, 81(4), 48002. \doi{10.1209/0295-5075/81/48002}
+#'
+#' Karsai, M., Kaski, K., Barabasi, A.-L., & Kertesz, J. (2012). Universal
+#' features of correlated bursty behaviour. *Scientific Reports*, 2, 397.
+#' \doi{10.1038/srep00397}
+#'
+#' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+#' 519(3), 97-125. \doi{10.1016/j.physrep.2012.03.001}
+#'
+#' @seealso [burstiness()] for the summary statistics of these gaps, and
+#'   [durations()] for how long a tie was up rather than how long a pair was
+#'   quiet.
+#'
+#' @examples
+#' dn <- dynet(school_contacts)
+#' quiet <- gaps(dn)
+#' quiet
+#' summary(quiet)
+#'
+#' dyads <- gaps(dn, unit = "pair")
+#' dyads
+#'
+#' @export
+gaps <- function(dn, unit = c("node", "pair"),
+                 sessions = c("bounded", "collapse", "separate"),
+                 censored = c("exclude", "include"), plot = FALSE) {
+  unit <- match.arg(unit)
+  sessions <- match.arg(sessions)
+  censored <- match.arg(censored)
+  .check_dynet(dn, sessions)
+
+  parts <- .split_sessions(
+    dn, if (identical(sessions, "separate")) "separate" else "collapse"
+  )
+  bounded <- identical(sessions, "bounded") && !is.null(dn$meta$sessions)
+
+  frames <- Map(function(enc, label) {
+    raw_time <- enc$raw_event_start
+    eligible <- .time_in_observation(dn, raw_time)
+    if (identical(censored, "exclude")) {
+      eligible <- eligible & !enc$raw_event_onset_censored
+    }
+    event_time <- if (!is.null(dn$meta$observations)) {
+      .observed_time(dn, raw_time)
+    } else raw_time
+    levels <- unique(enc$raw_event_session)
+
+    if (identical(unit, "node")) {
+      per_group <- lapply(seq_len(enc$n), function(vertex) {
+        rows <- which((enc$raw_from == vertex | enc$raw_to == vertex) &
+                        eligible)
+        tbl <- .gap_rows(.gap_sequences(event_time[rows],
+                                        enc$raw_event_session[rows],
+                                        bounded, levels))
+        if (!nrow(tbl)) return(NULL)
+        data.frame(session = label, time = tbl$time,
+                   node = enc$names[[vertex]], index = tbl$index,
+                   measure = "gap", value = tbl$value,
+                   stringsAsFactors = FALSE)
+      })
+    } else {
+      keep <- eligible & enc$raw_from != enc$raw_to
+      key <- .relational_pair_key(enc$raw_from, enc$raw_to, enc$n, dn$directed)
+      rows_by_key <- split(which(keep), key[keep])
+      per_group <- lapply(names(rows_by_key), function(one) {
+        rows <- rows_by_key[[one]]
+        tbl <- .gap_rows(.gap_sequences(event_time[rows],
+                                        enc$raw_event_session[rows],
+                                        bounded, levels))
+        if (!nrow(tbl)) return(NULL)
+        # The key is (from - 1) * n + to on the canonical orientation, so it
+        # decodes without carrying a second table alongside it.
+        code <- as.integer(one)
+        to <- ((code - 1L) %% enc$n) + 1L
+        from <- ((code - to) %/% enc$n) + 1L
+        data.frame(session = label, time = tbl$time,
+                   from = enc$names[[from]], to = enc$names[[to]],
+                   index = tbl$index, measure = "gap", value = tbl$value,
+                   stringsAsFactors = FALSE)
+      })
+    }
+    per_group <- Filter(Negate(is.null), per_group)
+    if (!length(per_group)) return(NULL)
+    do.call(rbind, per_group)
+  }, parts, names(parts))
+
+  frames <- Filter(Negate(is.null), frames)
+  out <- if (length(frames)) {
+    do.call(rbind, frames)
+  } else if (identical(unit, "node")) {
+    data.frame(session = character(), time = numeric(), node = character(),
+               index = integer(), measure = character(), value = numeric(),
+               stringsAsFactors = FALSE)
+  } else {
+    data.frame(session = character(), time = numeric(), from = character(),
+               to = character(), index = integer(), measure = character(),
+               value = numeric(), stringsAsFactors = FALSE)
+  }
+
+  out <- .metric(
+    out, level = if (identical(unit, "node")) "node" else "edge",
+    what = "Inter-event gaps", dn = dn,
+    note = "one row per gap; zero is a real gap, not a missing one"
+  )
+  attr(out, "event_identity") <- if (identical(unit, "node")) {
+    "incident_spell_start"
+  } else "pair_spell_start"
+  attr(out, "loop_contribution") <- if (identical(unit, "node")) {
+    "one_event"
+  } else "excluded"
+  attr(out, "weights") <- "ignored"
+  attr(out, "raw_censoring") <- if (identical(censored, "exclude")) {
+    "censored_onsets_excluded"
+  } else "censored_onsets_included"
+  attr(out, "session_gaps") <- switch(
+    sessions, collapse = "included", bounded = "excluded",
+    separate = "session_local"
+  )
+  .maybe_plot(out, plot)
 }

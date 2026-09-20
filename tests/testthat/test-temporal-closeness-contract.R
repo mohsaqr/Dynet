@@ -11,8 +11,11 @@ test_that("the temporal closeness reducer includes zero latency and excludes sel
     list(arrival = c(Inf, 0, Inf), source = 2L, origin = 0),
     list(arrival = c(0, 0, 0), source = 3L, origin = 0)
   )
-  expect_identical(Dynet:::.temporal_closeness_values(trees, 3L),
-                   c(1, 0, Inf))
+  expect_warning(
+    values <- Dynet:::.temporal_closeness_values(trees, 3L),
+    class = "dynet_zero_latency"
+  )
+  expect_identical(values, c(1, 0, Inf))
 
   extreme <- list(list(
     arrival = c(0, 1e308, 1e308), source = 1L, origin = 0
@@ -24,7 +27,10 @@ test_that("zero-latency endpoints are included explicitly", {
   simultaneous <- quiet_dynet(data.frame(
     from = c("S", "A"), to = c("A", "B"), time = c(0, 0)
   ))
-  value <- closeness_values(simultaneous, start = 0, end = 0)
+  expect_warning(
+    value <- closeness_values(simultaneous, start = 0, end = 0),
+    class = "dynet_zero_latency"
+  )
   expect_identical(unname(value[c("S", "A", "B")]), c(Inf, Inf, 0))
 
   mixed <- quiet_dynet(data.frame(
@@ -173,9 +179,12 @@ test_that("temporal closeness publishes its mathematical metadata", {
   expect_identical(attr(result, "normalization"),
                    "reachable_inverse_mean")
 
-  mixed <- dyn_centrality(
-    quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
-    measure = c("closeness", "reach"), scope = "temporal"
+  expect_warning(
+    mixed <- dyn_centrality(
+      quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
+      measure = c("closeness", "reach"), scope = "temporal"
+    ),
+    class = "dynet_zero_latency"
   )
   expect_null(attr(mixed, "distance"))
   expect_identical(

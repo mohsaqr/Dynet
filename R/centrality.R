@@ -22,7 +22,7 @@
                           "diffusion", "participation")
 
 .temporal_measures <- c("closeness", "betweenness", "reach", "reach_count",
-                        "katz", "pagerank", "walk")
+                        "katz", "pagerank", "walk", "efficiency")
 
 # Temporal measures computed by streaming the contact sequence rather than by
 # searching for paths. They need no per-source tree, so the trees are built
@@ -824,7 +824,11 @@ dyn_centrality <- function(dn,
   }
 
   if (identical(scope, "temporal")) {
-    if (!identical(mode, "all")) {
+    # `efficiency` is the one temporal measure with two directional readings:
+    # the mean over the targets a vertex reaches, and the mean over the
+    # sources that reach it. Every other temporal measure follows the
+    # network's recorded direction and has nothing for `mode` to select.
+    if (!identical(mode, "all") && !identical(measure, "efficiency")) {
       stop(errorCondition(
         "`mode` has no meaning for `scope = \"temporal\"`; temporal paths use the network's recorded direction.",
         class = "dynet_bad_input", call = NULL))
@@ -842,7 +846,10 @@ dyn_centrality <- function(dn,
     return(.temporal_centrality(
       dn, measure, sessions, start, end, traversal_time, beta, decay,
       criterion, damping = damping, transition = transition, rescale = rescale,
-      top = top, cost = cost
+      top = top, cost = cost,
+      # `mode` arrives as its default vector when the caller said nothing; only
+      # an explicit single value selects a direction for `efficiency`.
+      mode = if (length(mode) == 1L) mode else "out"
     ))
   }
 
@@ -1857,7 +1864,8 @@ dyn_centrality <- function(dn,
                                  beta = 0.1, decay = 0,
                                  criterion = "foremost_then_shortest",
                                  damping = 0.85, transition = 1,
-                                 rescale = TRUE, top = NULL, cost = "hops") {
+                                 rescale = TRUE, top = NULL, cost = "hops",
+                                 mode = "out") {
   parts <- .split_sessions(dn, sessions)
   bounded <- identical(sessions, "bounded")
   evaluated <- integer()
@@ -1932,7 +1940,7 @@ dyn_centrality <- function(dn,
     vals <- stats::setNames(lapply(measure, function(m)
       .temporal_measure(m, trees, enc, dn, beta, decay,
                         horizon$start, horizon$end, search_criterion,
-                        damping, transition, rescale)), measure)
+                        damping, transition, rescale, mode)), measure)
     data.frame(session = label, node = enc$names,
                measure = rep(measure, each = enc$n),
                value = unlist(vals, use.names = FALSE),
@@ -2137,7 +2145,7 @@ dyn_centrality <- function(dn,
                               decay = 0, lower = NULL, upper = NULL,
                               criterion = "foremost_then_shortest",
                               damping = 0.85, transition = 1,
-                              rescale = TRUE) {
+                              rescale = TRUE, mode = "out") {
   n <- enc$n
   switch(m,
     katz = .temporal_katz_values(enc, dn, beta, decay, lower, upper),
@@ -2147,8 +2155,57 @@ dyn_centrality <- function(dn,
     reach = .temporal_reach_values(trees, n, m)[[1L]],
     reach_count = .temporal_reach_values(trees, n, m)[[1L]],
     closeness = .temporal_closeness_values(trees, n, criterion),
-    betweenness = .temporal_betweenness_values(trees, n)
+    betweenness = .temporal_betweenness_values(trees, n),
+    efficiency = .temporal_efficiency_values(trees, n, criterion, mode)
   )
+}
+
+#' Node-level temporal efficiency from the same search trees
+#'
+#' The mean reciprocal temporal distance from a vertex to every other
+#' (`"out"`), or to it from every other (`"in"`). Unreachable targets
+#' contribute zero rather than being dropped, which is what makes this defined
+#' on a disconnected network and what distinguishes it from
+#' `.temporal_closeness_values()`, which averages over reachable targets only.
+#' A reader expecting `efficiency == 1 / closeness` will not find it.
+#'
+#' @param trees List of forward search results, one per source.
+#' @param n Size of the fixed vertex universe.
+#' @param criterion The criterion the searches solved, choosing the distance.
+#' @param mode `"in"` for the incoming mean; anything else is the outgoing one,
+#'   since a journey has a direction and `"all"` has no third reading here.
+#' @return A numeric vector, one value per vertex.
+#' @noRd
+.temporal_efficiency_values <- function(trees, n, criterion = "min_hops",
+                                        mode = "out") {
+  # Hop distance, whatever criterion selected the journeys. The reciprocal of
+  # a hop count between distinct vertices is always in (0, 1], so the measure
+  # is bounded and finite; a latency reading is available at graph level
+  # through `metrics(measure = "temporal_efficiency", basis = "latency")`,
+  # where the infinite case is warned about rather than hidden.
+  criterion <- "min_hops"
+  # Row i of `d` is the distance from i to every other vertex. The incoming
+  # reading is the column mean of the same matrix, so no extra search runs.
+  rows <- lapply(trees, function(tree) {
+    distance <- if (identical(criterion, "min_hops")) {
+      as.numeric(tree$n_hops)
+    } else if (identical(criterion, "shortest")) {
+      tree$path_cost
+    } else {
+      tree$arrival - tree$origin
+    }
+    distance[!is.finite(tree$arrival)] <- Inf
+    distance[is.na(distance)] <- Inf
+    distance
+  })
+  d <- matrix(unlist(rows), nrow = n, byrow = TRUE)
+  diag(d) <- 0
+  reciprocal <- 1 / d
+  diag(reciprocal) <- 0
+  totals <- if (identical(mode, "in")) colSums(reciprocal) else
+    rowSums(reciprocal)
+  if (n < 2L) return(rep(NA_real_, n))
+  totals / (n - 1L)
 }
 
 #' Count optimal endpoint routes through each named vertex
@@ -2592,7 +2649,7 @@ dyn_centrality <- function(dn,
 #' @noRd
 .temporal_closeness_values <- function(trees, n,
                                        criterion = "foremost_then_shortest") {
-  vapply(trees, function(tree) {
+  values <- vapply(trees, function(tree) {
     target <- seq_len(n) != tree$source & is.finite(tree$arrival)
     if (!any(target)) return(0)
     # The distance is whatever the criterion optimised, so closeness under
@@ -2615,6 +2672,18 @@ dyn_centrality <- function(dn,
     )
     1 / mean(distance)
   }, numeric(1L))
+  # A latency-based criterion can produce a mean distance of exactly zero when
+  # every reachable vertex is joined within one instant, and 1/0 is Inf. Inf is
+  # the honest limit -- instantaneous reach -- but returning it without a word
+  # is a silent failure. Warn with the same class `metrics()` uses.
+  if (any(is.infinite(values))) {
+    warning(warningCondition(
+      paste0("Zero-latency reachable sets make temporal closeness infinite; ",
+             "set a positive `traversal_time` or use ",
+             "`criterion = \"min_hops\"`."),
+      class = "dynet_zero_latency"))
+  }
+  values
 }
 
 #' Reduce temporal search trees to source-excluding reach measures

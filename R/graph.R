@@ -15,8 +15,16 @@
   "concurrent_nodes", "concurrent_share", "in_2stars", "out_2stars",
   "two_paths",
   "temporal_density", "observed_pair_density", "onset_intensity",
-  "observed_pair_onset_intensity"
+  "observed_pair_onset_intensity",
+  "temporal_efficiency", "temporal_diameter"
 )
+
+#' Graph measures that need an all-pairs time-respecting search
+#'
+#' The only `metrics()` measures that run temporal paths rather than reading
+#' one slice, which is why they alone accept `basis` and `traversal_time`.
+#' @noRd
+.path_graph_measures <- c("temporal_efficiency", "temporal_diameter")
 
 .temporal_graph_measures <- c(
   "temporal_density", "observed_pair_density", "onset_intensity",
@@ -226,7 +234,12 @@ metrics <- function(dn, measure = "density",
                         sessions = c("bounded", "collapse", "separate"),
                         sample = NULL,
                         start = NULL, end = NULL,
-                        step = NULL, window = NULL, plot = FALSE) {
+                        step = NULL, window = NULL,
+                        basis = c("hops", "latency"),
+                        traversal_time = 0, plot = FALSE) {
+  basis_supplied <- !missing(basis)
+  traversal_supplied <- !missing(traversal_time)
+  basis <- match.arg(basis)
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
@@ -242,6 +255,15 @@ metrics <- function(dn, measure = "density",
               paste(.graph_measures, collapse = ", ")),
       class = "dynet_unknown_measure", call = NULL))
   }
+  wants_paths <- any(measure %in% .path_graph_measures)
+  if (!wants_paths && (basis_supplied || traversal_supplied)) {
+    stop(errorCondition(
+      paste0("`basis` and `traversal_time` apply only to ",
+             paste(sQuote(.path_graph_measures), collapse = " and "), "."),
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (wants_paths) traversal_time <- .as_traversal_time(traversal_time, dn)
+
   if (!dn$directed) {
     dir_only <- intersect(measure, c(
       "reciprocity", "mutual", "asymmetric", "null",
@@ -255,21 +277,31 @@ metrics <- function(dn, measure = "density",
     }
   }
 
+  connected_seen <- list()
   df <- .over_bins(dn, sessions, node_level = FALSE, spec = spec,
     snapshot = TRUE, fun = function(enc, act, bin, state) {
       full <- .adjacency(enc, act, dn$directed)
       a <- full[state$index, state$index, drop = FALSE]
       temporal <- intersect(measure, .temporal_graph_measures)
+      label <- if (identical(sessions, "separate")) {
+        as.character(enc$raw_event_session[[1L]])
+      } else "all"
       temporal_values <- if (length(temporal)) {
-        label <- if (identical(sessions, "separate")) {
-          as.character(enc$raw_event_session[[1L]])
-        } else "all"
         .temporal_edge_values(.temporal_edge_ledger(
           dn, enc, bin, sessions, label
         ))
       } else numeric()
+      path_values <- if (any(measure %in% .path_graph_measures)) {
+        distances <- .temporal_distances(dn, enc, bin, sessions, label, basis,
+                                         traversal_time, state$index)
+        summary <- .temporal_path_summary(distances, measure, basis)
+        connected_seen[[length(connected_seen) + 1L]] <<- summary$connected
+        summary
+      } else NULL
       unlist(lapply(measure, function(m) {
-        if (m %in% .temporal_graph_measures) {
+        if (m %in% .path_graph_measures) {
+          stats::setNames(path_values[[m]], m)
+        } else if (m %in% .temporal_graph_measures) {
           stats::setNames(unname(temporal_values[[m]]), m)
         } else .graph_measure(m, a, dn$directed)
       }), use.names = TRUE)
@@ -306,6 +338,16 @@ metrics <- function(dn, measure = "density",
       "instant_exact"
     } else "any"
     attr(out, "edge_endpoint_rule") <- "induced_after_elementwise_union"
+  }
+  if (wants_paths) {
+    attr(out, "basis") <- basis
+    attr(out, "traversal_time") <- traversal_time
+    attr(out, "unreachable_rule") <- "excluded_from_mean"
+    # A diameter reported without saying whether the network was temporally
+    # connected is the classic misleading number: it is the diameter of the
+    # reachable part only.
+    seen <- unlist(connected_seen)
+    attr(out, "temporal_connected") <- if (length(seen)) all(seen) else NA
   }
   attr(out, "opportunity_domain") <- if (dn$directed) {
     "eligible_nonloop_ordered_pairs"

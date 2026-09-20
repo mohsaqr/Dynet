@@ -13,6 +13,8 @@ metrics(
   end = NULL,
   step = NULL,
   window = NULL,
+  basis = c("hops", "latency"),
+  traversal_time = 0,
   plot = FALSE
 )
 }
