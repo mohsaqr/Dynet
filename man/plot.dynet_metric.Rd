@@ -18,13 +18,18 @@
 \item{x}{A \code{dynet_metric}.}
 
 \item{type}{\code{"line"} for trajectories over time, \code{"heatmap"} for a
-vertex-by-time tile plot, \code{"ridge"} for small multiples per measure.}
+vertex-by-time tile plot, \code{"ridge"} for small multiples per measure.
+Ignored for a measure with no time axis.}
 
 \item{highlight}{Optional character vector of vertex names to draw in
 colour, with everything else in grey. Useful when there are many
-vertices.}
+vertices. Ignored for a measure with no time axis.}
 
-\item{top}{Draw only the \code{top} vertices by mean value. \code{NULL} draws all.}
+\item{top}{How many rows to draw. For a measure taken over time, the \code{top}
+vertices with the largest mean value; \code{NULL}, the default, draws every
+vertex. For a measure with no time axis, the \code{top} rows with the largest
+absolute value, defaulting to \code{30}, with a subtitle naming how many of
+how many are shown.}
 
 \item{palette}{Colours for the series: \code{"okabe"} (the default),
 \code{"extended"}, \code{"many"}, your own vector of colours, or a function of \code{n}.}
@@ -34,12 +39,19 @@ vertices.}
 \item{...}{Ignored.}
 }
 \value{
-A \code{ggplot} object.
+A \code{ggplot} object. Drawing happens when that object is printed, so
+the plot is the return value here rather than a side effect.
 }
 \description{
 Draws the quantity against time. Node-level measures are drawn as one line
 per vertex; graph-level measures as one line per measure. Distinctions are
 carried by colour and line type together, never by colour alone.
+}
+\details{
+A measure with no time axis, such as reachability or \code{\link[=durations]{durations()}}, has no
+trajectory to draw and is shown as a bar panel instead, one bar per vertex
+or pair and one facet per measure. \code{type} and \code{highlight} have nothing to
+act on there and are ignored.
 }
 \examples{
 dn <- dynet(school_contacts)

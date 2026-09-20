@@ -61,7 +61,8 @@
 #' @param network A `CographNetwork` carrying the two columns above.
 #' @param ... Ignored; present because cograph passes layout parameters
 #'   through.
-#' @return A `data.frame` with `x` and `y`, one row per vertex.
+#' @return A `data.frame` with `x` and `y`, one row per vertex, both rescaled
+#'   to `[-1, 1]`. Raises `dynet_bad_input` when either column is absent.
 #' @noRd
 .layout_temporal <- function(network, ...) {
   nodes <- if (inherits(network, "CographNetwork")) network$get_nodes() else

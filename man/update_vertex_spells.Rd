@@ -10,15 +10,29 @@ update_vertex_spells(dn, spells, data)
 \item{dn}{A temporal network.}
 
 \item{spells}{Integer positions or a logical mask over canonical vertex
-activity.}
+activity, as returned by \code{as.data.frame(dn, what = "vertex_spells")}.}
 
-\item{data}{One row or one row per selected component, containing fields to
-replace.}
+\item{data}{A data frame with one row, or one row per selected component,
+containing the fields to replace: \code{node}, \code{start}, \code{end}, \code{session},
+\code{onset_censored} or \code{terminus_censored}.}
 }
 \value{
-A new \code{dynet} object. Updated components are canonicalized with the
-retained components, so overlaps can merge and identifiers can change.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}. Updated components are
+canonicalised with the retained components, so overlaps can merge and
+spell identifiers can change. Raises \code{dynet_bad_input} when \code{spells} is
+not a valid selection, when \code{data} is malformed or of the wrong height,
+or when it names the read-only derived columns \code{vertex_spell},
+\code{duration} or \code{instant}.
 }
 \description{
 Update declared vertex-activity components
+}
+\examples{
+dn <- dynet(school_contacts)
+present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+enrolled <- set_vertex_spells(dn, present)
+extended <- update_vertex_spells(enrolled, spells = 1,
+                                 data = data.frame(end = 12))
+as.data.frame(extended, what = "vertex_spells")
 }

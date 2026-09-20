@@ -9,13 +9,20 @@
 \arguments{
 \item{x}{A result from \code{\link[=similarity]{similarity()}}.}
 
-\item{row.names, optional}{Ignored.}
+\item{row.names, optional}{Ignored; present for compatibility with the
+generic.}
 
 \item{...}{Ignored.}
 }
 \value{
-A plain data frame, one row per ordered pair of time bins.
+A plain \code{data.frame}, one row per ordered pair of time bins, with
+columns \code{time}, \code{other}, \code{measure} and \code{value}.
 }
 \description{
 Tidy table of time-bin similarity
+}
+\examples{
+dn <- dynet(school_contacts)
+resemblance <- similarity(dn, step = 4, window = 4)
+as.data.frame(resemblance)
 }

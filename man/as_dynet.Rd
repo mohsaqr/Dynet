@@ -15,11 +15,25 @@ as_dynet(x, ...)
 \item{...}{Passed to a class-specific method.}
 }
 \value{
-A \code{\link[=dynet]{dynet()}} temporal network: an object of class \code{dynet} carrying
-the tie ledger, the node table and the construction metadata. The \code{dynet}
-method is the identity, returning \code{x} unchanged, so \code{as_dynet()} is safe
-to call on an object that is already a temporal network.
+A \code{\link[=dynet]{dynet()}} temporal network: an object of class
+\code{c("dynet", "netobject", "cograph_network")} carrying the tie ledger, the
+node table and the construction metadata. The \code{dynet} method is the
+identity, returning \code{x} unchanged, so \code{as_dynet()} is safe to call on an
+object that is already a temporal network.
 }
 \description{
-Convert an object to a Dynet temporal network
+Imports a temporal network held in another R representation, so that every
+Dynet verb applies to it. A method is supplied for \code{networkDynamic}
+objects; the method for \code{dynet} is the identity.
+}
+\examples{
+dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
+as_dynet(dn)
+dn <- dynet(school_contacts)
+same <- as_dynet(dn)
+same
+}
+\seealso{
+\code{\link[=as_dynet.networkDynamic]{as_dynet.networkDynamic()}}, which imports a \code{networkDynamic}
+object.
 }

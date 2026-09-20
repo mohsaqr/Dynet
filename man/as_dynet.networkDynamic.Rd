@@ -26,27 +26,36 @@ names. \code{NULL} chooses the first complete unique attribute among \code{Name}
 \item{group_attribute}{Optional static vertex attribute used as the cograph
 grouping variable.}
 
-\item{weight_attribute}{Static edge attribute used as spell weight. Supply
-\code{NULL} to use unit weights.}
+\item{weight_attribute}{Static edge attribute used as spell weight,
+\code{"weight"} by default. Supply \code{NULL} to use unit weights. A name that is
+not a static edge attribute of \code{x} also yields unit weights.}
 
 \item{session_attribute}{Optional static edge attribute used as the spell
-session label.}
+session label. \code{NULL}, the default, leaves the network unsessioned; a
+name that is not a static edge attribute raises a condition of class
+\code{dynet_unknown_attribute}.}
 
-\item{interval}{Positive measurement interval. \code{NULL} uses the legacy
-observation time increment when available, otherwise one.}
+\item{interval}{Positive measurement interval. \code{NULL}, the default, uses the
+legacy observation time increment when available, otherwise one.}
 
 \item{active_default}{Whether legacy edges with no explicit activity spell
 are active over the observation period, matching the same argument in
-\code{networkDynamic}.}
+\code{networkDynamic}. \code{TRUE} by default.}
 
 \item{import_edge_attributes}{Whether to retain compatible static legacy
-edge attributes on the raw Dynet spell ledger.}
+edge attributes on the raw Dynet spell ledger. \code{TRUE} by default; an
+attribute whose name would collide with a canonical spell column is
+prefixed with \code{edge_}.}
 
 \item{...}{Ignored.}
 }
 \value{
-A \code{dynet} object carrying \code{legacy_source = "networkDynamic"} in
-its metadata.
+A \code{\link[=dynet]{dynet()}} temporal network: an object of class
+\code{c("dynet", "netobject", "cograph_network")} whose spell table has one row
+per imported edge-activity spell, with the legacy vertex and edge
+attributes, observation support, vertex activity and censor flags carried
+across. Its metadata additionally carries \code{legacy_source = "networkDynamic"}, the chosen \code{legacy_name_attribute}, the retained
+\code{legacy_edge_attributes} and any \code{legacy_edge_attribute_renames}.
 }
 \description{
 Converts the edge-activity spell ledger, observation support, explicit
@@ -60,4 +69,18 @@ Dynamic edge attributes other than activity itself are not part of the
 \code{networkDynamic} spell-list interface and are therefore not imported.
 Ordinary per-edge attributes are repeated onto every imported spell of the
 corresponding aggregate edge.
+}
+\examples{
+if (requireNamespace("networkDynamic", quietly = TRUE) &&
+    requireNamespace("network", quietly = TRUE)) {
+  spells <- data.frame(onset = c(0, 1), terminus = c(2, 3),
+                       tail = c(1, 2), head = c(2, 3))
+  legacy <- networkDynamic::networkDynamic(edge.spells = spells)
+  network::set.vertex.attribute(legacy, "Name", c("A", "B", "C"))
+  dn <- as_dynet(legacy)
+  as.data.frame(dn)
+}
+}
+\seealso{
+\code{\link[=as_dynet]{as_dynet()}}, the generic.
 }

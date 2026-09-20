@@ -77,11 +77,18 @@
 #' that averaging a closeness series does not silently propagate a missing
 #' value.
 #'
-#' @param a Adjacency matrix.
+#' `C(i) = r(i) / sum_{j reachable from i} d(i, j)`, where `r(i)` is the
+#' number of vertices `i` reaches.
+#'
+#' @param a Adjacency matrix. Binarised by `.geodesic()`, so every arc is one
+#'   hop and edge weights do not shorten a path; the igraph agreement above is
+#'   therefore with an unweighted `igraph::closeness()`.
 #' @param directed Whether to respect direction.
 #' @param mode `"out"` counts distance from the vertex, `"in"` distance to it,
-#'   `"all"` ignores direction.
-#' @return A named numeric vector.
+#'   `"all"` ignores direction. `"all"` is the default.
+#' @return A named numeric vector; zero for a vertex that reaches nothing.
+#' @references Freeman, L. C. (1979). Centrality in social networks: conceptual
+#'   clarification. *Social Networks*, 1(3), 215-239.
 #' @noRd
 .closeness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
@@ -99,10 +106,17 @@
 
 #' Betweenness centrality by Brandes' algorithm
 #'
-#' @param a Adjacency matrix.
+#' `B(v) = sum_{s != v != t} sigma_st(v) / sigma_st`, where `sigma_st` counts
+#' the shortest paths from `s` to `t` and `sigma_st(v)` those passing through
+#' `v`. Accumulated one source at a time, which is what makes Brandes linear
+#' in the edge count per source rather than quadratic.
+#'
+#' @param a Adjacency matrix. Binarised before use, so edge weights do not
+#'   shorten a path.
 #' @param directed Whether to respect direction. Undirected counts are halved,
 #'   matching `sna::betweenness(gmode = "graph")`.
-#' @return A named numeric vector.
+#' @return A named numeric vector; zero throughout on fewer than three
+#'   vertices.
 #' @references Brandes, U. (2001). A faster algorithm for betweenness
 #'   centrality. *Journal of Mathematical Sociology*, 25(2), 163-177.
 #' @noRd
@@ -157,6 +171,9 @@
 
 #' Principal eigenvector centrality
 #'
+#' The non-negative solution of `A x = rho x` at the Perron root
+#' `rho = max |eigenvalue|`, scaled so `max(x) = 1`.
+#'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction. `FALSE` symmetrises with
 #'   `pmax(a, t(a))`. `TRUE` respects direction only when `mode` asks it to.
@@ -165,9 +182,25 @@
 #'   (igraph's convention); `"out"` uses the right eigenvector
 #'   (`sna::evcent`'s); `"all"`, the default, symmetrises and so gives the
 #'   undirected answer even when `directed = TRUE`.
-#' @param tol,max_iter Retained for compatibility with the former power-
-#'   iteration implementation; the stable eigensolver does not use them.
-#' @return A named numeric vector scaled to a maximum of one.
+#' @param tol Relative tolerance, scaled by the matrix magnitude, for the
+#'   three decisions the certification makes: whether the Perron root is
+#'   effectively zero, which singular values count as the null space of
+#'   `A - rho I`, and which loadings are snapped to zero before the
+#'   non-negativity check.
+#' @param max_iter Unused. Retained from the former power-iteration
+#'   implementation; no caller in the package names it.
+#' @return A named numeric vector scaled to a maximum of one. When the answer
+#'   is not defined -- the eigensolve failed, the spectral radius is zero
+#'   (an acyclic snapshot), the Perron eigenspace is not one-dimensional (two
+#'   components of equal weight), or the leading vector is not sign-constant
+#'   -- an all-`NA` vector carrying `attr(, "undefined") = TRUE` is returned
+#'   instead, so the calling verb can report the fact once. Two shapes return
+#'   early and are not flagged: a zero-vertex matrix gives an unnamed
+#'   `numeric(0)`, and an edgeless one a named vector of zeros, which is the
+#'   defined answer rather than a missing one.
+#' @references Bonacich, P. (1972). Factoring and weighting approaches to
+#'   status scores and clique identification. *Journal of Mathematical
+#'   Sociology*, 2(1), 113-120.
 #' @noRd
 .eigen_centrality <- function(a, directed = TRUE, mode = c("all", "out", "in"),
                               tol = 1e-12, max_iter = 1000L) {
@@ -214,10 +247,19 @@
 
 #' PageRank by power iteration
 #'
+#' `x = d (P' x + (1/n) sum_{dangling} x) + (1 - d) / n`, iterated to a fixed
+#' point, where `P` is the row-normalised adjacency and a dangling vertex
+#' spreads its mass uniformly. Matches `igraph::page_rank()` at the same
+#' damping.
+#'
 #' @param a Adjacency matrix.
-#' @param damping Damping factor.
-#' @param tol,max_iter Convergence tolerance and iteration cap.
+#' @param damping Damping factor `d`.
+#' @param tol,max_iter Convergence tolerance on the maximum absolute change,
+#'   and the iteration cap. The cap is not reported when it is hit.
 #' @return A named numeric vector summing to one.
+#' @references Brin, S., & Page, L. (1998). The anatomy of a large-scale
+#'   hypertextual web search engine. *Computer Networks and ISDN Systems*,
+#'   30(1-7), 107-117.
 #' @noRd
 .pagerank <- function(a, damping = 0.85, tol = 1e-12, max_iter = 1000L) {
   n <- nrow(a)
@@ -229,19 +271,40 @@
   tp <- t(p)
   x <- rep(1 / n, n)
   it <- 0L
+  converged <- FALSE
   repeat {
     y <- damping * (as.vector(tp %*% x) + sum(x[dangling]) / n) + (1 - damping) / n
     it <- it + 1L
-    if (max(abs(y - x)) < tol || it >= max_iter) { x <- y; break }
+    change <- max(abs(y - x))
     x <- y
+    converged <- change < tol
+    if (converged || it >= max_iter) break
+  }
+  # Reaching the iteration cap used to be indistinguishable from converging.
+  # The final iterate is still returned -- it is the best estimate available
+  # -- but the caller is told that it is not a converged one.
+  if (!converged) {
+    warning(warningCondition(sprintf(
+      "PageRank did not converge in %d iterations; the last change was %.3g against a tolerance of %.3g, and the final iterate is reported.",
+      max_iter, change, tol
+    ), class = "dynet_pagerank_nonconvergence", call = NULL))
   }
   stats::setNames(x / sum(x), rownames(a))
 }
 
 #' Hub and authority scores
+#'
+#' The principal eigenvector of `A A'` for hubs and of `A' A` for
+#' authorities. Matches `igraph::hub_score()` and
+#' `igraph::authority_score()`.
+#'
 #' @param a Adjacency matrix.
 #' @param which Either `"hub"` or `"authority"`.
-#' @return A named numeric vector scaled to a maximum of one.
+#' @return A named numeric vector scaled to a maximum of one, or the
+#'   `undefined`-flagged all-`NA` vector `.eigen_centrality()` returns when the
+#'   leading eigenvector is not determined.
+#' @references Kleinberg, J. M. (1999). Authoritative sources in a hyperlinked
+#'   environment. *Journal of the ACM*, 46(5), 604-632.
 #' @noRd
 .hits <- function(a, which = c("hub", "authority")) {
   which <- match.arg(which)
@@ -250,10 +313,17 @@
 }
 
 #' k-core number of every vertex
+#'
+#' The largest `k` such that the vertex survives repeated removal of every
+#' vertex of degree below `k`. Matches `igraph::coreness()` under the matching
+#' mode.
+#'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
 #' @param mode Which degree the peeling uses: `"all"`, `"out"` or `"in"`.
 #' @return A named numeric vector.
+#' @references Seidman, S. B. (1983). Network structure and minimum degree.
+#'   *Social Networks*, 5(3), 269-287.
 #' @noRd
 .coreness <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
   mode <- match.arg(mode)
@@ -287,8 +357,16 @@
 }
 
 #' Burt's constraint
+#'
+#' `C(i) = sum_{j in N(i)} (p_ij + sum_q p_iq p_qj)^2`, where `p_ij` is `i`'s
+#' proportional investment in `j` computed on the symmetrised, loop-free
+#' network. Matches `igraph::constraint()` on both directed and undirected
+#' input.
+#'
 #' @param a Adjacency matrix.
 #' @return A named numeric vector; `NA` for isolates.
+#' @references Burt, R. S. (1992). *Structural holes: the social structure of
+#'   competition*. Harvard University Press.
 #' @noRd
 .constraint <- function(a) {
   m <- a + t(a)
@@ -322,6 +400,10 @@
 
 #' Directed and undirected transitivity
 #'
+#' The share of two-paths that are closed: `sum_ij (A^2)_ij A_ij / sum_ij
+#' (A^2)_ij` off the diagonal, on the binarised network. This is the "weak"
+#' convention, and it matches `sna::gtrans(measure = "weak")`.
+#'
 #' Follows the `sna::gtrans()` convention of returning one when the graph has
 #' no two-paths, rather than the `NaN` that `igraph` produces.
 #'
@@ -339,8 +421,15 @@
 }
 
 #' Dyad census
+#'
+#' Counts of the three dyad states over all `choose(n, 2)` unordered pairs.
+#' Matches `sna::dyad.census()`.
+#'
 #' @param a Adjacency matrix.
 #' @return A named numeric vector with `mutual`, `asymmetric` and `null`.
+#' @references Holland, P. W., & Leinhardt, S. (1970). A method for detecting
+#'   structure in sociometric data. *American Journal of Sociology*, 76(3),
+#'   492-513.
 #' @noRd
 .dyad_census <- function(a) {
   b <- .binary(a, directed = TRUE)
@@ -352,11 +441,14 @@
 
 #' Edgewise reciprocity
 #'
-#' The share of edges whose reverse is also present. Empty graphs give zero,
-#' matching `sna::grecip(measure = "edgewise")`.
+#' `sum_ij B_ij B_ji / sum_ij B_ij` on the binarised network: the share of
+#' arcs whose reverse is also present. Matches
+#' `sna::grecip(measure = "edgewise")` on any graph carrying at least one arc.
+#' A graph with no arcs at all is reported as zero here, where `sna::grecip()`
+#' divides by zero and returns `NaN`.
 #'
 #' @param a Adjacency matrix.
-#' @return A single numeric value.
+#' @return A single numeric value in `[0, 1]`.
 #' @noRd
 .reciprocity <- function(a) {
   b <- .binary(a, directed = TRUE)
@@ -366,10 +458,22 @@
 }
 
 #' Degree assortativity
+#'
+#' The Pearson correlation of the two endpoint values over the edge list. The
+#' default value is **total** degree, `rowSums(A) + colSums(A)`, on both
+#' endpoints. On an undirected network this matches
+#' `igraph::assortativity_degree()`; on a directed one it does not, because
+#' igraph correlates the source's out-degree against the target's in-degree
+#' while this correlates total degree on both sides.
+#'
 #' @param a Adjacency matrix.
 #' @param directed Whether to respect direction.
-#' @param values Optional numeric vertex values; degree is used when absent.
-#' @return A single numeric value, `NA` when undefined.
+#' @param values Optional numeric vertex values; total degree is used when
+#'   absent.
+#' @return A single numeric value, `NA` when fewer than two edges remain or
+#'   either endpoint series is constant.
+#' @references Newman, M. E. J. (2002). Assortative mixing in networks.
+#'   *Physical Review Letters*, 89(20), 208701.
 #' @noRd
 .assortativity <- function(a, directed = TRUE, values = NULL) {
   b <- .binary(a, directed)
@@ -384,9 +488,15 @@
 }
 
 #' Freeman centralisation of a node-level score
+#'
+#' `sum_i (max(c) - c_i) / max_score`, where `max_score` is the same sum for
+#' the most centralised graph of this size.
+#'
 #' @param scores Numeric vector of vertex scores.
 #' @param max_score Theoretical maximum sum of differences for this graph size.
 #' @return A single numeric value in `[0, 1]`, `NA` when the maximum is zero.
+#' @references Freeman, L. C. (1979). Centrality in social networks: conceptual
+#'   clarification. *Social Networks*, 1(3), 215-239.
 #' @noRd
 .centralisation <- function(scores, max_score) {
   if (!is.finite(max_score) || max_score <= 0) return(NA_real_)
@@ -395,11 +505,18 @@
 
 #' Triad census over all 16 isomorphism classes
 #'
+#' Every triple is reduced to the six-bit code of its three dyads and looked up
+#' in `.triad_class`. Matches `sna::triad.census()` and
+#' `igraph::triad_census()`.
+#'
 #' Cost grows with the cube of the vertex count; the computation is streamed
 #' one first-vertex at a time so that memory stays bounded.
 #'
 #' @param a Adjacency matrix.
 #' @return A named numeric vector of length 16 using the standard MAN labels.
+#' @references Holland, P. W., & Leinhardt, S. (1970). A method for detecting
+#'   structure in sociometric data. *American Journal of Sociology*, 76(3),
+#'   492-513.
 #' @noRd
 .triad_census <- function(a) {
   b <- .binary(a, directed = TRUE)

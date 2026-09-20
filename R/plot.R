@@ -45,7 +45,9 @@
 #' @param x A temporal network from [dynet()].
 #' @param node_size,node_shape,node_fill,node_border_color,node_border_width,node_alpha
 #'   Node aesthetics, named as in `cograph::splot()`. `NULL` uses the view's
-#'   own default. For the node-link views these are forwarded to splot.
+#'   own default. They are honoured by the `"network"`, `"snapshots"` and
+#'   `"events"` views; the `"layers"`, `"heatmap"`, `"stack"` and
+#'   `"proximity"` views take their renderer's own arguments through `...`.
 #' @param edge_color,edge_alpha,edge_width,edge_width_range,edge_style Link
 #'   aesthetics, named as in `cograph::splot()`. An `edge_color` overrides the
 #'   source-to-target colour run with one colour.
@@ -57,27 +59,29 @@
 #' @param bins Number of equal time bins for `"timeline"` and `"events"`.
 #'   `NULL` uses the network's own interval. `step`, a width, takes
 #'   precedence when both are given.
-#' @param link Link glyph for `"events"`: `"hook"` (default), `"arc"`,
+#' @param link Link glyph for `"events"`: `"hook"` (the default), `"arc"`,
 #'   `"chevron"`, `"wave"` or `"bracket"`.
-#' @param time Time axis for `"events"`. `"bin"` groups onsets into equal
-#'   windows and keeps duration honest, `"event"` gives one evenly spaced
-#'   column per distinct onset, `"clock"` uses true positions.
+#' @param time Time axis for `"events"`. `"bin"`, the default, groups onsets
+#'   into equal windows and keeps duration honest, `"event"` gives one evenly
+#'   spaced column per distinct onset, `"clock"` uses true positions.
 #' @param aggregate For `"events"`, fold repeat firings of one pair inside one
-#'   column into a single link. Binning merges distinct onsets, and without
-#'   this they stack as parallel bows carrying no extra reading.
-#' @param nest For `"events"`, which links are fanned apart. `"pair"` fans
-#'   only links joining the same two rows in the same column; `"column"` fans
-#'   every link sharing a column.
+#'   column into a single link, `TRUE` by default. Binning merges distinct
+#'   onsets, and without this they stack as parallel bows carrying no extra
+#'   reading.
+#' @param nest For `"events"`, which links are fanned apart. `"pair"`, the
+#'   default, fans only links joining the same two rows in the same column;
+#'   `"column"` fans every link sharing a column.
 #' @param split For `"events"`, the share of each link that keeps its source
 #'   colour before switching to its target's, so direction reads without
-#'   arrowheads.
+#'   arrowheads. One number between 0 and 1, `0.8` by default.
 #' @param blend For `"events"`, fade between the two endpoint colours instead
-#'   of switching at a boundary.
+#'   of switching at a boundary. `FALSE` by default.
 #' @param weight For `"events"`, scale alpha and width by how often the pair
 #'   occurs across the network, so one-off links recede and habitual ones
-#'   stand out.
-#' @param type One of `"timeline"`, `"events"`, `"activity"`, `"network"`,
-#'   `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or `"proximity"`.
+#'   stand out. `TRUE` by default.
+#' @param type One of `"timeline"` (the default), `"events"`, `"activity"`,
+#'   `"network"`, `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or
+#'   `"proximity"`.
 #' @param at For `"network"`, the time to draw. `NULL` draws the whole window
 #'   flattened.
 #' @param step Width of one time bin, in the network's time unit. For
@@ -87,55 +91,89 @@
 #'   two slices are needed, so too wide a `step` is an error rather than a
 #'   single panel. `NULL` uses the construction interval.
 #' @param omega For `"layers"`, the weight on the identity arcs carrying a
-#'   vertex between adjacent slices, that is, the interlayer coupling.
+#'   vertex between adjacent slices, that is, the interlayer coupling. One
+#'   non-negative number, `1` by default.
 #' @param start,end Window the plot to `[start, end]` before drawing. Either
 #'   may be `NULL`, which keeps that side of the observed range. Every view is
 #'   windowed, and an empty window is an error rather than an empty panel.
 #' @param top For the timeline, draw only the `top` busiest vertex pairs.
-#' @param panels For snapshots, the maximum number of panels to draw. Bins are
-#'   sampled evenly across the window and the choice is reported.
+#'   Defaults to 40.
+#' @param panels For snapshots, the maximum number of panels to draw, 9 by
+#'   default. Bins are sampled evenly across the window and the choice is
+#'   reported.
 #' @param measure For the proximity view, the node-level measure that line
-#'   thickness follows. Any measure [dyn_centrality()] accepts at snapshot
-#'   scope; the temporal-scope-only measures `"reach"` and `"reach_count"`
-#'   are not available here, because the view redraws the measure over many
-#'   short slices.
+#'   thickness follows, `"degree"` by default. Any measure [dyn_centrality()]
+#'   accepts at snapshot scope; the temporal-scope-only measures `"reach"` and
+#'   `"reach_count"` are not available here, because the view redraws the
+#'   measure over many short slices.
 #' @param phases For the proximity view, how many phases to split the window
 #'   into for the network panels. `NULL` uses the network's sessions when it
 #'   has them and three phases otherwise.
-#' @param networks Whether the proximity view draws a network panel per phase.
-#' @param events Whether the proximity view marks the times edges formed.
-#' @param labels Whether vertices are named in place of a legend: at the
-#'   right-hand end of each line in the proximity view, and beside each node
-#'   in the `"layers"` and `"stack"` views.
+#' @param networks Whether the proximity view draws a network panel per phase,
+#'   `TRUE` by default.
+#' @param events Whether the proximity view marks the times edges formed,
+#'   `TRUE` by default.
+#' @param labels Whether vertices are named, `TRUE` by default: beside each
+#'   node in the `"network"`, `"snapshots"`, `"layers"` and `"stack"` views,
+#'   and at the right-hand end of each line in the proximity view in place of
+#'   a legend. The `"timeline"`, `"events"`, `"activity"` and `"heatmap"`
+#'   views name their axes rather than their vertices and ignore it. `FALSE`
+#'   is the readable choice for a network of more than a few dozen vertices.
 #' @param highlight Vertex names to draw in colour in the proximity view, with
-#'   the rest in grey.
+#'   the rest in grey. `NULL`, the default, colours every vertex.
 #' @param slices How many times the proximity view measures the network across
-#'   the window. Smoothness comes from measuring often, never from
-#'   interpolation. `NULL` measures once per time bin.
+#'   the window, 120 by default. Smoothness comes from measuring often, never
+#'   from interpolation. `NULL` measures once per time bin, and anything else
+#'   must be at least two.
 #' @param palette Colours for vertices and lines: `"okabe"` (the default,
 #'   nine colour-blind safe colours, recycled), `"extended"` (hue varied with
 #'   lightness, about twelve distinct), `"many"` (packed for separation, any
 #'   number, not colour-blind safe), your own vector of colours, or a function
 #'   of `n` returning `n` colours.
-#' @param flow How much to round the corners of each proximity line. Rounding
-#'   only ever takes convex combinations of measurements, so it softens the
-#'   joints without letting the curve overshoot one. `0` leaves them sharp.
+#' @param flow How many corner-cutting passes round each proximity line, 2 by
+#'   default. Rounding only ever takes convex combinations of measurements, so
+#'   it softens the joints without letting the curve overshoot one. `0` leaves
+#'   them sharp.
 #' @param window Width of each proximity slice. `NULL` uses a sixth of the
 #'   observation window, or the bin width if that is wider: scaling is only
 #'   meaningful on a slice whose network is connected, and over one narrow bin
 #'   most vertices are isolated.
 #' @param default_dist Distance assumed between vertices with no path between
-#'   them, in the proximity view.
-#' @param base_size Base font size for the ggplot views.
-#' @param style A base-graphics style list from `.dyn_style()`, used by the
-#'   proximity view.
-#' @param ... Passed to `cograph::splot()` for the network, snapshot and
-#'   proximity views.
+#'   them, in the proximity view. `2` by default.
+#' @param base_size Base font size for the `"timeline"`, `"events"` and
+#'   `"activity"` views, 12 by default. The `"heatmap"` view is also a ggplot
+#'   but is sized by its own renderer.
+#' @param style Style constants for the proximity view's base-graphics panel:
+#'   a list holding `cex`, `grid`, `background`, `grid_color`, `axis_color`,
+#'   `text_color` and `frame_color`. The default is the package's own.
+#' @param ... Passed to the renderer the chosen view uses: `cograph::splot()`
+#'   for `"network"`, `"snapshots"` and `"proximity"`, `cograph::plot_mlna()`
+#'   for `"layers"`, `cograph::plot_ml_heatmap()` for `"heatmap"` and
+#'   `cograph::plot_temporal()` for `"stack"`. The remaining views take no
+#'   further drawing arguments, and a name no view can read is an error rather
+#'   than a silently ignored argument.
+#'
+#' @details
+#' The node-link views set a few of `cograph::splot()`'s defaults before
+#' handing over: they draw no edge labels and no edge-colour legend
+#' (`legend_edge_colors = FALSE`, against `cograph::splot()`'s own `TRUE`),
+#' colour edges a neutral grey, and size nodes and arrowheads from the vertex
+#' count. Naming any of those through `...` overrides it.
+#'
+#' Failures are classed conditions. `dynet_bad_input` covers every malformed
+#' argument, `dynet_unknown_plot_arg` a name in `...` no view can read,
+#' `dynet_bad_palette` an unusable `palette`, and `dynet_empty_result` a
+#' window, an `at` or a `step` that leaves nothing to draw. The proximity view
+#' adds `dynet_unknown_measure` and `dynet_needs_directed`. With cograph
+#' absent, the node-link views raise `dynet_needs_cograph` and the
+#' `"layers"`, `"heatmap"` and `"stack"` views `dynet_missing_package`.
 #'
 #' @return For `"timeline"`, `"events"`, `"activity"` and `"heatmap"`, a
 #'   `ggplot` object, which prints itself when the call is not assigned. For
 #'   `"network"`, `"snapshots"`, `"layers"`, `"stack"` and `"proximity"`, the
-#'   figure is drawn on the current device and `x` is returned invisibly.
+#'   figure is drawn on the current device and the network is returned
+#'   invisibly -- `x` itself, or the windowed network when `start` or `end`
+#'   was given.
 #'
 #' @references
 #' Okabe, M., & Ito, K. (2008). Color universal design: how to make figures
@@ -208,10 +246,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     activity   = .plot_activity(x, base_size),
     network    = do.call(.splot_network,
                          c(list(x, at, palette = palette), aes_args,
-                           list(...))),
+                           list(labels = labels), list(...))),
     snapshots  = do.call(.splot_snapshots,
                          c(list(x, panels, palette = palette), aes_args,
-                           list(...))),
+                           list(labels = labels), list(...))),
     layers     = .plot_layers(x, step = step, omega = omega,
                               palette = palette, labels = labels, ...),
     heatmap    = .plot_layer_heatmap(x, step = step, palette = palette, ...),
@@ -238,7 +276,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param step Width of each slice, or `NULL` for the construction interval.
 #' @param prefix Prefix for the slice names.
 #' @return A named list of square weight matrices, one per slice, sharing
-#'   dimnames.
+#'   dimnames. Raises `dynet_bad_input` for a `step` that is not one positive
+#'   number, and `dynet_empty_result` when the window holds fewer than two
+#'   slices.
 #' @noRd
 .dyn_layer_matrices <- function(x, step, prefix = "t") {
   .check(
@@ -274,7 +314,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param step Width of each slice, or `NULL` for the construction interval.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Passed to `cograph::plot_ml_heatmap()`.
-#' @return A `ggplot` object.
+#' @return A `ggplot` object. Raises `dynet_missing_package` when cograph is
+#'   not installed.
 #' @noRd
 .plot_layer_heatmap <- function(x, step, palette, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
@@ -302,7 +343,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param labels Whether to draw vertex labels.
 #' @param ... Passed to `cograph::plot_temporal()`.
-#' @return The `dynet` object, invisibly. Drawn to the current device.
+#' @return The `dynet` object, invisibly. Drawn to the current device. Raises
+#'   `dynet_missing_package` when cograph is not installed.
 #' @noRd
 .plot_layer_stack <- function(x, step, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
@@ -325,11 +367,17 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' A sequential ramp for the heatmap planes
 #'
 #' Okabe-Ito is a categorical palette; a matrix plane needs a continuous one.
-#' White to the palette's blue keeps the family recognisable while staying
-#' monotone in lightness.
+#' The ramp is white followed by the palette's first two colours, so it stays
+#' recognisably in the same family as the node-link views.
+#'
+#' The two palette colours need not differ much in lightness -- for `"okabe"`
+#' they are L = 70.6 and L = 69.8 in CIE Lab -- so the upper half of the ramp
+#' separates by hue rather than by lightness. A ramp built from one hue would
+#' read better; this is an open question, not a settled choice.
 #'
 #' @param palette Palette specification, as in [plot.dynet()].
-#' @return A character vector of colours defining the ramp.
+#' @return A character vector of colours defining the ramp: white plus the
+#'   first two colours the palette yields.
 #' @noRd
 .dyn_heat_ramp <- function(palette) {
   c("#FFFFFF", .dyn_palette(palette, 2L))
@@ -350,7 +398,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param labels Whether to draw vertex labels.
 #' @param ... Passed to `cograph::plot_mlna()`.
-#' @return The `dynet` object, invisibly. Drawn to the current device.
+#' @return The `dynet` object, invisibly. Drawn to the current device. Raises
+#'   `dynet_missing_package` when cograph is not installed and
+#'   `dynet_bad_input` when `omega` is not one non-negative number.
 #' @noRd
 .plot_layers <- function(x, step, omega, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
@@ -388,15 +438,21 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 
 #' Reject plot arguments that no view will ever read
 #'
-#' Everything in `...` reaches `cograph::splot()` for the node-link views and
-#' nothing at all for the ggplot views, so a misspelled name would otherwise
-#' be accepted in silence and the caller would be handed a picture that
-#' ignored it. Names are checked against this method's own arguments plus, for
-#' the views that delegate, `splot()`'s.
+#' Everything in `...` reaches one cograph renderer for the views that
+#' delegate -- `splot()` for `"network"`, `"snapshots"` and `"proximity"`,
+#' `plot_mlna()` for `"layers"`, `plot_ml_heatmap()` for `"heatmap"`,
+#' `plot_temporal()` for `"stack"` -- and nothing at all for `"timeline"`,
+#' `"events"` and `"activity"`, so a misspelled name would otherwise be
+#' accepted in silence and the caller would be handed a picture that ignored
+#' it. Names are checked against `plot.dynet()`'s own arguments plus, for the
+#' views that delegate, the chosen renderer's. With cograph not installed only
+#' `plot.dynet()`'s own names are known, so a renderer argument is accepted
+#' here and the missing-package condition is raised by the view instead.
 #'
 #' @param dots The captured `...`.
 #' @param type The plot type being drawn.
-#' @return `TRUE`, invisibly.
+#' @return `TRUE`, invisibly. Raises `dynet_unknown_plot_arg` for an unnamed
+#'   or unreadable argument.
 #' @noRd
 .check_plot_dots <- function(dots, type) {
   if (!length(dots)) return(invisible(TRUE))
@@ -423,7 +479,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
         paste(sQuote(unknown), collapse = ", "),
         if (length(unknown) > 1L) "are" else "is", type,
         if (delegates)
-          " Drawing arguments are passed to cograph::splot()."
+          # `layers`, `heatmap` and `stack` delegate to plot_mlna(),
+          # plot_ml_heatmap() and plot_temporal(), not to splot().
+          sprintf(" Drawing arguments are passed to cograph::%s().", delegate)
         else " This view takes no further drawing arguments."),
       class = "dynet_unknown_plot_arg", call = NULL))
   }
@@ -434,7 +492,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' @param x A `dynet` object.
 #' @param start,end Optional bounds; `NULL` keeps the observed edge.
-#' @return A `dynet` object covering the requested window.
+#' @return A `dynet` object covering the requested window, or `x` itself when
+#'   both bounds are `NULL`. Raises `dynet_bad_input` for a non-finite bound
+#'   or a `start` at or after `end`, and `dynet_empty_result` when nothing is
+#'   active in the window.
 #' @noRd
 .clip_plot_range <- function(x, start, end) {
   if (is.null(start) && is.null(end)) return(x)
@@ -564,6 +625,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param link Glyph style.
 #' @param time Axis rule.
 #' @param bins Number of equal bins, or `NULL` for the network's interval.
+#' @param step Bin width in the network's time unit, or `NULL`. Takes
+#'   precedence over `bins`.
 #' @param aggregate Fold repeat firings of one pair inside one column.
 #' @param nest Which links are fanned apart.
 #' @param split,blend Source-to-target colour run.
@@ -572,7 +635,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param base_size Base text size.
 #' @param aes Named list of `cograph::splot()` aesthetics the caller set
 #'   explicitly, spliced into the drawing so they are not swallowed.
-#' @return A `ggplot` object.
+#' @return A `ggplot` object. Raises `dynet_bad_input` for a malformed
+#'   `split`, `bins`, `aggregate`, `blend`, `weight` or `curvature`, and
+#'   `dynet_empty_result` when the network has no edge spell.
 #' @noRd
 .plot_events <- function(x, link, time, bins, step = NULL, aggregate, nest, split, blend,
                          weight, palette, base_size, aes = list()) {
@@ -752,7 +817,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 }
 
 #' Require cograph, the renderer for every node-link view
-#' @return `TRUE`, invisibly.
+#' @return `TRUE`, invisibly. Raises `dynet_needs_cograph` when cograph is not
+#'   installed.
 #' @noRd
 .need_cograph <- function() {
   if (!requireNamespace("cograph", quietly = TRUE)) {
@@ -768,6 +834,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param at Time to draw, or `NULL` for the whole window.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Passed to `cograph::splot()`, overriding the defaults below.
+#'   `plot.dynet()` splices its own `labels` in here, so vertex naming is
+#'   controlled by splot's `labels` argument like any other of its defaults.
 #' @return `x`, invisibly.
 #' @noRd
 .splot_network <- function(x, at = NULL, palette = "okabe", ...) {
@@ -781,7 +849,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' Colour is carried by the registered `"dynet"` theme (see
 #' `.register_dynet_theme()`); everything the theme contract cannot express
-#' is stated here. Two things make the extra layer necessary.
+#' is stated here. Three things make the extra layer necessary.
 #'
 #' First, `cograph::splot()` treats a directed netobject carrying no `$method`
 #' as a transition network and applies its TNA look: a per-state colour ramp
@@ -795,6 +863,12 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' partition needs a vector, so that is supplied here instead, and only when
 #' there is a partition -- leaving a plain network free to take its fill from
 #' whichever theme the caller asked for.
+#'
+#' Third, `splot()` defaults `legend_edge_colors` to `TRUE`, which prints a
+#' key for edge colour. Here every edge is the same neutral grey unless the
+#' caller says otherwise, so the key would have one entry and explain
+#' nothing; it is defaulted off and a caller who does colour edges can name
+#' `legend_edge_colors = TRUE` to get it back.
 #'
 #' Everything in `...` wins, which is the same delegation contract
 #' `lagdynamics::plot_transitions()` uses.
@@ -816,7 +890,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     edge_label_style = "none",
     edge_color       = "#4A4A4A",
     edge_alpha       = 0.55,
-    label_size       = 0.75
+    label_size       = 0.75,
+    legend_edge_colors = FALSE
   )
   if (!is.null(net$nodes$groups)) defaults$node_fill <- .node_fill(net, palette)
 
@@ -892,6 +967,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 .arrow_size <- function(n) max(0.35, min(0.75, 1.7 / sqrt(max(1L, n))))
 
 #' Vertex fill colours, following the partition when there is one
+#'
 #' cograph's own `palette_colorblind()` is an interpolated ramp, not the
 #' Okabe-Ito set, so the partition colours come from `.dyn_palette()`.
 #'
@@ -909,8 +985,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param x A `dynet` object.
 #' @param panels Maximum number of panels.
 #' @param palette Palette specification, as in [plot.dynet()].
-#' @param ... Passed to `cograph::splot()`.
-#' @return `x`, invisibly.
+#' @param ... Passed to `cograph::splot()` for every panel, `plot.dynet()`'s
+#'   `labels` among them. A `title` is set per panel and is overridable here.
+#' @return `x`, invisibly. Messages which bins were drawn when there are more
+#'   bins than `panels`.
 #' @noRd
 .splot_snapshots <- function(x, panels = 9L, palette = "okabe", ...) {
   .need_cograph()
@@ -945,10 +1023,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param x A `dynet` object.
 #' @param at Time falling inside the wanted bin.
 #' @return A `dynet` netobject holding the eligible vertices and active,
-#'   endpoint-valid spells in that bin.
-#' @examples
-#' dn <- dynet(school_contacts)
-#' Dynet:::.bin_netobject(dn, 1)
+#'   endpoint-valid spells in that bin. Raises `dynet_empty_result` when no
+#'   bin covers `at` or no vertex is eligible there.
 #' @noRd
 .bin_netobject <- function(x, at) {
   enc <- .encode(x)
@@ -964,20 +1040,44 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
       class = "dynet_empty_result", call = NULL
     ))
   }
-  state <- .snapshot_state(
-    x, enc, grid[k, , drop = FALSE], grid$hi[k] - grid$lo[k],
-    "bounded", "all"
-  )
+  .frame_netobject(x, enc, grid[k, , drop = FALSE],
+                   grid$hi[k] - grid$lo[k], label = format(at))
+}
+
+#' Build the netobject for one bin of a measurement grid
+#'
+#' The drawing half of a snapshot: `.snapshot_state()` says which spells are
+#' active and which vertices are eligible in the bin, and this turns that into
+#' a positioned-network-ready `netobject`. Shared by `.bin_netobject()` and by
+#' `animate()`, which walks a grid of its own.
+#' @param x A `dynet` object.
+#' @param enc Encoded network from `.encode()`.
+#' @param bin One row of a measurement grid, with `lo`, `hi` and `time`.
+#' @param window Window width for the bin.
+#' @param all_vertices When `TRUE`, keep every vertex of `x` rather than only
+#'   those eligible in the bin, so a layout computed frame by frame keeps one
+#'   position per vertex for the whole animation. Default `FALSE`.
+#' @param label How to name the bin in the error message.
+#' @param sessions Session treatment for the eligibility rule, `"bounded"`
+#'   or `"collapse"`. Default `"bounded"`.
+#' @return A `netobject`, as `.as_netobject()` builds it. Raises
+#'   `dynet_empty_result` when the bin holds neither an active spell nor an
+#'   eligible vertex.
+#' @noRd
+.frame_netobject <- function(x, enc, bin, window, all_vertices = FALSE,
+                             label = NULL, sessions = "bounded") {
+  state <- .snapshot_state(x, enc, bin, window, sessions, "all")
   raw_ids <- unique(enc$raw_spell[state$active])
   keep <- x$spells[x$spells$.raw_spell %in% raw_ids, , drop = FALSE]
   if (nrow(keep) == 0L && !any(state$eligible)) {
     stop(errorCondition(
       sprintf("No vertex is eligible at t = %s, so there is nothing to draw.",
-              format(at)),
+              label %||% format(bin$time)),
       class = "dynet_empty_result", call = NULL))
   }
   groups <- if ("groups" %in% names(x$nodes)) "groups" else NULL
-  nodes <- x$nodes[state$eligible,
+  wanted <- if (all_vertices) rep(TRUE, nrow(x$nodes)) else state$eligible
+  nodes <- x$nodes[wanted,
     setdiff(names(x$nodes), c("id", "label", "x", "y")), drop = FALSE
   ]
   vertex_spells <- x$vertex_spells[
@@ -996,7 +1096,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' @param top Draw only the `top` busiest pairs.
 #' @param bins Number of equal bins, or `NULL` for the network's own interval.
 #' @param base_size Base text size.
-#' @return A `ggplot` object.
+#' @param step Bin width in the network's time unit, or `NULL`. Takes
+#'   precedence over `bins`.
+#' @return A `ggplot` object. Raises `dynet_empty_result` when the network has
+#'   no edge spell.
 #' @noRd
 .plot_timeline <- function(x, top, bins, base_size, step = NULL) {
   e <- as.data.frame(x)
@@ -1072,23 +1175,34 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' Plot time-respecting paths when a valid renderer exists
 #'
 #' @description
-#' Rendering endpoint-local shortest-foremost families is not currently
-#' supported. Such paths need not share prefix-optimal routes, so they do not
-#' form one predecessor tree. Inspect their compact counts and expanded steps
-#' instead.
+#' A result from [paths()] records the optimality criterion it was found
+#' under, and such a result is drawn as a trajectory tree by
+#' [plot_path_trajectories()]. That is the right picture for an
+#' endpoint-local family: the routes need not share prefix-optimal
+#' subpaths, so a vertex reached under two different temporal histories
+#' appears twice rather than being forced into one predecessor tree.
 #'
-#' All P08 shortest-foremost results raise a `dynet_unsupported_plot`
-#' condition, regardless of session mode. This keeps rendering from implying
-#' a prefix-compatible tree that the endpoint-local criterion does not define.
+#' Older serialised results carry no criterion. Those are drawn by the legacy
+#' predecessor-tree renderer, which only defines a tree when the sessions were
+#' collapsed; a bounded or separate-session result of that vintage raises
+#' `dynet_unsupported_plot` instead of implying a tree the criterion never
+#' promised.
 #'
 #' @param x A `dynet_paths` from [paths()].
 #' @param palette Palette specification, as in [plot.dynet()]. Vertices are
-#'   coloured by how many hops they are from the source.
-#' @param ... Passed to `cograph::splot()`.
+#'   coloured by how many hops they are from the source. Read only by the
+#'   legacy tree renderer.
+#' @param ... Passed to [plot_path_trajectories()], or to `cograph::splot()`
+#'   for a legacy result.
 #'
-#' @return A `ggplot` object for current shortest-foremost results. The legacy
-#'   `cograph` tree renderer remains only for older serialized results without
-#'   criterion metadata, and draws to the active device.
+#' @return A `ggplot` object for a result carrying criterion metadata, which
+#'   is every result [paths()] returns. A legacy result without it is drawn on
+#'   the current device by `cograph::splot()` and `x` is returned invisibly.
+#'
+#'   A legacy result raises `dynet_unsupported_plot` when its sessions were
+#'   not collapsed, `dynet_empty_result` when the source reaches no other
+#'   vertex, `dynet_bad_palette` for an unusable `palette`, and
+#'   `dynet_needs_cograph` when cograph is not installed.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -1198,7 +1312,8 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
 #' @param span Numeric length-2 range being drawn.
 #' @param bins Number of bins, or `NULL`.
 #' @param step Bin width, or `NULL`.
-#' @return A single positive width.
+#' @return A single positive width. Raises `dynet_bad_input` when `step` is
+#'   not one positive number.
 #' @noRd
 .bin_width <- function(x, span, bins, step) {
   if (!is.null(step)) {

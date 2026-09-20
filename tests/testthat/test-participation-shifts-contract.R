@@ -412,3 +412,26 @@ test_that("every measurement verb agrees on the measure/value column pair", {
                 info = nm)
   }
 })
+
+test_that("the printed header counts types and transitions in every layout", {
+  # The cumulative layout is one row per turn per shift type carrying a
+  # *running* total, so `nrow()` is not a type count and `sum(value)` adds
+  # each transition once for every later turn -- 3081 types and 27831
+  # transitions on school_contacts, against a true 13 and 235.
+  dn <- quiet_dynet(school_contacts)
+  header <- function(x) {
+    lines <- utils::capture.output(print(x))
+    c(types = as.integer(sub(".*, ([0-9]+) types.*", "\\1", lines[[1L]])),
+      observed = as.integer(sub("^# ([0-9]+) classified.*", "\\1", lines[[2L]])))
+  }
+  final <- pshifts(dn)
+  cumulative <- pshifts(dn, output = "cumulative")
+
+  # The invariant: the header does not depend on the layout.
+  expect_identical(header(final), header(cumulative))
+  expect_identical(unname(header(final)[["types"]]), 13L)
+
+  counted <- as.data.frame(final)
+  expect_identical(unname(header(final)[["observed"]]),
+                   as.integer(sum(counted$value)))
+})

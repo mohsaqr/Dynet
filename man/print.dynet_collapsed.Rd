@@ -17,3 +17,8 @@
 \description{
 Print a collapsed temporal network
 }
+\examples{
+dn <- dynet(school_contacts)
+collapsed <- collapse_network(dn)
+collapsed
+}

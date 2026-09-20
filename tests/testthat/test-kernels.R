@@ -121,3 +121,24 @@ test_that("kernels are invariant to relabelling the vertices", {
   expect_equal(unname(.coreness(b)), unname(.coreness(a))[perm])
   expect_equal(.triad_census(b), .triad_census(a))
 })
+
+test_that("PageRank says so when it hits the iteration cap", {
+  # Reaching `max_iter` used to be indistinguishable from converging: the
+  # loop broke on either condition and returned the final iterate silently.
+  set.seed(11)
+  a <- matrix(stats::rbinom(64, 1, 0.35), 8, 8)
+  diag(a) <- 0
+  dimnames(a) <- list(letters[1:8], letters[1:8])
+
+  expect_warning(.pagerank(a, max_iter = 2L),
+                 class = "dynet_pagerank_nonconvergence")
+
+  # The invariant: a converged run is silent and its values are unchanged.
+  expect_silent(converged <- .pagerank(a))
+  expect_equal(sum(converged), 1)
+  skip_if_not_installed("igraph")
+  g <- igraph::graph_from_adjacency_matrix(a, mode = "directed")
+  reference <- igraph::page_rank(g, damping = 0.85)$vector
+  expect_equal(unname(converged), unname(reference[names(converged)]),
+               tolerance = 1e-6)
+})

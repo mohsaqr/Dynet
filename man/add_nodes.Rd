@@ -13,8 +13,9 @@ add_nodes(dn, data)
 a \code{name} column and optional static attributes.}
 }
 \value{
-A new \code{dynet} object with the added nodes represented as implicit
-always-active isolates until ties or vertex activity are supplied.
+A new \code{dynet} object, of the same class and structure as the input,
+with the added nodes represented as implicit always-active isolates until
+ties or vertex activity are supplied. The input is unchanged.
 }
 \description{
 Add nodes to a temporal network
@@ -22,8 +23,9 @@ Add nodes to a temporal network
 \details{
 Existing nodes and attributes are unchanged. Missing attribute
 values are filled with typed \code{NA}. If the source has a cograph grouping,
-each new node must supply its group through \code{groups} or through the source
-attribute from which that grouping was derived.
+each new node must supply its group through a \code{groups} column in \code{data}
+or through the source attribute from which that grouping was derived;
+otherwise a condition of class \code{dynet_missing_group} is raised.
 }
 \examples{
 dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))

@@ -30,3 +30,6 @@ cran-comments.md
 Rplots.pdf
 tests/testthat/Rplots.pdf
 tests/testthat/_problems/
+# Rendered pkgdown articles and the files their chunks write
+vignettes/articles/*.html
+vignettes/articles/animating_files/

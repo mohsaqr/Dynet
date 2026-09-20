@@ -12,8 +12,16 @@
 \item{...}{Passed to the data frame print method.}
 }
 \value{
-\code{x}, invisibly.
+\code{x}, invisibly. Called for the side effect of printing a header
+naming the direction, anchor, node count, depth and number of routes,
+followed by the tidy table.
 }
 \description{
 Print a temporal trajectory tree
+}
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+print(trajectories)
 }

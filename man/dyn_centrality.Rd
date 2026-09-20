@@ -39,24 +39,38 @@ dyn_centrality(
 \code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
 \code{"load"}, \code{"flow_betweenness"}, \code{"participation"} or \code{"diffusion"} for
 snapshot scope; \code{"closeness"}, \code{"betweenness"}, \code{"reach"},
-\code{"reach_count"}, \code{"katz"}, \code{"pagerank"} or \code{"walk"} for temporal scope.}
+\code{"reach_count"}, \code{"katz"}, \code{"pagerank"} or \code{"walk"} for temporal scope.
+Snapshot scope also still accepts the deprecated names \code{"indegree"} and
+\code{"outdegree"}, which warn with class \code{dynet_deprecated} and are replaced
+by \code{measure = "degree"} with \code{mode = "in"} or \code{mode = "out"}. Defaults to
+\code{"degree"}. Any other
+name raises an error of class \code{dynet_unknown_measure}; the directed-only
+measures \code{"prestige"}, \code{"hub"}, \code{"authority"} and the two deprecated
+names \code{"indegree"} and \code{"outdegree"} raise \code{dynet_needs_directed} on an
+undirected network.}
 
-\item{scope}{\code{"snapshot"} for a value per time bin, \code{"temporal"} for one
+\item{scope}{\code{"snapshot"} (the default) for a value per time bin,
+\code{"temporal"} for one
 value per vertex computed on time-respecting paths.}
 
-\item{sessions}{How to treat sessions: \code{"bounded"} keeps paths inside a
+\item{sessions}{How to treat sessions: \code{"bounded"} (the default) keeps
+paths inside a
 session, \code{"collapse"} ignores sessions, \code{"separate"} reports each session
-on its own rows.}
+on its own rows. \code{"separate"} on a network built without a session column
+raises an error of class \code{dynet_no_sessions}.}
 
 \item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
 \code{"window"} uses the current positive/default window.}
 
-\item{damping}{Damping factor for PageRank, at either scope. In the
-temporal formulation it is the paper's jumping probability, so each extra
-step of a temporal walk is worth \code{damping} times the last.}
+\item{damping}{Damping factor for PageRank, at either scope; a single
+number strictly between zero and one, \code{0.85} by default. In the temporal
+formulation it is the paper's jumping probability, so each extra step of
+a temporal walk is worth \code{damping} times the last.}
 
 \item{mode}{Which edges count on a directed network: \code{"all"} both
-directions, \code{"out"} outgoing only, \code{"in"} incoming only. Name several at
+directions, \code{"out"} outgoing only, \code{"in"} incoming only. Defaults to
+\code{"all"}; any other string raises an error of class \code{dynet_bad_input}.
+Name several at
 once -- \code{mode = c("all", "in", "out")} -- to get degree, in-degree and
 out-degree from a single call; the extra directions are then labelled
 \code{degree_in} and \code{degree_out} in the \code{measure} column, while a call naming
@@ -83,15 +97,19 @@ right so an event at the final instant is inside it; it cannot be combined
 with \code{step}, and under \code{sessions = "separate"} or discontinuous
 observation it gives one window per session or observed component.}
 
-\item{exponent}{Attenuation factor for Bonacich \code{"power"}. Positive rewards
+\item{exponent}{Attenuation factor for Bonacich \code{"power"}, a single finite
+number, \code{1} by default. Positive rewards
 being connected to well-connected others; negative rewards the opposite,
 which is the bargaining reading.}
 
 \item{traversal_time}{Nonnegative duration charged for every temporal-path
-hop, in the network's time unit. A calendar network also accepts a scalar
-\code{difftime}. Nonzero values require \code{scope = "temporal"}.}
+hop, in the network's time unit; \code{0} by default. A calendar network also
+accepts a scalar
+\code{difftime}. Nonzero values require \code{scope = "temporal"}, and raise
+\code{dynet_bad_input} otherwise.}
 
-\item{prestige}{Prestige definition. \code{"indegree"} counts distinct active
+\item{prestige}{Prestige definition, \code{"indegree"} by default.
+\code{"indegree"} counts distinct active
 incoming dyads. \code{"indegree.rownorm"} first gives every active sender one
 unit split equally across its distinct outgoing dyads, then sums the
 received mass. \code{"indegree.rowcolnorm"} balances a total-support binary
@@ -109,11 +127,14 @@ and balances binary adjacency to doubly stochastic form. Prestige is
 directed and snapshot-only.}
 
 \item{rescale}{Whether to divide prestige by its total independently
-inside every reported time/session block. Zero-total count/proximity
+inside every reported time/session block; \code{FALSE} by default. Zero-total
+count/proximity
 definitions return \code{NaN}; structurally undefined spectral definitions
-return \code{NA}. This argument requires \code{measure = "prestige"}.}
+return \code{NA}. This argument requires \code{measure = "prestige"}, and raises
+\code{dynet_bad_input} otherwise.}
 
-\item{lambda}{Nonnegative multiplier for \code{"diffusion"}. Diffusion degree is
+\item{lambda}{Nonnegative multiplier for \code{"diffusion"}, \code{1} by default.
+Diffusion degree is
 the sum of the selected degree of a vertex and all of its one-step
 neighbours, multiplied by \code{lambda}.}
 
@@ -182,8 +203,9 @@ the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric}: a tidy data frame with one row per vertex, time
-point and measure. Columns are \code{session} (only when the network has
-sessions), \code{time} (snapshot scope only), \code{node}, \code{measure} and \code{value}.
+point and measure. Columns are \code{session} (only under
+\code{sessions = "separate"}, which is the only mode that keeps session labels
+apart), \code{time} (snapshot scope only), \code{node}, \code{measure} and \code{value}.
 Print it, \code{\link[=summary]{summary()}} it, \code{\link[=plot]{plot()}} it, or take the plain frame with
 \code{\link[=as.data.frame]{as.data.frame()}}. A closeness- or betweenness-only temporal result stores
 its mathematical choices as direct attributes; a mixed temporal result
@@ -191,8 +213,8 @@ stores named records under \code{measure_metadata}. Snapshot prestige follows
 the same direct-versus-scoped metadata convention. When a prestige
 variant is structurally undefined or fails to converge, the affected
 values are \code{NA}, a warning says how many reporting blocks were affected,
-and a \code{prestige_diagnostics} record naming the stage and reason for each
-is attached to the result.
+and a record naming the stage and reason for each comes out through
+\code{as.data.frame(x, what = "diagnostics")}.
 }
 \description{
 Centrality for every vertex at every time point. Ask for several measures
@@ -215,6 +237,22 @@ window, which keeps the resolution of the smaller step while smoothing over
 the noise of a sparse bin. The arguments match \code{tsna::tSnaStats()}, where
 they are called \code{time.interval} and \code{aggregate.dur}.
 
+Snapshot \code{"degree"} counts distinct active binary dyads, so duplicate,
+split and overlapping spells do not multiply it; \code{mode = "all"} on a
+directed snapshot is in-degree plus out-degree. \code{"strength"} is the same
+margin taken over summed spell weights rather than over binary dyads.
+
+Snapshot \code{"closeness"} is \strong{not} Freeman's \eqn{1 / \sum_z d_{sz}}, which
+is
+undefined once a snapshot is disconnected -- and a time bin almost always
+is. It is the reciprocal of the mean geodesic distance to the vertices a
+vertex can actually reach: with \eqn{R_s} the reachable nonself set,
+\deqn{C(s) = |R_s| / \sum_{z \in R_s} d_{sz},}
+which is zero for an isolate and equals Freeman's normalised closeness
+\eqn{(n - 1) / \sum_z d_{sz}} on a connected snapshot. \code{"harary"} is the
+reciprocal of
+eccentricity, zero for a vertex that cannot reach everything.
+
 \code{"eigenvector"}, \code{"hub"} and \code{"authority"} are certified the way eigenvector
 prestige is: a snapshot whose spectral radius is zero (no cycle) or whose
 Perron root is repeated (components of equal weight) has no single answer,
@@ -233,7 +271,7 @@ the result, while an explicitly retained directed loop contributes once.
 With \code{rescale = TRUE}, the column sums are divided by their block total. A
 zero total is mathematically undefined and is returned as literal \code{NaN}.
 
-Row-normalized indegree prestige first converts every nonzero binary
+Row-normalised indegree prestige first converts every nonzero binary
 adjacency row to sum one; zero rows remain all zero. Its column sums are the
 received sender-nomination mass, so their total is the number of active
 senders. \code{rescale = TRUE} divides again by that block total. This closed-form
@@ -241,7 +279,7 @@ transform is the \code{sna::prestige(cmode = "indegree.rownorm")} definition on
 binary matrices. Dynet deliberately ignores edge weights, whereas \code{sna}
 uses their magnitudes on valued matrices.
 
-Row-column-normalized prestige uses deterministic Sinkhorn--Knopp scaling
+Row-column-normalised prestige uses deterministic Sinkhorn--Knopp scaling
 only when the full binary vertex matrix has total support: every active dyad
 must belong to a perfect matching. It preserves all binary dyads and does
 not remove isolates or unsupported edges. Infeasible blocks return \code{NA} for
@@ -250,7 +288,7 @@ column sum equal to one, so raw prestige is uniformly one and rescaled
 prestige uniformly \code{1 / n}; this definition is a transform diagnostic, not
 a vertex ranking. Dynet uses fixed-order sweeps, maximum absolute row/column
 residual \code{1e-12}, and at most 10,000 sweeps. It never returns a partial
-iterate. This deliberately differs from the randomized loose-tolerance
+iterate. This deliberately differs from the randomised loose-tolerance
 annealer in \code{sna} 2.8.
 
 Domain prestige is incoming indegree in the directed reachability graph
@@ -267,7 +305,7 @@ distances. For the nonself domain \code{D[j]}, let \code{r[j]} be its size and \
 the sum of its finite distances into \code{j}. The score is zero when \code{r[j] = 0}
 and otherwise \code{r[j]^2 / ((n - 1) * s[j])}: the incoming domain fraction
 divided by mean hop distance. Unreachable vertices are omitted before the
-distance sum. This deliberately fixes an arithmetic artifact in \code{sna} 2.8,
+distance sum. This deliberately fixes an arithmetic artefact in \code{sna} 2.8,
 whose \code{FALSE * Inf} operation incorrectly zeros partial nonempty domains.
 
 Eigenvector prestige solves \code{t(B) \%*\% p = rho * p} for the nonnegative
@@ -280,25 +318,25 @@ uses direct eigenvalues plus an SVD nullity/residual check at tolerance
 \code{1e-10}, orients the ray as nonnegative, and never applies elementwise
 absolute value.
 
-Row-normalized eigenvector prestige first forms binary adjacency \code{B} and
+Row-normalised eigenvector prestige first forms binary adjacency \code{B} and
 divides each nonzero sender row by its number of distinct outgoing dyads;
 zero rows remain exactly zero. It then solves the certified incoming Perron
 equation for the transpose of that row-stochastic matrix. Thus each active
 sender distributes one unit of recursive nomination mass, with no
 teleportation or dangling-row imputation. Binary session union and retained
-loop policy occur before row normalization. The positive-radius, geometric-
+loop policy occur before row normalisation. The positive-radius, geometric-
 uniqueness, nonnegative-sign, L2/sum-scale, warning, and diagnostic rules
 are otherwise exactly those of ordinary eigenvector prestige.
 
-Column-normalized eigenvector prestige divides each nonzero binary receiver
+Column-normalised eigenvector prestige divides each nonzero binary receiver
 column by its number of distinct incoming dyads; zero columns remain zero.
 It solves the incoming Perron equation only after that transform. If every
 vertex has positive indegree, the transformed transpose is row-stochastic
 and every certified score is necessarily uniform. Nonuniform defined scores
 therefore require a zero-indegree vertex. Binary union and retained-loop
-policy precede normalization; certification and scaling remain those above.
+policy precede normalisation; certification and scaling remain those above.
 
-Row-column-normalized eigenvector prestige composes the total-support and
+Row-column-normalised eigenvector prestige composes the total-support and
 deterministic Sinkhorn--Knopp contract with the certified Perron contract.
 Infeasible support and nonconvergent balancing terminate before the spectral
 solve. A completed doubly stochastic transform always has the all-ones
@@ -313,14 +351,16 @@ equally over every canonical shortest-foremost journey, and an internal
 vertex receives the fraction of those journeys that contain it. Sources and
 targets receive no endpoint credit. This ordered-pair convention also
 applies to undirected contacts because temporal reach is generally
-asymmetric. The result is not normalized; its fixed range is
+asymmetric. The result is not normalised; its fixed range is
 \verb{[0, (n - 1) * (n - 2)]}.
 
 Temporal closeness is inverse mean forward latency over reachable vertices:
 if \eqn{R_s} is the set of reachable vertices other than source \eqn{s},
-\deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - L),}
-where \eqn{a_z} is the foremost arrival time and \eqn{L} is the traversal
-window's lower bound. Every reachable endpoint is included once, regardless
+\deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - o_s),}
+where \eqn{a_z} is the foremost arrival time and \eqn{o_s} is the source's
+resolved origin: the traversal window's lower bound, or -- when vertex
+activity was declared -- the source's first presence inside that window.
+Every reachable endpoint is included once, regardless
 of how many optimal paths reach it. A source with no reachable nonself
 endpoints has value zero. If all reachable endpoints have zero latency, the
 value is \code{Inf}; zero-latency endpoints remain in the numerator when mixed
@@ -402,6 +442,30 @@ valid anchor may cross inactivity; interval traversal requires both endpoints
 through completion, while a point trigger requires the receiver again after
 any traversal delay. Fixed node rows and pre-V04 denominators are retained.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_unknown_measure} (a measure this scope does not offer),
+\code{dynet_needs_directed} (\code{"prestige"}, \code{"hub"}, \code{"authority"},
+\code{"indegree"} or \code{"outdegree"} on an undirected network),
+\code{dynet_no_sessions} (\code{sessions = "separate"} without a session column),
+\code{dynet_outside_observation} (the requested range misses observed support;
+it also carries \code{dynet_bad_input}),
+and \code{dynet_bad_input} for every other broken contract -- \code{dn} not a
+\code{dynet}, an unknown \code{mode}, an out-of-range \code{damping}, \code{exponent},
+\code{lambda}, \code{prestige}, \code{rescale}, \code{start}, \code{end}, \code{step}, \code{window} or
+\code{traversal_time}, \code{rescale = TRUE} without \code{measure = "prestige"}, a
+nonzero \code{traversal_time} at snapshot scope, and \code{mode}, \code{step} or \code{window}
+at temporal scope.
+
+Warnings: \code{dynet_deprecated} (\code{measure = "indegree"}/\code{"outdegree"}, or the
+retired \code{sample} argument), \code{dynet_eigen_undefined} and
+\code{dynet_kernel_singular} (both also carrying \code{dynet_measure_undefined}) when
+a snapshot's eigenvector, hub, authority, Bonacich power or information
+kernel has no unique answer, and \code{dynet_prestige_infeasible},
+\code{dynet_prestige_nonconvergence} and \code{dynet_prestige_eigen_undefined} when a
+prestige variant is structurally undefined or fails to converge.
+}
+
 \examples{
 dn <- dynet(school_contacts)
 
@@ -473,6 +537,10 @@ doi:10.32614/CRAN.package.sna.
 
 Lin, N. (1976). \emph{Foundations of Social Research}. McGraw-Hill.
 
+Freeman, L. C. (1979). Centrality in social networks: conceptual
+clarification. \emph{Social Networks}, 1(3), 215-239.
+\doi{10.1016/0378-8733(78)90021-7}
+
 Brandes, U. (2001). A faster algorithm for betweenness centrality.
 \emph{Journal of Mathematical Sociology}, 25(2), 163-177.
 
@@ -491,6 +559,25 @@ distribution in scale-free networks. \emph{Physical Review Letters}, 87(27),
 
 Freeman, L. C., Borgatti, S. P., & White, D. R. (1991). Centrality in
 valued graphs. \emph{Social Networks}, 13(2), 141-154.
+
+Page, L., Brin, S., Motwani, R., & Winograd, T. (1999). \emph{The PageRank
+citation ranking: bringing order to the web}. Technical Report 1999-66,
+Stanford InfoLab.
+
+Kleinberg, J. M. (1999). Authoritative sources in a hyperlinked
+environment. \emph{Journal of the ACM}, 46(5), 604-632.
+doi:10.1145/324133.324140.
+
+Seidman, S. B. (1983). Network structure and minimum degree. \emph{Social
+Networks}, 5(3), 269-287. doi:10.1016/0378-8733(83)90028-X.
+
+Burt, R. S. (1992). \emph{Structural Holes: The Social Structure of
+Competition}. Harvard University Press.
+
+Kundu, S., Murthy, C. A., & Pal, S. K. (2011). A new centrality measure for
+influence maximization in social networks. In \emph{Pattern Recognition and
+Machine Intelligence}, Lecture Notes in Computer Science 6744 (pp. 242-247).
+Springer. doi:10.1007/978-3-642-21786-9_40.
 
 Bonacich, P. (1972). Factoring and weighting approaches to status scores
 and clique identification. \emph{Journal of Mathematical Sociology}, 2, 113-120.

@@ -4,18 +4,33 @@
 
 #' Convert an object to a Dynet temporal network
 #'
+#' @description
+#' Imports a temporal network held in another R representation, so that every
+#' Dynet verb applies to it. A method is supplied for `networkDynamic`
+#' objects; the method for `dynet` is the identity.
+#'
 #' @param x An object representing a temporal network.
 #' @param ... Passed to a class-specific method.
-#' @return A [dynet()] temporal network: an object of class `dynet` carrying
-#'   the tie ledger, the node table and the construction metadata. The `dynet`
-#'   method is the identity, returning `x` unchanged, so `as_dynet()` is safe
-#'   to call on an object that is already a temporal network.
+#' @return A [dynet()] temporal network: an object of class
+#'   `c("dynet", "netobject", "cograph_network")` carrying the tie ledger, the
+#'   node table and the construction metadata. The `dynet` method is the
+#'   identity, returning `x` unchanged, so `as_dynet()` is safe to call on an
+#'   object that is already a temporal network.
+#' @seealso [as_dynet.networkDynamic()], which imports a `networkDynamic`
+#'   object.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
+#' as_dynet(dn)
 #' @export
 as_dynet <- function(x, ...) {
   UseMethod("as_dynet")
 }
 
 #' @rdname as_dynet
+#' @examples
+#' dn <- dynet(school_contacts)
+#' same <- as_dynet(dn)
+#' same
 #' @export
 as_dynet.dynet <- function(x, ...) {
   x
@@ -40,20 +55,41 @@ as_dynet.dynet <- function(x, ...) {
 #'   `Label`, and `vertex.names`.
 #' @param group_attribute Optional static vertex attribute used as the cograph
 #'   grouping variable.
-#' @param weight_attribute Static edge attribute used as spell weight. Supply
-#'   `NULL` to use unit weights.
+#' @param weight_attribute Static edge attribute used as spell weight,
+#'   `"weight"` by default. Supply `NULL` to use unit weights. A name that is
+#'   not a static edge attribute of `x` also yields unit weights.
 #' @param session_attribute Optional static edge attribute used as the spell
-#'   session label.
-#' @param interval Positive measurement interval. `NULL` uses the legacy
-#'   observation time increment when available, otherwise one.
+#'   session label. `NULL`, the default, leaves the network unsessioned; a
+#'   name that is not a static edge attribute raises a condition of class
+#'   `dynet_unknown_attribute`.
+#' @param interval Positive measurement interval. `NULL`, the default, uses the
+#'   legacy observation time increment when available, otherwise one.
 #' @param active_default Whether legacy edges with no explicit activity spell
 #'   are active over the observation period, matching the same argument in
-#'   `networkDynamic`.
+#'   `networkDynamic`. `TRUE` by default.
 #' @param import_edge_attributes Whether to retain compatible static legacy
-#'   edge attributes on the raw Dynet spell ledger.
+#'   edge attributes on the raw Dynet spell ledger. `TRUE` by default; an
+#'   attribute whose name would collide with a canonical spell column is
+#'   prefixed with `edge_`.
 #' @param ... Ignored.
-#' @return A `dynet` object carrying `legacy_source = "networkDynamic"` in
-#'   its metadata.
+#' @return A [dynet()] temporal network: an object of class
+#'   `c("dynet", "netobject", "cograph_network")` whose spell table has one row
+#'   per imported edge-activity spell, with the legacy vertex and edge
+#'   attributes, observation support, vertex activity and censor flags carried
+#'   across. Its metadata additionally carries `legacy_source =
+#'   "networkDynamic"`, the chosen `legacy_name_attribute`, the retained
+#'   `legacy_edge_attributes` and any `legacy_edge_attribute_renames`.
+#' @seealso [as_dynet()], the generic.
+#' @examples
+#' if (requireNamespace("networkDynamic", quietly = TRUE) &&
+#'     requireNamespace("network", quietly = TRUE)) {
+#'   spells <- data.frame(onset = c(0, 1), terminus = c(2, 3),
+#'                        tail = c(1, 2), head = c(2, 3))
+#'   legacy <- networkDynamic::networkDynamic(edge.spells = spells)
+#'   network::set.vertex.attribute(legacy, "Name", c("A", "B", "C"))
+#'   dn <- as_dynet(legacy)
+#'   as.data.frame(dn)
+#' }
 #' @export
 as_dynet.networkDynamic <- function(
     x, name_attribute = NULL, group_attribute = NULL,

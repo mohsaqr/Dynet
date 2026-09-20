@@ -16,24 +16,31 @@ plot_path_trajectories(
 \arguments{
 \item{x}{A result from \code{\link[=paths]{paths()}} or from \code{\link[=path_trajectories]{path_trajectories()}}.}
 
-\item{measure}{Node fill. \code{"frequency"} is the number of optimal routes
-through the branch, \code{"time"} is the attained time at the node, and
-\code{"predictability"} is the branching fraction of the parent's routes that
-continue along the branch.}
+\item{measure}{What each node reports, and what fills it. \code{"frequency"},
+the default, is the number of optimal routes through the branch and fills
+by vertex, since node size already carries the count; \code{"time"} is the
+attained time at the node and \code{"predictability"} the branching fraction
+of the parent's routes that continue along the branch, both filled from a
+ramp.}
 
 \item{orientation}{\code{"horizontal"} grows the tree left to right with hop
 number on the x axis; \code{"vertical"} grows it top to bottom.}
 
 \item{min_count}{Draw only branches used by at least this many optimal
-routes. Ignored when \code{x} is already a \code{\link[=path_trajectories]{path_trajectories()}} result.}
+routes. Defaults to \code{1}, the complete family. Ignored when \code{x} is already
+a \code{\link[=path_trajectories]{path_trajectories()}} result.}
 
-\item{base_size}{Base text size.}
+\item{base_size}{Base text size, as in \code{\link[ggplot2:ggtheme]{ggplot2::theme_minimal()}}. Defaults
+to eleven.}
 
 \item{palette}{Palette for the vertex colours of the frequency view, as in
-\code{\link[=plot.dynet]{plot.dynet()}}.}
+\code{\link[=plot.dynet]{plot.dynet()}}. Defaults to \code{"okabe"}.}
 }
 \value{
-A \code{ggplot} object.
+A \code{ggplot} object. A tree with no branch to draw raises
+\code{dynet_empty_result}; an \code{x} that is neither a \code{\link[=paths]{paths()}} nor a
+\code{\link[=path_trajectories]{path_trajectories()}} result, or a \code{base_size} that is not one positive
+number, raises \code{dynet_bad_input}.
 }
 \description{
 Draws the optimal route family returned by \code{\link[=paths]{paths()}} using the
@@ -41,10 +48,12 @@ trajectory-tree grammar ported from the \code{transitiontrees} package: leaves
 stacked in depth-first order, parents centred on their children, and
 branches carried by a cosine smoothstep. Nodes follow that package's
 horizontal phylogram rather than its capsule style -- a count-sized filled
-circle with its label set below it. Branch width
-always shows how many optimal routes use a branch; node fill shows the
-chosen \code{measure}, and every node also prints its value, so nothing is
-encoded by colour alone.
+circle with its label set below it. Node size and branch width always show
+how many optimal routes use a branch. Every node also prints the value of
+the chosen \code{measure} beside its vertex name, so nothing is encoded by
+colour alone: the default frequency view is free to fill each node with its
+vertex's own colour, while the \code{"time"} and \code{"predictability"} views fill
+from a ramp with a colour bar.
 
 Forward paths grow away from the queried source. Backward paths are
 flipped so the queried target is the root and possible senders branch away
@@ -53,9 +62,9 @@ temporal history.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- paths(dn, from = "Ana")
-plot_path_trajectories(paths)
-plot_path_trajectories(paths, measure = "time", orientation = "vertical")
+routes <- paths(dn, from = "Ana")
+plot_path_trajectories(routes)
+plot_path_trajectories(routes, measure = "time", orientation = "vertical")
 }
 \seealso{
 \code{\link[=path_trajectories]{path_trajectories()}} for the tidy tree behind the plot.

@@ -9,13 +9,19 @@
 \arguments{
 \item{x}{A result from \code{\link[=similarity]{similarity()}}.}
 
-\item{base_size}{Base text size.}
+\item{base_size}{Base text size. Defaults to twelve.}
 
 \item{...}{Ignored.}
 }
 \value{
-A \code{ggplot} object.
+A \code{ggplot} object. Drawing happens when that object is printed, so
+the plot is the return value here rather than a side effect.
 }
 \description{
 Draw time-bin similarity as a heatmap
+}
+\examples{
+dn <- dynet(school_contacts)
+bin_similarity <- similarity(dn, step = 5, window = 5)
+plot(bin_similarity)
 }

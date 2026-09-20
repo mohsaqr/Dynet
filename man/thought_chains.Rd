@@ -7,16 +7,16 @@
 \format{
 A \code{data.frame} with 23,017 rows and 7 columns:
 \describe{
-\item{from}{Code of the replying message, one of \code{Approving}, \code{Arguing},
-\code{Coordinating}, \code{Drafting}, \code{Inquiring}, \code{Objecting}, \code{Resourcing},
-\code{Socialising}, \code{Tutoring}.}
-\item{to}{Code of the message replied to, same set.}
+\item{from}{Character. Code of the replying message, one of the nine
+codes \code{Approving}, \code{Arguing}, \code{Coordinating}, \code{Drafting}, \code{Inquiring},
+\code{Objecting}, \code{Resourcing}, \code{Socialising}, \code{Tutoring}.}
+\item{to}{Character. Code of the message replied to, same set.}
 \item{time}{\code{POSIXct} (UTC) time of the replying message, shifted by
-whole weeks.}
-\item{participant}{Anonymous author label, \code{P001} to \code{P240}.}
-\item{discussion}{Integer discussion (thread) id, 1 to 1169.}
-\item{group}{Course group, \code{A_01} style; 29 groups.}
-\item{course}{Course, \code{A} to \code{E}.}
+whole weeks; 2006-09-23 to 2011-11-02 after the shift.}
+\item{participant}{Character. Anonymous author label, \code{P001} to \code{P240}.}
+\item{discussion}{Integer discussion (thread) id, 1 to 1169, all present.}
+\item{group}{Character. Course group, \code{A_01} style; 29 groups.}
+\item{course}{Character. Course, \code{A} to \code{E}.}
 }
 }
 \source{

@@ -19,7 +19,8 @@ metrics(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{measure}{One or more of \code{"density"}, \code{"edges"}, \code{"active_nodes"},
+\item{measure}{One or more measure names, \code{"density"} by default:
+\code{"density"}, \code{"edges"}, \code{"active_nodes"},
 \code{"isolates"}, \code{"transitivity"}, \code{"reciprocity"}, \code{"components"},
 \code{"components_strong"}, \code{"largest_component"}, \code{"mean_distance"},
 \code{"diameter"}, \code{"mutual"},
@@ -34,9 +35,17 @@ hierarchy. Lightweight structural summaries are \code{"degree_mean"},
 \code{"concurrent_nodes"}, \code{"concurrent_share"}, \code{"in_2stars"},
 \code{"out_2stars"}, and \code{"two_paths"}. Exact window-integrated quantities are \code{"temporal_density"},
 \code{"observed_pair_density"}, \code{"onset_intensity"}, and
-\code{"observed_pair_onset_intensity"}.}
+\code{"observed_pair_onset_intensity"}. Any other name raises an error of
+class \code{dynet_unknown_measure}. Eight of these read direction and need a
+directed network, raising \code{dynet_needs_directed} on an undirected one:
+\code{"reciprocity"}, \code{"mutual"}, \code{"asymmetric"}, \code{"null"}, \code{"in_2stars"},
+\code{"out_2stars"}, \code{"indegree_1_5"} and \code{"outdegree_1_5"}.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\code{"bounded"} (the default) keeps each session apart while pooling the
+reported rows, \code{"collapse"} ignores session labels, and \code{"separate"}
+reports each session on its own rows and needs a network built with a
+session column, raising \code{dynet_no_sessions} otherwise.}
 
 \item{sample}{Deprecated. \code{"instant"} is equivalent to \code{window = 0};
 \code{"window"} uses the current positive/default window.}
@@ -63,8 +72,12 @@ the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_metric} at graph level: one row per time point and
-measure, with columns \code{session} (when present), \code{time}, \code{measure} and
-\code{value}.
+measure, with columns \code{session} (only under \code{sessions = "separate"}, the
+one mode that keeps session labels apart), \code{time}, \code{measure} and \code{value}.
+\code{"triads"} contributes sixteen rows per time point, whose \code{measure}
+entries are \code{triad_003}, \code{triad_012}, ..., \code{triad_300}. Print it,
+\code{\link[=summary]{summary()}} it, \code{\link[=plot]{plot()}} it, or take the plain frame with
+\code{\link[=as.data.frame]{as.data.frame()}}.
 }
 \description{
 Graph properties measured on each time bin, returned as a time series. This
@@ -154,6 +167,21 @@ sum \code{choose(degree, 2)} over directed in- and out-degrees. Directed
 undirected two-paths count each unordered wedge once. Empty eligible
 snapshots return zero for all selectors.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_unknown_measure} (a name outside the forty above),
+\code{dynet_needs_directed} (one of the eight direction-reading selectors on an
+undirected network), \code{dynet_no_sessions} (\code{sessions = "separate"} without a
+session column), \code{dynet_outside_observation} (the requested range misses
+observed support; it also carries \code{dynet_bad_input}), and
+\code{dynet_bad_input} for every other broken contract --
+\code{dn} not a \code{dynet}, a non-character \code{measure}, an empty \code{measure}, an
+out-of-range \code{start}, \code{end}, \code{step} or \code{window}, \code{end} before \code{start}, and
+\code{step} combined with \code{window = "all"}.
+
+Warning: \code{dynet_deprecated} for the retired \code{sample} argument.
+}
+
 \examples{
 dn <- dynet(school_contacts)
 metrics(dn, measure = "density")
@@ -186,4 +214,13 @@ processes: a large sample study. \emph{Annals of Statistics}, 10, 1100-1120.
 Krackhardt, D. (1994). Graph theoretical dimensions of informal
 organizations. In \emph{Computational Organization Theory} (pp. 89-111).
 Lawrence Erlbaum.
+
+Newman, M. E. J. (2002). Assortative mixing in networks. \emph{Physical Review
+Letters}, 89, 208701. \doi{10.1103/PhysRevLett.89.208701}
+
+Holland, P. W., & Leinhardt, S. (1976). Local structure in social networks.
+\emph{Sociological Methodology}, 7, 1-45. \doi{10.2307/270703}
+
+Wasserman, S., & Faust, K. (1994). \emph{Social Network Analysis: Methods and
+Applications}. Cambridge University Press.
 }

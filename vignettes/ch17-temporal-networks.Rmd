@@ -1,0 +1,398 @@
+---
+title: "Temporal network analysis: the LA Methods chapter with Dynet"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Temporal network analysis: the LA Methods chapter with Dynet}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center",
+                      fig.width = 7, fig.height = 4.5, dpi = 96)
+library(Dynet)
+has_tsna <- requireNamespace("tsna", quietly = TRUE) &&
+  requireNamespace("networkDynamic", quietly = TRUE) &&
+  requireNamespace("network", quietly = TRUE) &&
+  requireNamespace("sna", quietly = TRUE)
+```
+
+Chapter 17 of *Learning Analytics Methods and Tutorials* builds a temporal
+network from a MOOC discussion forum and takes it through visualisation,
+graph-level measures, node-level measures, reachability and mixing, using
+`networkDynamic`, `tsna`, `sna` and `ndtv`. This vignette is the same
+analysis, in the same order, with Dynet's verbs and the chapter's own data,
+bundled here as `mooc_posts` and `mooc_people`.
+
+It is not a line-by-line transcription. Two things in the chapter's code
+change the numbers, and reproducing them would mean writing worse code to get
+worse numbers; both are named and measured in
+[what differs](#what-differs).
+
+## 1. Data
+
+The log is one row per post: who wrote it, who it answers, when, and the
+thread it sits in.
+
+```{r data}
+head(mooc_posts)
+```
+
+```{r people}
+head(mooc_people)
+```
+
+The chapter recodes the experience level and uses it as the mixing attribute.
+
+```{r recode}
+people <- transform(
+  mooc_people,
+  expert_level = as.character(factor(experience, levels = c(1L, 2L, 3L),
+                                     labels = c("Expert", "Student", "Teacher")))
+)
+with(people, table(expert_level))
+```
+
+Self-replies carry no tie, and a thread with a single post never became an
+exchange. The chapter drops both.
+
+```{r prepare}
+replies <- subset(mooc_posts, sender != receiver)
+busy_threads <- with(replies, names(which(table(discussion) > 1)))
+exchanges <- subset(replies, discussion %in% busy_threads)
+nrow(exchanges)
+with(exchanges, length(unique(discussion)))
+```
+
+## 2. The temporal network
+
+Forum data is threaded: a tie is live from its own post until the thread falls
+silent (Saqr & Nouri, 2020). Naming `thread` selects that rule, and the
+timestamps are converted to elapsed days.
+
+```{r build}
+dn_full <- dynet(exchanges, from = "sender", to = "receiver",
+                 time = "timestamp", thread = "discussion",
+                 nodes = people, time_unit = "days",
+                 directed = TRUE, loops = FALSE)
+summary(dn_full)
+```
+
+## 3. The active subnetwork
+
+The chapter keeps the vertices with more than 20 ties. `induce_subgraph()`
+takes the condition directly.
+
+```{r active}
+dn <- induce_subgraph(dn_full, degree > 20)
+dn
+```
+
+## 4. Visualisation
+
+```{r net-plot, fig.width = 7, fig.height = 6}
+plot(dn, type = "network")
+```
+
+Four windows across the course, the chapter's four `network.extract()`
+panels.
+
+```{r snapshots, fig.width = 9, fig.height = 3}
+plot(dn, type = "snapshots", panels = 4)
+```
+
+What those panels hold, week by week:
+
+```{r snapshot-counts}
+weekly <- snapshots(dn, start = 1, end = 22, step = 7, window = 7)
+weekly_summary <- summary(weekly)
+knitr::kable(weekly_summary, caption = "Ties, active participants and weight per week.")
+```
+
+Who was active, and when.
+
+```{r timeline, fig.height = 5}
+plot(dn, type = "timeline", top = 25)
+```
+
+Ties forming and dissolving, day by day.
+
+```{r turnover}
+turnover <- events(dn, measure = c("formation", "dissolution"),
+                   start = 0, end = 72, step = 1, window = 1)
+plot(turnover)
+```
+
+The chapter's proximity timeline.
+
+```{r proximity, fig.width = 8, fig.height = 6}
+plot(dn, type = "proximity", slices = 20)
+```
+
+## 5. Graph-level measures
+
+A seven-day rolling density.
+
+```{r density}
+weekly_density <- metrics(dn, measure = "density",
+                          start = 14, end = 60, step = 1, window = 7)
+plot(weekly_density)
+```
+
+Density over the whole period, and the time-integrated density that accounts
+for how long each tie was actually live.
+
+```{r density-scalars}
+scalars <- metrics(dn, measure = c("edges", "density", "temporal_density"),
+                   window = "all")
+scalar_table <- as.data.frame(scalars)
+knitr::kable(scalar_table, caption = "Aggregate structure.")
+```
+
+Reciprocity, on the full network as in the chapter.
+
+```{r recip}
+reciprocity <- metrics(dn_full, measure = "reciprocity",
+                       start = 1, end = 73, step = 1, window = 1)
+plot(reciprocity)
+```
+
+The dyad census. `window = 0` samples at each instant, which is what
+`tSnaStats()` does by default.
+
+```{r dyads}
+dyad_census <- metrics(dn, measure = c("mutual", "asymmetric", "null"),
+                       start = 0, end = 72, step = 1, window = 0)
+plot(dyad_census)
+```
+
+Degree centralisation.
+
+```{r centralization}
+centralisation <- metrics(dn, measure = "centralization_degree",
+                          start = 1, end = 73, step = 1, window = 1)
+plot(centralisation)
+```
+
+## 6. Node-level measures
+
+The chapter runs a `while` loop per centrality. One call takes all three
+directions at once.
+
+```{r degree}
+degree_series <- dyn_centrality(dn, measure = "degree",
+                                mode = c("all", "in", "out"),
+                                start = 1, end = 73, step = 1, window = 1)
+degree_summary <- summary(degree_series, by = "measure")
+knitr::kable(degree_summary, caption = "Degree, in-degree and out-degree per day.")
+```
+
+```{r degree-plot, fig.height = 4.5}
+degree <- dyn_centrality(dn, measure = "degree",
+                         start = 1, end = 73, step = 1, window = 1)
+plot(degree, top = 10)
+```
+
+Closeness, betweenness and eigenvector, again in one call.
+
+```{r other-centrality}
+other_centrality <- dyn_centrality(dn,
+                                   measure = c("closeness", "betweenness",
+                                               "eigenvector"),
+                                   start = 1, end = 73, step = 1, window = 1)
+other_summary <- summary(other_centrality, by = "measure")
+knitr::kable(other_summary, caption = "Three centralities over the same grid.")
+```
+
+```{r betweenness-plot, fig.height = 4.5}
+betweenness <- dyn_centrality(dn, measure = "betweenness",
+                              start = 1, end = 73, step = 1, window = 1)
+plot(betweenness, top = 10)
+```
+
+Aggregate centrality can be read straight off the vertex table, so ranking
+participants needs no second call.
+
+```{r node-table}
+ranked <- as.data.frame(dn, what = "nodes",
+                        measure = c("degree", "betweenness", "eigenvector"))
+top_ranked <- head(ranked)
+knitr::kable(top_ranked, caption = "The vertex table carries aggregate centrality.")
+```
+
+## 7. Reachability
+
+The chapter seeds its forward path search on participant 444. Dynet addresses
+vertices by name, so the seed is the name.
+
+```{r paths}
+forward <- paths(dn, from = "444", direction = "forward")
+forward
+```
+
+```{r path-plot, fig.width = 8, fig.height = 6}
+plot(forward, base_size = 9)
+```
+
+The chapter's `transmissionTimeline()` becomes a trajectory tree, which
+carries the route counts and branching probabilities the original does not.
+
+```{r trajectories, fig.width = 9, fig.height = 6}
+tree <- path_trajectories(forward)
+plot_path_trajectories(tree, measure = "time", base_size = 9)
+```
+
+## 8. Mixing between experience levels
+
+```{r mixing}
+mix <- mixing(dn, attribute = "expert_level",
+              start = 1, end = 73, step = 1, window = 1)
+mixing_summary <- summary(mix)
+mixing_pairs <- head(mixing_summary, 9)
+knitr::kable(mixing_pairs,
+             caption = "Ties within and between experience levels.")
+```
+
+```{r mixing-plot, fig.height = 4.5}
+plot(mix)
+```
+
+`nodemix` drops one cell as the `ergm` base category, so the chapter plots
+eight of the nine group pairs. `mixing()` reports all nine.
+
+## What differs {#what-differs}
+
+Two differences from the published figures, both deliberate.
+
+**The spell rule.** The chapter sets every tie in a discussion to start at the
+discussion's *first* post. Saqr and Nouri (2020), which `thread =`
+implements, starts each tie at *its own* post. Only 299 of the 2406
+surviving posts are opening posts, so the chapter's spells are longer on
+average and its time-integrated density is correspondingly higher.
+
+**Ties that never happened.** The chapter builds its static edge list before
+dropping single-post discussions, so pairs enter the network with no activity
+at all. `networkDynamic()` then gives each of them activity across the entire
+observation window, flagged censored at both ends — permanently-on ties that
+no message ever created. That is why the chapter reports 433 ties in the
+active subnetwork where this reports 428, and why its day-73 statistics are
+non-empty for a day past the end of observation.
+
+Neither is a fault in the chapter's argument. Both are worth knowing before
+its numbers are reused.
+
+## 9. Do the two implementations agree?
+
+The differences above are definitional, not numerical: they come from how the
+network is *built*, not from how it is measured. Given the same network,
+Dynet and `tsna`/`sna` should return the same values, and this section checks
+that rather than asserting it. The chunks run when the four packages the
+chapter uses are installed.
+
+The comparison network is built from Dynet's own spell table, so both sides
+measure the same thing. Turning vertex names back into the integers
+`networkDynamic` wants is the bookkeeping Dynet hides, and it belongs inside
+a function rather than in the analysis.
+
+```{r agree-build, eval = has_tsna, message = FALSE, warning = FALSE}
+as_network_dynamic <- function(x) {
+  spells <- as.data.frame(x)
+  vertices <- as.data.frame(x, what = "nodes")
+  ids <- stats::setNames(seq_len(nrow(vertices)), vertices$name)
+  base <- network::network.initialize(length(ids), directed = TRUE)
+  nd <- networkDynamic::networkDynamic(
+    base.net = base,
+    edge.spells = data.frame(onset = spells$start, terminus = spells$end,
+                             tail = as.integer(ids[spells$from]),
+                             head = as.integer(ids[spells$to])),
+    verbose = FALSE
+  )
+  network::set.vertex.attribute(nd, "vertex.names", vertices$name)
+  nd
+}
+nd <- as_network_dynamic(dn)
+```
+
+Four quantities, one from each level the chapter works at: a graph-level
+scalar, a graph-level series, a node-level series, and a path result. Each
+helper reports how many values it lined up as well as the largest difference,
+so an empty comparison cannot pass as agreement.
+
+```{r agree-helpers, eval = has_tsna}
+graph_agreement <- function(quantity, result, reference) {
+  measured <- as.data.frame(result)
+  reference <- as.numeric(reference)
+  stopifnot("the two series have different lengths" =
+              length(reference) == nrow(measured))
+  data.frame(quantity = quantity, compared = nrow(measured),
+             max_abs_difference = max(abs(measured$value - reference)))
+}
+
+node_agreement <- function(quantity, result, reference) {
+  measured <- as.data.frame(result)
+  reference <- as.matrix(reference)
+  flat <- data.frame(
+    time = rep(sort(unique(measured$time)), times = ncol(reference)),
+    node = rep(colnames(reference), each = nrow(reference)),
+    reference = as.numeric(reference), stringsAsFactors = FALSE
+  )
+  both <- merge(measured, flat, by = c("time", "node"))
+  stopifnot("a node-day was lost in the join" = nrow(both) == nrow(measured))
+  data.frame(quantity = quantity, compared = nrow(both),
+             max_abs_difference = max(abs(both$value - both$reference)))
+}
+
+arrival_agreement <- function(quantity, result, reference, vertices) {
+  measured <- as.data.frame(result)
+  theirs <- stats::setNames(reference$tdist, vertices)
+  mine <- stats::setNames(measured$latency, measured$node)
+  shared <- intersect(names(theirs)[is.finite(theirs)], names(mine))
+  data.frame(quantity = quantity, compared = length(shared),
+             max_abs_difference = max(abs(theirs[shared] - mine[shared])))
+}
+```
+
+```{r agree, eval = has_tsna, message = FALSE, warning = FALSE}
+participants <- network::network.vertex.names(nd)
+
+aggregate_density <- metrics(dn, measure = "density", window = "all")
+mutual_series <- metrics(dn, measure = "mutual",
+                         start = 1, end = 73, step = 1, window = 1)
+degree_per_day <- dyn_centrality(dn, measure = "degree",
+                                 start = 1, end = 73, step = 1, window = 1)
+forward_from_444 <- paths(dn, from = "444")
+
+their_density <- sna::gden(nd)
+their_mutual <- tsna::tSnaStats(nd, "mutuality", start = 1, end = 73,
+                                time.interval = 1, aggregate.dur = 1)
+their_degree <- tsna::tSnaStats(nd, "degree", start = 1, end = 73,
+                                time.interval = 1, aggregate.dur = 1,
+                                cmode = "freeman")
+their_paths <- tsna::tPath(nd, v = match("444", participants), direction = "fwd")
+
+agreement <- rbind(
+  graph_agreement("aggregate density", aggregate_density, their_density),
+  graph_agreement("mutual dyads per day", mutual_series, their_mutual),
+  node_agreement("degree per node per day", degree_per_day, their_degree),
+  arrival_agreement("earliest arrival time", forward_from_444, their_paths,
+                    participants)
+)
+knitr::kable(agreement,
+             caption = "Dynet against tsna and sna on the same network.")
+```
+
+```{r agree-absent, eval = !has_tsna, echo = FALSE, results = "asis"}
+cat("*`tsna`, `networkDynamic`, `network` or `sna` is not installed, so the",
+    "comparison was skipped.*")
+```
+
+## References
+
+Saqr, M. (2024). Temporal network analysis: Introduction, methods and
+analysis with R. In M. Saqr & S. López-Pernas (Eds.), *Learning Analytics
+Methods and Tutorials*. Springer.
+https://doi.org/10.1007/978-3-031-54464-4_17
+
+Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis to
+understand and improve collaborative learning. *Proceedings of the Tenth
+International Conference on Learning Analytics & Knowledge*, 314-319.

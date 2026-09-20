@@ -18,9 +18,10 @@ projection(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{sessions}{Session handling. \code{"collapse"} erases labels. For a
-sessioned network, \code{"bounded"} and \code{"separate"} both preserve disjoint
-session-local projection blocks so identity arcs never cross a wall.}
+\item{sessions}{Session handling: \code{"bounded"} (the default), \code{"collapse"}
+or \code{"separate"}. \code{"collapse"} erases labels. For a sessioned network,
+\code{"bounded"} and \code{"separate"} both preserve disjoint session-local
+projection blocks so identity arcs never cross a wall.}
 
 \item{start, end}{First and last slice times. Defaults to observed support.}
 
@@ -33,8 +34,9 @@ single slice, closed on the right.}
 
 \item{omega}{Weight on the identity arcs that carry a vertex from one slice
 to the next, that is, the interlayer coupling of the time-expanded
-network. One keeps an identity arc as heavy as a unit contact; zero
-leaves the slices uncoupled. Must be a single non-negative number.}
+network. One, the default, keeps an identity arc as heavy as a unit
+contact; zero leaves the slices uncoupled. Must be a single finite
+non-negative number, or a \code{dynet_bad_input} error is raised.}
 
 \item{coupling}{Which slices an identity arc may join. \code{"ordinal"}, the
 default and the only temporally meaningful choice, joins each slice to
@@ -50,8 +52,8 @@ An object of class \code{dynet_projection}. Use
 \code{as.data.frame(x, what = "edges")} for directed projected arcs.
 }
 \description{
-\code{projection()} discretizes a temporal network into snapshot slices and
-connects each vertex state to its realization in the next slice. Within a
+\code{projection()} discretises a temporal network into snapshot slices and
+connects each vertex state to its realisation in the next slice. Within a
 slice it uses the same independently aggregated, endpoint-induced snapshot
 as \code{\link[=snapshots]{snapshots()}}. Identity arcs always point forward and carry the coupling
 weight \code{omega}. The result is a tidy projection object rather than a bare

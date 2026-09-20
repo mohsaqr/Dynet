@@ -23,11 +23,18 @@ paths(
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{from}{Name of the vertex to start from.}
+\item{from}{Name of the one vertex the search is anchored on: the source of
+a forward search, the target of a backward one.}
 
 \item{at}{Forward source-availability time or backward arrival deadline.
-Defaults to the start of the observation window for forward paths and its
-end for backward paths. Date and date-time values use the network's time
+An explicit \code{at} is used exactly: a source that is not present at that
+instant reaches nothing. The default, \code{NULL}, lets the vertex supply its
+own anchor. A vertex with declared spells (see \code{\link[=set_vertex_spells]{set_vertex_spells()}})
+starts at the first instant it is present inside the window, or at the
+last instant searching backward; a vertex with no declared spells starts
+at the window bound, which is \code{start} for a forward search and \code{end} for a
+backward one, each defaulting in turn to the matching end of the
+observation window. Date and date-time values use the network's time
 scale. It cannot be combined with \code{start} or \code{end}.}
 
 \item{direction}{\code{"forward"} traces where the vertex can reach;
@@ -91,8 +98,9 @@ the result when the figure needs arguments of its own.}
 \value{
 An object of class \code{"dynet_paths"}: a tidy data frame with one row
 per vertex and columns \code{node}, \code{reachable}, \code{arrival_time}, \code{attained}
-(whether that optimum itself is realized), \code{latency} (time taken from the
-source), \code{n_hops}, and the exact count \code{n_paths}. Under
+(whether that optimum itself is realised), \code{latency} (elapsed time
+between the origin and \code{arrival_time}, in either direction), \code{n_hops},
+and the exact count \code{n_paths}. Under
 \code{criterion = "latest_departure"} a \code{departure_time} column follows
 \code{arrival_time}, holding the latest departure supremum from \code{from}, and a
 \code{duration} column; \code{arrival_time}, \code{n_hops} and \code{n_paths} then describe
@@ -104,10 +112,13 @@ duration but has \code{n_hops = NA} and \code{n_paths = 0}. Under
 \code{criterion = "shortest"} a \code{path_cost} column follows \code{n_paths}: the
 summed cost of the cheapest journey, \code{n_hops} is the fewest hops among
 the cheapest journeys (\code{NA} when they differ), and \code{arrival_time} and
-\code{n_paths} describe the cheapest journeys that arrive earliest. Bounded mode adds \code{path_session} and
-\code{n_best_sessions}; separate mode adds \code{session} and \code{origin}. Use
-\code{as.data.frame(x, what = "steps")} for every reconstructed optimal route;
-its endpoint-local \code{path_id} distinguishes tied atom sequences.
+\code{n_paths} describe the cheapest journeys that arrive earliest. Bounded
+mode adds \code{path_session} and \code{n_best_sessions}; separate mode adds \code{session} and
+\code{origin}, one complete vertex block per session. Use
+\code{as.data.frame(x, what = "steps")} for every reconstructed optimal route:
+one row per vertex visited, with \code{endpoint}, \code{path_id} (endpoint-local,
+distinguishing tied atom sequences), \code{path_session}, \code{step}, \code{node},
+\code{time} and \code{attained}, preceded by \code{session} in separate mode.
 }
 \description{
 Follows every time-respecting path out of (or into) one vertex and reports
@@ -128,14 +139,26 @@ edge-row order or duplicate spell rows.
 }
 \details{
 A valid forward journey has distinct vertices, hop-entry times \code{x}, and
-completion times \code{y = x + traversal_time}. The source is ready at \code{start},
-each later entry is no earlier than the preceding completion, and final
-completion is at or before \code{end}. At zero duration, entry and completion
-coincide and recover P01's nondecreasing traversal times. The empty journey
-reaches the source at \code{start}. With \code{at}, that value supplies \code{start} for
-forward paths or \code{end} for backward paths. Cycles are unnecessary for reach
-and earliest arrival because deleting a repeated-vertex section and waiting
-at that vertex preserves every later hop.
+completion times \code{y = x + traversal_time}. The source is ready at the
+resolved origin, each later entry is no earlier than the preceding
+completion, and final completion is at or before \code{end}. At zero duration,
+entry and completion coincide, recovering the nondecreasing hop times
+described above. The empty journey reaches the source at the origin. With
+\code{at}, that value is both the origin and the window bound: \code{start} for
+forward paths or \code{end} for backward paths. Cycles are unnecessary for
+reach and earliest
+arrival because deleting a repeated-vertex section and waiting at that
+vertex preserves every later hop.
+
+The origin is anchored at the source's own presence. Without \code{at}, a vertex
+with declared spells starts at the first instant it is present inside the
+window, or at the last instant when searching backward, so a vertex that
+enters the network late is never scored from a time before it existed; a
+vertex with no declared spells starts at the window bound. A vertex that is
+never present inside the window has no valid anchor, so every row of its
+result, the source row included, is unreachable. The resolved origin is
+reported in the printed header; under \code{sessions = "separate"}, where every
+session resolves its own, it is reported in the \code{origin} column instead.
 
 \code{start} and \code{end} form a closed bound on the complete journey: entry may
 equal \code{start} and completion may equal \code{end}. This does not close interval
@@ -144,9 +167,13 @@ activity on the right. At zero duration, an event or interval onset at
 With positive duration, no nonempty hop can both enter and complete at
 \code{end}; \code{start = end} therefore leaves only the empty journey.
 
-Declared vertex activity gates traversal appearances. The forward source
-must be active exactly at \code{start}, and the backward target exactly at \code{end};
-otherwise every fixed-universe row, including the anchor, is unreachable.
+Declared vertex activity gates traversal appearances. The anchor must be
+valid: the forward source must be active exactly at the resolved origin,
+and the backward target either active there or leaving exactly there, since
+a spell's terminus is the last instant that vertex exists even though
+presence is half-open. An invalid anchor -- which an explicit \code{at} outside
+the source's own spells produces -- leaves every fixed-universe row,
+including the anchor row itself, unreachable.
 After a valid anchor, waiting may cross inactive periods. A zero-duration
 hop requires both endpoints at its time. A positive-duration interval hop
 requires both endpoints continuously on the closed traversal from entry
@@ -158,7 +185,10 @@ canonical contact remain one path atom and cannot multiply \code{n_paths}.
 For backward paths, \code{arrival_time} is the latest-departure supremum for a
 journey ending at the named target by the resolved \code{end}, and \code{latency} is
 \code{end} minus that value. A supremum at an interval's excluded terminus need
-not itself be an attainable departure.
+not itself be an attainable departure. Such an endpoint is still reachable
+and still reports its route family: \code{n_hops}, \code{n_paths} and the steps of
+the routes that approach the supremum are those of the family, and
+\code{attained = FALSE} records that the instant itself is not realised.
 
 A latest-departure query is solved by time reversal: the latest departure
 from \code{from} into a vertex \code{z} by \code{end} is the label a backward search rooted
@@ -183,7 +213,7 @@ duration is the minimum over departures \code{d} of the earliest arrival from
 whole multiples of \code{traversal_time}), each taken exactly and from below,
 at which the source can depart; one forward search runs per candidate.
 
-With \code{sessions = "bounded"}, each endpoint is optimized across complete
+With \code{sessions = "bounded"}, each endpoint is optimised across complete
 session-specific searches. A unique winner is named in \code{path_session}; ties
 leave it missing and are counted in \code{n_best_sessions}. No merged predecessor
 tree is exposed. The steps accessor retains a complete route from every tied
@@ -201,18 +231,31 @@ timestamp and arrives after the same duration; it does not represent
 continued edge activity. The query \code{end} bounds completion, not only entry.
 
 Optimal forward journeys are shortest foremost: final completion is
-minimized first and hop count second. Journey identity is the ordered
-sequence of canonical oriented contacts. Duplicate points, overlapping or
+minimised first (foremost) and hop count second (shortest). Backward
+journeys mirror it, maximising the departure time first and minimising hop
+count second. There is no criterion argument: this is the only criterion
+\code{paths()} offers, and it is recorded on the result as
+\code{"foremost_then_shortest"}. A fastest journey, which minimises elapsed time
+rather than arrival time, is a different optimum and is not computed here.
+Journey identity is the ordered sequence of canonical oriented contacts.
+Duplicate points, overlapping or
 touching interval segmentation, weights, and waiting schedules do not
 multiply paths; genuinely recurrent contacts do. \code{n_paths} is exact through
 \code{2^53}, after which a \code{dynet_path_overflow} condition is raised. The empty
-journey has one path, an unreachable endpoint has zero, and an unattained
-backward supremum has zero because it has no maximizing journey.
+journey has one path and an unreachable endpoint has none.
+
+Failures are classed. An unknown \code{from} raises \code{dynet_unknown_vertex}; a
+\code{from} that is not one name, a negative \code{traversal_time}, combining \code{at}
+with \code{start} or \code{end}, or a window that cannot hold a journey, raises
+\code{dynet_bad_input}; a window disjoint from explicit observation raises
+\code{dynet_outside_observation}; a count beyond \code{2^53} raises
+\code{dynet_path_overflow}; and expanding more than a million routes through
+\code{as.data.frame(x, what = "steps")} raises
+\code{dynet_path_expansion_too_large}, which the compact \code{n_paths} column
+answers instead.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths(dn, from = "Ana")
-paths(dn, from = "Ana", start = 0, end = 10)
 paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
 
 # Every earliest-arrival journey, not only the shortest ones
@@ -223,13 +266,20 @@ few <- dynet(data.frame(from = c("A", "A", "B", "C"),
 paths(few, from = "A", criterion = "foremost")
 paths(few, from = "A", criterion = "fastest")
 routes <- paths(dn, from = "Ana")
+routes
 summary(routes)
+paths(dn, from = "Ana", start = 0, end = 10)
+paths(dn, from = "Ana", direction = "backward")
 
 }
 \references{
 Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
 problems for temporal networks. \emph{Journal of Computer and System Sciences},
 64(4), 820-842.
+
+Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest, fastest,
+and foremost journeys in dynamic networks. \emph{International Journal of
+Foundations of Computer Science}, 14(2), 267-285.
 
 Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
 519(3), 97-125.

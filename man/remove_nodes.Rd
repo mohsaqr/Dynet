@@ -12,10 +12,14 @@ remove_nodes(dn, nodes, cascade = FALSE)
 \item{nodes}{Character node names.}
 
 \item{cascade}{Whether to remove every incident temporal tie and vertex
-activity spell. The safe default rejects nodes that are not isolates.}
+activity spell. The safe default, \code{FALSE}, rejects nodes that are not
+isolates with a condition of class \code{dynet_node_not_isolate}.}
 }
 \value{
-A new internally consistent \code{dynet} object.
+A new internally consistent \code{dynet} object, of the same class and
+structure as the input, without the named vertices and -- under
+\code{cascade = TRUE} -- without their ties and vertex-activity spells. At
+least one temporal tie must remain.
 }
 \description{
 Remove nodes from a temporal network

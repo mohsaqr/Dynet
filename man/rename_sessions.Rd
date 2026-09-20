@@ -13,8 +13,21 @@ rename_sessions(dn, mapping)
 \code{old}/\code{new} data frame.}
 }
 \value{
-A new \code{dynet} object with edge and vertex session labels renamed.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with edge and vertex
+session labels renamed together and the session scheme in its metadata
+updated. Labels absent from \code{mapping} are left alone. Raises
+\code{dynet_unknown_session} when an old label is not a session, and
+\code{dynet_bad_input} when the network has no session scheme, when \code{mapping}
+is malformed, or when the renaming would produce duplicate labels.
 }
 \description{
 Rename session walls
+}
+\examples{
+dn <- dynet(school_contacts)
+weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
+labelled <- set_tie_sessions(dn, session = weeks)
+renamed <- rename_sessions(labelled, c(week_1 = "opening"))
+renamed
 }

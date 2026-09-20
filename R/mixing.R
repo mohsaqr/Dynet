@@ -26,7 +26,7 @@
 #' unordered group pair, with display labels such as `"A -- B"`. A within-group
 #' edge or loop contributes once to its diagonal cell. The group stub margin is
 #' \deqn{d_a=2M_{aa}+\sum_{b\ne a}M_{\min(a,b),\max(a,b)},}
-#' so the margins sum to twice the table total. These are unnormalized counts,
+#' so the margins sum to twice the table total. These are unnormalised counts,
 #' not Newman's mixing proportions.
 #'
 #' Missing attribute values are retained as a collision-safe explicit group
@@ -39,8 +39,13 @@
 #' eligible isolates contribute no dyad.
 #'
 #' @param dn A temporal network from [dynet()] built with vertex attributes.
-#' @param attribute Name of a column in the vertex table.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param attribute Name of a column in the vertex table. A name the network
+#'   does not carry raises an error of class `dynet_unknown_attribute` that
+#'   lists the attributes it does have.
+#' @param sessions How to treat sessions, as in [dyn_centrality()]:
+#'   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
+#'   needs a network built with a session column and raises
+#'   `dynet_no_sessions` otherwise.
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
 #' @param start,end First and last time at which to measure. Default to the
@@ -61,11 +66,25 @@
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
 #' @return A `dynet_metric` at graph level with one row per time point and
-#'   group pair. Directed `measure` labels use `"A -> B"`; undirected labels
-#'   use `"A -- B"`. `value` is the active binary-dyad count, and the
-#'   authoritative `from_group` and `to_group` columns identify the cell.
-#'   Attributes record unit, pair-domain, normalization, weight, loop,
-#'   missing-group, and session-aggregation conventions.
+#'   group pair. The columns are `session` (only under
+#'   `sessions = "separate"`, the one mode that keeps session labels apart),
+#'   `time`, `measure`, `value`, `from_group` and `to_group`. Directed
+#'   `measure` labels use `"A -> B"`; undirected labels use `"A -- B"`.
+#'   `value` is the active binary-dyad count, and the authoritative
+#'   `from_group` and `to_group` columns identify the cell. Attributes record
+#'   unit, pair-domain, normalisation, weight, loop, missing-group, and
+#'   session-aggregation conventions.
+#'
+#' @section Conditions:
+#' Errors: `dynet_unknown_attribute` (no such vertex attribute),
+#' `dynet_no_sessions` (`sessions = "separate"` without a session column),
+#' `dynet_outside_observation` (the requested range misses observed support;
+#' it also carries `dynet_bad_input`),
+#' and `dynet_bad_input` for every other broken contract -- `dn` not a
+#' `dynet`, an `attribute` that is not a single column name, and an
+#' out-of-range `start`, `end`, `step` or `window`.
+#'
+#' Warning: `dynet_deprecated` for the retired `sample` argument.
 #'
 #' @references
 #' Newman, M. E. J. (2003). Mixing patterns in networks. *Physical Review E*,
@@ -222,12 +241,16 @@ mixing <- function(dn, attribute,
 #' verbs are seeing.
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param at Optional numeric time, narrowing the result to the bins that
-#'   cover it. With the default disjoint tiling that is one bin; with an
+#' @param at Optional single time, narrowing the result to the bins that
+#'   cover it. A network built from dates may be addressed with a date.
+#'   With the default disjoint tiling that is one bin; with an
 #'   overlapping `window` every bin containing the time is returned. A time
 #'   outside every bin falls back to the nearest bin rather than an empty
 #'   result, so `at` never returns zero rows on a nonempty network.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param sessions How to treat sessions, as in [dyn_centrality()]:
+#'   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
+#'   needs a network built with a session column and raises
+#'   `dynet_no_sessions` otherwise.
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
 #' @param start,end First and last time at which to measure. Default to the
@@ -259,6 +282,16 @@ mixing <- function(dn, attribute,
 #'   here agree with those from [metrics()]. Eligible isolates have no
 #'   synthetic edge row; use [dyn_centrality()] or [metrics()] when the
 #'   eligible population itself is required.
+#'
+#' @section Conditions:
+#' Errors: `dynet_no_sessions` (`sessions = "separate"` without a session
+#' column), `dynet_outside_observation` (the requested range misses observed
+#' support; it also carries `dynet_bad_input`), and `dynet_bad_input` for
+#' every other broken contract -- `dn` not
+#' a `dynet`, an `at`, `start` or `end` that is not a single finite time, and
+#' an out-of-range `step` or `window`.
+#'
+#' Warning: `dynet_deprecated` for the retired `sample` argument.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -360,11 +393,13 @@ as.data.frame.dynet_snapshot <- function(x, row.names = NULL,
 #' Print snapshot edges
 #'
 #' @param x A `dynet_snapshot` from [snapshots()].
-#' @param n Number of rows to show.
+#' @param n Number of rows to show; ten by default.
 #' @param ... Ignored.
 #' @return `x`, invisibly.
 #' @examples
-#' snapshots(dynet(school_contacts), at = 3)
+#' dn <- dynet(school_contacts)
+#' bins <- snapshots(dn, at = 3)
+#' bins
 #' @export
 print.dynet_snapshot <- function(x, n = 10L, ...) {
   flat <- as.data.frame(x)
@@ -423,7 +458,9 @@ summary.dynet_snapshot <- function(object, ...) {
 #' @param base_size Base font size.
 #' @param palette Palette specification, as in [plot.dynet()].
 #' @param ... Ignored.
-#' @return A `ggplot` object.
+#' @return A `ggplot` object, faceted by session when the result carries one.
+#'   A result in which no tie is active raises an error of class
+#'   `dynet_empty_result` rather than drawing an empty panel.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' bins <- snapshots(dn)

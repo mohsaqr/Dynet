@@ -10,12 +10,24 @@ remove_vertex_spells(dn, spells)
 \item{dn}{A temporal network.}
 
 \item{spells}{Integer positions or a logical mask over
-\code{as.data.frame(dn, what = "vertex_spells")}.}
+\code{as.data.frame(dn, what = "vertex_spells")}. A logical mask must have one
+element per declared component and no \code{NA}.}
 }
 \value{
-A new \code{dynet} object. A node with no remaining declaration becomes
-implicitly always active over observation support.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with the selected activity
+components dropped and the rest canonicalised again, so the remaining
+spell identifiers renumber. A node with no remaining declaration becomes
+implicitly always active over observation support. Raises
+\code{dynet_bad_input} when \code{spells} is not a valid selection.
 }
 \description{
 Remove declared vertex-activity components
+}
+\examples{
+dn <- dynet(school_contacts)
+present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+enrolled <- set_vertex_spells(dn, present)
+trimmed <- remove_vertex_spells(enrolled, spells = 1)
+as.data.frame(trimmed, what = "vertex_spells")
 }

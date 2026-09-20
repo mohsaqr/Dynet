@@ -20,6 +20,14 @@ serves). The node table has one row per vertex the source actually
 reaches, the source included, with \code{name}, \code{arrival_time}, \code{latency},
 \code{n_hops}, \code{n_paths} and \code{groups} (hop count as a grouping label for
 plotting). Unreachable vertices are absent, not present with \code{NA}.
+The network is always directed, because a route hop has an orientation
+even when the temporal network does not; hops of a backward path result
+still point the way time runs, from the sender towards the queried
+target, and its \code{arrival_time} is that vertex's latest-departure
+supremum, as in \code{\link[=paths]{paths()}}.
+
+A result that is not from \code{\link[=paths]{paths()}} raises \code{dynet_bad_input}; a path
+result with no reachable vertex raises \code{dynet_empty_result}.
 }
 \description{
 \code{paths()} uses an endpoint-local foremost-then-shortest criterion, so
@@ -27,4 +35,11 @@ its routes need not form one predecessor tree. This function therefore
 returns the honest union of all expanded optimal route hops. Edge \code{weight}
 is the number of endpoint/path families using the hop; \code{first_time} and
 \code{last_time} retain its temporal range.
+}
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+union_network <- path_network(routes)
+as.data.frame(union_network)
+as.data.frame(union_network, what = "nodes")
 }

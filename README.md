@@ -40,6 +40,16 @@ dynet(forum_posts, thread = "thread", nodes = forum_people)
 # Co-presence log: actors sharing a group become connected (every member
 # pair, for the whole span of the group; attendance inside it is not used)
 dynet(seminar_attendance, actor = "student", group = "seminar")
+
+# Numbered endpoints with a node table: the vertices take the table's
+# `name`, and its `onset`/`terminus` say when each one is present
+workshops <- data.frame(vertex.id = c(1L, 2L, 3L),
+                        name = c("Ana", "Ben", "Cara"),
+                        onset = c(0, 1, 2), terminus = c(9, 9, 9))
+collaborations <- data.frame(onset = c(1, 3), terminus = c(2, 4),
+                             tail = c(1L, 2L), head = c(2L, 3L))
+dynet(collaborations, directed = FALSE, nodes = workshops,
+      vertex_spells = workshops)
 ```
 
 Column names are matched case-insensitively against a table of aliases, so
@@ -219,7 +229,7 @@ rather than the vertices.
 
 `update_vertex_spells()` and `remove_vertex_spells()` complete vertex-activity
 editing; `clear_observations()` restores continuous implicit observation.
-Overlapping activity or observation spells are canonicalized after every edit.
+Overlapping activity or observation spells are canonicalised after every edit.
 
 Existing `networkDynamic` objects can enter through `as_dynet()`, including
 their activity spells, semantic vertex names, observation support, weights,
@@ -496,7 +506,7 @@ Domain-proximity prestige multiplies that incoming domain fraction by the
 inverse mean directed hop distance of its members. Partial domains remain valid
 and positive; unreachable vertices are excluded before distances are summed.
 This follows the published Lin/Wasserman--Faust equation and deliberately
-differs from `sna` 2.8's `0 * Inf` behavior on disconnected graphs.
+differs from `sna` 2.8's `0 * Inf` behaviour on disconnected graphs.
 
 Eigenvector prestige uses the incoming nonnegative Perron ray of the binary
 snapshot. Raw scores have Euclidean norm one; rescaled scores sum to one.
@@ -716,9 +726,48 @@ graphics scales dash length by line width, so a dashed line disintegrates
 exactly where it is thinnest — and thin there means low activity, not missing
 data. Solid lines plus direct labels say the true thing.
 
+## Animating
+
+`animate()` draws the measurement grid as a film. It takes the same four
+grid arguments as every measuring verb, so the animation shows exactly the
+bins `snapshots()` tabulates, joined by motion.
+
+```r
+animate(dn, step = 2, window = 4)                       # GIF, spring layout
+animate(dn, step = 2, window = 4, file = "forum.mp4")   # video, by extension
+animate(dn, step = 2, window = 4, measure = "degree",   # node size follows a measure
+        layout = "relaxed", file = "forum.webm")
+```
+
+Each bin is drawn `tween` times (six by default). Between bins the vertices
+glide, a tie about to appear fades in dotted and green, one about to vanish
+fades out dashed and vermilion, and a vertex whose measure changes grows or
+shrinks; the motion follows the smoothstep curve, so each bin dwells before
+it changes. Tie width follows weight on one scale fixed across the whole
+animation, so the same weight has the same width in a quiet frame and a
+busy one. A strip under the network shows the grid, a marker at the current
+time, and the key.
+
+`layout` is `"spring"` (the union of every bin, laid out once), `"circle"`,
+`"oval"`, `"groups"` (one ring per partition), `"relaxed"` (each bin laid out
+again, seeded from the last, held within `max_displacement` and smoothed
+along time), or a data frame of your own `name`, `x`, `y`. Under every
+layout but `"relaxed"` a vertex never moves. A vertex absent from a bin is
+faded, parked out of sight and glided in when it arrives (`absent = "away"`),
+or hidden; `set_vertex_spells(dn, "ties")` declares each vertex present from
+its first tie to its last when the log itself says nothing about arrivals.
+
+The extension of `file` picks the encoder: `.gif` needs `gifski`, `.mp4`
+and `.webm` need `av`. The verb returns a tidy table with one row per bin
+(`time`, `nodes`, `ties`, `forming`, `dissolving`, the first rendered
+`frame` of the bin) invisibly; `as.data.frame(x, what = "frames")` maps
+every rendered frame to its time.
+
 ## What it depends on
 
 `cograph` for rendering, `ggplot2` for the time-series views. Nothing else.
+Writing an animation needs `gifski` for a GIF or `av` for a video, both in
+`Suggests`.
 
 Every metric — geodesics, Brandes betweenness, PageRank, HITS, k-cores, Burt's
 constraint, the dyad and triad censuses — is base R matrix algebra, so
@@ -730,7 +779,8 @@ suite uses them to check the numbers.
 
 All 78 kernel comparisons against `igraph` and `sna` agree, across directed and
 undirected graphs at three sizes. Earliest-arrival times agree with
-`tsna::tPath` on twenty source-network combinations. Two conventions differ
+`tsna::tPath` on twenty source-network combinations, forward and backward,
+including the vertex-activity boundary cases. Two conventions differ
 deliberately and are documented where they are implemented:
 
 - **Closeness** uses the reachable-set normalisation from `igraph`.

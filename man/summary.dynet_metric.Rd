@@ -9,8 +9,13 @@
 \arguments{
 \item{object}{A \code{dynet_metric}.}
 
-\item{by}{Grouping for the summary: \code{"node"} (the default for node-level
-measures), \code{"time"}, or \code{"measure"}.}
+\item{by}{Grouping for the summary: \code{"node"}, \code{"time"} or \code{"measure"}. The
+default, \code{NULL}, groups by \code{"node"} when the measure has a \code{node} column
+and by \code{"measure"} otherwise. A \code{session} column, when the measure has
+one, and \code{measure} itself are always part of the grouping as well. A
+grouping the measure has no column for -- \code{"node"} on a graph-level
+series, say -- is dropped rather than raising, leaving the grouping the
+measure does carry.}
 
 \item{...}{Ignored.}
 }

@@ -23,10 +23,14 @@ dyn_reachability(
 \item{direction}{\code{"both"} (the default, reporting each vertex's forward and
 backward reach side by side), \code{"forward"} or \code{"backward"}.}
 
-\item{at}{Forward source-availability time or backward arrival deadline.
-Defaults to the beginning or end of each observed period, respectively.
-Date and date-time values use the network's time scale. It cannot be
-combined with \code{start} or \code{end}.}
+\item{at}{Forward source-availability time or backward arrival deadline,
+defaulting to the beginning or end of each observed period respectively.
+Unlike in \code{\link[=paths]{paths()}} it sets only the traversal window, because every
+vertex is then anchored at its own presence inside that window: a vertex
+with declared spells starts at the first instant it is present there, or
+at the last instant searching backward, and one with no declared spells
+starts at the window bound. Date and date-time values use the network's
+time scale. It cannot be combined with \code{start} or \code{end}.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
@@ -39,7 +43,8 @@ network's time unit. A calendar network also accepts a scalar \code{difftime}.}
 \item{measure}{One or more of \code{"reach"}, the share of other vertices joined
 by a time-respecting path; \code{"reach_count"}, their number; \code{"latency"}, the
 mean elapsed time to reach them; and \code{"hops"}, the mean number of contacts
-taken. The source vertex is excluded from all four. The two cost measures
+taken. The source vertex is excluded from all four. Defaults to
+\code{"reach"}. The two cost measures
 are \code{NaN} when nothing is reachable, since the mean is then 0/0.}
 
 \item{criterion}{Which optimisation problem the journeys solve. Reach and
@@ -54,9 +59,12 @@ wrapping \code{plot()} call without changing what comes back. Use \code{plot()} 
 the result when the figure needs arguments of its own.}
 }
 \value{
-A \code{dynet_metric} at node level. Proportion measures are named
-\code{forward_reach} and \code{backward_reach}; counts are named
-\code{forward_reach_count} and \code{backward_reach_count}.
+A \code{dynet_metric} at node level: a tidy data frame with one row per
+vertex per requested measure, columns \code{node}, \code{measure} and \code{value},
+preceded by \code{session} under \code{sessions = "separate"}. Proportion
+measures are named \code{forward_reach} and \code{backward_reach}; counts are named
+\code{forward_reach_count} and \code{backward_reach_count}. \code{as.data.frame()}
+returns the plain frame.
 }
 \description{
 The number or share of other vertices each vertex can reach along
@@ -71,8 +79,12 @@ Reachability uses \code{\link[=paths]{paths()}} traversal semantics: nondecreasi
 unlimited waiting, half-open interval spells, and a separate exact timestamp
 rule for point events. Positive \code{traversal_time} requires interval occupancy
 to finish within continuous pair activity and delays a point-trigger arrival.
-Declared vertex activity additionally requires an exact active query anchor
-and active hop endpoints. Waiting after a valid anchor may cross vertex
+Declared vertex activity additionally requires active hop endpoints and a
+valid anchor, and every vertex is anchored at its own presence: each search
+starts at that vertex's first instant inside the window, or its last
+instant searching backward, rather than at the window bound. A vertex never
+present inside the window reaches nothing, which is reported as zero rather
+than as a missing row. Waiting after a valid anchor may cross vertex
 inactivity; interval traversal requires both endpoints continuously through
 completion, while a delayed point requires the receiver again at completion.
 For backward reachability, the resolved \code{end} is a common deadline and
@@ -90,6 +102,12 @@ In separate-session output, a session entirely outside a one-sided bound
 contributes zero-reach rows rather than aborting the complete result. Its
 missing implicit bound is clamped to the supplied bound, producing the
 empty journey at that boundary and no eligible hop.
+
+Failures are classed. An unrecognised \code{measure} raises
+\code{dynet_unknown_measure}; a malformed \code{measure}, a negative
+\code{traversal_time}, \code{at} combined with \code{start} or \code{end}, or a window that
+cannot hold a journey raises \code{dynet_bad_input}; and a window disjoint from
+explicit observation raises \code{dynet_outside_observation}.
 }
 \examples{
 # Reachability searches every ordered pair, so the example uses a small
@@ -104,4 +122,11 @@ dyn_reachability(dn)
 dyn_reachability(dn, direction = "forward")
 dyn_reachability(dn, start = 0, end = 2)
 
+}
+\references{
+Holme, P. (2005). Network reachability of real-world contact sequences.
+\emph{Physical Review E}, 71(4), 046119.
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. \emph{Physics Reports},
+519(3), 97-125.
 }

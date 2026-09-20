@@ -1,7 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.claude$
-^\.DS_Store$
+(^|/)\.DS_Store$
 ^legacy$
 ^tmp$
 ^docs$
@@ -29,3 +29,4 @@
 ^_pkgdown\.yml$
 ^pkgdown$
 ^\.git$
+^vignettes/articles$

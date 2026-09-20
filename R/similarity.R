@@ -20,13 +20,16 @@
 #' @param dn A temporal network from [dynet()].
 #' @param method One of `"jaccard"` (the default), `"overlap"`, `"hamming"`,
 #'   `"cosine"` or `"pearson"`.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param sessions How to treat sessions: `"bounded"` (the default),
+#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
 #' @param start,end First and last time to measure. Default to the observed
 #'   range.
-#' @param step,window How often to measure and how much time each measurement
-#'   covers. Default to the interval the network was built with. `window =
-#'   "all"` is rejected here, because a similarity matrix of one bin against
-#'   itself says nothing.
+#' @param step How often to measure. Defaults to the interval the network was
+#'   built with.
+#' @param window How much time each measurement covers. Defaults to `step`.
+#'   `window = "all"` measures the whole observed period as a single bin and so
+#'   leaves nothing to compare; it raises `dynet_empty_result`, as does any
+#'   other grid that yields fewer than two bins.
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
@@ -37,7 +40,11 @@
 #'   diagonal is included and is one for every coefficient except
 #'   `"hamming"`, where identical layers differ in nothing and score zero.
 #'   `"pearson"` reaches one only to floating-point accuracy, so compare it
-#'   with a tolerance rather than with `==`.
+#'   with a tolerance rather than with `==`. The frame is returned invisibly
+#'   when `plot = TRUE` has drawn the figure.
+#'
+#'   The coefficients come from cograph, which is a hard dependency of Dynet;
+#'   a namespace that cannot be loaded raises `dynet_needs_cograph`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' similarity(dn)
@@ -92,9 +99,15 @@ similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
 
 #' Tidy table of time-bin similarity
 #' @param x A result from [similarity()].
-#' @param row.names,optional Ignored.
+#' @param row.names,optional Ignored; present for compatibility with the
+#'   generic.
 #' @param ... Ignored.
-#' @return A plain data frame, one row per ordered pair of time bins.
+#' @return A plain `data.frame`, one row per ordered pair of time bins, with
+#'   columns `time`, `other`, `measure` and `value`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' resemblance <- similarity(dn, step = 4, window = 4)
+#' as.data.frame(resemblance)
 #' @export
 as.data.frame.dynet_similarity <- function(x, row.names = NULL,
                                            optional = FALSE, ...) {
@@ -108,6 +121,10 @@ as.data.frame.dynet_similarity <- function(x, row.names = NULL,
 #' @param x A result from [similarity()].
 #' @param ... Passed to the data frame print method.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' resemblance <- similarity(dn, step = 4, window = 4)
+#' resemblance
 #' @export
 print.dynet_similarity <- function(x, ...) {
   bins <- length(unique(x$time))
@@ -122,9 +139,14 @@ print.dynet_similarity <- function(x, ...) {
 
 #' Draw time-bin similarity as a heatmap
 #' @param x A result from [similarity()].
-#' @param base_size Base text size.
+#' @param base_size Base text size. Defaults to twelve.
 #' @param ... Ignored.
-#' @return A `ggplot` object.
+#' @return A `ggplot` object. Drawing happens when that object is printed, so
+#'   the plot is the return value here rather than a side effect.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' bin_similarity <- similarity(dn, step = 5, window = 5)
+#' plot(bin_similarity)
 #' @export
 plot.dynet_similarity <- function(x, base_size = 12, ...) {
   ggplot2::ggplot(as.data.frame(x)) +

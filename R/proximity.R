@@ -241,7 +241,7 @@
               paste(.node_measures, collapse = ", ")),
       class = "dynet_unknown_measure", call = NULL))
   }
-  if (!x$directed && measure %in% c("indegree", "outdegree", "hub", "authority")) {
+  if (!x$directed && measure %in% .directed_only_measures) {
     stop(errorCondition(
       sprintf("%s needs a directed network; this one is undirected.",
               sQuote(measure)),

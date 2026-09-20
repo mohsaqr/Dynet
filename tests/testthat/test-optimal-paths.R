@@ -158,7 +158,11 @@ test_that("equal full-cost sessions remain distinct bounded paths", {
   expect_equal(separate$n_paths[separate$node == "T"], c(1, 1))
 })
 
-test_that("backward unattained suprema have no maximizing path family", {
+test_that("backward unattained suprema keep their route family", {
+  # An interval spell is half-open, so the latest departure into `T` is a
+  # supremum no journey attains exactly. The family that approaches it is
+  # still the answer: its hops, count and steps are reported, and `attained`
+  # is what records that the instant itself is not realised.
   interval <- quiet_dynet(data.frame(
     from = "A", to = "T", start = 0, end = 5
   ))
@@ -168,9 +172,12 @@ test_that("backward unattained suprema have no maximizing path family", {
   expect_true(origin$reachable)
   expect_false(origin$attained)
   expect_equal(origin$arrival_time, 5)
-  expect_true(is.na(origin$n_hops))
-  expect_equal(origin$n_paths, 0)
-  expect_length(optimal_routes(paths, "A"), 0L)
+  expect_equal(origin$n_hops, 1L)
+  expect_equal(origin$n_paths, 1)
+  expect_length(optimal_routes(paths, "A"), 1L)
+  supremum_route <- optimal_routes(paths, "A")[[1L]]
+  expect_identical(supremum_route$node, c("A", "T"))
+  expect_identical(supremum_route$attained, c(FALSE, TRUE))
 
   exact <- quiet_dynet(data.frame(
     from = c("A", "A"), to = c("T", "T"),
@@ -192,7 +199,8 @@ test_that("an incoming contact can cap an unattained backward suffix", {
   paths <- paths(dn, from = "T", direction = "backward",
                      start = 0, end = 10)
   expect_false(path_value(paths, "B")$attained)
-  expect_equal(path_value(paths, "B")$n_paths, 0)
+  expect_equal(path_value(paths, "B")$n_paths, 1)
+  expect_equal(path_value(paths, "B")$n_hops, 1L)
   expect_true(path_value(paths, "A")$attained)
   expect_equal(path_value(paths, "A")$arrival_time, 4)
   expect_equal(path_value(paths, "A")$n_hops, 2L)

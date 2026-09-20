@@ -132,13 +132,22 @@
 
 #' Gibson participation shifts from raw temporal turns
 #'
-#' @param dn A directed temporal network from [dynet()].
-#' @param sessions Session aggregation policy.
-#' @param output Return final class totals or cumulative rows.
+#' @param dn A directed temporal network from [dynet()]. An undirected network
+#'   raises an error of class `dynet_needs_directed`.
+#' @param sessions Session aggregation policy: `"bounded"` (the default) reads
+#'   each session as its own turn sequence and pools the counts, `"collapse"`
+#'   erases session labels and reads one calendar-ordered sequence, and
+#'   `"separate"` reports each session on its own rows. `"separate"` needs a
+#'   network built with a session column and raises `dynet_no_sessions`
+#'   otherwise.
+#' @param output `"final"` (the default) for one row per shift class,
+#'   `"cumulative"` for the running class vector at every turn.
 #' @param start,end Optional inclusive query limits; each query is a fresh
-#'   sequence and never uses a predecessor outside the range.
+#'   sequence and never uses a predecessor outside the range. A network built
+#'   from dates may be addressed with dates.
 #' @param group_events Infer one group-directed turn from simultaneous distinct
-#'   recipients (`"simultaneous"`), or retain every dyadic row (`"none"`).
+#'   recipients (`"simultaneous"`, the default), or retain every dyadic row
+#'   (`"none"`).
 #'   Several turns at one instant are ordered by speaker, then group turn
 #'   before dyadic turn, then target, each in the network's vertex order; the
 #'   classification of consecutive turns depends on that order, so under
@@ -148,13 +157,22 @@
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
-#' @return A `dynet_pshifts` data frame with the thirteen fixed classes,
-#'   carrying columns `shift`, `family`, `measure` and `value` — the same
-#'   `measure`/`value` pair every other measurement verb returns, so a
-#'   participation-shift census composes with the verbs that consume one.
-#'   `measure` is the constant `"count"`; `value` is the integer count.
-#'   `output = "cumulative"` prepends the turn columns; `sessions =
-#'   "separate"` prepends `session`.
+#' @return A `dynet_pshifts` data frame whose shape follows `output`, carrying
+#'   the `measure`/`value` pair every other measurement verb returns, so a
+#'   participation-shift census composes with the verbs that consume one;
+#'   `measure` is the constant `"count"` and `value` is the integer count.
+#'   `"final"` gives one row per shift class -- thirteen rows, always all
+#'   thirteen even when a class never occurred -- with columns `shift` (the
+#'   Gibson label), `family` (the label's group), `measure` and `value`.
+#'   `"cumulative"` gives one row per turn and class, that is thirteen rows
+#'   per classified turn, with `sequence` and `event` locating the turn in its
+#'   sequence, `time`, `speaker`, `target` and `group` describing the turn,
+#'   and `shift`, `family`, `measure` and `value` carrying the running total
+#'   of that class up to and including the turn. Either shape gains a leading
+#'   `session` column under `sessions = "separate"`, which reports each
+#'   session on its own rows; `"bounded"` and `"collapse"` carry no session
+#'   column. Print it, [summary()] it, [plot()] it, or take the plain frame
+#'   with [as.data.frame()].
 #' @details Only uncensored raw spell onsets inside the observed query and
 #' observation components are turns; duration, weights, fragments and
 #' terminus censoring are ignored. Consecutive turns are classified using
@@ -162,6 +180,16 @@
 #' duplicate multiplicity, and simultaneous-recipient group inference are
 #' retained in metadata. `output = "final"` emits one typed row per class;
 #' `output = "cumulative"` emits the running class vector for each turn.
+#' @section Conditions:
+#' Errors: `dynet_needs_directed` (an undirected network; the class vector is
+#' `c("dynet_needs_directed", "dynet_bad_input")`), `dynet_no_sessions`
+#' (`sessions = "separate"` without a session column),
+#' `dynet_outside_observation` (the requested range misses observed support;
+#' it also carries `dynet_bad_input`),
+#' and `dynet_bad_input` for every other broken contract -- `dn` not a
+#' `dynet`, and a `start` or `end` that is not a single finite time. An
+#' unmatched `sessions`, `output` or `group_events` is rejected by
+#' [match.arg()] and is a plain error, not a classed one.
 #' @references Gibson, D. R. (2003). Participation shifts and institutional
 #'   change in relational systems. *Social Forces*, 81, 1335--1380.
 #'   \doi{10.1353/sof.2003.0055}
@@ -283,10 +311,13 @@ pshifts <- function(
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per shift type: `shift`, `family` and
-#'   `count`, preceded by `session` when the result is session-local. The
-#'   thirteen Gibson shift types are always present, including those with a
-#'   count of zero.
+#' @return A plain `data.frame` carrying the same rows and columns as `x`. For
+#'   a result built with `output = "final"` that is one row per shift type --
+#'   `shift`, `family` and `count` -- preceded by `session` when the result is
+#'   session-local; the thirteen Gibson shift types are always present,
+#'   including those with a count of zero. For `output = "cumulative"` it is
+#'   thirteen rows per classified turn, adding `sequence`, `event`, `time`,
+#'   `speaker`, `target` and `group` ahead of `shift`, `family` and `count`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' shifts <- pshifts(dn)
@@ -300,19 +331,44 @@ as.data.frame.dynet_pshifts <- function(x, row.names = NULL, optional = FALSE,
   out
 }
 
+#' Number of classified turn transitions behind a pshift table
+#'
+#' The `"final"` layout holds one row per shift type, so its counts add up.
+#' The `"cumulative"` layout repeats a *running* total for every turn, so
+#' summing the column counts each transition once for every later turn --
+#' 27831 instead of 235 on `school_contacts`. The totals are the running
+#' counts carried by the last turn of each session block.
+#' @param x A `dynet_pshifts` result.
+#' @return One non-negative number.
+#' @noRd
+.pshift_observed <- function(x) {
+  if (!"event" %in% names(x)) return(sum(x$value))
+  key <- if ("session" %in% names(x)) x$session else rep("all", nrow(x))
+  blocks <- vapply(split(seq_len(nrow(x)), key), function(rows) {
+    latest <- rows[x$sequence[rows] == max(x$sequence[rows])]
+    latest <- latest[x$event[latest] == max(x$event[latest])]
+    sum(x$value[latest])
+  }, numeric(1L))
+  sum(blocks)
+}
+
 #' Print participation shift counts
 #'
 #' @param x A `dynet_pshifts` result.
 #' @param ... Ignored.
 #' @return `x`, invisibly.
 #' @examples
-#' pshifts(dynet(school_contacts))
+#' dn <- dynet(school_contacts)
+#' shifts <- pshifts(dn)
+#' shifts
 #' @export
 print.dynet_pshifts <- function(x, ...) {
-  observed <- sum(x$value)
-  cat(sprintf("# Participation shifts (Gibson 2003, %d types)\n", nrow(x)))
+  observed <- .pshift_observed(x)
+  cat(sprintf("# Participation shifts (Gibson 2003, %d types)
+",
+              length(unique(x$shift))))
   cat(sprintf("# %d classified turn transition%s across %d famil%s\n",
-              observed, if (observed == 1L) "" else "s",
+              observed, if (isTRUE(all.equal(observed, 1))) "" else "s",
               length(unique(x$family)),
               if (length(unique(x$family)) == 1L) "y" else "ies"))
   print(as.data.frame(x), row.names = FALSE)
@@ -323,10 +379,12 @@ print.dynet_pshifts <- function(x, ...) {
 #'
 #' @param object A `dynet_pshifts` result.
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per shift family: `family`, its
-#'   `count`, the `share` of all classified transitions it accounts for, and
-#'   `top_shift`, the single most frequent shift type within it. `share` is
-#'   `NaN` when nothing was classified.
+#' @return A plain `data.frame`, one row per shift family, ordered by
+#'   descending `count`: `family`, its `count`, the `share` of all classified
+#'   transitions it accounts for, and `top_shift`, the single most frequent
+#'   shift type within it. `share` is `NaN` when nothing was classified. The
+#'   family totals are sums of the `count` column as it stands, so they are
+#'   transition counts for an `output = "final"` result.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' shifts <- pshifts(dn)

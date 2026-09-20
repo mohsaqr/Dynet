@@ -17,3 +17,8 @@
 \description{
 Print time-bin similarity
 }
+\examples{
+dn <- dynet(school_contacts)
+resemblance <- similarity(dn, step = 4, window = 4)
+resemblance
+}

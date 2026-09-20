@@ -21,8 +21,8 @@
   session  = c("session", "period", "wave", "phase", "cohort", "course"),
   group    = c("group", "event", "context", "room", "class", "meeting",
                "venue", "team", "channel"),
-  actor    = c("actor", "person", "member", "student", "participant", "user",
-               "id", "name"),
+  actor    = c("actor", "node", "vertex", "vertexid", "nodeid", "person",
+               "member", "student", "participant", "user", "id", "name"),
   weight   = c("weight", "weights", "strength")
 )
 

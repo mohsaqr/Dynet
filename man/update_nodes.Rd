@@ -13,7 +13,14 @@ update_nodes(dn, data)
 attributes to add or replace. Only named nodes are changed.}
 }
 \value{
-A new internally consistent \code{dynet} object.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with the same spells,
+vertex activity and metadata as \code{dn} and the supplied attributes added to
+or replaced on the named vertices. Unnamed vertices keep their existing
+values, gaining \code{NA} in any column the network did not already have.
+Raises \code{dynet_unknown_node} when a name is not a vertex, and
+\code{dynet_bad_input} when \code{data} is malformed or names a cograph structural
+column (\code{id}, \code{label}, \code{x}, \code{y}).
 }
 \description{
 Update static node attributes

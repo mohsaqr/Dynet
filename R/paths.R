@@ -213,7 +213,106 @@
   )
 }
 
-#' Canonicalize a union of feasible entry domains
+#' Whether a vertex leaves exactly at `time`
+#'
+#' Interval presence is half-open, so a vertex is not "active" at its own
+#' terminus. A backward search may still anchor there: the terminus is the
+#' last instant the vertex exists, and every arrival strictly before it is
+#' admissible.
+#' @param activity Internal V03 activity context, or `NULL`.
+#' @param vertex Integer vertex ID.
+#' @param time Query anchor.
+#' @return Logical scalar.
+#' @noRd
+.path_vertex_exit <- function(activity, vertex, time) {
+  if (is.null(activity) || !activity$declared[[vertex]]) return(FALSE)
+  rows <- which(activity$node == vertex & !activity$instant)
+  if (!length(rows)) return(FALSE)
+  any(vapply(activity$end[rows], function(end) .time_eq(end, time), logical(1L)))
+}
+
+#' Anchor a search at a vertex's own presence
+#'
+#' A vertex with declared activity is anchored at the first instant it is
+#' present inside the window (forward) or the last (backward), so a vertex
+#' that enters the network late is not scored from a time before it existed.
+#' Undeclared vertices anchor at the window bound.
+#' @param activity Internal V03 activity context, or `NULL`.
+#' @param vertex Integer vertex ID.
+#' @param direction `"forward"` or `"backward"`.
+#' @param lower,upper Closed window bounds.
+#' @return The anchor time, or `NA_real_` when the vertex is never present in
+#'   the window.
+#' @noRd
+.presence_anchor <- function(activity, vertex, direction, lower, upper) {
+  bound <- if (identical(direction, "forward")) lower else upper
+  if (is.null(activity) || !activity$declared[[vertex]]) return(bound)
+  rows <- which(activity$node == vertex)
+  if (!length(rows)) return(NA_real_)
+  start <- activity$start[rows]
+  end <- activity$end[rows]
+  instant <- activity$instant[rows]
+  inside <- function(x, lo, hi) {
+    vapply(x, function(value) .time_geq(value, lo) && .time_leq(value, hi),
+           logical(1L))
+  }
+  if (identical(direction, "forward")) {
+    candidate <- pmax(start, lower)
+    admissible <- (instant & inside(start, lower, upper)) |
+      (!instant & candidate < end & inside(candidate, lower, upper))
+    if (!any(admissible)) return(NA_real_)
+    return(min(candidate[admissible]))
+  }
+  candidate <- pmin(end, upper)
+  admissible <- (instant & inside(start, lower, upper)) |
+    (!instant & candidate >= start & inside(candidate, lower, upper))
+  if (!any(admissible)) return(NA_real_)
+  max(candidate[admissible])
+}
+
+#' Resolve the origin of a single-vertex path query
+#'
+#' An explicit `at` is used exactly. Otherwise a vertex with declared
+#' activity anchors at its own presence inside the window
+#' (`.presence_anchor()`), falling back to the window bound when it is never
+#' present there, which the search then reports as unreachable.
+#' @param dn A `dynet` object.
+#' @param enc Encoded edge list.
+#' @param vertex Integer vertex ID.
+#' @param direction Search direction.
+#' @param at The user's explicit anchor, or `NULL`.
+#' @param window Resolved `start`/`end` window.
+#' @param session,erase_sessions Passed to `.prepare_path_encoding()`.
+#' @return The origin time.
+#' @noRd
+.default_origin <- function(dn, enc, vertex, direction, at, window,
+                            session = NULL, erase_sessions = TRUE) {
+  bound <- if (identical(direction, "backward")) window$end else window$start
+  if (!is.null(at)) return(bound)
+  prepared <- .prepare_path_encoding(dn, enc, session = session,
+                                     erase_sessions = erase_sessions)
+  anchor <- .presence_anchor(prepared$path_activity, vertex, direction,
+                             window$start, window$end)
+  if (is.na(anchor)) bound else anchor
+}
+
+#' Search result for a vertex never present in the window
+#' @param n Number of vertices.
+#' @param source Integer vertex ID.
+#' @param direction Search direction.
+#' @return A minimal search list with every vertex unreachable.
+#' @noRd
+.absent_search <- function(n, source, direction) {
+  list(
+    arrival = rep(if (identical(direction, "forward")) Inf else -Inf, n),
+    attained = rep(FALSE, n), previous = rep(NA_integer_, n),
+    source = source, origin = NA_real_, anchor_valid = FALSE,
+    n_hops = rep(NA_integer_, n), n_paths = rep(0, n),
+    selected_states = vector("list", n)
+  )
+}
+
+#' Canonicalise a union of feasible entry domains
 #' @param domains Data frame with `start`, `end`, and `end_closed`.
 #' @return Ordered disjoint domains with inclusive left endpoints.
 #' @noRd
@@ -421,7 +520,8 @@
 #' Add exact temporal-path counts
 #'
 #' Base-R doubles represent every integer through `2^53` exactly. This helper
-#' rejects an addition before that range would be exceeded.
+#' rejects an addition before that range would be exceeded, raising
+#' `dynet_path_overflow` rather than returning an inexact count.
 #'
 #' @param left,right Nonnegative exact counts.
 #' @return Their exact numeric sum.
@@ -498,7 +598,9 @@
   atoms <- prepared$atoms
   domains <- prepared$domains
   n <- enc$n
-  anchor_valid <- .path_vertex_active(enc$path_activity, source, origin)
+  anchor_valid <- .path_vertex_active(enc$path_activity, source, origin) ||
+    (identical(direction, "backward") &&
+       .path_vertex_exit(enc$path_activity, source, origin))
   if (!anchor_valid) {
     return(list(
       direction = direction, source = source, origin = origin,
@@ -680,8 +782,16 @@
 }
 
 #' Select each endpoint's shortest-foremost state family
+#'
+#' The winning time is taken first (earliest forward, latest backward) and the
+#' fewest hops second. A backward optimum on a half-open spell can be a
+#' supremum no journey attains exactly; the family that approaches it is still
+#' selected, and `attained` records that the instant itself is not realised.
+#'
 #' @param search Raw state-DAG search.
-#' @return `search` with compact endpoint arrays and selected state IDs.
+#' @return `search` with the endpoint-parallel vectors `arrival`, `attained`,
+#'   `n_hops` and `n_paths`, plus `selected_states`, a list of the winning
+#'   state IDs per endpoint.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' enc <- Dynet:::.encode(dn)
@@ -720,8 +830,11 @@
     # backward supremum or a forward infimum with no realising journey.
     has_optimum <- any(state$attained[ids])
     attained[[endpoint]] <- has_optimum
-    if (!has_optimum) next
-    ids <- ids[state$attained[ids]]
+    # On half-open interval spells the latest departure is a supremum that
+    # no journey attains exactly. The route family that approaches it is
+    # still the answer: keep its hops, count and predecessors, and let
+    # `attained` say that the instant itself is not realised.
+    if (has_optimum) ids <- ids[state$attained[ids]]
     if (!is.null(rule$secondary)) {
       secondary <- state[[rule$secondary]][ids]
       take_max2 <- forward == FALSE && identical(rule$secondary, "time")
@@ -1292,7 +1405,14 @@
 #' @param origin_attained Whether the anchor is ready exactly at `origin`.
 #' @param table_cache An environment in which atom and domain tables are
 #'   shared across the searches of one query, or `NULL`.
-#' @return A direct or session-envelope optimal search.
+#' @return One of two shapes. Unbounded, the direct search from
+#'   `.optimal_path_search()`, carrying `atoms`, `state` and
+#'   `selected_states`. Bounded, a session envelope that keeps one direct
+#'   search per session in `per_session` and adds `best_sessions` and
+#'   `session_names`; it has the endpoint-parallel `arrival`, `attained`,
+#'   `n_hops` and `n_paths`, but **no** `state`, `atoms` or `selected_states`
+#'   of its own, so a consumer must reach through `per_session` for anything
+#'   state-level.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' enc <- Dynet:::.encode(dn)
@@ -1723,7 +1843,11 @@
 #' @param default_start,default_end Default observed bounds for this encoding.
 #' @param clamp_missing Whether an implicit bound may clamp to an explicit one
 #'   for a non-overlapping separate session.
-#' @return A list containing numeric `start` and `end`.
+#' @return A list containing numeric `start` and `end`. Raises
+#'   `dynet_bad_input` when `at` is combined with `start` or `end`, or when the
+#'   resolved lower bound exceeds the upper one, and
+#'   `dynet_outside_observation` when the request misses explicit observed
+#'   support entirely.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' Dynet:::.path_window(dn, "forward", start = 0, end = 10)
@@ -1793,8 +1917,9 @@
 #' @return A list per endpoint; each element contains every best-session route.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' routes <- paths(dn, from = "Ana")
-#' as.data.frame(routes, what = "steps")
+#' enc <- Dynet:::.encode(dn)
+#' bfs <- Dynet:::.bfs_bounded(dn, enc, source = 1L, t0 = 0, bounded = FALSE)
+#' Dynet:::.path_routes(bfs, enc$n, "forward")
 #' @noRd
 .path_routes <- function(bfs, n, direction) {
   direction <- match.arg(direction, c("forward", "backward"))
@@ -1833,11 +1958,13 @@
 #' @param direction `"forward"` or `"backward"`.
 #' @param mode Session mode for this result.
 #' @param session_label Session label for a separate-session block.
-#' @return A list with tidy `paths` and `steps` data frames.
+#' @return A list with the tidy `paths` and `steps` data frames and the
+#'   per-endpoint `routes` they were built from.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' routes <- paths(dn, from = "Ana")
-#' as.data.frame(routes, what = "steps")
+#' enc <- Dynet:::.encode(dn)
+#' bfs <- Dynet:::.bfs_bounded(dn, enc, source = 1L, t0 = 0, bounded = FALSE)
+#' Dynet:::.paths_tables(enc, bfs, "forward")
 #' @noRd
 .paths_tables <- function(enc, bfs, direction,
                           mode = c("collapse", "bounded", "separate"),
@@ -1977,9 +2104,15 @@
 }
 
 #' Recover all compact optimal routes for one endpoint
+#'
+#' A session envelope from `.optimal_bounded_search()` has no states of its
+#' own, so it delegates to the direct search of each best session and stamps
+#' that session's label on the routes it returns.
+#'
 #' @param search Direct or bounded optimal search.
 #' @param endpoint Integer endpoint.
-#' @return A list of route records with state-specific labels.
+#' @return A list of route records, each with parallel `vertices`, `times` and
+#'   `attained`, the canonical `atoms` traversed, and `path_session`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' enc <- Dynet:::.encode(dn)
@@ -1987,11 +2120,16 @@
 #' Dynet:::.optimal_endpoint_routes(search, 1L)
 #' @noRd
 .optimal_endpoint_routes <- function(search, endpoint) {
-  if (!is.finite(search$arrival[[endpoint]]) ||
-      !search$attained[[endpoint]]) return(list())
+  # A reachable endpoint whose optimum is a supremum (backward searches on
+  # half-open spells) still has its route family; `attained` on each state
+  # records that the instant itself is not realised.
+  if (!is.finite(search$arrival[[endpoint]])) return(list())
   if (!is.null(search$per_target)) {
     return(.optimal_endpoint_routes(search$per_target[[endpoint]], endpoint))
   }
+  # The session-envelope search from `.optimal_bounded_search()` carries no
+  # `selected_states` of its own: its routes live in the per-session results,
+  # so delegate before asking for them.
   if (!is.null(search$per_session)) {
     sessions <- search$best_sessions[[endpoint]]
     if (endpoint == search$source && length(sessions) == 0L) {
@@ -2008,6 +2146,7 @@
       })
     }), recursive = FALSE))
   }
+  if (!length(search$selected_states[[endpoint]])) return(list())
   ids <- search$selected_states[[endpoint]]
   routes <- unlist(lapply(ids, function(id) {
     .expand_optimal_state(search, id)
@@ -2096,12 +2235,16 @@
   paths
 }
 
-#' Lazily materialize optimal route steps
+#' Lazily materialise optimal route steps
 #' @param descriptor Search descriptor stored on a `dynet_paths` result.
-#' @return A tidy route-step data frame.
+#' @return A tidy route-step data frame with one row per vertex visited:
+#'   `endpoint`, `path_id`, `path_session`, `step`, `node`, `time` and
+#'   `attained`, preceded by `session` in separate mode. Expanding more than a
+#'   million routes raises `dynet_path_expansion_too_large`.
 #' @examples
-#' paths <- paths(dynet(school_contacts), from = "Ana")
-#' Dynet:::.optimal_steps(attr(paths, "optimal_search"))
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' Dynet:::.optimal_steps(attr(routes, "optimal_search"))
 #' @noRd
 .optimal_steps <- function(descriptor) {
   mode <- descriptor$mode
@@ -2187,10 +2330,17 @@
 #' edge-row order or duplicate spell rows.
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param from Name of the vertex to start from.
+#' @param from Name of the one vertex the search is anchored on: the source of
+#'   a forward search, the target of a backward one.
 #' @param at Forward source-availability time or backward arrival deadline.
-#'   Defaults to the start of the observation window for forward paths and its
-#'   end for backward paths. Date and date-time values use the network's time
+#'   An explicit `at` is used exactly: a source that is not present at that
+#'   instant reaches nothing. The default, `NULL`, lets the vertex supply its
+#'   own anchor. A vertex with declared spells (see [set_vertex_spells()])
+#'   starts at the first instant it is present inside the window, or at the
+#'   last instant searching backward; a vertex with no declared spells starts
+#'   at the window bound, which is `start` for a forward search and `end` for a
+#'   backward one, each defaulting in turn to the matching end of the
+#'   observation window. Date and date-time values use the network's time
 #'   scale. It cannot be combined with `start` or `end`.
 #' @param criterion Which optimisation problem to solve.
 #'   `"foremost_then_shortest"` (the default, and what every earlier release
@@ -2245,8 +2395,9 @@
 #'   the result when the figure needs arguments of its own.
 #' @return An object of class `"dynet_paths"`: a tidy data frame with one row
 #'   per vertex and columns `node`, `reachable`, `arrival_time`, `attained`
-#'   (whether that optimum itself is realized), `latency` (time taken from the
-#'   source), `n_hops`, and the exact count `n_paths`. Under
+#'   (whether that optimum itself is realised), `latency` (elapsed time
+#'   between the origin and `arrival_time`, in either direction), `n_hops`,
+#'   and the exact count `n_paths`. Under
 #'   `criterion = "latest_departure"` a `departure_time` column follows
 #'   `arrival_time`, holding the latest departure supremum from `from`, and a
 #'   `duration` column; `arrival_time`, `n_hops` and `n_paths` then describe
@@ -2258,21 +2409,36 @@
 #'   `criterion = "shortest"` a `path_cost` column follows `n_paths`: the
 #'   summed cost of the cheapest journey, `n_hops` is the fewest hops among
 #'   the cheapest journeys (`NA` when they differ), and `arrival_time` and
-#'   `n_paths` describe the cheapest journeys that arrive earliest. Bounded mode adds `path_session` and
-#'   `n_best_sessions`; separate mode adds `session` and `origin`. Use
-#'   `as.data.frame(x, what = "steps")` for every reconstructed optimal route;
-#'   its endpoint-local `path_id` distinguishes tied atom sequences.
+#'   `n_paths` describe the cheapest journeys that arrive earliest. Bounded
+#'   mode adds `path_session` and `n_best_sessions`; separate mode adds `session` and
+#'   `origin`, one complete vertex block per session. Use
+#'   `as.data.frame(x, what = "steps")` for every reconstructed optimal route:
+#'   one row per vertex visited, with `endpoint`, `path_id` (endpoint-local,
+#'   distinguishing tied atom sequences), `path_session`, `step`, `node`,
+#'   `time` and `attained`, preceded by `session` in separate mode.
 #'
 #' @details
 #' A valid forward journey has distinct vertices, hop-entry times `x`, and
-#' completion times `y = x + traversal_time`. The source is ready at `start`,
-#' each later entry is no earlier than the preceding completion, and final
-#' completion is at or before `end`. At zero duration, entry and completion
-#' coincide and recover P01's nondecreasing traversal times. The empty journey
-#' reaches the source at `start`. With `at`, that value supplies `start` for
-#' forward paths or `end` for backward paths. Cycles are unnecessary for reach
-#' and earliest arrival because deleting a repeated-vertex section and waiting
-#' at that vertex preserves every later hop.
+#' completion times `y = x + traversal_time`. The source is ready at the
+#' resolved origin, each later entry is no earlier than the preceding
+#' completion, and final completion is at or before `end`. At zero duration,
+#' entry and completion coincide, recovering the nondecreasing hop times
+#' described above. The empty journey reaches the source at the origin. With
+#' `at`, that value is both the origin and the window bound: `start` for
+#' forward paths or `end` for backward paths. Cycles are unnecessary for
+#' reach and earliest
+#' arrival because deleting a repeated-vertex section and waiting at that
+#' vertex preserves every later hop.
+#'
+#' The origin is anchored at the source's own presence. Without `at`, a vertex
+#' with declared spells starts at the first instant it is present inside the
+#' window, or at the last instant when searching backward, so a vertex that
+#' enters the network late is never scored from a time before it existed; a
+#' vertex with no declared spells starts at the window bound. A vertex that is
+#' never present inside the window has no valid anchor, so every row of its
+#' result, the source row included, is unreachable. The resolved origin is
+#' reported in the printed header; under `sessions = "separate"`, where every
+#' session resolves its own, it is reported in the `origin` column instead.
 #'
 #' `start` and `end` form a closed bound on the complete journey: entry may
 #' equal `start` and completion may equal `end`. This does not close interval
@@ -2281,9 +2447,13 @@
 #' With positive duration, no nonempty hop can both enter and complete at
 #' `end`; `start = end` therefore leaves only the empty journey.
 #'
-#' Declared vertex activity gates traversal appearances. The forward source
-#' must be active exactly at `start`, and the backward target exactly at `end`;
-#' otherwise every fixed-universe row, including the anchor, is unreachable.
+#' Declared vertex activity gates traversal appearances. The anchor must be
+#' valid: the forward source must be active exactly at the resolved origin,
+#' and the backward target either active there or leaving exactly there, since
+#' a spell's terminus is the last instant that vertex exists even though
+#' presence is half-open. An invalid anchor -- which an explicit `at` outside
+#' the source's own spells produces -- leaves every fixed-universe row,
+#' including the anchor row itself, unreachable.
 #' After a valid anchor, waiting may cross inactive periods. A zero-duration
 #' hop requires both endpoints at its time. A positive-duration interval hop
 #' requires both endpoints continuously on the closed traversal from entry
@@ -2295,7 +2465,10 @@
 #' For backward paths, `arrival_time` is the latest-departure supremum for a
 #' journey ending at the named target by the resolved `end`, and `latency` is
 #' `end` minus that value. A supremum at an interval's excluded terminus need
-#' not itself be an attainable departure.
+#' not itself be an attainable departure. Such an endpoint is still reachable
+#' and still reports its route family: `n_hops`, `n_paths` and the steps of
+#' the routes that approach the supremum are those of the family, and
+#' `attained = FALSE` records that the instant itself is not realised.
 #'
 #' A latest-departure query is solved by time reversal: the latest departure
 #' from `from` into a vertex `z` by `end` is the label a backward search rooted
@@ -2320,7 +2493,7 @@
 #' whole multiples of `traversal_time`), each taken exactly and from below,
 #' at which the source can depart; one forward search runs per candidate.
 #'
-#' With `sessions = "bounded"`, each endpoint is optimized across complete
+#' With `sessions = "bounded"`, each endpoint is optimised across complete
 #' session-specific searches. A unique winner is named in `path_session`; ties
 #' leave it missing and are counted in `n_best_sessions`. No merged predecessor
 #' tree is exposed. The steps accessor retains a complete route from every tied
@@ -2338,18 +2511,37 @@
 #' continued edge activity. The query `end` bounds completion, not only entry.
 #'
 #' Optimal forward journeys are shortest foremost: final completion is
-#' minimized first and hop count second. Journey identity is the ordered
-#' sequence of canonical oriented contacts. Duplicate points, overlapping or
+#' minimised first (foremost) and hop count second (shortest). Backward
+#' journeys mirror it, maximising the departure time first and minimising hop
+#' count second. There is no criterion argument: this is the only criterion
+#' `paths()` offers, and it is recorded on the result as
+#' `"foremost_then_shortest"`. A fastest journey, which minimises elapsed time
+#' rather than arrival time, is a different optimum and is not computed here.
+#' Journey identity is the ordered sequence of canonical oriented contacts.
+#' Duplicate points, overlapping or
 #' touching interval segmentation, weights, and waiting schedules do not
 #' multiply paths; genuinely recurrent contacts do. `n_paths` is exact through
 #' `2^53`, after which a `dynet_path_overflow` condition is raised. The empty
-#' journey has one path, an unreachable endpoint has zero, and an unattained
-#' backward supremum has zero because it has no maximizing journey.
+#' journey has one path and an unreachable endpoint has none.
+#'
+#' Failures are classed. An unknown `from` raises `dynet_unknown_vertex`; a
+#' `from` that is not one name, a negative `traversal_time`, combining `at`
+#' with `start` or `end`, or a window that cannot hold a journey, raises
+#' `dynet_bad_input`; a window disjoint from explicit observation raises
+#' `dynet_outside_observation`; a count beyond `2^53` raises
+#' `dynet_path_overflow`; and expanding more than a million routes through
+#' `as.data.frame(x, what = "steps")` raises
+#' `dynet_path_expansion_too_large`, which the compact `n_paths` column
+#' answers instead.
 #'
 #' @references
 #' Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
 #' problems for temporal networks. *Journal of Computer and System Sciences*,
 #' 64(4), 820-842.
+#'
+#' Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest, fastest,
+#' and foremost journeys in dynamic networks. *International Journal of
+#' Foundations of Computer Science*, 14(2), 267-285.
 #'
 #' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
 #' 519(3), 97-125.
@@ -2371,8 +2563,6 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths(dn, from = "Ana")
-#' paths(dn, from = "Ana", start = 0, end = 10)
 #' paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
 #'
 #' # Every earliest-arrival journey, not only the shortest ones
@@ -2383,7 +2573,10 @@
 #' paths(few, from = "A", criterion = "foremost")
 #' paths(few, from = "A", criterion = "fastest")
 #' routes <- paths(dn, from = "Ana")
+#' routes
 #' summary(routes)
+#' paths(dn, from = "Ana", start = 0, end = 10)
+#' paths(dn, from = "Ana", direction = "backward")
 #'
 #' @export
 paths <- function(dn, from, at = NULL,
@@ -2462,11 +2655,8 @@ paths <- function(dn, from, at = NULL,
         default_end = .encoding_time_range(dn, enc)[["end"]],
         clamp_missing = TRUE
       )
-      origin <- if (identical(direction, "backward")) {
-        window$end
-      } else {
-        window$start
-      }
+      origin <- .default_origin(dn, enc, src, direction, at, window,
+                                session = label, erase_sessions = FALSE)
       search <- if (latest) {
         .check_latest_deadline(window)
         .latest_departure_search(
@@ -2513,11 +2703,7 @@ paths <- function(dn, from, at = NULL,
     window <- .path_window(dn, direction, at, start, end)
     enc <- base_enc
     if (!dn$directed) enc <- .undirect_or_reverse(enc, FALSE, "forward")
-    origin <- if (identical(direction, "backward")) {
-      window$end
-    } else {
-      window$start
-    }
+    origin <- .default_origin(dn, enc, src, direction, at, window)
     bounded <- identical(sessions, "bounded") && !is.null(dn$meta$sessions)
     search <- if (latest) {
       .check_latest_deadline(window)
@@ -2708,10 +2894,14 @@ paths <- function(dn, from, at = NULL,
 #' @param dn A temporal network from [dynet()].
 #' @param direction `"both"` (the default, reporting each vertex's forward and
 #'   backward reach side by side), `"forward"` or `"backward"`.
-#' @param at Forward source-availability time or backward arrival deadline.
-#'   Defaults to the beginning or end of each observed period, respectively.
-#'   Date and date-time values use the network's time scale. It cannot be
-#'   combined with `start` or `end`.
+#' @param at Forward source-availability time or backward arrival deadline,
+#'   defaulting to the beginning or end of each observed period respectively.
+#'   Unlike in [paths()] it sets only the traversal window, because every
+#'   vertex is then anchored at its own presence inside that window: a vertex
+#'   with declared spells starts at the first instant it is present there, or
+#'   at the last instant searching backward, and one with no declared spells
+#'   starts at the window bound. Date and date-time values use the network's
+#'   time scale. It cannot be combined with `start` or `end`.
 #' @param sessions How to treat sessions, as in [dyn_centrality()].
 #' @param start,end Inclusive lower and upper traversal-time bounds. Interval
 #'   spells remain terminus-exclusive.
@@ -2720,7 +2910,8 @@ paths <- function(dn, from, at = NULL,
 #' @param measure One or more of `"reach"`, the share of other vertices joined
 #'   by a time-respecting path; `"reach_count"`, their number; `"latency"`, the
 #'   mean elapsed time to reach them; and `"hops"`, the mean number of contacts
-#'   taken. The source vertex is excluded from all four. The two cost measures
+#'   taken. The source vertex is excluded from all four. Defaults to
+#'   `"reach"`. The two cost measures
 #'   are `NaN` when nothing is reachable, since the mean is then 0/0.
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
@@ -2732,17 +2923,24 @@ paths <- function(dn, from, at = NULL,
 #'   reach count are identical under every criterion, because they depend on
 #'   the feasible set rather than on which journey wins; `latency` and `hops`
 #'   summarise the selected journeys and do depend on it.
-#' @return A `dynet_metric` at node level. Proportion measures are named
-#'   `forward_reach` and `backward_reach`; counts are named
-#'   `forward_reach_count` and `backward_reach_count`.
+#' @return A `dynet_metric` at node level: a tidy data frame with one row per
+#'   vertex per requested measure, columns `node`, `measure` and `value`,
+#'   preceded by `session` under `sessions = "separate"`. Proportion
+#'   measures are named `forward_reach` and `backward_reach`; counts are named
+#'   `forward_reach_count` and `backward_reach_count`. `as.data.frame()`
+#'   returns the plain frame.
 #'
 #' @details
 #' Reachability uses [paths()] traversal semantics: nondecreasing times,
 #' unlimited waiting, half-open interval spells, and a separate exact timestamp
 #' rule for point events. Positive `traversal_time` requires interval occupancy
 #' to finish within continuous pair activity and delays a point-trigger arrival.
-#' Declared vertex activity additionally requires an exact active query anchor
-#' and active hop endpoints. Waiting after a valid anchor may cross vertex
+#' Declared vertex activity additionally requires active hop endpoints and a
+#' valid anchor, and every vertex is anchored at its own presence: each search
+#' starts at that vertex's first instant inside the window, or its last
+#' instant searching backward, rather than at the window bound. A vertex never
+#' present inside the window reaches nothing, which is reported as zero rather
+#' than as a missing row. Waiting after a valid anchor may cross vertex
 #' inactivity; interval traversal requires both endpoints continuously through
 #' completion, while a delayed point requires the receiver again at completion.
 #' For backward reachability, the resolved `end` is a common deadline and
@@ -2760,6 +2958,19 @@ paths <- function(dn, from, at = NULL,
 #' contributes zero-reach rows rather than aborting the complete result. Its
 #' missing implicit bound is clamped to the supplied bound, producing the
 #' empty journey at that boundary and no eligible hop.
+#'
+#' Failures are classed. An unrecognised `measure` raises
+#' `dynet_unknown_measure`; a malformed `measure`, a negative
+#' `traversal_time`, `at` combined with `start` or `end`, or a window that
+#' cannot hold a journey raises `dynet_bad_input`; and a window disjoint from
+#' explicit observation raises `dynet_outside_observation`.
+#'
+#' @references
+#' Holme, P. (2005). Network reachability of real-world contact sequences.
+#' *Physical Review E*, 71(4), 046119.
+#'
+#' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+#' 519(3), 97-125.
 #'
 #' @examples
 #' # Reachability searches every ordered pair, so the example uses a small
@@ -2815,13 +3026,20 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
         default_end = encoding_range[["end"]],
         clamp_missing = identical(sessions, "separate")
       )
-      t0 <- if (identical(d, "backward")) window$end else window$start
+      activity <- .prepare_path_encoding(
+        dn, e2,
+        session = if (identical(sessions, "separate")) label else NULL,
+        erase_sessions = !identical(sessions, "separate")
+      )$path_activity
       # Cost measures need the optimal search, which is also what temporal
       # closeness uses; that is what makes 1/latency == closeness exact rather
       # than merely close. Reach itself is criterion-invariant and keeps the
       # cheaper breadth-first walk.
       wants_cost <- any(measure %in% c("latency", "hops"))
-      cost_trees <- if (!wants_cost) NULL else lapply(seq_len(enc$n), function(s)
+      cost_trees <- if (!wants_cost) NULL else lapply(seq_len(enc$n), function(s) {
+        # Anchored at the vertex's own presence, exactly as `trees` below.
+        t0 <- .presence_anchor(activity, s, d, window$start, window$end)
+        if (is.na(t0)) return(.absent_search(enc$n, s, d))
         .optimal_bounded_search(
           dn, e2, s, t0, d, identical(sessions, "bounded"),
           lower = window$start, upper = window$end,
@@ -2833,8 +3051,13 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
           },
           activity_session = if (identical(sessions, "separate")) label else NULL,
           criterion = criterion
-        ))
+        )
+      })
       trees <- lapply(seq_len(enc$n), function(s) {
+        t0 <- .presence_anchor(activity, s, d, window$start, window$end)
+        if (is.na(t0)) {
+          return(.absent_search(enc$n, s, d))
+        }
         if (identical(d, "backward")) {
           .bfs_backward_bounded(
             dn, e2, s, t0, identical(sessions, "bounded"),

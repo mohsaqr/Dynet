@@ -308,14 +308,20 @@
 #' @param measure One or more of `"formation"` (spells beginning in the bin),
 #'   `"dissolution"` (spells ending in the bin), `"active"` (spells alive
 #'   during the bin), `"new_pairs"` (vertex pairs meeting for the first time),
-#'   and `"formation_fraction"` (confirmed binary pair formations divided by
-#'   their exact two-sided inactive risk set), or `"dissolution_fraction"`
+#'   `"formation_fraction"` (confirmed binary pair formations divided by
+#'   their exact two-sided inactive risk set), `"dissolution_fraction"`
 #'   (confirmed binary pair dissolutions divided by their exact two-sided
-#'   active risk set), or `"formation_rate"` (confirmed formations divided by
-#'   exact integrated inactive eligible pair-time), or `"dissolution_rate"`
+#'   active risk set), `"formation_rate"` (confirmed formations divided by
+#'   exact integrated inactive eligible pair-time), and `"dissolution_rate"`
 #'   (confirmed dissolutions divided by exact integrated active eligible
-#'   pair-time).
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#'   pair-time). Defaults to `c("formation", "dissolution")`. Anything else
+#'   raises a `dynet_unknown_measure` error. The two fractions need
+#'   `window = 0` (`dynet_transition_requires_instant` otherwise) and the two
+#'   rates need a positive window (`dynet_rate_requires_positive_window`), so
+#'   asking for a fraction and a rate in one call raises
+#'   `dynet_incompatible_transition_windows`.
+#' @param sessions How to treat sessions: `"bounded"` (the default),
+#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
 #' @param start,end First and last time at which to measure. Default to the
 #'   observed range. A network built from dates may be addressed with dates.
 #' @param step How often to measure. Defaults to the interval the network was
@@ -324,9 +330,10 @@
 #'   which tiles the period into disjoint bins. A larger value slides an
 #'   overlapping window; `0` samples the network at each point in time.
 #'   `"all"` measures the whole observed period as one window, closed on the
-#'   right so an event at the final instant is inside it; it cannot be combined
-#'   with `step`, and under `sessions = "separate"` or discontinuous
-#'   observation it gives one window per session or observed component.
+#'   right so an event at the final instant is inside it; naming `step` as well
+#'   raises a `dynet_bad_input` error, and under `sessions = "separate"` or
+#'   discontinuous observation it gives one window per session or observed
+#'   component.
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
@@ -359,7 +366,7 @@
 #' transitions. Observation and vertex boundaries are excluded by two-sided
 #' eligibility. Onset censoring suppresses confirmation but not state;
 #' terminus censoring, weights, loops, and point contacts do not contribute.
-#' Collapse erases labels, bounded authorizes within sessions before unioning
+#' Collapse erases labels, bounded authorises within sessions before unioning
 #' each calendar pair, and separate returns session-local fractions.
 #'
 #' Dissolution fraction is the dual exact-time quantity. For each nonloop pair,
@@ -373,7 +380,7 @@
 #' but an all-censored disappearance is unconfirmed. Duplicate, overlapping,
 #' adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
 #' and administrative observation/activity boundaries do not create transitions.
-#' Collapse erases labels, bounded unions authorized session-local states, and
+#' Collapse erases labels, bounded unions authorised session-local states, and
 #' separate reports local rows. Positive windows are rejected because T04 owns
 #' dissolution rates.
 #'
@@ -944,26 +951,32 @@ events <- function(dn,
 #' @param dn A temporal network from [dynet()].
 #' @param measure For pair unit, one or more of `"events"` (number of spells),
 #'   `"total"` (summed duration), `"union"` (binary pair occupancy), `"mean"`,
-#'   `"median"`, `"first"`, and `"last"`. For spell unit, one or more of
+#'   `"median"`, `"first"`, and `"last"`; its default is
+#'   `c("events", "total", "mean")`. For spell unit, one or more of
 #'   `"duration"`, `"first"`, and `"last"`; its default is `"duration"`.
 #'   Vertex-activity unit allows the pair-like measures and defaults to
 #'   `"events"`, `"total"`, and `"union"`; vertex-spell unit allows the same
 #'   measures as edge spell and defaults to `"duration"`.
 #'   Node-ties unit allows `"events"` (incident raw-spell endpoint stubs),
 #'   `"total"` (their summed endpoint-valid duration), and `"union"` (binary
-#'   incident calendar exposure), defaulting to events and total.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
-#' @param censored Whether to `"include"` known follow-up or `"exclude"` an
-#'   entire edge raw spell or canonical vertex component with either explicit
-#'   outer censor flag. Administrative observation cuts never cause exclusion.
-#' @param unit `"pair"` retains the existing pair summary and adds union
-#'   duration; `"spell"` returns one row per retained raw edge-spell identity;
-#'   `"vertex_activity"` returns fixed-node aggregates; `"vertex_spell"`
-#'   returns retained canonical V01 activity identities; `"node_ties"` returns
-#'   fixed-node incident-tie quantities.
-#' @param mode For `unit = "node_ties"`, `"out"`, `"in"`, or `"all"` endpoint
-#'   incidence. Undirected networks normalize every request to `"all"`. An
-#'   explicitly supplied mode is invalid for every other duration unit.
+#'   incident calendar exposure), defaulting to events and total. A measure
+#'   the chosen unit does not offer raises a `dynet_unknown_measure` error.
+#' @param sessions How to treat sessions: `"bounded"` (the default),
+#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
+#' @param censored Whether to `"include"` known follow-up, the default, or
+#'   `"exclude"` an entire edge raw spell or canonical vertex component with
+#'   either explicit outer censor flag. Administrative observation cuts never
+#'   cause exclusion.
+#' @param unit `"pair"`, the default, retains the existing pair summary and
+#'   adds union duration; `"spell"` returns one row per retained raw
+#'   edge-spell identity; `"vertex_activity"` returns fixed-node aggregates;
+#'   `"vertex_spell"` returns retained canonical V01 activity identities;
+#'   `"node_ties"` returns fixed-node incident-tie quantities.
+#' @param mode For `unit = "node_ties"`, `"out"` (the default), `"in"`, or
+#'   `"all"` endpoint incidence. Undirected networks normalise every request
+#'   to `"all"`. Supplying `mode` explicitly for any other duration unit
+#'   raises a `dynet_incompatible_duration_mode` error; leaving it at its
+#'   default is what makes the other units legal.
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
@@ -1021,7 +1034,7 @@ events <- function(dn,
 #' once to in, and twice to additive all-mode events/total; undirected results
 #' use the same two-stub rule. In contrast, node-tie `union` Boolean-unions all
 #' positive incident fragments, so loops, reciprocal overlap, duplicate rows,
-#' and simultaneous neighbors occupy calendar time only once. Consequently
+#' and simultaneous neighbours occupy calendar time only once. Consequently
 #' `union <= total`, and directed all equals out plus in only for events and
 #' total. Formally, for endpoint-stub multiplicity `c[v,i,m]`, retained raw
 #' identity duration `d[i]`, and positive support `F[i]`, node-tie events are
@@ -1339,8 +1352,10 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param measure One or more of `"burstiness"`, `"memory"`, `"events"` and
-#'   `"mean_gap"`.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#'   `"mean_gap"`. Defaults to the first three. Anything else raises a
+#'   `dynet_unknown_measure` error.
+#' @param sessions How to treat sessions: `"bounded"` (the default),
+#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns

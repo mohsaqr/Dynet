@@ -10,6 +10,7 @@
   optional = FALSE,
   layout = c("long", "wide"),
   what = c("values", "diagnostics"),
+  top = NULL,
   ...
 )
 }
@@ -23,7 +24,9 @@
 \item{layout}{\code{"long"} gives one row per observation, which is the default
 and the shape every other verb expects. \code{"wide"} spreads time across
 columns, giving one row per vertex (or per measure for graph-level
-quantities), which is convenient for exporting a table.}
+quantities), which is convenient for exporting a table. A measure with
+no time axis, such as reachability, is spread by measure instead: one
+row per vertex with one column per measure.}
 
 \item{what}{\code{"values"}, the default, gives the measured values.
 \code{"diagnostics"} gives the record a prestige computation keeps when it
@@ -35,6 +38,12 @@ row-column scaling step, and \code{spectral_radius}, \code{eigenspace_dimension}
 and \code{eigen_residual} for the eigen step. A result with nothing to report
 gives a zero-row frame of those same columns rather than \code{NULL}.}
 
+\item{top}{Keep only the \code{top} vertices with the largest mean value, and
+order the result from largest to smallest. A single positive number;
+\code{NULL}, the default, keeps every row in the measure's own order. It
+selects vertices, so it applies to \code{what = "values"} on a measure that
+has a \code{node} column; anything else raises a \code{dynet_bad_input} error.}
+
 \item{...}{Ignored.}
 }
 \value{
@@ -42,11 +51,18 @@ A plain \code{data.frame}. Long layout carries \code{measure} and \code{value}
 with one row per observation, alongside whichever columns say what was
 measured: \code{session} when the network has sessions, \code{time} for anything
 measured on a grid of bins, \code{node} for a vertex-level quantity, \code{from}
-and \code{to} for a pair-level one, \code{vertex_spell} and \code{implicit} for
-per-spell vertex durations from \code{\link[=durations]{durations()}}, and \code{from_group} and
-\code{to_group} for \code{\link[=mixing]{mixing()}}. A graph-level series carries \code{time},
-\code{measure} and \code{value} alone. In wide layout the identifying columns come
-first and the remaining columns are the time points, one per bin.
+and \code{to} for a pair-level one, \code{raw_spell} for per-spell edge durations
+and \code{vertex_spell} with \code{implicit} for per-spell vertex durations from
+\code{\link[=durations]{durations()}}, and \code{from_group} and \code{to_group} for \code{\link[=mixing]{mixing()}}. A
+graph-level series carries \code{time}, \code{measure} and \code{value} alone.
+
+Wide layout puts the identifying columns first and spreads what varies
+across the rest. A measure taken on a grid of bins spreads time: one
+column per bin, named \code{t} followed by the bin's time, leaving one row per
+vertex and measure. A measure with no time axis, such as reachability,
+spreads the measures instead: one column per measure, leaving one row per
+vertex. A measure with no time axis and only one measure is already wide
+and comes back unchanged.
 }
 \description{
 Tidy data frame of a temporal measure
@@ -56,6 +72,7 @@ dn <- dynet(school_contacts)
 degree <- dyn_centrality(dn, measure = "degree")
 as.data.frame(degree)
 as.data.frame(degree, layout = "wide")
+as.data.frame(degree, top = 5)
 as.data.frame(degree, what = "diagnostics")
 
 }

@@ -12,6 +12,13 @@ A \code{data.frame} with 240 rows and 4 columns:
 \item{start}{Numeric. Day the contact began, counted from day zero.}
 \item{end}{Numeric. Day the contact ended.}
 }
+The fourteen students are \code{Ana}, \code{Ben}, \code{Cara}, \code{Dan}, \code{Eve}, \code{Finn},
+\code{Gita}, \code{Hugo}, \code{Iris}, \code{Jonas}, \code{Kira}, \code{Leo}, \code{Mira} and \code{Nils}; times
+run from day 0 to day 21.52.
+}
+\source{
+Simulated, not observed. Generated deterministically under a fixed
+seed by \code{data-raw/make-data.R}.
 }
 \usage{
 school_contacts

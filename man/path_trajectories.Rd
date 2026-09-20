@@ -21,11 +21,22 @@ the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_path_trajectories} data frame with one row per tree node
-and columns \code{node}, \code{parent}, \code{depth}, \code{count}, \code{probability}, \code{vertex},
+and columns \code{node} (the route prefix, written as \code{vertex@time} steps
+joined by arrows), \code{parent}, \code{depth}, \code{count}, \code{probability}, \code{vertex},
 \code{time}, \code{session} and \code{branch}. \code{depth} is the hop number from the
 queried vertex, \code{probability} is the branching fraction of the parent's
-routes that continue along this branch, and \code{branch} is the node's
-placement across the tree.
+routes that continue along this branch and is missing at the root, which
+has no parent, and \code{branch} is the node's
+placement across the tree. The synthetic \code{(start)} root is dropped when
+it has a single child, which is the usual case; it is kept when it
+genuinely branches, as under \code{sessions = "separate"}, where it carries
+one subtree per session, has no \code{vertex} or \code{time}, a missing
+\code{probability}, and pushes every other node one hop deeper.
+
+A result that is not from \code{\link[=paths]{paths()}}, or a \code{min_count} that is not one
+positive whole number, raises \code{dynet_bad_input}; a path result with no
+route step, or a \code{min_count} no prefix reaches, raises
+\code{dynet_empty_result}.
 }
 \description{
 Turns the optimal route family returned by \code{\link[=paths]{paths()}} into a tidy
@@ -41,8 +52,8 @@ away from it.
 }
 \examples{
 dn <- dynet(school_contacts)
-paths <- paths(dn, from = "Ana")
-path_trajectories(paths)
+routes <- paths(dn, from = "Ana")
+path_trajectories(routes)
 }
 \seealso{
 \code{\link[=plot_path_trajectories]{plot_path_trajectories()}} to draw the tree, \code{\link[=path_network]{path_network()}} for

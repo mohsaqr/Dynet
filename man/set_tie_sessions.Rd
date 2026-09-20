@@ -9,13 +9,25 @@ set_tie_sessions(dn, session = NULL)
 \arguments{
 \item{dn}{A temporal network.}
 
-\item{session}{A complete character vector of length one or the raw tie
-count. \code{NULL} removes all tie-session walls and erases session labels on
-vertex activity.}
+\item{session}{A complete, nonempty character vector of length one or the
+raw tie count; a length-one value labels every spell. Default \code{NULL},
+which removes all tie-session walls and erases session labels on vertex
+activity.}
 }
 \value{
-A new \code{dynet} object.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with a \code{session} column on
+the spell table and the session scheme recorded in its metadata, or with
+both removed when \code{session = NULL}. Raises \code{dynet_bad_input} when
+\code{session} has neither length one nor the raw tie count, or carries \code{NA}
+or blank labels.
 }
 \description{
 Assign or remove tie sessions
+}
+\examples{
+dn <- dynet(school_contacts)
+weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
+labelled <- set_tie_sessions(dn, session = weeks)
+labelled
 }

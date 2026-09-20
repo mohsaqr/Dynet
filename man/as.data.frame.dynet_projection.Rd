@@ -19,8 +19,8 @@
 
 \item{optional}{Ignored; present for compatibility with the generic.}
 
-\item{what}{\code{"vertices"} returns vertex-time states and \code{"edges"} returns
-directed within-slice and identity arcs.}
+\item{what}{\code{"vertices"}, the default, returns vertex-time states, and
+\code{"edges"} returns directed within-slice and identity arcs.}
 
 \item{...}{Ignored.}
 }
@@ -34,4 +34,10 @@ and \code{lag}.
 }
 \description{
 Tidy tables from a time-projected network
+}
+\examples{
+dn <- dynet(school_contacts)
+projected <- projection(dn, step = 4, window = 4)
+as.data.frame(projected)
+as.data.frame(projected, what = "edges")
 }

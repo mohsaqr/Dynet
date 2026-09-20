@@ -77,19 +77,26 @@
 #'   column named `weight`, `weights` or `strength` (and says so); with none,
 #'   every row counts once.
 #' @param nodes Optional data frame of vertex attributes. The vertex key is
-#'   auto-detected, or given as the first column.
+#'   auto-detected (`node`, `vertex.id`, `id`, `name`, ...), or given as the
+#'   first column. When the key is not `name` and the table also has a
+#'   `name` column, the vertices are named by `name`: edge endpoints and
+#'   vertex spells given by key are translated, and the key stays on the
+#'   node table as an attribute. A key with no row in `nodes` keeps the key
+#'   as its name, with a `dynet_unnamed_nodes` warning.
 #' @param groups Name of a column in `nodes` to use as the vertex partition.
 #'   Written into the places cograph looks for it, so `cograph::splot()`
-#'   colours and groups by it without further argument.
-#' @param format One of `"auto"`, `"interval"`, `"contact"`, `"threaded"`,
-#'   `"copresence"`. `"auto"` infers the format from the arguments you name
-#'   and the columns present.
-#' @param directed Whether edges are directed. Co-presence networks are always
-#'   undirected.
-#' @param interval Width of one time bin, in the network's time unit.
+#'   colours and groups by it without further argument. A name that is not a
+#'   column of `nodes` raises a condition of class `dynet_unknown_attribute`.
+#' @param format One of `"auto"` (the default), `"interval"`, `"contact"`,
+#'   `"threaded"`, `"copresence"`. `"auto"` infers the format from the
+#'   arguments you name and the columns present.
+#' @param directed Whether edges are directed, `TRUE` by default. Co-presence
+#'   networks are always undirected.
+#' @param interval Width of one time bin, in the network's time unit. Defaults
+#'   to `1`.
 #' @param time_unit Unit for converting `Date`/`POSIXct`/character times:
-#'   `"auto"`, `"seconds"`, `"minutes"`, `"hours"`, `"days"` or `"weeks"`.
-#'   Numeric times are left alone and reported as `"step"`.
+#'   `"auto"` (the default), `"seconds"`, `"minutes"`, `"hours"`, `"days"` or
+#'   `"weeks"`. Numeric times are left alone and reported as `"step"`.
 #' @param observation_start,observation_end Optional bounds of the continuous
 #'   observation interval. Supply numeric values in the network's internal
 #'   time scale, or `Date`/`POSIXct` values for a calendar network. Either
@@ -97,21 +104,29 @@
 #'   used. Positive spells are measured on their half-open intersection with
 #'   this interval; instantaneous events are retained at either boundary.
 #'   Raw spell endpoints returned by [as.data.frame()] are never changed.
-#' @param observation_spells Optional data frame with `start` and `end` columns
-#'   defining discontinuous observed support. Overlapping and adjacent positive
-#'   intervals are merged; isolated points are retained. This is mutually
-#'   exclusive with `observation_start` and `observation_end`.
-#' @param loops Whether to keep self-loops. `FALSE` drops them with a message,
-#'   which is almost always what relational logs need.
+#' @param observation_spells Optional data frame with exactly two columns,
+#'   `start` and `end`, defining discontinuous observed support. Overlapping
+#'   and adjacent positive intervals are merged; isolated points are retained.
+#'   This is mutually exclusive with `observation_start` and
+#'   `observation_end`; supplying both raises a condition of class
+#'   `dynet_conflicting_observation`.
+#' @param loops Whether to keep self-loops. `FALSE`, the default, drops them
+#'   with a message, which is almost always what relational logs need; `TRUE`
+#'   keeps them and reports how many, but they are still excluded from degree.
 #' @param onset_censored,terminus_censored Optional logical column names for
 #'   explicit raw interval-boundary censor state. These selectors are available
 #'   only for interval input, are never auto-detected, and may not flag a
 #'   zero-duration point.
-#' @param vertex_spells Optional tidy vertex-activity table with exact columns
-#'   `node`, `start`, and `end`, plus optional `session`, `onset_censored`, and
-#'   `terminus_censored`. Positive spells use `[start,end)` and points are exact.
-#'   Overlapping and adjacent positive spells are unioned independently by node
-#'   and session. A vertex absent from this table remains active at all times.
+#' @param vertex_spells Optional tidy vertex-activity table: one row per
+#'   period in which a vertex is present, with a node column (`node`,
+#'   `vertex.id`, `name`, ...) and a start and end column (`start`/`end`,
+#'   `onset`/`terminus`, ...), resolved through the same alias table as
+#'   `data`, plus optional exact columns `session`, `onset_censored`, and
+#'   `terminus_censored`. Any other column is ignored, so a node table that
+#'   carries entry and exit times can be passed as it is. Positive spells
+#'   use `[start,end)` and points are exact. Overlapping and adjacent
+#'   positive spells are unioned independently by node and session. A
+#'   vertex absent from this table remains active at all times.
 #'
 #' @return An object of class `c("dynet", "netobject", "cograph_network")`.
 #'   It is a cograph network, so `cograph::splot()` draws it directly and
@@ -268,6 +283,21 @@ dynet <- function(data,
   # accessor, whose one-row-per-input-derived-spell contract is unchanged.
   e$.raw_spell <- seq_len(nrow(e))
 
+  # A node table with a key beside a `name` column names the vertices.
+  naming <- .node_naming(nodes)
+  if (!is.null(naming)) {
+    unnamed <- setdiff(unique(c(e$from, e$to)), naming$key)
+    if (length(unnamed)) {
+      warning(warningCondition(
+        sprintf("%d vertex key(s) in the edge data have no row in `nodes` and keep their key as name: %s",
+                length(unnamed), paste(utils::head(unnamed, 5), collapse = ", ")),
+        class = "dynet_unnamed_nodes", call = NULL
+      ))
+    }
+    e$from <- .translate_vertices(e$from, naming)
+    e$to <- .translate_vertices(e$to, naming)
+  }
+
   # Undirected spells are stored once, with endpoints in a canonical order, so
   # that A-B and B-A are the same edge. Canonicalise BEFORE sorting, so the
   # order here is the order every later rebuild (`.rebuild_ties()`) produces
@@ -285,6 +315,12 @@ dynet <- function(data,
   vertex_activity <- .normalize_vertex_spells(
     vertex_spells, built$origin, built$time_unit, edge_sessions
   )
+  if (!is.null(naming)) {
+    vertex_activity$spells$node <- .translate_vertices(
+      vertex_activity$spells$node, naming
+    )
+    built$node_pool <- .translate_vertices(built$node_pool, naming)
+  }
   node_table <- .build_nodes(
     e, nodes, c(built$node_pool, vertex_activity$spells$node)
   )
@@ -431,12 +467,17 @@ dynet <- function(data,
   )
 }
 
-#' Normalize declared vertex activity
+#' Normalise declared vertex activity
 #'
 #' @param vertex_spells Optional fixed-schema vertex activity table.
 #' @param origin,time_unit The already resolved edge clock.
 #' @param edge_sessions Existing canonical edge-session labels, or `NULL`.
-#' @return A list containing canonical spells and construction metadata.
+#'   Defaults to `NULL`.
+#' @return A list with `spells` (the canonical vertex-spell data frame, one row
+#'   per maximal activity component, with the schema of
+#'   `.empty_vertex_spells()`), `input_rows`, `scope` (`"none"`, `"global"` or
+#'   `"session"`), `sessions`, `censor_explicit`, `n_onset_censored` and
+#'   `n_terminus_censored`.
 #' @noRd
 .normalize_vertex_spells <- function(vertex_spells, origin, time_unit,
                                      edge_sessions = NULL) {
@@ -459,22 +500,27 @@ dynet <- function(data,
   if (anyDuplicated(names(vertex_spells))) {
     fail("`vertex_spells` column names must be unique.")
   }
+  # The three required columns are resolved through the alias table, so a
+  # node table with `vertex.id`, `onset` and `terminus` columns is accepted
+  # as it stands; its other columns are attributes and are ignored here.
   required <- c("node", "start", "end")
   optional <- c("session", "onset_censored", "terminus_censored")
-  missing <- setdiff(required, names(vertex_spells))
+  resolved <- c(
+    node = if ("node" %in% names(vertex_spells)) "node" else
+      .match_column(vertex_spells, "actor", exclude = c("start", "end")),
+    start = .match_column(vertex_spells, "start"),
+    end = .match_column(vertex_spells, "end")
+  )
+  missing <- setdiff(required, names(resolved)[!is.na(resolved)])
   if (length(missing)) {
     fail(sprintf(
       "`vertex_spells` is missing required column(s): %s.",
       paste(missing, collapse = ", ")
     ), "dynet_missing_column")
   }
-  extra <- setdiff(names(vertex_spells), c(required, optional))
-  if (length(extra)) {
-    fail(sprintf(
-      "`vertex_spells` has unsupported column(s): %s.",
-      paste(extra, collapse = ", ")
-    ))
-  }
+  keep <- c(resolved, intersect(optional, names(vertex_spells)))
+  vertex_spells <- vertex_spells[, keep, drop = FALSE]
+  names(vertex_spells)[seq_along(resolved)] <- names(resolved)
   n <- nrow(vertex_spells)
   vector_column <- function(values) {
     is.atomic(values) && is.null(dim(values)) && length(values) == n
@@ -666,11 +712,13 @@ dynet <- function(data,
   )
 }
 
-#' Normalize discontinuous observation support
+#' Normalise discontinuous observation support
 #'
-#' @param spells Data frame with `start` and `end`.
+#' @param spells Data frame with exactly two columns, `start` and `end`.
 #' @param origin,time_unit Network clock description.
-#' @return Canonical observation components.
+#' @return A data frame of canonical observation components, one row per
+#'   merged component, with `observation`, `start`, `end`, `duration` and
+#'   `instant`.
 #' @noRd
 .normalize_observation_spells <- function(spells, origin, time_unit) {
   .check(
@@ -921,7 +969,8 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to,start,end,duration,session User-supplied column names.
 #' @param time_unit Requested time unit.
-#' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
+#' @return A list with `edges`, `time_unit`, `origin`, `row_index`,
+#'   `node_pool` and `used` (the source columns the builder consumed).
 #' @noRd
 .build_interval <- function(data, from, to, start, end, duration, session,
                             time_unit) {
@@ -978,7 +1027,8 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to,time,session User-supplied column names.
 #' @param time_unit Requested time unit.
-#' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
+#' @return A list with `edges`, `time_unit`, `origin`, `row_index`,
+#'   `node_pool` and `used` (the source columns the builder consumed).
 #' @noRd
 .build_contact <- function(data, from, to, time, session, time_unit) {
   dyad <- .resolve_dyad(data, from, to)
@@ -1013,7 +1063,10 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to,time,thread,session User-supplied column names.
 #' @param time_unit Requested time unit.
-#' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
+#' @param thread_clock `"absolute"`, the default, keeps every post on the
+#'   calendar; `"relative"` re-bases each thread on its own first post.
+#' @return A list with `edges` (carrying an extra `thread` column),
+#'   `time_unit`, `origin`, `row_index`, `node_pool` and `used`.
 #' @noRd
 .build_threaded <- function(data, from, to, time, thread, session, time_unit,
                             thread_clock = "absolute") {
@@ -1053,7 +1106,11 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param actor,group,time,start,end,session User-supplied column names.
 #' @param time_unit Requested time unit.
-#' @return A list with `edges`, `time_unit`, `origin`, `row_index`, `node_pool`.
+#' @return A list with `edges` (carrying an extra `group` column), `time_unit`,
+#'   `origin`, `node_pool` (every actor, including those in a singleton group)
+#'   and `row_index`, which is `NULL` because one source row does not map to
+#'   one spell. No `used` element is returned, because co-presence rows are
+#'   memberships rather than ties and carry no tie attributes.
 #' @noRd
 .build_copresence <- function(data, actor, group, time, start, end, session,
                               time_unit) {
@@ -1215,6 +1272,45 @@ dynet <- function(data,
   w[row_index]
 }
 
+#' Vertex names carried by a node table beside its key
+#'
+#' A node table whose key is not `name` but which has a `name` column names
+#' the vertices by that column, as `network(vertex.attrnames = )` does: the
+#' edge endpoints, the vertex spells and the node pool are translated from
+#' the key to the name before the network is assembled, and the key stays
+#' on the node table as an attribute.
+#' @param nodes The user's node table, or `NULL`.
+#' @return `NULL`, or a data frame with `key` and `name` columns.
+#' @noRd
+.node_naming <- function(nodes) {
+  if (is.null(nodes) || !is.data.frame(nodes)) return(NULL)
+  key <- .match_column(nodes, "actor") %||% .match_column(nodes, "from") %||%
+    names(nodes)[1L]
+  if (identical(key, "name") || !"name" %in% names(nodes)) return(NULL)
+  out <- data.frame(key = as.character(nodes[[key]]),
+                    name = as.character(nodes$name),
+                    stringsAsFactors = FALSE)
+  if (anyNA(out$name) || any(!nzchar(out$name)) || anyDuplicated(out$name)) {
+    stop(errorCondition(
+      "`nodes$name` must be complete and unique to name the vertices; drop it or make it the key.",
+      class = c("dynet_bad_node_names", "dynet_bad_input"), call = NULL
+    ))
+  }
+  out
+}
+
+#' Translate vertex keys to their names
+#' @param values Character vertex keys.
+#' @param naming The table from `.node_naming()`.
+#' @return `values` with every key that has a name replaced by it.
+#' @noRd
+.translate_vertices <- function(values, naming) {
+  hit <- match(as.character(values), naming$key)
+  values <- as.character(values)
+  values[!is.na(hit)] <- naming$name[hit[!is.na(hit)]]
+  values
+}
+
 #' Assemble the vertex table, merging any supplied attributes
 #' @param edges Canonical edge frame.
 #' @param nodes Optional data frame of vertex attributes.
@@ -1238,9 +1334,14 @@ dynet <- function(data,
   key <- .match_column(nodes, "actor") %||% .match_column(nodes, "from") %||%
     names(nodes)[1L]
   attrs <- nodes
-  key_values <- as.character(attrs[[key]])
-  if (!identical(key, "name")) attrs[[key]] <- NULL
-  attrs$name <- key_values
+  naming <- .node_naming(nodes)
+  if (is.null(naming)) {
+    key_values <- as.character(attrs[[key]])
+    if (!identical(key, "name")) attrs[[key]] <- NULL
+    attrs$name <- key_values
+  }
+  # With a naming table the endpoints were translated to `name` already and
+  # the key column stays behind as an attribute.
   dup <- duplicated(attrs$name)
   if (any(dup)) {
     warning(warningCondition(

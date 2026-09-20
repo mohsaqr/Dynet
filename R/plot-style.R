@@ -10,14 +10,17 @@
 #' axis, frame and text colours plus a global size multiplier. Every plot that
 #' uses it exposes it as a `style` argument.
 #'
-#' @param cex Global size multiplier for text.
-#' @param grid Whether to draw the background grid.
-#' @param background Panel background colour.
-#' @param grid_color Grid line colour.
-#' @param axis_color Axis tick and label colour.
-#' @param text_color Title and emphasis colour.
-#' @param frame_color Panel frame colour, or `NA` for no frame.
-#' @return A named list of style constants.
+#' @param cex Global size multiplier for text, `1` by default.
+#' @param grid Whether to draw the background grid, `TRUE` by default.
+#' @param background Panel background colour, `"#FFFFFF"` by default.
+#' @param grid_color Grid line colour, `"#ECEEF0"` by default.
+#' @param axis_color Axis tick and label colour, `"#6B7280"` by default.
+#' @param text_color Title and emphasis colour, `"#1F2937"` by default.
+#' @param frame_color Panel frame colour, `"#D8DCE0"` by default, or `NA` for
+#'   no frame.
+#' @return A named list of the seven style constants above, in that order.
+#'   Raises `dynet_bad_input` when `cex` is not one positive number or `grid`
+#'   is not one `TRUE` or `FALSE`.
 #' @noRd
 .dyn_style <- function(cex = 1, grid = TRUE, background = "#FFFFFF",
                        grid_color = "#ECEEF0", axis_color = "#6B7280",
@@ -55,9 +58,11 @@
 #' title.
 #'
 #' @param xlim,ylim Axis limits.
-#' @param main,xlab,ylab Panel labels.
-#' @param style A style list from `.dyn_style()`.
-#' @param x_axis,y_axis Whether to draw each axis.
+#' @param main,xlab,ylab Panel labels, empty by default; an empty one is not
+#'   drawn.
+#' @param style A style list from `.dyn_style()`, which also supplies the
+#'   default.
+#' @param x_axis,y_axis Whether to draw each axis, `TRUE` by default.
 #' @return `NULL`, invisibly.
 #' @noRd
 .dyn_panel <- function(xlim, ylim, main = "", xlab = "", ylab = "",

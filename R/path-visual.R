@@ -2,6 +2,18 @@
 # Honest visual representations of endpoint-local temporal path families
 # ===========================================================================
 
+#' Consecutive vertex pairs of every expanded optimal route
+#'
+#' The steps accessor gives one row per vertex visited; a drawing needs the
+#' hops between them. Routes are grouped by session, endpoint and `path_id`
+#' so a hop is never assembled across two different routes, and a route of
+#' fewer than two vertices contributes none.
+#'
+#' @param x A result from [paths()].
+#' @return A data frame with one row per hop: `from`, `to`, the `time` the hop
+#'   reaches `to`, `endpoint`, `path_id`, `path_session`, and `session` when
+#'   the path result carries one. Zero rows when no route has a hop.
+#' @noRd
 .path_hops <- function(x) {
   steps <- as.data.frame(x, what = "steps")
   if (!nrow(steps)) return(data.frame(
@@ -56,6 +68,20 @@
 #'   reaches, the source included, with `name`, `arrival_time`, `latency`,
 #'   `n_hops`, `n_paths` and `groups` (hop count as a grouping label for
 #'   plotting). Unreachable vertices are absent, not present with `NA`.
+#'   The network is always directed, because a route hop has an orientation
+#'   even when the temporal network does not; hops of a backward path result
+#'   still point the way time runs, from the sender towards the queried
+#'   target, and its `arrival_time` is that vertex's latest-departure
+#'   supremum, as in [paths()].
+#'
+#'   A result that is not from [paths()] raises `dynet_bad_input`; a path
+#'   result with no reachable vertex raises `dynet_empty_result`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' union_network <- path_network(routes)
+#' as.data.frame(union_network)
+#' as.data.frame(union_network, what = "nodes")
 #' @export
 path_network <- function(x) {
   if (!inherits(x, "dynet_paths")) {
@@ -124,13 +150,19 @@ path_network <- function(x) {
 #' Tidy tables from a temporal path-union network
 #' @param x A network returned by [path_network()].
 #' @param row.names,optional Ignored.
-#' @param what `"edges"` or `"nodes"`.
+#' @param what `"edges"`, the default, or `"nodes"`.
 #' @param ... Ignored.
 #' @return A plain `data.frame`. For `"edges"`, one row per hop used by an
 #'   optimal route, with `from`, `to`, `weight`, `first_time`, `last_time` and
 #'   `n_endpoints`. For `"nodes"`, one row per reached vertex, with `name`,
 #'   `arrival_time`, `latency`, `n_hops`, `n_paths` and `groups`. See
 #'   [path_network()] for what each column means.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' routes <- paths(dn, from = "Ana")
+#' union_network <- path_network(routes)
+#' as.data.frame(union_network, what = "edges")
+#' as.data.frame(union_network, what = "nodes")
 #' @export
 as.data.frame.dynet_path_network <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {

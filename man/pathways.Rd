@@ -9,9 +9,11 @@ pathways(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FALSE)
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{from}{Optional source vertex. One name gives the routes leaving that
-vertex. The default pools every vertex, which is the network-wide
-question, and adds a \code{from} column naming each route's source.}
+\item{from}{Optional source vertex. A name gives the routes leaving that
+vertex, and several names give the routes leaving each of them. The
+default, \code{NULL}, pools every vertex, which is the network-wide question,
+and is the only case that adds a \code{from} column naming each route's source;
+a named source is already the first step of every \code{route} string.}
 
 \item{top}{Optional number of routes to keep, most frequent first. The
 default keeps all of them.}
@@ -32,9 +34,18 @@ the result when the figure needs arguments of its own.}
 An object of class \code{dynet_pathways}, a data frame with one row per
 distinct route, most frequent first: \code{route}, the vertex sequence joined
 by arrows; \code{endpoint}, where it lands; \code{count}, how many optimal routes
-follow it; \code{share}, its fraction of the counted total; \code{n_hops}; and
-\code{arrival_time}. Pooling over every source adds \code{from} as the first
-column. Use \code{as.data.frame()} for a plain frame.
+follow it; \code{share}, its fraction of every counted route, so the shares of
+a result limited by \code{top} do not sum to one; \code{n_hops}; and
+\code{arrival_time}, the earliest time the route lands. Pooling over every
+source adds \code{from} as the first column. Use \code{as.data.frame()} for a plain
+frame and \code{as.data.frame(x, what = "steps")} for the per-hop timing of
+the routes that were kept.
+
+An unknown \code{from} raises \code{dynet_unknown_node}; a \code{top} or \code{min_hops} that
+is not one finite number in range raises \code{dynet_bad_input}; and a query
+that leaves no route of at least \code{min_hops} hops raises
+\code{dynet_empty_result}. Conditions raised by \code{\link[=paths]{paths()}} on the arguments
+passed through \code{...} reach the caller unchanged.
 }
 \description{
 \code{pathways()} reports whole journeys rather than per-vertex summaries: one

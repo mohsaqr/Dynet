@@ -7,21 +7,28 @@
 
 #' Okabe-Ito qualitative palette
 #'
-#' Colour-blind safe. Recycled when more colours are asked for than the nine
+#' Colour-blind safe. The same nine hex values base R ships as
+#' `grDevices::palette.colors(9, "Okabe-Ito")`, reordered so black comes last
+#' rather than first. Recycled when more colours are asked for than the nine
 #' it holds, on the understanding that whatever is drawn also carries a label.
 #'
-#' @param n Number of colours needed.
-#' @return A character vector of hex colours.
+#' @param n Number of colours needed; values below one are treated as one.
+#' @return A character vector of `max(1, n)` hex colours.
 #' @references Okabe, M., & Ito, K. (2008). Color universal design.
 #' @noRd
 .okabe_ito <- function(n = 9L) rep(.okabe, length.out = max(1L, n))
 
 #' Resolve a palette specification to colours
 #'
-#' @param palette One of `"okabe"`, `"extended"`, `"many"`, a character vector
-#'   of colours, or a function taking `n` and returning `n` colours.
-#' @param n Number of colours needed.
-#' @return A character vector of `n` colours.
+#' @param palette One of `"okabe"` (the default), `"extended"`, `"many"`, a
+#'   character vector of colours, or a function taking `n` and returning `n`
+#'   colours.
+#' @param n Number of colours needed, 9 by default; values below one are
+#'   treated as one.
+#' @return A character vector of `max(1, n)` colours. Raises
+#'   `dynet_bad_palette` when `palette` is neither a character vector nor a
+#'   function, when a palette function returns too few colours or a
+#'   non-character result, or when any colour given is one R cannot render.
 #'
 #' @details
 #' The three built-in options trade separability against colour-blind safety,
@@ -78,7 +85,8 @@
 
 #' Reject anything R cannot render as a colour
 #' @param x Character vector.
-#' @return `x`, unchanged.
+#' @return `x` with its names dropped. Raises `dynet_bad_palette` naming every
+#'   value `grDevices::col2rgb()` refuses.
 #' @noRd
 .check_colours <- function(x) {
   ok <- vapply(x, function(v) {
@@ -93,6 +101,11 @@
 }
 
 #' Qualitative palette varying hue together with lightness
+#'
+#' Nine or fewer colours are the Okabe-Ito set unchanged, so a small network
+#' keeps the familiar colours; beyond that the colours are drawn from four
+#' lightness bands, each carrying an offset hue ramp.
+#'
 #' @param n Number of colours needed.
 #' @return A character vector of `n` colours.
 #' @noRd
@@ -116,7 +129,8 @@
 #' far. Deterministic: no sampling and no seed.
 #'
 #' @param n Number of colours needed.
-#' @param grid Points per sRGB axis in the candidate lattice.
+#' @param grid Points per sRGB axis in the candidate lattice, 16 by default,
+#'   so 4096 candidates.
 #' @return A character vector of `n` colours.
 #' @noRd
 .palette_many <- function(n, grid = 16L) {
@@ -174,8 +188,8 @@
 
 #' Simulate how a palette looks to dichromatic vision
 #' @param colours Character vector of colours.
-#' @param type `"deutan"` or `"protan"`.
-#' @return A character vector of simulated colours.
+#' @param type `"deutan"` (the default) or `"protan"`.
+#' @return A character vector of simulated colours, one per input colour.
 #' @references Vienot, F., Brettel, H., & Mollon, J. D. (1999). Digital video
 #'   colourmaps for checking the legibility of displays by dichromats.
 #'   *Color Research and Application*, 24(4), 243-252.

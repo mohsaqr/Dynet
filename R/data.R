@@ -18,6 +18,12 @@
 #'   \item{start}{Numeric. Day the contact began, counted from day zero.}
 #'   \item{end}{Numeric. Day the contact ended.}
 #' }
+#' The fourteen students are `Ana`, `Ben`, `Cara`, `Dan`, `Eve`, `Finn`,
+#' `Gita`, `Hugo`, `Iris`, `Jonas`, `Kira`, `Leo`, `Mira` and `Nils`; times
+#' run from day 0 to day 21.52.
+#'
+#' @source Simulated, not observed. Generated deterministically under a fixed
+#'   seed by `data-raw/make-data.R`.
 #'
 #' @examples
 #' dynet(school_contacts)
@@ -37,9 +43,13 @@
 #' \describe{
 #'   \item{sender}{Character. Who wrote the post.}
 #'   \item{receiver}{Character. Who the post replied to.}
-#'   \item{timestamp}{`POSIXct`. When the post was made.}
-#'   \item{thread}{Character. The discussion thread it belongs to.}
+#'   \item{timestamp}{`POSIXct` (UTC). When the post was made. Posts run from
+#'     2024-09-02 to 2024-10-27, just under eight weeks.}
+#'   \item{thread}{Character. The discussion thread it belongs to; 62 threads.}
 #' }
+#'
+#' @source Simulated, not observed. Generated deterministically under a fixed
+#'   seed by `data-raw/make-data.R`.
 #'
 #' @examples
 #' dynet(forum_posts, thread = "thread", nodes = forum_people)
@@ -54,10 +64,14 @@
 #' \describe{
 #'   \item{name}{Character. Matches the sender and receiver names in
 #'     [forum_posts].}
-#'   \item{role}{Character. `"Student"`, `"Teacher"` or `"Facilitator"`.}
+#'   \item{role}{Character. `"Student"` (16), `"Teacher"` (3) or
+#'     `"Facilitator"` (1).}
 #'   \item{achievement}{Character. `"High"`, `"Middle"` or `"Low"` for
-#'     students; `NA` for staff.}
+#'     students; `NA` for the four staff.}
 #' }
+#'
+#' @source Simulated, not observed. Generated deterministically under a fixed
+#'   seed by `data-raw/make-data.R`.
 #'
 #' @examples
 #' dn <- dynet(forum_posts, thread = "thread", nodes = forum_people)
@@ -73,10 +87,13 @@
 #'
 #' @format A `data.frame` with 104 rows and 3 columns:
 #' \describe{
-#'   \item{student}{Character. Student identifier.}
-#'   \item{seminar}{Character. Which weekly seminar.}
-#'   \item{date}{`Date`. When the seminar was held.}
+#'   \item{student}{Character. Student identifier, `s01` to `s24`.}
+#'   \item{seminar}{Character. Which weekly seminar, `week_01` to `week_12`.}
+#'   \item{date}{`Date`. When the seminar was held, 2024-09-03 to 2024-11-19.}
 #' }
+#'
+#' @source Simulated, not observed. Generated deterministically under a fixed
+#'   seed by `data-raw/make-data.R`.
 #'
 #' @examples
 #' dynet(seminar_attendance, actor = "student", group = "seminar")
@@ -106,10 +123,14 @@
 #' \describe{
 #'   \item{from}{Character. Code of the replying message.}
 #'   \item{to}{Character. Code of the message replied to.}
-#'   \item{start}{Numeric. When the spell opens.}
-#'   \item{end}{Numeric. When it closes.}
-#'   \item{weight}{Integer. Message pairs the spell represents.}
+#'   \item{start}{Numeric. When the spell opens, 0 to 2.10.}
+#'   \item{end}{Numeric. When it closes, 0.03 to 5.80.}
+#'   \item{weight}{Numeric, whole-valued. Message pairs the spell represents,
+#'     1 to 5881.}
 #' }
+#' The ten codes are `Acceptance`, `Argument`, `Composing`, `Disagreement`,
+#' `Evaluation`, `Group_regulation`, `Question`, `Sharing`, `Socioemotional`
+#' and `T.Regulation`; 14 rows are self-loops.
 #'
 #' @source Synthesised from the *Trees of Thought* code-transition network by
 #'   the resampling described above; see `data-raw/synthdata.R`.
@@ -147,16 +168,16 @@
 #'
 #' @format A `data.frame` with 23,017 rows and 7 columns:
 #' \describe{
-#'   \item{from}{Code of the replying message, one of `Approving`, `Arguing`,
-#'     `Coordinating`, `Drafting`, `Inquiring`, `Objecting`, `Resourcing`,
-#'     `Socialising`, `Tutoring`.}
-#'   \item{to}{Code of the message replied to, same set.}
+#'   \item{from}{Character. Code of the replying message, one of the nine
+#'     codes `Approving`, `Arguing`, `Coordinating`, `Drafting`, `Inquiring`,
+#'     `Objecting`, `Resourcing`, `Socialising`, `Tutoring`.}
+#'   \item{to}{Character. Code of the message replied to, same set.}
 #'   \item{time}{`POSIXct` (UTC) time of the replying message, shifted by
-#'     whole weeks.}
-#'   \item{participant}{Anonymous author label, `P001` to `P240`.}
-#'   \item{discussion}{Integer discussion (thread) id, 1 to 1169.}
-#'   \item{group}{Course group, `A_01` style; 29 groups.}
-#'   \item{course}{Course, `A` to `E`.}
+#'     whole weeks; 2006-09-23 to 2011-11-02 after the shift.}
+#'   \item{participant}{Character. Anonymous author label, `P001` to `P240`.}
+#'   \item{discussion}{Integer discussion (thread) id, 1 to 1169, all present.}
+#'   \item{group}{Character. Course group, `A_01` style; 29 groups.}
+#'   \item{course}{Character. Course, `A` to `E`.}
 #' }
 #' @source Derived from the *Trees of Thought* study reply table by the
 #'   procedure in `data-raw/thought_chains.R`, which needs the study's private
@@ -165,3 +186,60 @@
 #' dynet(thought_chains, time = "time", loops = TRUE)
 #' dynet(thought_chains, thread = "discussion")
 "thought_chains"
+
+#' Posts in a MOOC discussion forum
+#'
+#' The discussion log of chapter 17 of *Learning Analytics Methods and
+#' Tutorials* (Saqr, 2024), one row per post in the Digital Learning
+#' Transition MOOC, April to June 2013. A post names the participant who
+#' wrote it and the participant it answers, so a tie runs from sender to
+#' receiver; `discussion` is the thread the post belongs to, which is what
+#' makes the log threaded in the sense [dynet()] means by `thread =`.
+#'
+#' Only the four columns the chapter's analysis reads are kept; the category
+#' hierarchy and comment identifiers of the published file are dropped.
+#'
+#' @format A data frame with 2529 rows and 4 columns:
+#' \describe{
+#'   \item{sender}{Character. The participant who wrote the post.}
+#'   \item{receiver}{Character. The participant the post answers.}
+#'   \item{timestamp}{POSIXct (UTC). When the post was made, from
+#'     2013-04-04 16:32 to 2013-06-16 17:12.}
+#'   \item{discussion}{Character. Thread title; 338 distinct threads.}
+#' }
+#' @source Saqr, M. (2024). Temporal network analysis: Introduction, methods
+#'   and analysis with R. In M. Saqr & S. López-Pernas (Eds.), *Learning
+#'   Analytics Methods and Tutorials*. Springer.
+#'   \doi{10.1007/978-3-031-54464-4_17}. Data from
+#'   <https://github.com/lamethods/data>, directory `6_snaMOOC`, prepared by
+#'   `data-raw/mooc_forum.R`.
+#' @seealso [mooc_people] for the participants, and
+#'   `vignette("ch17-temporal-networks")` for the chapter's analysis.
+#' @examples
+#' dn <- dynet(mooc_posts, from = "sender", to = "receiver",
+#'             time = "timestamp", thread = "discussion")
+#' summary(dn)
+"mooc_posts"
+
+#' Participants in a MOOC discussion forum
+#'
+#' The participant table accompanying [mooc_posts]: every person who appears
+#' as a sender or a receiver there, with the self-reported experience level
+#' the chapter recodes into `Expert`, `Student` and `Teacher` and then uses
+#' as the mixing attribute.
+#'
+#' @format A data frame with 445 rows and 2 columns:
+#' \describe{
+#'   \item{name}{Character. Participant identifier, matching the `sender`
+#'     and `receiver` columns of [mooc_posts].}
+#'   \item{experience}{Integer. Self-reported experience level: `1` expert,
+#'     `2` student, `3` teacher.}
+#' }
+#' @source As [mooc_posts].
+#' @seealso [mooc_posts]; `vignette("ch17-temporal-networks")`.
+#' @examples
+#' participants <- dynet(mooc_posts, from = "sender", to = "receiver",
+#'                       time = "timestamp", thread = "discussion",
+#'                       nodes = mooc_people)
+#' as.data.frame(participants, what = "nodes")
+"mooc_people"

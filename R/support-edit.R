@@ -24,18 +24,60 @@
   normalized$spells
 }
 
+#' Each vertex's span from its first tie to its last
+#' @param dn A temporal network.
+#' @return A data frame with `node`, `start` (the earliest start among the
+#'   vertex's tie spells) and `end` (the latest end), one row per vertex that
+#'   has a tie. A `dynet` object is never edgeless, so every vertex has one.
+#' @noRd
+.tie_spans <- function(dn) {
+  spells <- dn$spells
+  node <- c(spells$from, spells$to)
+  first <- tapply(rep(spells$start, 2L), node, min)
+  last <- tapply(rep(spells$end, 2L), node, max)
+  data.frame(node = names(first), start = as.numeric(first),
+             end = as.numeric(last[names(first)]), stringsAsFactors = FALSE)
+}
+
 #' Replace declared vertex activity
 #'
 #' @param dn A temporal network.
 #' @param data A vertex-spell data frame with `node`, `start`, and `end`, plus
-#'   optional `session`, `onset_censored`, and `terminus_censored`. `NULL`
-#'   clears explicit activity, making every retained node implicitly active.
-#' @return A new `dynet` object. Overlapping or adjacent spells are
-#'   canonicalized exactly as in [dynet()]. Canonical spell identifiers may
-#'   therefore change.
+#'   optional `session`, `onset_censored`, and `terminus_censored`; or the
+#'   string `"ties"`, which declares each vertex present from the start of
+#'   its first tie spell to the end of its last, so that a vertex is absent
+#'   before it has had a tie and after it has had its last. Default
+#'   `NULL`, which clears explicit activity, making every retained node
+#'   implicitly active over observation support.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, whose declared vertex
+#'   activity is exactly `data` and whose edge spells, node attributes and
+#'   metadata are those of `dn`. Overlapping or adjacent spells are
+#'   canonicalised exactly as in [dynet()], so canonical spell identifiers may
+#'   change. Read the result back with
+#'   `as.data.frame(x, what = "vertex_spells")`. Raises `dynet_unknown_node`
+#'   when `data` names a vertex the network does not have, and
+#'   `dynet_bad_input` for a string other than `"ties"`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+#' enrolled <- set_vertex_spells(dn, present)
+#' as.data.frame(enrolled, what = "vertex_spells")
+#'
+#' # Present from the first contact to the last, vertex by vertex.
+#' spanned <- set_vertex_spells(dn, "ties")
+#' as.data.frame(spanned, what = "vertex_spells")
 #' @export
 set_vertex_spells <- function(dn, data = NULL) {
   .check_dynet(dn, "bounded")
+  if (is.character(data)) {
+    if (!identical(data, "ties")) {
+      stop(errorCondition(
+        "`data` must be a vertex-spell data frame, NULL, or the string \"ties\".",
+        class = "dynet_bad_input", call = NULL))
+    }
+    data <- .tie_spans(dn)
+  }
   vertex_spells <- if (is.null(data)) .empty_vertex_spells() else
     .normalize_edited_vertex_spells(dn, data)
   .rebuild_ties(
@@ -45,9 +87,25 @@ set_vertex_spells <- function(dn, data = NULL) {
 }
 
 #' Add declared vertex-activity spells
-#' @inheritParams set_vertex_spells
-#' @return A new `dynet` object with old and new activity canonicalized
-#'   together.
+#' @param dn A temporal network.
+#' @param data A nonempty vertex-spell data frame with `node`, `start`, and
+#'   `end`, plus optional `session`, `onset_censored`, and
+#'   `terminus_censored`. Unlike [set_vertex_spells()] this argument is
+#'   required; `NULL` is an error.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with the network's existing
+#'   activity and `data` canonicalised together, so an added spell that
+#'   overlaps or abuts an existing one for the same vertex is merged into it
+#'   and canonical spell identifiers may change. Raises `dynet_unknown_node`
+#'   for a vertex the network does not have, and `dynet_bad_input` when `data`
+#'   is not a nonempty data frame.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+#' enrolled <- set_vertex_spells(dn, present)
+#' extended <- add_vertex_spells(enrolled,
+#'                               data.frame(node = "Cara", start = 5, end = 20))
+#' as.data.frame(extended, what = "vertex_spells")
 #' @export
 add_vertex_spells <- function(dn, data) {
   .check_dynet(dn, "bounded")
@@ -82,9 +140,20 @@ add_vertex_spells <- function(dn, data) {
 #'
 #' @param dn A temporal network.
 #' @param spells Integer positions or a logical mask over
-#'   `as.data.frame(dn, what = "vertex_spells")`.
-#' @return A new `dynet` object. A node with no remaining declaration becomes
-#'   implicitly always active over observation support.
+#'   `as.data.frame(dn, what = "vertex_spells")`. A logical mask must have one
+#'   element per declared component and no `NA`.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with the selected activity
+#'   components dropped and the rest canonicalised again, so the remaining
+#'   spell identifiers renumber. A node with no remaining declaration becomes
+#'   implicitly always active over observation support. Raises
+#'   `dynet_bad_input` when `spells` is not a valid selection.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+#' enrolled <- set_vertex_spells(dn, present)
+#' trimmed <- remove_vertex_spells(enrolled, spells = 1)
+#' as.data.frame(trimmed, what = "vertex_spells")
 #' @export
 remove_vertex_spells <- function(dn, spells) {
   .check_dynet(dn, "bounded")
@@ -99,11 +168,24 @@ remove_vertex_spells <- function(dn, spells) {
 #'
 #' @param dn A temporal network.
 #' @param spells Integer positions or a logical mask over canonical vertex
-#'   activity.
-#' @param data One row or one row per selected component, containing fields to
-#'   replace.
-#' @return A new `dynet` object. Updated components are canonicalized with the
-#'   retained components, so overlaps can merge and identifiers can change.
+#'   activity, as returned by `as.data.frame(dn, what = "vertex_spells")`.
+#' @param data A data frame with one row, or one row per selected component,
+#'   containing the fields to replace: `node`, `start`, `end`, `session`,
+#'   `onset_censored` or `terminus_censored`.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`. Updated components are
+#'   canonicalised with the retained components, so overlaps can merge and
+#'   spell identifiers can change. Raises `dynet_bad_input` when `spells` is
+#'   not a valid selection, when `data` is malformed or of the wrong height,
+#'   or when it names the read-only derived columns `vertex_spell`,
+#'   `duration` or `instant`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+#' enrolled <- set_vertex_spells(dn, present)
+#' extended <- update_vertex_spells(enrolled, spells = 1,
+#'                                  data = data.frame(end = 12))
+#' as.data.frame(extended, what = "vertex_spells")
 #' @export
 update_vertex_spells <- function(dn, spells, data) {
   .check_dynet(dn, "bounded")
@@ -162,9 +244,23 @@ update_vertex_spells <- function(dn, spells, data) {
 #' @param dn A temporal network.
 #' @param data Optional data frame with `start` and `end` observation
 #'   components. Overlapping and adjacent positive components are merged.
-#' @param start,end Optional scalar continuous bounds used instead of `data`.
-#' @return A new `dynet` object. Raw edge and vertex spells are unchanged;
-#'   only the non-destructive measurement view is replaced.
+#'   Default `NULL`.
+#' @param start,end Optional scalar continuous bounds used instead of `data`,
+#'   each defaulting to `NULL`. Supply exactly one of `data` or the
+#'   `start`/`end` pair; supplying both, or neither, is an error.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`. Raw edge and vertex spells
+#'   are unchanged -- `as.data.frame(x)` still returns the originals -- and
+#'   only the non-destructive measurement view is replaced, so every verb now
+#'   clips exposure and path horizons to this support. Read the components
+#'   back with `as.data.frame(x, what = "observations")`, one row per
+#'   component with `observation`, `start`, `end`, `duration` and `instant`.
+#'   Raises `dynet_bad_input` when neither or both of `data` and the bounds
+#'   are given.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' first_week <- set_observations(dn, start = 0, end = 7)
+#' as.data.frame(first_week, what = "observations")
 #' @export
 set_observations <- function(dn, data = NULL, start = NULL, end = NULL) {
   .check_dynet(dn, "bounded")
@@ -195,8 +291,18 @@ set_observations <- function(dn, data = NULL, start = NULL, end = NULL) {
 #' Restore implicit observation support
 #'
 #' @param dn A temporal network.
-#' @return A new `dynet` object observed continuously from its earliest raw
-#'   start through its latest raw end.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, observed continuously from
+#'   its earliest raw start through its latest raw end. Every explicit
+#'   observation field is dropped from the metadata and the bin count is
+#'   recomputed over the raw range; spells and attributes are untouched. Safe
+#'   on a network that never had explicit observations, which is returned with
+#'   only its recorded call changed.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' first_week <- set_observations(dn, start = 0, end = 7)
+#' restored <- clear_observations(first_week)
+#' restored
 #' @export
 clear_observations <- function(dn) {
   .check_dynet(dn, "bounded")
@@ -222,10 +328,21 @@ clear_observations <- function(dn) {
 #' Assign or remove tie sessions
 #'
 #' @param dn A temporal network.
-#' @param session A complete character vector of length one or the raw tie
-#'   count. `NULL` removes all tie-session walls and erases session labels on
-#'   vertex activity.
-#' @return A new `dynet` object.
+#' @param session A complete, nonempty character vector of length one or the
+#'   raw tie count; a length-one value labels every spell. Default `NULL`,
+#'   which removes all tie-session walls and erases session labels on vertex
+#'   activity.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with a `session` column on
+#'   the spell table and the session scheme recorded in its metadata, or with
+#'   both removed when `session = NULL`. Raises `dynet_bad_input` when
+#'   `session` has neither length one nor the raw tie count, or carries `NA`
+#'   or blank labels.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
+#' labelled <- set_tie_sessions(dn, session = weeks)
+#' labelled
 #' @export
 set_tie_sessions <- function(dn, session = NULL) {
   .check_dynet(dn, "bounded")
@@ -263,7 +380,19 @@ set_tie_sessions <- function(dn, session = NULL) {
 #' @param dn A sessioned temporal network.
 #' @param mapping A named character vector from old to new labels, or an
 #'   `old`/`new` data frame.
-#' @return A new `dynet` object with edge and vertex session labels renamed.
+#' @return A new `dynet` object, class
+#'   `c("dynet", "netobject", "cograph_network")`, with edge and vertex
+#'   session labels renamed together and the session scheme in its metadata
+#'   updated. Labels absent from `mapping` are left alone. Raises
+#'   `dynet_unknown_session` when an old label is not a session, and
+#'   `dynet_bad_input` when the network has no session scheme, when `mapping`
+#'   is malformed, or when the renaming would produce duplicate labels.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
+#' labelled <- set_tie_sessions(dn, session = weeks)
+#' renamed <- rename_sessions(labelled, c(week_1 = "opening"))
+#' renamed
 #' @export
 rename_sessions <- function(dn, mapping) {
   .check_dynet(dn, "bounded")

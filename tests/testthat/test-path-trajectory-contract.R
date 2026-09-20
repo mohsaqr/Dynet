@@ -61,6 +61,9 @@ test_that("counts after pruning match transitiontrees, orphans included", {
 
 test_that("leaf placement reproduces the transitiontrees layout", {
   skip_if_not_installed("transitiontrees")
+  # plot_trajectories() reaches for ggforce at draw time, so guarding
+  # transitiontrees alone is not enough on a machine that lacks ggforce.
+  skip_if_not_installed("ggforce")
   seqs <- .fixed_sequences()
   tree <- transitiontrees::context_tree(seqs, max_depth = 2L, min_count = 1L)
   built <- ggplot2::ggplot_build(
@@ -263,20 +266,21 @@ test_that("bad input raises classed conditions", {
                class = "dynet_empty_result")
 })
 
-test_that("a backward family with no attained departure has no branch", {
-  # At the calendar end every latest-departure supremum is unattained, so no
-  # sender has a maximising journey and only the queried target's own
-  # zero-hop route survives. The tree must show that emptiness honestly
-  # rather than inventing branches or refusing to build.
-  paths <- paths(dynet(school_contacts), from = "Ben",
-                     direction = "backward", at = 21.52)
-  expect_identical(sum(as.data.frame(paths)$n_paths), 1)
+test_that("a backward family of unattained suprema still branches", {
+  # At the calendar end every latest-departure optimum is a supremum that no
+  # journey attains exactly, because interval spells are half-open. The route
+  # family that approaches it is still the answer, so the tree branches; each
+  # step's `attained` flag, not the tree's emptiness, records the distinction.
+  dn <- dynet(school_contacts)
+  routes <- paths(dn, from = "Ben", direction = "backward", at = 21.52)
+  reached <- as.data.frame(routes)
+  expect_identical(sum(reached$n_paths), 14)
 
-  tree <- path_trajectories(paths)
-  expect_identical(nrow(tree), 1L)
+  tree <- path_trajectories(routes)
+  expect_identical(nrow(tree), 14L)
   expect_identical(tree$vertex[tree$depth == 0L], "Ben")
-  expect_identical(as.numeric(tree$count[[1L]]), 1)
-  expect_identical(max(tree$depth), 0L)
+  expect_identical(as.numeric(tree$count[[1L]]), 14)
+  expect_identical(max(tree$depth), 2L)
 })
 
 # ---- visual regression ---------------------------------------------------
@@ -310,8 +314,8 @@ test_that("a branching forward family is visually stable", {
 })
 
 test_that("a backward family is visually stable", {
-  paths <- paths(dynet(school_contacts), from = "Ben",
-                     direction = "backward", at = 14)
+  dn <- dynet(school_contacts)
+  paths <- paths(dn, from = "Ben", direction = "backward", at = 14)
   expect_snapshot(str(.plot_fingerprint(
     plot_path_trajectories(paths, measure = "time",
                            orientation = "vertical")

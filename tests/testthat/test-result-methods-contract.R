@@ -119,3 +119,72 @@ test_that("plot = TRUE draws without changing what a verb returns", {
   expect_error(pathways(dn, from = "Ana", plot = c(TRUE, TRUE)),
                class = "dynet_bad_input")
 })
+
+test_that("`top` counts vertices whose series has an undefined bin", {
+  # A vertex outside its activity spell, and any bin the grid never defined,
+  # contribute a missing value rather than a measured zero. Ranking with a
+  # bare `sort()` dropped those vertices silently: `top = 5` returned four,
+  # and once every vertex had one undefined bin it returned none at all.
+  spells <- data.frame(
+    from = c("A", "B", "C", "D", "A"), to = c("B", "C", "D", "A", "C"),
+    start = c(0, 1, 2, 3, 1), end = c(1, 2, 3, 4, 2)
+  )
+  activity <- data.frame(
+    node = c("A", "B", "C", "D", "E"),
+    start = c(0, 0, 0, 0, 9), end = c(5, 5, 5, 5, 10)
+  )
+  dn <- quiet_dynet(spells, vertex_spells = activity,
+                    observation_start = 0, observation_end = 5)
+  degree <- dyn_centrality(dn, measure = "degree", start = 0, end = 5,
+                           step = 1, window = 1)
+  measured <- as.data.frame(degree)
+  expect_true(anyNA(measured$value))
+
+  # The invariant: `top = k` yields exactly min(k, number of vertices).
+  n_nodes <- length(unique(measured$node))
+  counts <- vapply(seq_len(n_nodes + 2L), function(k) {
+    kept <- as.data.frame(degree, top = k)
+    length(unique(kept$node))
+  }, integer(1L))
+  expect_identical(counts, pmin(seq_len(n_nodes + 2L), n_nodes))
+
+  # A vertex with nothing defined stays in the ordering, last, rather than
+  # vanishing from it.
+  ranked <- as.data.frame(degree, top = n_nodes)
+  expect_identical(unique(ranked$node)[[n_nodes]], "E")
+})
+
+test_that("`top` selects the same vertices for the table and the plot", {
+  dn <- quiet_dynet(school_contacts)
+  degree <- dyn_centrality(dn, measure = "degree", step = 4, window = 4)
+  kept <- as.data.frame(degree, top = 5)
+  drawn <- plot(degree, top = 5)
+  drawn_nodes <- sort(unique(drawn$data$node))
+  expect_identical(sort(unique(kept$node)), drawn_nodes)
+  expect_length(drawn_nodes, 5L)
+})
+
+test_that("both directed-only guards refuse the same measures", {
+  # The proximity panel validates `measure` itself rather than going through
+  # dyn_centrality(), so the two lists must not drift apart. Its copy used to
+  # omit "prestige", which then ran on a symmetric adjacency and returned a
+  # directed quantity without complaint.
+  undirected <- quiet_dynet(school_contacts, directed = FALSE)
+  directed_only <- Dynet:::.directed_only_measures
+  expect_gt(length(directed_only), 0L)
+
+  # `indegree` and `outdegree` also raise a deprecation warning on the way
+  # out; muffle that one condition so the error class is what is asserted.
+  refuses <- function(call_it) {
+    withCallingHandlers(
+      expect_error(call_it(), class = "dynet_needs_directed"),
+      dynet_deprecated = function(w) invokeRestart("muffleWarning")
+    )
+  }
+  pdf(tempfile())
+  on.exit(grDevices::dev.off(), add = TRUE)
+  lapply(directed_only, function(measure) {
+    refuses(function() dyn_centrality(undirected, measure = measure))
+    refuses(function() plot(undirected, type = "proximity", measure = measure))
+  })
+})

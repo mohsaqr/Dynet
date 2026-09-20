@@ -21,15 +21,21 @@ events(
 \item{measure}{One or more of \code{"formation"} (spells beginning in the bin),
 \code{"dissolution"} (spells ending in the bin), \code{"active"} (spells alive
 during the bin), \code{"new_pairs"} (vertex pairs meeting for the first time),
-and \code{"formation_fraction"} (confirmed binary pair formations divided by
-their exact two-sided inactive risk set), or \code{"dissolution_fraction"}
+\code{"formation_fraction"} (confirmed binary pair formations divided by
+their exact two-sided inactive risk set), \code{"dissolution_fraction"}
 (confirmed binary pair dissolutions divided by their exact two-sided
-active risk set), or \code{"formation_rate"} (confirmed formations divided by
-exact integrated inactive eligible pair-time), or \code{"dissolution_rate"}
+active risk set), \code{"formation_rate"} (confirmed formations divided by
+exact integrated inactive eligible pair-time), and \code{"dissolution_rate"}
 (confirmed dissolutions divided by exact integrated active eligible
-pair-time).}
+pair-time). Defaults to \code{c("formation", "dissolution")}. Anything else
+raises a \code{dynet_unknown_measure} error. The two fractions need
+\code{window = 0} (\code{dynet_transition_requires_instant} otherwise) and the two
+rates need a positive window (\code{dynet_rate_requires_positive_window}), so
+asking for a fraction and a rate in one call raises
+\code{dynet_incompatible_transition_windows}.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions: \code{"bounded"} (the default),
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
 
 \item{start, end}{First and last time at which to measure. Default to the
 observed range. A network built from dates may be addressed with dates.}
@@ -41,9 +47,10 @@ built with.}
 which tiles the period into disjoint bins. A larger value slides an
 overlapping window; \code{0} samples the network at each point in time.
 \code{"all"} measures the whole observed period as one window, closed on the
-right so an event at the final instant is inside it; it cannot be combined
-with \code{step}, and under \code{sessions = "separate"} or discontinuous
-observation it gives one window per session or observed component.}
+right so an event at the final instant is inside it; naming \code{step} as well
+raises a \code{dynet_bad_input} error, and under \code{sessions = "separate"} or
+discontinuous observation it gives one window per session or observed
+component.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
@@ -85,7 +92,7 @@ Duplicate, overlapping, or adjacent raw spells cannot multiply pair-state
 transitions. Observation and vertex boundaries are excluded by two-sided
 eligibility. Onset censoring suppresses confirmation but not state;
 terminus censoring, weights, loops, and point contacts do not contribute.
-Collapse erases labels, bounded authorizes within sessions before unioning
+Collapse erases labels, bounded authorises within sessions before unioning
 each calendar pair, and separate returns session-local fractions.
 
 Dissolution fraction is the dual exact-time quantity. For each nonloop pair,
@@ -99,7 +106,7 @@ Censor flags do not change state: one known terminus confirms a disappearance
 but an all-censored disappearance is unconfirmed. Duplicate, overlapping,
 adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
 and administrative observation/activity boundaries do not create transitions.
-Collapse erases labels, bounded unions authorized session-local states, and
+Collapse erases labels, bounded unions authorised session-local states, and
 separate reports local rows. Positive windows are rejected because T04 owns
 dissolution rates.
 

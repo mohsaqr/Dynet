@@ -15,12 +15,14 @@ twelve, which keeps the vertex labels legible.}
 \item{labels}{Whether to name the vertex at each step. \code{TRUE} by default;
 turn it off for a dense figure where the shape is the point.}
 
-\item{base_size}{Base font size, as in \code{\link[ggplot2:ggtheme]{ggplot2::theme_minimal()}}.}
+\item{base_size}{Base font size, as in \code{\link[ggplot2:ggtheme]{ggplot2::theme_minimal()}}.
+Defaults to twelve.}
 
 \item{...}{Ignored.}
 }
 \value{
-A \code{ggplot} object.
+A \code{ggplot} object. A \code{top}, \code{labels} or \code{base_size} that is not one
+valid value raises \code{dynet_bad_input}.
 }
 \description{
 One row per route, drawn along real time: a point at each vertex placed at

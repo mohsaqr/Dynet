@@ -2,6 +2,17 @@
 # Exact temporal collapse to a static cograph network
 # ===========================================================================
 
+#' Clip observation fragments to a collapse window
+#'
+#' Positive fragments are trimmed to `[start, end]` and dropped when nothing
+#' positive survives; a genuine point is kept whole when it falls inside the
+#' window, because clipping cannot shorten something of zero width.
+#'
+#' @param fragments A fragment table with `start`, `end` and `instant`.
+#' @param start,end Collapse bounds.
+#' @return The rows of `fragments` that survive, with positive endpoints
+#'   clipped.
+#' @noRd
 .clip_collapse_fragments <- function(fragments, start, end) {
   if (!nrow(fragments)) return(fragments)
   point <- fragments$instant
@@ -13,6 +24,17 @@
   fragments[keep, , drop = FALSE]
 }
 
+#' Joint activity time available to one vertex pair
+#'
+#' The denominator of `duration_fraction`: how much of the collapse window
+#' both endpoints were active at once, overlaps counted once. Points
+#' contribute nothing, having no width.
+#'
+#' @param vertex_fragments Vertex-activity fragments for every vertex.
+#' @param from,to The two vertex names.
+#' @param start,end Collapse bounds.
+#' @return A single numeric duration, zero when the pair never coincided.
+#' @noRd
 .collapse_pair_opportunity <- function(vertex_fragments, from, to, start, end) {
   one <- .clip_collapse_fragments(
     vertex_fragments[vertex_fragments$node == from, , drop = FALSE], start, end
@@ -32,6 +54,22 @@
   .union_duration(lo[keep], hi[keep])
 }
 
+#' Assemble a collapsed cograph netobject
+#'
+#' Turns the collapsed edge and node summaries into the integer-endpoint
+#' `nodes`/`edges`/`weights` layout cograph renders, keeping the full summary
+#' table in `data` so `as.data.frame()` can return every weighting.
+#'
+#' @param dn The source temporal network, read for `directed`.
+#' @param edges The collapsed edge summary, one row per pair.
+#' @param nodes The public vertex table, with `name` first.
+#' @param weight Which edge column becomes the cograph weight.
+#' @param start,end The collapse bounds, recorded in `meta`.
+#' @param sessions The session policy, recorded in `meta`.
+#' @param session_label Session name for a separate block, else `NULL`.
+#' @return An object of class
+#'   `c("dynet_collapsed", "netobject", "cograph_network")`.
+#' @noRd
 .collapsed_netobject <- function(dn, edges, nodes, weight, start, end,
                                  sessions, session_label = NULL) {
   node_names <- nodes$name
@@ -77,6 +115,23 @@
   )
 }
 
+#' Collapse one block of fragments into a static network
+#'
+#' Groups the clipped edge fragments by pair, recombines them into raw-spell
+#' identities first so an administrative observation cut does not split one
+#' spell into two, and computes every weighting side by side. The vertex table
+#' gains the unioned activity duration of each vertex.
+#'
+#' @param dn The source temporal network.
+#' @param fragments Endpoint-valid edge fragments for this block.
+#' @param vertex_fragments Vertex-activity fragments for this block.
+#' @param weight Which edge column becomes the cograph weight.
+#' @param start,end Collapse bounds.
+#' @param sessions The session policy, recorded in `meta`.
+#' @param session_label Session name for a separate block, else `NULL`.
+#' @return A `dynet_collapsed` netobject; a block with no surviving fragment
+#'   still returns the full typed edge schema with zero rows.
+#' @noRd
 .collapse_one <- function(dn, fragments, vertex_fragments, weight,
                           start, end, sessions, session_label = NULL) {
   fragments <- .clip_collapse_fragments(fragments, start, end)
@@ -154,18 +209,21 @@
 #' duration summaries, so choosing one weighting does not discard the others.
 #'
 #' @param dn A temporal network from [dynet()] or [as_dynet()].
-#' @param start,end Collapse bounds. Defaults to the observed range. Positive
-#'   intervals are clipped to `[start, end)`; genuine points at either bound
-#'   are retained.
-#' @param weight Edge field used as the cograph weight: `"binary"`,
-#'   `"union_duration"`, `"total_duration"`, `"duration_fraction"`,
+#' @param start,end Collapse bounds. Default to the observed range. Positive
+#'   intervals are clipped to `[start, end]`; genuine points at either bound
+#'   are retained. An `end` before `start` raises a `dynet_bad_input` error.
+#' @param weight Edge field used as the cograph weight: `"binary"` (the
+#'   default), `"union_duration"`, `"total_duration"`, `"duration_fraction"`,
 #'   `"spell_count"`, `"weight_sum"`, `"weighted_duration"`, or
-#'   `"latest_weight"`.
-#' @param sessions Session handling. `"collapse"` erases session labels,
-#'   `"bounded"` respects session-specific endpoint activity before pooling,
-#'   and `"separate"` returns one collapsed cograph network per session.
+#'   `"latest_weight"`. Every field is present in the edge table whichever one
+#'   is chosen; this names only the one cograph draws with.
+#' @param sessions Session handling. `"bounded"`, the default, respects
+#'   session-specific endpoint activity before pooling, `"collapse"` erases
+#'   session labels, and `"separate"` returns one collapsed cograph network
+#'   per session.
 #' @param censored Whether raw edge and vertex identities carrying an explicit
-#'   censor flag are included.
+#'   censor flag are `"include"`d, the default, or `"exclude"`d. Exclusion
+#'   drops the whole raw identity, never just one observed fragment.
 #' @return A `dynet_collapsed` cograph netobject, whose two tidy tables are
 #'   reached with `as.data.frame(x, what = "edges")` and
 #'   `as.data.frame(x, what = "nodes")`. With `sessions = "separate"`, a named
@@ -183,9 +241,10 @@
 #'   the `activity.duration` and `activity.count` aliases for compatibility
 #'   with `networkDynamic::network.collapse()`.
 #'
-#'   The node table carries one row per vertex, with `name`,
-#'   `activity_duration` (time the vertex was active, overlaps counted once)
-#'   and its `activity.duration` alias.
+#'   The node table carries one row per vertex, with `name`, any static vertex
+#'   attributes the network was built with, `activity_duration` (time the
+#'   vertex was active, overlaps counted once) and its `activity.duration`
+#'   alias.
 #' @examples
 #' dn <- dynet(data.frame(
 #'   from = c("A", "A"), to = c("B", "B"),
@@ -228,16 +287,21 @@ collapse_network <- function(
 #' Tidy tables from a collapsed temporal network
 #' @param x A network returned by [collapse_network()].
 #' @param row.names,optional Ignored; present for compatibility.
-#' @param what `"edges"` or `"nodes"`.
+#' @param what `"edges"`, the default, or `"nodes"`.
 #' @param ... Ignored.
 #' @return A plain `data.frame`. For `"edges"`, one row per collapsed vertex
 #'   pair carrying every weighting side by side: `from`, `to`, `binary`,
 #'   `union_duration`, `total_duration`, `duration_fraction`, `spell_count`,
 #'   `weight_sum`, `weighted_duration`, `latest_weight`, `first`, `last`, and
 #'   the `activity.duration` and `activity.count` aliases. For `"nodes"`, one
-#'   row per vertex with `name`, `activity_duration` and its
-#'   `activity.duration` alias, plus any static vertex attributes the network
-#'   carries. See [collapse_network()] for what each weighting means.
+#'   row per vertex with `name`, any static vertex attributes the network
+#'   carries, `activity_duration` and its `activity.duration` alias. See
+#'   [collapse_network()] for what each weighting means.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' collapsed <- collapse_network(dn)
+#' as.data.frame(collapsed)
+#' as.data.frame(collapsed, what = "nodes")
 #' @export
 as.data.frame.dynet_collapsed <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {
@@ -253,6 +317,10 @@ as.data.frame.dynet_collapsed <- function(
 #' @param x A network returned by [collapse_network()].
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' collapsed <- collapse_network(dn)
+#' collapsed
 #' @export
 print.dynet_collapsed <- function(x, ...) {
   cat(sprintf(
@@ -277,7 +345,9 @@ print.dynet_collapsed <- function(x, ...) {
 #' @param row.names Ignored; present for compatibility with the generic.
 #' @param optional Ignored; present for compatibility with the generic.
 #' @param session Optional session name. Supply one to get that session's
-#'   table alone, without the `session` key; the default stacks them all.
+#'   table alone, without the `session` key; the default, `NULL`, stacks them
+#'   all. A name that is not one of the collapsed sessions raises a
+#'   `dynet_unknown_session` error.
 #' @param ... Ignored.
 #' @return A plain `data.frame`, one row per collapsed pair per session, with
 #'   `session` first and then the columns

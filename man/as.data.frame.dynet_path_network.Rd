@@ -17,7 +17,7 @@
 
 \item{row.names, optional}{Ignored.}
 
-\item{what}{\code{"edges"} or \code{"nodes"}.}
+\item{what}{\code{"edges"}, the default, or \code{"nodes"}.}
 
 \item{...}{Ignored.}
 }
@@ -30,4 +30,11 @@ optimal route, with \code{from}, \code{to}, \code{weight}, \code{first_time}, \c
 }
 \description{
 Tidy tables from a temporal path-union network
+}
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+union_network <- path_network(routes)
+as.data.frame(union_network, what = "edges")
+as.data.frame(union_network, what = "nodes")
 }

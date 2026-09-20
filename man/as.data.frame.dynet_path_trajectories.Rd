@@ -14,8 +14,15 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain data frame with one row per tree node.
+A plain data frame with one row per tree node, with the columns
+described in \code{\link[=path_trajectories]{path_trajectories()}} and none of its attributes.
 }
 \description{
 Tidy table of a temporal trajectory tree
+}
+\examples{
+dn <- dynet(school_contacts)
+routes <- paths(dn, from = "Ana")
+trajectories <- path_trajectories(routes)
+as.data.frame(trajectories)
 }

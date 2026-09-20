@@ -9,14 +9,28 @@ add_vertex_spells(dn, data)
 \arguments{
 \item{dn}{A temporal network.}
 
-\item{data}{A vertex-spell data frame with \code{node}, \code{start}, and \code{end}, plus
-optional \code{session}, \code{onset_censored}, and \code{terminus_censored}. \code{NULL}
-clears explicit activity, making every retained node implicitly active.}
+\item{data}{A nonempty vertex-spell data frame with \code{node}, \code{start}, and
+\code{end}, plus optional \code{session}, \code{onset_censored}, and
+\code{terminus_censored}. Unlike \code{\link[=set_vertex_spells]{set_vertex_spells()}} this argument is
+required; \code{NULL} is an error.}
 }
 \value{
-A new \code{dynet} object with old and new activity canonicalized
-together.
+A new \code{dynet} object, class
+\code{c("dynet", "netobject", "cograph_network")}, with the network's existing
+activity and \code{data} canonicalised together, so an added spell that
+overlaps or abuts an existing one for the same vertex is merged into it
+and canonical spell identifiers may change. Raises \code{dynet_unknown_node}
+for a vertex the network does not have, and \code{dynet_bad_input} when \code{data}
+is not a nonempty data frame.
 }
 \description{
 Add declared vertex-activity spells
+}
+\examples{
+dn <- dynet(school_contacts)
+present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
+enrolled <- set_vertex_spells(dn, present)
+extended <- add_vertex_spells(enrolled,
+                              data.frame(node = "Cara", start = 5, end = 20))
+as.data.frame(extended, what = "vertex_spells")
 }

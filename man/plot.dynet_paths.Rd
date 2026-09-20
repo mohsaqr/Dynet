@@ -10,24 +10,35 @@
 \item{x}{A \code{dynet_paths} from \code{\link[=paths]{paths()}}.}
 
 \item{palette}{Palette specification, as in \code{\link[=plot.dynet]{plot.dynet()}}. Vertices are
-coloured by how many hops they are from the source.}
+coloured by how many hops they are from the source. Read only by the
+legacy tree renderer.}
 
-\item{...}{Passed to \code{cograph::splot()}.}
+\item{...}{Passed to \code{\link[=plot_path_trajectories]{plot_path_trajectories()}}, or to \code{cograph::splot()}
+for a legacy result.}
 }
 \value{
-A \code{ggplot} object for current shortest-foremost results. The legacy
-\code{cograph} tree renderer remains only for older serialized results without
-criterion metadata, and draws to the active device.
+A \code{ggplot} object for a result carrying criterion metadata, which
+is every result \code{\link[=paths]{paths()}} returns. A legacy result without it is drawn on
+the current device by \code{cograph::splot()} and \code{x} is returned invisibly.
+
+A legacy result raises \code{dynet_unsupported_plot} when its sessions were
+not collapsed, \code{dynet_empty_result} when the source reaches no other
+vertex, \code{dynet_bad_palette} for an unusable \code{palette}, and
+\code{dynet_needs_cograph} when cograph is not installed.
 }
 \description{
-Rendering endpoint-local shortest-foremost families is not currently
-supported. Such paths need not share prefix-optimal routes, so they do not
-form one predecessor tree. Inspect their compact counts and expanded steps
-instead.
+A result from \code{\link[=paths]{paths()}} records the optimality criterion it was found
+under, and such a result is drawn as a trajectory tree by
+\code{\link[=plot_path_trajectories]{plot_path_trajectories()}}. That is the right picture for an
+endpoint-local family: the routes need not share prefix-optimal
+subpaths, so a vertex reached under two different temporal histories
+appears twice rather than being forced into one predecessor tree.
 
-All P08 shortest-foremost results raise a \code{dynet_unsupported_plot}
-condition, regardless of session mode. This keeps rendering from implying
-a prefix-compatible tree that the endpoint-local criterion does not define.
+Older serialised results carry no criterion. Those are drawn by the legacy
+predecessor-tree renderer, which only defines a tree when the sessions were
+collapsed; a bounded or separate-session result of that vintage raises
+\code{dynet_unsupported_plot} instead of implying a tree the criterion never
+promised.
 }
 \examples{
 dn <- dynet(school_contacts)
