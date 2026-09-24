@@ -32,10 +32,16 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           dependencies: '"hard"'
+          # The Trees of Thought article draws plot(type = "heatmap",
+          # show_node_labels = FALSE), an argument cograph gained after its
+          # CRAN 2.4.4 release. The GitHub ref installs the development
+          # cograph for the website build only; DESCRIPTION stays CRAN-clean
+          # (no Remotes field), as in Nestimate's pkgdown workflow.
           extra-packages: |
             any::pkgdown
             any::knitr
             any::rmarkdown
+            mohsaqr/cograph
           needs: website
 
       - name: Build site
