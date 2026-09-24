@@ -1,4 +1,4 @@
-url: https://mohsaqr.github.io/Dynet
+url: https://pak.dynasite.org/Dynet
 
 template:
   bootstrap: 5
@@ -39,6 +39,7 @@ reference:
   contents:
   - dynet
   - as_dynet
+  - as_dynet.networkDynamic
   - events
   - snapshots
 
@@ -115,4 +116,6 @@ reference:
   - starts_with("print.")
   - starts_with("summary.")
   - starts_with("plot.")
+  - starts_with("head.")
+  - starts_with("tail.")
   - starts_with("as.data.frame.")

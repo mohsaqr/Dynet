@@ -28,3 +28,6 @@ cran-comments.md
 # Rendered pkgdown articles and the files their chunks write
 vignettes/articles/*.html
 vignettes/articles/animating_files/
+
+# Local pkgdown build output; the site is built by CI onto gh-pages
+docs/
