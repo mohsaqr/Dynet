@@ -14,11 +14,11 @@ plot(x, base_size = 12, ...)
 - x:
 
   A result from
-  [`similarity()`](https://mohsaqr.github.io/Dynet/reference/similarity.md).
+  [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md).
 
 - base_size:
 
-  Base text size.
+  Base text size. Defaults to twelve.
 
 - ...:
 
@@ -26,4 +26,13 @@ plot(x, base_size = 12, ...)
 
 ## Value
 
-A `ggplot` object.
+A `ggplot` object. Drawing happens when that object is printed, so the
+plot is the return value here rather than a side effect.
+
+## Examples
+
+``` r
+dn <- dynet(school_contacts)
+bin_similarity <- similarity(dn, step = 5, window = 5)
+plot(bin_similarity)
+```

@@ -17,7 +17,7 @@ timing lines up."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,8 +28,11 @@ timing lines up."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -86,10 +89,14 @@ backward reach side by side), <code>"forward"</code> or <code>"backward"</code>.
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
-<dd><p>Forward source-availability time or backward arrival deadline.
-Defaults to the beginning or end of each observed period, respectively.
-Date and date-time values use the network's time scale. It cannot be
-combined with <code>start</code> or <code>end</code>.</p></dd>
+<dd><p>Forward source-availability time or backward arrival deadline,
+defaulting to the beginning or end of each observed period respectively.
+Unlike in <code><a href="paths.html">paths()</a></code> it sets only the traversal window, because every
+vertex is then anchored at its own presence inside that window: a vertex
+with declared spells starts at the first instant it is present there, or
+at the last instant searching backward, and one with no declared spells
+starts at the window bound. Date and date-time values use the network's
+time scale. It cannot be combined with <code>start</code> or <code>end</code>.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
@@ -109,7 +116,7 @@ network's time unit. A calendar network also accepts a scalar <code>difftime</co
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
 <dd><p>One or both of <code>"reach"</code>, the proportion of other vertices,
 and <code>"reach_count"</code>, their number. The source vertex is excluded from
-both.</p></dd>
+both. Defaults to <code>"reach"</code>.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>
@@ -122,9 +129,12 @@ the result when the figure needs arguments of its own.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>dynet_metric</code> at node level. Proportion measures are named
-<code>forward_reach</code> and <code>backward_reach</code>; counts are named
-<code>forward_reach_count</code> and <code>backward_reach_count</code>.</p>
+    <p>A <code>dynet_metric</code> at node level: a tidy data frame with one row per
+vertex per requested measure, columns <code>node</code>, <code>measure</code> and <code>value</code>,
+preceded by <code>session</code> under <code>sessions = "separate"</code>. Proportion
+measures are named <code>forward_reach</code> and <code>backward_reach</code>; counts are named
+<code>forward_reach_count</code> and <code>backward_reach_count</code>. <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>
+returns the plain frame.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -132,8 +142,12 @@ the result when the figure needs arguments of its own.</p></dd>
 unlimited waiting, half-open interval spells, and a separate exact timestamp
 rule for point events. Positive <code>traversal_time</code> requires interval occupancy
 to finish within continuous pair activity and delays a point-trigger arrival.
-Declared vertex activity additionally requires an exact active query anchor
-and active hop endpoints. Waiting after a valid anchor may cross vertex
+Declared vertex activity additionally requires active hop endpoints and a
+valid anchor, and every vertex is anchored at its own presence: each search
+starts at that vertex's first instant inside the window, or its last
+instant searching backward, rather than at the window bound. A vertex never
+present inside the window reaches nothing, which is reported as zero rather
+than as a missing row. Waiting after a valid anchor may cross vertex
 inactivity; interval traversal requires both endpoints continuously through
 completion, while a delayed point requires the receiver again at completion.
 For backward reachability, the resolved <code>end</code> is a common deadline and
@@ -149,6 +163,18 @@ denominator is retained in every session block.</p>
 contributes zero-reach rows rather than aborting the complete result. Its
 missing implicit bound is clamped to the supplied bound, producing the
 empty journey at that boundary and no eligible hop.</p>
+<p>Failures are classed. An unrecognised <code>measure</code> raises
+<code>dynet_unknown_measure</code>; a malformed <code>measure</code>, a negative
+<code>traversal_time</code>, <code>at</code> combined with <code>start</code> or <code>end</code>, or a window that
+cannot hold a journey raises <code>dynet_bad_input</code>; and a window disjoint from
+explicit observation raises <code>dynet_outside_observation</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Holme, P. (2005). Network reachability of real-world contact sequences.
+<em>Physical Review E</em>, 71(4), 046119.</p>
+<p>Holme, P., &amp; Saramaki, J. (2012). Temporal networks. <em>Physics Reports</em>,
+519(3), 97-125.</p>
     </div>
 
     <div class="section level2">

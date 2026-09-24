@@ -1,7 +1,7 @@
 # Add directed temporal arcs
 
 The same operation as
-[`add_ties()`](https://mohsaqr.github.io/Dynet/reference/add_ties.md),
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md),
 with one extra guarantee: the network must already be directed, so
 `from` and `to` keep the direction the caller means. Adding an arc to an
 undirected network raises a condition of class `dynet_needs_directed`
@@ -18,7 +18,7 @@ add_arcs(dn, data, loops = FALSE)
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - data:
 
@@ -28,7 +28,8 @@ add_arcs(dn, data, loops = FALSE)
 
 - loops:
 
-  Whether added self-loops are permitted.
+  Whether added self-loops are permitted. `FALSE`, the default, raises a
+  condition of class `dynet_loop_not_allowed`.
 
 ## Value
 
@@ -37,7 +38,7 @@ structure as the input.
 
 ## See also
 
-[`add_ties()`](https://mohsaqr.github.io/Dynet/reference/add_ties.md),
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md),
 which does not require a directed network.
 
 ## Examples

@@ -20,7 +20,7 @@ study's *Evaluation* and *Acceptance* merged into *Approving*.
 A reply carrying two codes that both map to one label yields two
 identical rows; the study counted such repeats as weight, and they are
 kept as rows. A code answering itself is a self-link (9,452 rows);
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) drops
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) drops
 these unless `loops = TRUE`. The `course` column is recognised as the
 session column, so the five courses become sessions unless `session = `
 says otherwise.
@@ -37,33 +37,34 @@ A `data.frame` with 23,017 rows and 7 columns:
 
 - from:
 
-  Code of the replying message, one of `Approving`, `Arguing`,
-  `Coordinating`, `Drafting`, `Inquiring`, `Objecting`, `Resourcing`,
-  `Socialising`, `Tutoring`.
+  Character. Code of the replying message, one of the nine codes
+  `Approving`, `Arguing`, `Coordinating`, `Drafting`, `Inquiring`,
+  `Objecting`, `Resourcing`, `Socialising`, `Tutoring`.
 
 - to:
 
-  Code of the message replied to, same set.
+  Character. Code of the message replied to, same set.
 
 - time:
 
-  `POSIXct` (UTC) time of the replying message, shifted by whole weeks.
+  `POSIXct` (UTC) time of the replying message, shifted by whole weeks;
+  2006-09-23 to 2011-11-02 after the shift.
 
 - participant:
 
-  Anonymous author label, `P001` to `P240`.
+  Character. Anonymous author label, `P001` to `P240`.
 
 - discussion:
 
-  Integer discussion (thread) id, 1 to 1169.
+  Integer discussion (thread) id, 1 to 1169, all present.
 
 - group:
 
-  Course group, `A_01` style; 29 groups.
+  Character. Course group, `A_01` style; 29 groups.
 
 - course:
 
-  Course, `A` to `E`.
+  Character. Course, `A` to `E`.
 
 ## Source
 
@@ -75,7 +76,7 @@ and is not run at build time.
 
 ``` r
 dynet(thought_chains, time = "time", loops = TRUE)
-#> Keeping 9452 self-loop event(s); they are excluded from degree.
+#> Keeping 9452 self-loop event(s); each adds two to its vertex's degree.
 #> # Temporal network (contact format, directed) | a cograph netobject
 #> # 9 vertices | 23017 edge spells | 80 distinct pairs
 #> # observed from 0 to 1865.447 days, binned every 1

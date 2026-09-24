@@ -25,20 +25,25 @@ snapshots(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - at:
 
-  Optional numeric time, narrowing the result to the bins that cover it.
-  With the default disjoint tiling that is one bin; with an overlapping
-  `window` every bin containing the time is returned. A time outside
-  every bin falls back to the nearest bin rather than an empty result,
-  so `at` never returns zero rows on a nonempty network.
+  Optional single time, narrowing the result to the bins that cover it.
+  A network built from dates may be addressed with a date. With the
+  default disjoint tiling that is one bin; with an overlapping `window`
+  every bin containing the time is returned. A time outside every bin
+  falls back to the nearest bin rather than failing, but that bin may
+  itself hold no active tie, in which case the result is a zero-row
+  frame with the documented columns.
 
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
+  needs a network built with a session column and raises
+  `dynet_no_sessions` otherwise.
 
 - sample:
 
@@ -92,11 +97,22 @@ ties each bin holds, and
 the plain table. A pair joined by more than one spell in the same bin is
 one edge, with `n_spells` recording how many spells were collapsed – so
 the edge counts here agree with those from
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md).
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md).
 Eligible isolates have no synthetic edge row; use
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
-or [`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+or [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 when the eligible population itself is required.
+
+## Conditions
+
+Errors: `dynet_no_sessions` (`sessions = "separate"` without a session
+column), `dynet_outside_observation` (the requested range misses
+observed support; it also carries `dynet_bad_input`), and
+`dynet_bad_input` for every other broken contract – `dn` not a `dynet`,
+an `at`, `start` or `end` that is not a single finite time, and an
+out-of-range `step` or `window`.
+
+Warning: `dynet_deprecated` for the retired `sample` argument.
 
 ## Examples
 

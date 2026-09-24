@@ -26,30 +26,41 @@ metrics(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - measure:
 
-  One or more of `"density"`, `"edges"`, `"active_nodes"`, `"isolates"`,
-  `"transitivity"`, `"reciprocity"`, `"components"`,
-  `"components_strong"`, `"largest_component"`, `"mean_distance"`,
-  `"diameter"`, `"mutual"`, `"asymmetric"`, `"null"`, `"assortativity"`,
+  One or more measure names, `"density"` by default: `"density"`,
+  `"edges"`, `"active_nodes"`, `"isolates"`, `"transitivity"`,
+  `"reciprocity"`, `"components"`, `"components_strong"`,
+  `"largest_component"`, `"mean_distance"`, `"diameter"`, `"mutual"`,
+  `"asymmetric"`, `"null"`, `"assortativity"`,
   `"centralization_degree"`, `"centralization_betweenness"`,
   `"centralization_closeness"`, `"triads"`, `"connectedness"`,
   `"efficiency"`, `"hierarchy"`, `"lubness"`. `"triads"` expands to the
-  sixteen triad classes; the last four are Krackhardt's indices of
-  hierarchy. Lightweight structural summaries are `"degree_mean"`,
-  `"degree_variance"`, `"degree_min"`, `"degree_max"`, `"mean_degree"`,
-  `"indegree_1_5"`, `"outdegree_1_5"`, `"triangles"`,
+  sixteen triad classes; those four are Krackhardt's indices of how far
+  a directed network departs from a pure out-tree, only one of which is
+  hierarchy itself. Lightweight structural summaries are
+  `"degree_mean"`, `"degree_variance"`, `"degree_min"`, `"degree_max"`,
+  `"mean_degree"`, `"indegree_1_5"`, `"outdegree_1_5"`, `"triangles"`,
   `"concurrent_nodes"`, `"concurrent_share"`, `"in_2stars"`,
   `"out_2stars"`, and `"two_paths"`. Exact window-integrated quantities
   are `"temporal_density"`, `"observed_pair_density"`,
-  `"onset_intensity"`, and `"observed_pair_onset_intensity"`.
+  `"onset_intensity"`, and `"observed_pair_onset_intensity"`. Any other
+  name raises an error of class `dynet_unknown_measure`. Eight of these
+  read direction and need a directed network, raising
+  `dynet_needs_directed` on an undirected one: `"reciprocity"`,
+  `"mutual"`, `"asymmetric"`, `"null"`, `"in_2stars"`, `"out_2stars"`,
+  `"indegree_1_5"` and `"outdegree_1_5"`.
 
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  `"bounded"` (the default) keeps each session apart while pooling the
+  reported rows, `"collapse"` ignores session labels, and `"separate"`
+  reports each session on its own rows and needs a network built with a
+  session column, raising `dynet_no_sessions` otherwise.
 
 - sample:
 
@@ -91,7 +102,14 @@ metrics(
 ## Value
 
 A `dynet_metric` at graph level: one row per time point and measure,
-with columns `session` (when present), `time`, `measure` and `value`.
+with columns `session` (only under `sessions = "separate"`, the one mode
+that keeps session labels apart), `time`, `measure` and `value`.
+`"triads"` contributes sixteen rows per time point, whose `measure`
+entries are `triad_003`, `triad_012`, ..., `triad_300`. Print it,
+[`summary()`](https://rdrr.io/r/base/summary.html) it,
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) it, or take the
+plain frame with
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html).
 
 ## Details
 
@@ -133,7 +151,7 @@ without giving up daily resolution. They match `time.interval` and
 [`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html).
 
 When vertex activity was declared in
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md), every
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md), every
 measure is computed on the endpoint-induced eligible vertex set for the
 window. Positive windows independently use the any-time vertex and edge
 unions before induction; `window = 0` evaluates the exact state. Density
@@ -183,6 +201,20 @@ sum `choose(degree, 2)` over directed in- and out-degrees. Directed
 undirected two-paths count each unordered wedge once. Empty eligible
 snapshots return zero for all selectors.
 
+## Conditions
+
+Errors: `dynet_unknown_measure` (a name outside the forty above),
+`dynet_needs_directed` (one of the eight direction-reading selectors on
+an undirected network), `dynet_no_sessions` (`sessions = "separate"`
+without a session column), `dynet_outside_observation` (the requested
+range misses observed support; it also carries `dynet_bad_input`), and
+`dynet_bad_input` for every other broken contract – `dn` not a `dynet`,
+a non-character `measure`, an empty `measure`, an out-of-range `start`,
+`end`, `step` or `window`, `end` before `start`, and `step` combined
+with `window = "all"`.
+
+Warning: `dynet_deprecated` for the retired `sample` argument.
+
 ## References
 
 Freeman, L. C. (1979). Centrality in social networks: conceptual
@@ -211,6 +243,17 @@ counting processes: a large sample study. *Annals of Statistics*, 10,
 Krackhardt, D. (1994). Graph theoretical dimensions of informal
 organizations. In *Computational Organization Theory* (pp. 89-111).
 Lawrence Erlbaum.
+
+Newman, M. E. J. (2002). Assortative mixing in networks. *Physical
+Review Letters*, 89, 208701.
+[doi:10.1103/PhysRevLett.89.208701](https://doi.org/10.1103/PhysRevLett.89.208701)
+
+Holland, P. W., & Leinhardt, S. (1976). Local structure in social
+networks. *Sociological Methodology*, 7, 1-45.
+[doi:10.2307/270703](https://doi.org/10.2307/270703)
+
+Wasserman, S., & Faust, K. (1994). *Social Network Analysis: Methods and
+Applications*. Cambridge University Press.
 
 ## Examples
 

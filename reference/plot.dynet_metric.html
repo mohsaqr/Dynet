@@ -11,7 +11,7 @@ carried by colour and line type together, never by colour alone."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,8 +22,11 @@ carried by colour and line type together, never by colour alone."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -72,17 +75,22 @@ carried by colour and line type together, never by colour alone.</p>
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
 <dd><p><code>"line"</code> for trajectories over time, <code>"heatmap"</code> for a
-vertex-by-time tile plot, <code>"ridge"</code> for small multiples per measure.</p></dd>
+vertex-by-time tile plot, <code>"ridge"</code> for small multiples per measure.
+Ignored for a measure with no time axis.</p></dd>
 
 
 <dt id="arg-highlight">highlight<a class="anchor" aria-label="anchor" href="#arg-highlight"></a></dt>
 <dd><p>Optional character vector of vertex names to draw in
 colour, with everything else in grey. Useful when there are many
-vertices.</p></dd>
+vertices. Ignored for a measure with no time axis.</p></dd>
 
 
 <dt id="arg-top">top<a class="anchor" aria-label="anchor" href="#arg-top"></a></dt>
-<dd><p>Draw only the <code>top</code> vertices by mean value. <code>NULL</code> draws all.</p></dd>
+<dd><p>How many rows to draw. For a measure taken over time, the <code>top</code>
+vertices with the largest mean value; <code>NULL</code>, the default, draws every
+vertex. For a measure with no time axis, the <code>top</code> rows with the largest
+absolute value, defaulting to <code>30</code>, with a subtitle naming how many of
+how many are shown.</p></dd>
 
 
 <dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
@@ -100,7 +108,15 @@ vertices.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>ggplot</code> object.</p>
+    <p>A <code>ggplot</code> object. Drawing happens when that object is printed, so
+the plot is the return value here rather than a side effect.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A measure with no time axis, such as reachability or <code><a href="durations.html">durations()</a></code>, has no
+trajectory to draw and is shown as a bar panel instead, one bar per vertex
+or pair and one facet per measure. <code>type</code> and <code>highlight</code> have nothing to
+act on there and are ignored.</p>
     </div>
 
     <div class="section level2">

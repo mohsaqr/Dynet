@@ -47,7 +47,7 @@ otherwise."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,8 +58,11 @@ otherwise."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -110,28 +113,28 @@ otherwise.</p>
     <div class="section level2">
     <h2 id="format">Format<a class="anchor" aria-label="anchor" href="#format"></a></h2>
     <p>A <code>data.frame</code> with 23,017 rows and 7 columns:</p><dl><dt>from</dt>
-<dd><p>Code of the replying message, one of <code>Approving</code>, <code>Arguing</code>,
-<code>Coordinating</code>, <code>Drafting</code>, <code>Inquiring</code>, <code>Objecting</code>, <code>Resourcing</code>,
-<code>Socialising</code>, <code>Tutoring</code>.</p></dd>
+<dd><p>Character. Code of the replying message, one of the nine
+codes <code>Approving</code>, <code>Arguing</code>, <code>Coordinating</code>, <code>Drafting</code>, <code>Inquiring</code>,
+<code>Objecting</code>, <code>Resourcing</code>, <code>Socialising</code>, <code>Tutoring</code>.</p></dd>
 
 <dt>to</dt>
-<dd><p>Code of the message replied to, same set.</p></dd>
+<dd><p>Character. Code of the message replied to, same set.</p></dd>
 
 <dt>time</dt>
 <dd><p><code>POSIXct</code> (UTC) time of the replying message, shifted by
-whole weeks.</p></dd>
+whole weeks; 2006-09-23 to 2011-11-02 after the shift.</p></dd>
 
 <dt>participant</dt>
-<dd><p>Anonymous author label, <code>P001</code> to <code>P240</code>.</p></dd>
+<dd><p>Character. Anonymous author label, <code>P001</code> to <code>P240</code>.</p></dd>
 
 <dt>discussion</dt>
-<dd><p>Integer discussion (thread) id, 1 to 1169.</p></dd>
+<dd><p>Integer discussion (thread) id, 1 to 1169, all present.</p></dd>
 
 <dt>group</dt>
-<dd><p>Course group, <code>A_01</code> style; 29 groups.</p></dd>
+<dd><p>Character. Course group, <code>A_01</code> style; 29 groups.</p></dd>
 
 <dt>course</dt>
-<dd><p>Course, <code>A</code> to <code>E</code>.</p></dd>
+<dd><p>Character. Course, <code>A</code> to <code>E</code>.</p></dd>
 
 
 </dl></div>
@@ -145,7 +148,7 @@ files and is not run at build time.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">thought_chains</span>, time <span class="op">=</span> <span class="st">"time"</span>, loops <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Keeping 9452 self-loop event(s); they are excluded from degree.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Keeping 9452 self-loop event(s); each adds two to its vertex's degree.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Temporal network (contact format, directed) | a cograph netobject</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 9 vertices | 23017 edge spells | 80 distinct pairs</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # observed from 0 to 1865.447 days, binned every 1</span>

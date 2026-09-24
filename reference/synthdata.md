@@ -25,15 +25,19 @@ A `data.frame` with 101 rows and 5 columns:
 
 - start:
 
-  Numeric. When the spell opens.
+  Numeric. When the spell opens, 0 to 2.10.
 
 - end:
 
-  Numeric. When it closes.
+  Numeric. When it closes, 0.03 to 5.80.
 
 - weight:
 
-  Integer. Message pairs the spell represents.
+  Numeric, whole-valued. Message pairs the spell represents, 1 to 5881.
+
+The ten codes are `Acceptance`, `Argument`, `Composing`, `Disagreement`,
+`Evaluation`, `Group_regulation`, `Question`, `Sharing`,
+`Socioemotional` and `T.Regulation`; 14 rows are self-loops.
 
 ## Source
 
@@ -60,7 +64,7 @@ and common transition. Build with `loops = TRUE` to keep them; the
 
 ``` r
 dynet(synthdata, directed = TRUE, loops = TRUE, weight = "weight")
-#> Keeping 14 self-loop event(s); they are excluded from degree.
+#> Keeping 14 self-loop event(s); each adds two to its vertex's degree.
 #> # Temporal network (interval format, directed) | a cograph netobject
 #> # 10 vertices | 101 edge spells | 48 distinct pairs
 #> # observed from 0 to 5.800729 step, binned every 1

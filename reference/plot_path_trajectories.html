@@ -4,10 +4,12 @@ trajectory-tree grammar ported from the transitiontrees package: leaves
 stacked in depth-first order, parents centred on their children, and
 branches carried by a cosine smoothstep. Nodes follow that package's
 horizontal phylogram rather than its capsule style – a count-sized filled
-circle with its label set below it. Branch width
-always shows how many optimal routes use a branch; node fill shows the
-chosen measure, and every node also prints its value, so nothing is
-encoded by colour alone.
+circle with its label set below it. Node size and branch width always show
+how many optimal routes use a branch. Every node also prints the value of
+the chosen measure beside its vertex name, so nothing is encoded by
+colour alone: the default frequency view is free to fill each node with its
+vertex's own colour, while the &quot;time&quot; and &quot;predictability&quot; views fill
+from a ramp with a colour bar.
 Forward paths grow away from the queried source. Backward paths are
 flipped so the queried target is the root and possible senders branch away
 from it. A named vertex repeats whenever it is reached under a different
@@ -16,10 +18,12 @@ trajectory-tree grammar ported from the transitiontrees package: leaves
 stacked in depth-first order, parents centred on their children, and
 branches carried by a cosine smoothstep. Nodes follow that package's
 horizontal phylogram rather than its capsule style – a count-sized filled
-circle with its label set below it. Branch width
-always shows how many optimal routes use a branch; node fill shows the
-chosen measure, and every node also prints its value, so nothing is
-encoded by colour alone.
+circle with its label set below it. Node size and branch width always show
+how many optimal routes use a branch. Every node also prints the value of
+the chosen measure beside its vertex name, so nothing is encoded by
+colour alone: the default frequency view is free to fill each node with its
+vertex's own colour, while the &quot;time&quot; and &quot;predictability&quot; views fill
+from a ramp with a colour bar.
 Forward paths grow away from the queried source. Backward paths are
 flipped so the queried target is the root and possible senders branch away
 from it. A named vertex repeats whenever it is reached under a different
@@ -31,7 +35,7 @@ temporal history."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,8 +46,11 @@ temporal history."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -68,10 +75,12 @@ trajectory-tree grammar ported from the <code>transitiontrees</code> package: le
 stacked in depth-first order, parents centred on their children, and
 branches carried by a cosine smoothstep. Nodes follow that package's
 horizontal phylogram rather than its capsule style – a count-sized filled
-circle with its label set below it. Branch width
-always shows how many optimal routes use a branch; node fill shows the
-chosen <code>measure</code>, and every node also prints its value, so nothing is
-encoded by colour alone.</p>
+circle with its label set below it. Node size and branch width always show
+how many optimal routes use a branch. Every node also prints the value of
+the chosen <code>measure</code> beside its vertex name, so nothing is encoded by
+colour alone: the default frequency view is free to fill each node with its
+vertex's own colour, while the <code>"time"</code> and <code>"predictability"</code> views fill
+from a ramp with a colour bar.</p>
 <p>Forward paths grow away from the queried source. Backward paths are
 flipped so the queried target is the root and possible senders branch away
 from it. A named vertex repeats whenever it is reached under a different
@@ -99,10 +108,12 @@ temporal history.</p>
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
-<dd><p>Node fill. <code>"frequency"</code> is the number of optimal routes
-through the branch, <code>"time"</code> is the attained time at the node, and
-<code>"predictability"</code> is the branching fraction of the parent's routes that
-continue along the branch.</p></dd>
+<dd><p>What each node reports, and what fills it. <code>"frequency"</code>,
+the default, is the number of optimal routes through the branch and fills
+by vertex, since node size already carries the count; <code>"time"</code> is the
+attained time at the node and <code>"predictability"</code> the branching fraction
+of the parent's routes that continue along the branch, both filled from a
+ramp.</p></dd>
 
 
 <dt id="arg-orientation">orientation<a class="anchor" aria-label="anchor" href="#arg-orientation"></a></dt>
@@ -112,21 +123,26 @@ number on the x axis; <code>"vertical"</code> grows it top to bottom.</p></dd>
 
 <dt id="arg-min-count">min_count<a class="anchor" aria-label="anchor" href="#arg-min-count"></a></dt>
 <dd><p>Draw only branches used by at least this many optimal
-routes. Ignored when <code>x</code> is already a <code><a href="path_trajectories.html">path_trajectories()</a></code> result.</p></dd>
+routes. Defaults to <code>1</code>, the complete family. Ignored when <code>x</code> is already
+a <code><a href="path_trajectories.html">path_trajectories()</a></code> result.</p></dd>
 
 
 <dt id="arg-base-size">base_size<a class="anchor" aria-label="anchor" href="#arg-base-size"></a></dt>
-<dd><p>Base text size.</p></dd>
+<dd><p>Base text size, as in <code><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">ggplot2::theme_minimal()</a></code>. Defaults
+to eleven.</p></dd>
 
 
 <dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
 <dd><p>Palette for the vertex colours of the frequency view, as in
-<code><a href="plot.dynet.html">plot.dynet()</a></code>.</p></dd>
+<code><a href="plot.dynet.html">plot.dynet()</a></code>. Defaults to <code>"okabe"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>ggplot</code> object.</p>
+    <p>A <code>ggplot</code> object. A tree with no branch to draw raises
+<code>dynet_empty_result</code>; an <code>x</code> that is neither a <code><a href="paths.html">paths()</a></code> nor a
+<code><a href="path_trajectories.html">path_trajectories()</a></code> result, or a <code>base_size</code> that is not one positive
+number, raises <code>dynet_bad_input</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -136,10 +152,10 @@ routes. Ignored when <code>x</code> is already a <code><a href="path_trajectorie
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">plot_path_trajectories</span><span class="op">(</span><span class="va">paths</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">plot_path_trajectories</span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_path_trajectories-1.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span><span class="fu">plot_path_trajectories</span><span class="op">(</span><span class="va">paths</span>, measure <span class="op">=</span> <span class="st">"time"</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">plot_path_trajectories</span><span class="op">(</span><span class="va">routes</span>, measure <span class="op">=</span> <span class="st">"time"</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_path_trajectories-2.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>

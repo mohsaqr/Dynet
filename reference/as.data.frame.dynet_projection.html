@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -71,8 +74,8 @@
 
 
 <dt id="arg-what">what<a class="anchor" aria-label="anchor" href="#arg-what"></a></dt>
-<dd><p><code>"vertices"</code> returns vertex-time states and <code>"edges"</code> returns
-directed within-slice and identity arcs.</p></dd>
+<dd><p><code>"vertices"</code>, the default, returns vertex-time states, and
+<code>"edges"</code> returns directed within-slice and identity arcs.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -89,6 +92,673 @@ and <code>observation</code>, <code>slice</code>, <code>time</code>, <code>start
 and <code>lag</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">projected</span> <span class="op">&lt;-</span> <span class="fu"><a href="projection.html">projection</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">4</span>, window <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">projected</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    state slice time start end closed  node active</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      1     1    0     0   4  FALSE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      2     1    0     0   4  FALSE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3      3     1    0     0   4  FALSE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4      4     1    0     0   4  FALSE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5      5     1    0     0   4  FALSE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6      6     1    0     0   4  FALSE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7      7     1    0     0   4  FALSE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8      8     1    0     0   4  FALSE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9      9     1    0     0   4  FALSE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10    10     1    0     0   4  FALSE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11    11     1    0     0   4  FALSE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12    12     1    0     0   4  FALSE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13    13     1    0     0   4  FALSE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14    14     1    0     0   4  FALSE  Nils   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15    15     2    4     4   8  FALSE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16    16     2    4     4   8  FALSE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17    17     2    4     4   8  FALSE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18    18     2    4     4   8  FALSE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19    19     2    4     4   8  FALSE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20    20     2    4     4   8  FALSE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21    21     2    4     4   8  FALSE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22    22     2    4     4   8  FALSE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23    23     2    4     4   8  FALSE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24    24     2    4     4   8  FALSE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25    25     2    4     4   8  FALSE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26    26     2    4     4   8  FALSE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27    27     2    4     4   8  FALSE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28    28     2    4     4   8  FALSE  Nils   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29    29     3    8     8  12  FALSE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30    30     3    8     8  12  FALSE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31    31     3    8     8  12  FALSE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32    32     3    8     8  12  FALSE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33    33     3    8     8  12  FALSE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34    34     3    8     8  12  FALSE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35    35     3    8     8  12  FALSE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36    36     3    8     8  12  FALSE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37    37     3    8     8  12  FALSE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38    38     3    8     8  12  FALSE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39    39     3    8     8  12  FALSE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40    40     3    8     8  12  FALSE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41    41     3    8     8  12  FALSE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42    42     3    8     8  12  FALSE  Nils   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43    43     4   12    12  16  FALSE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44    44     4   12    12  16  FALSE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45    45     4   12    12  16  FALSE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46    46     4   12    12  16  FALSE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47    47     4   12    12  16  FALSE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48    48     4   12    12  16  FALSE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49    49     4   12    12  16  FALSE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50    50     4   12    12  16  FALSE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51    51     4   12    12  16  FALSE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52    52     4   12    12  16  FALSE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53    53     4   12    12  16  FALSE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54    54     4   12    12  16  FALSE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55    55     4   12    12  16  FALSE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56    56     4   12    12  16  FALSE  Nils   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57    57     5   16    16  20  FALSE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58    58     5   16    16  20  FALSE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59    59     5   16    16  20  FALSE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60    60     5   16    16  20  FALSE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61    61     5   16    16  20  FALSE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62    62     5   16    16  20  FALSE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63    63     5   16    16  20  FALSE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64    64     5   16    16  20  FALSE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65    65     5   16    16  20  FALSE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66    66     5   16    16  20  FALSE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67    67     5   16    16  20  FALSE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68    68     5   16    16  20  FALSE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69    69     5   16    16  20  FALSE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70    70     5   16    16  20  FALSE  Nils   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71    71     6   20    20  24   TRUE   Ana   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 72    72     6   20    20  24   TRUE   Ben   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 73    73     6   20    20  24   TRUE  Cara   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 74    74     6   20    20  24   TRUE   Dan   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 75    75     6   20    20  24   TRUE   Eve   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 76    76     6   20    20  24   TRUE  Finn   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 77    77     6   20    20  24   TRUE  Gita   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 78    78     6   20    20  24   TRUE  Hugo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 79    79     6   20    20  24   TRUE  Iris   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 80    80     6   20    20  24   TRUE Jonas   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 81    81     6   20    20  24   TRUE  Kira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 82    82     6   20    20  24   TRUE   Leo   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 83    83     6   20    20  24   TRUE  Mira   TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 84    84     6   20    20  24   TRUE  Nils   TRUE</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">projected</span>, what <span class="op">=</span> <span class="st">"edges"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     from_state to_state from_node to_node from_slice to_slice from_time to_time</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1            1       10       Ana   Jonas          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2            2        5       Ben     Eve          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3            2       10       Ben   Jonas          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4            3       14      Cara    Nils          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5            4        1       Dan     Ana          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6            4        5       Dan     Eve          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7            4       10       Dan   Jonas          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8            4       12       Dan     Leo          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9            5        8       Eve    Hugo          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10           5        9       Eve    Iris          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11           5       11       Eve    Kira          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12           7        1      Gita     Ana          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13           7       10      Gita   Jonas          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14           8       11      Hugo    Kira          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15           9        3      Iris    Cara          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16           9        6      Iris    Finn          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17           9        7      Iris    Gita          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18          10        4     Jonas     Dan          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19          10       11     Jonas    Kira          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20          10       13     Jonas    Mira          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21          11        2      Kira     Ben          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22          11        5      Kira     Eve          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23          11       12      Kira     Leo          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24          12        6       Leo    Finn          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25          12        9       Leo    Iris          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26          12       13       Leo    Mira          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27          13        5      Mira     Eve          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28          13        6      Mira    Finn          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29          14        5      Nils     Eve          1        1         0       0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30           1       15       Ana     Ana          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31           2       16       Ben     Ben          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32           3       17      Cara    Cara          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33           4       18       Dan     Dan          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34           5       19       Eve     Eve          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35           6       20      Finn    Finn          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36           7       21      Gita    Gita          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37           8       22      Hugo    Hugo          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38           9       23      Iris    Iris          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39          10       24     Jonas   Jonas          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40          11       25      Kira    Kira          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41          12       26       Leo     Leo          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42          13       27      Mira    Mira          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43          14       28      Nils    Nils          1        2         0       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44          15       17       Ana    Cara          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45          15       21       Ana    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46          15       24       Ana   Jonas          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47          15       27       Ana    Mira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48          16       19       Ben     Eve          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49          16       20       Ben    Finn          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50          16       22       Ben    Hugo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51          16       23       Ben    Iris          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52          17       20      Cara    Finn          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53          17       23      Cara    Iris          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54          17       25      Cara    Kira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55          17       26      Cara     Leo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56          17       28      Cara    Nils          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57          18       20       Dan    Finn          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58          18       21       Dan    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59          18       23       Dan    Iris          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60          19       25       Eve    Kira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61          20       17      Finn    Cara          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62          20       25      Finn    Kira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63          20       28      Finn    Nils          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64          21       15      Gita     Ana          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65          21       27      Gita    Mira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66          22       15      Hugo     Ana          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67          22       18      Hugo     Dan          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68          22       19      Hugo     Eve          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69          22       21      Hugo    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70          22       24      Hugo   Jonas          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71          22       25      Hugo    Kira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 72          22       28      Hugo    Nils          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 73          23       16      Iris     Ben          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 74          23       17      Iris    Cara          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 75          23       19      Iris     Eve          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 76          23       26      Iris     Leo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 77          24       15     Jonas     Ana          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 78          24       21     Jonas    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 79          24       25     Jonas    Kira          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 80          25       21      Kira    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 81          25       24      Kira   Jonas          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 82          25       26      Kira     Leo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 83          26       15       Leo     Ana          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 84          26       17       Leo    Cara          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 85          26       20       Leo    Finn          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 86          26       22       Leo    Hugo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 87          26       23       Leo    Iris          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 88          27       15      Mira     Ana          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 89          27       21      Mira    Gita          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 90          27       24      Mira   Jonas          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 91          28       16      Nils     Ben          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 92          28       19      Nils     Eve          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 93          28       22      Nils    Hugo          2        2         4       4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 94          15       29       Ana     Ana          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 95          16       30       Ben     Ben          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 96          17       31      Cara    Cara          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 97          18       32       Dan     Dan          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 98          19       33       Eve     Eve          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 99          20       34      Finn    Finn          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 100         21       35      Gita    Gita          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 101         22       36      Hugo    Hugo          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 102         23       37      Iris    Iris          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103         24       38     Jonas   Jonas          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 104         25       39      Kira    Kira          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 105         26       40       Leo     Leo          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 106         27       41      Mira    Mira          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 107         28       42      Nils    Nils          2        3         4       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 108         29       35       Ana    Gita          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 109         29       38       Ana   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 110         29       39       Ana    Kira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 111         29       41       Ana    Mira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 112         30       33       Ben     Eve          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 113         30       35       Ben    Gita          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 114         30       36       Ben    Hugo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 115         30       39       Ben    Kira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 116         30       42       Ben    Nils          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 117         31       36      Cara    Hugo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 118         31       37      Cara    Iris          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 119         31       42      Cara    Nils          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 120         32       38       Dan   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 121         33       36       Eve    Hugo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 122         33       38       Eve   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 123         34       31      Finn    Cara          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 124         34       37      Finn    Iris          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 125         34       38      Finn   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 126         34       40      Finn     Leo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 127         35       41      Gita    Mira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 128         35       42      Gita    Nils          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 129         36       32      Hugo     Dan          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 130         36       38      Hugo   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 131         36       42      Hugo    Nils          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 132         37       31      Iris    Cara          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 133         37       40      Iris     Leo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 134         37       41      Iris    Mira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 135         38       29     Jonas     Ana          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 136         38       32     Jonas     Dan          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 137         38       35     Jonas    Gita          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 138         39       30      Kira     Ben          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 139         39       36      Kira    Hugo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 140         39       38      Kira   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 141         39       41      Kira    Mira          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 142         39       42      Kira    Nils          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 143         40       31       Leo    Cara          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 144         40       34       Leo    Finn          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 145         40       37       Leo    Iris          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 146         41       29      Mira     Ana          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 147         41       32      Mira     Dan          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 148         41       35      Mira    Gita          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 149         41       38      Mira   Jonas          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 150         42       29      Nils     Ana          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 151         42       31      Nils    Cara          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 152         42       36      Nils    Hugo          3        3         8       8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 153         29       43       Ana     Ana          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 154         30       44       Ben     Ben          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 155         31       45      Cara    Cara          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 156         32       46       Dan     Dan          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 157         33       47       Eve     Eve          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 158         34       48      Finn    Finn          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 159         35       49      Gita    Gita          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 160         36       50      Hugo    Hugo          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 161         37       51      Iris    Iris          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 162         38       52     Jonas   Jonas          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 163         39       53      Kira    Kira          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 164         40       54       Leo     Leo          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 165         41       55      Mira    Mira          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 166         42       56      Nils    Nils          3        4         8      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 167         43       46       Ana     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 168         43       49       Ana    Gita          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 169         43       51       Ana    Iris          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 170         44       47       Ben     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 171         44       50       Ben    Hugo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 172         44       53       Ben    Kira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 173         44       56       Ben    Nils          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 174         45       46      Cara     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 175         45       47      Cara     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 176         45       48      Cara    Finn          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 177         45       51      Cara    Iris          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 178         45       54      Cara     Leo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 179         46       50       Dan    Hugo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 180         46       52       Dan   Jonas          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 181         46       55       Dan    Mira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 182         47       45       Eve    Cara          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 183         47       50       Eve    Hugo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 184         47       52       Eve   Jonas          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 185         47       56       Eve    Nils          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 186         48       46      Finn     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 187         48       47      Finn     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 188         48       51      Finn    Iris          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 189         48       53      Finn    Kira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 190         48       54      Finn     Leo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 191         48       55      Finn    Mira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 192         49       43      Gita     Ana          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 193         49       46      Gita     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 194         49       52      Gita   Jonas          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 195         49       55      Gita    Mira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 196         50       47      Hugo     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 197         50       53      Hugo    Kira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 198         51       54      Iris     Leo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 199         51       56      Iris    Nils          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 200         52       43     Jonas     Ana          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 201         52       46     Jonas     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 202         52       47     Jonas     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 203         52       49     Jonas    Gita          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 204         52       50     Jonas    Hugo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 205         53       47      Kira     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 206         53       50      Kira    Hugo          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 207         54       45       Leo    Cara          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 208         54       48       Leo    Finn          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 209         55       43      Mira     Ana          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 210         55       46      Mira     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 211         55       49      Mira    Gita          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 212         55       52      Mira   Jonas          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 213         55       53      Mira    Kira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 214         56       44      Nils     Ben          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 215         56       46      Nils     Dan          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 216         56       47      Nils     Eve          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 217         56       53      Nils    Kira          4        4        12      12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 218         43       57       Ana     Ana          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 219         44       58       Ben     Ben          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 220         45       59      Cara    Cara          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 221         46       60       Dan     Dan          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 222         47       61       Eve     Eve          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 223         48       62      Finn    Finn          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 224         49       63      Gita    Gita          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 225         50       64      Hugo    Hugo          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 226         51       65      Iris    Iris          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 227         52       66     Jonas   Jonas          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 228         53       67      Kira    Kira          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 229         54       68       Leo     Leo          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 230         55       69      Mira    Mira          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 231         56       70      Nils    Nils          4        5        12      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 232         57       60       Ana     Dan          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 233         58       64       Ben    Hugo          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 234         59       57      Cara     Ana          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 235         59       58      Cara     Ben          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 236         59       62      Cara    Finn          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 237         59       68      Cara     Leo          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 238         60       63       Dan    Gita          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 239         60       66       Dan   Jonas          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 240         62       67      Finn    Kira          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 241         62       69      Finn    Mira          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 242         63       66      Gita   Jonas          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 243         63       69      Gita    Mira          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 244         64       57      Hugo     Ana          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 245         64       67      Hugo    Kira          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 246         65       58      Iris     Ben          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 247         65       61      Iris     Eve          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 248         65       62      Iris    Finn          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 249         66       59     Jonas    Cara          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 250         67       58      Kira     Ben          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 251         67       64      Kira    Hugo          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 252         67       70      Kira    Nils          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 253         69       58      Mira     Ben          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 254         69       60      Mira     Dan          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 255         70       67      Nils    Kira          5        5        16      16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 256         57       71       Ana     Ana          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 257         58       72       Ben     Ben          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 258         59       73      Cara    Cara          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 259         60       74       Dan     Dan          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 260         61       75       Eve     Eve          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 261         62       76      Finn    Finn          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 262         63       77      Gita    Gita          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 263         64       78      Hugo    Hugo          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 264         65       79      Iris    Iris          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 265         66       80     Jonas   Jonas          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 266         67       81      Kira    Kira          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 267         68       82       Leo     Leo          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 268         69       83      Mira    Mira          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 269         70       84      Nils    Nils          5        6        16      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 270         71       74       Ana     Dan          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 271         71       82       Ana     Leo          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 272         73       71      Cara     Ana          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 273         74       71       Dan     Ana          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 274         74       83       Dan    Mira          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 275         74       84       Dan    Nils          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 276         75       72       Eve     Ben          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 277         75       78       Eve    Hugo          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 278         76       73      Finn    Cara          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 279         77       83      Gita    Mira          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 280         78       81      Hugo    Kira          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 281         79       72      Iris     Ben          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 282         80       72     Jonas     Ben          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 283         80       74     Jonas     Dan          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 284         81       78      Kira    Hugo          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 285         84       73      Nils    Cara          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 286         84       81      Nils    Kira          6        6        20      20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        edge_type weight n_spells lag</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 72  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 73  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 74  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 75  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 76  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 77  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 78  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 79  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 80  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 81  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 82  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 83  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 84  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 85  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 86  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 87  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 88  within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 89  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 90  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 91  within_slice      5        5   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 92  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 93  within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 94  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 95  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 96  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 97  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 98  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 99  identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 100 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 101 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 102 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 104 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 105 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 106 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 107 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 108 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 109 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 110 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 111 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 112 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 113 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 114 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 115 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 116 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 117 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 118 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 119 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 120 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 121 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 122 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 123 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 124 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 125 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 126 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 127 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 128 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 129 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 130 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 131 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 132 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 133 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 134 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 135 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 136 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 137 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 138 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 139 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 140 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 141 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 142 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 143 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 144 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 145 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 146 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 147 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 148 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 149 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 150 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 151 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 152 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 153 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 154 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 155 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 156 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 157 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 158 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 159 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 160 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 161 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 162 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 163 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 164 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 165 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 166 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 167 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 168 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 169 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 170 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 171 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 172 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 173 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 174 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 175 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 176 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 177 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 178 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 179 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 180 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 181 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 182 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 183 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 184 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 185 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 186 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 187 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 188 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 189 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 190 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 191 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 192 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 193 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 194 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 195 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 196 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 197 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 198 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 199 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 200 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 201 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 202 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 203 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 204 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 205 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 206 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 207 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 208 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 209 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 210 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 211 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 212 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 213 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 214 within_slice      3        3   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 215 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 216 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 217 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 218 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 219 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 220 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 221 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 222 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 223 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 224 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 225 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 226 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 227 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 228 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 229 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 230 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 231 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 232 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 233 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 234 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 235 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 236 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 237 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 238 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 239 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 240 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 241 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 242 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 243 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 244 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 245 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 246 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 247 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 248 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 249 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 250 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 251 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 252 within_slice      2        2   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 253 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 254 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 255 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 256 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 257 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 258 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 259 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 260 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 261 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 262 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 263 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 264 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 265 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 266 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 267 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 268 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 269 identity_arc      1        0   4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 270 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 271 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 272 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 273 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 274 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 275 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 276 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 277 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 278 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 279 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 280 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 281 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 282 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 283 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 284 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 285 within_slice      1        1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 286 within_slice      1        1   0</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

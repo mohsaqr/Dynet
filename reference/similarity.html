@@ -17,7 +17,7 @@ Coefficients are computed by cograph::layer_similarity()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,8 +28,11 @@ Coefficients are computed by cograph::layer_similarity()."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -85,7 +88,11 @@ quantities in <code><a href="events.html">events()</a></code> only address betwe
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>.</p></dd>
+<dd><p>How to treat sessions when the layers are built:
+<code>"bounded"</code> (the default) and <code>"collapse"</code> differ in whether a session
+wall gates a tie into its bin. Unlike <code><a href="dyn_centrality.html">dyn_centrality()</a></code>, <code>"separate"</code>
+adds no <code>session</code> column here: layers are keyed on time alone, so two
+session-local bins sharing a time are compared as one layer.</p></dd>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
@@ -93,10 +100,16 @@ quantities in <code><a href="events.html">events()</a></code> only address betwe
 range.</p></dd>
 
 
-<dt id="arg-step-window">step, window<a class="anchor" aria-label="anchor" href="#arg-step-window"></a></dt>
-<dd><p>How often to measure and how much time each measurement
-covers. Default to the interval the network was built with. <code>window = "all"</code> is rejected here, because a similarity matrix of one bin against
-itself says nothing.</p></dd>
+<dt id="arg-step">step<a class="anchor" aria-label="anchor" href="#arg-step"></a></dt>
+<dd><p>How often to measure. Defaults to the interval the network was
+built with.</p></dd>
+
+
+<dt id="arg-window">window<a class="anchor" aria-label="anchor" href="#arg-window"></a></dt>
+<dd><p>How much time each measurement covers. Defaults to <code>step</code>.
+<code>window = "all"</code> measures the whole observed period as a single bin and so
+leaves nothing to compare; it raises <code>dynet_empty_result</code>, as does any
+other grid that yields fewer than two bins.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>
@@ -114,7 +127,10 @@ time bins and columns <code>time</code>, <code>other</code>, <code>measure</code
 diagonal is included and is one for every coefficient except
 <code>"hamming"</code>, where identical layers differ in nothing and score zero.
 <code>"pearson"</code> reaches one only to floating-point accuracy, so compare it
-with a tolerance rather than with <code>==</code>.</p>
+with a tolerance rather than with <code>==</code>. The frame is returned invisibly
+when <code>plot = TRUE</code> has drawn the figure.</p>
+<p>The coefficients come from cograph, which is a hard dependency of Dynet;
+a namespace that cannot be loaded raises <code>dynet_needs_cograph</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

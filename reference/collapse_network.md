@@ -24,31 +24,34 @@ collapse_network(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) or
-  [`as_dynet()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) or
+  [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md).
 
 - start, end:
 
-  Collapse bounds. Defaults to the observed range. Positive intervals
-  are clipped to `[start, end)`; genuine points at either bound are
-  retained.
+  Collapse bounds. Default to the observed range. Positive intervals are
+  clipped to `[start, end]`; genuine points at either bound are
+  retained. An `end` before `start` raises a `dynet_bad_input` error.
 
 - weight:
 
-  Edge field used as the cograph weight: `"binary"`, `"union_duration"`,
-  `"total_duration"`, `"duration_fraction"`, `"spell_count"`,
-  `"weight_sum"`, `"weighted_duration"`, or `"latest_weight"`.
+  Edge field used as the cograph weight: `"binary"` (the default),
+  `"union_duration"`, `"total_duration"`, `"duration_fraction"`,
+  `"spell_count"`, `"weight_sum"`, `"weighted_duration"`, or
+  `"latest_weight"`. Every field is present in the edge table whichever
+  one is chosen; this names only the one cograph draws with.
 
 - sessions:
 
-  Session handling. `"collapse"` erases session labels, `"bounded"`
-  respects session-specific endpoint activity before pooling, and
-  `"separate"` returns one collapsed cograph network per session.
+  Session handling. `"bounded"`, the default, respects session-specific
+  endpoint activity before pooling, `"collapse"` erases session labels,
+  and `"separate"` returns one collapsed cograph network per session.
 
 - censored:
 
   Whether raw edge and vertex identities carrying an explicit censor
-  flag are included.
+  flag are `"include"`d, the default, or `"exclude"`d. Exclusion drops
+  the whole raw identity, never one observed fragment alone.
 
 ## Value
 
@@ -70,9 +73,10 @@ terminus), and the `activity.duration` and `activity.count` aliases for
 compatibility with
 [`networkDynamic::network.collapse()`](https://rdrr.io/pkg/networkDynamic/man/network.collapse.html).
 
-The node table carries one row per vertex, with `name`,
-`activity_duration` (time the vertex was active, overlaps counted once)
-and its `activity.duration` alias.
+The node table carries one row per vertex, with `name`, any static
+vertex attributes the network was built with, `activity_duration` (time
+the vertex was active, overlaps counted once) and its
+`activity.duration` alias.
 
 ## Examples
 

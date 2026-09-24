@@ -21,14 +21,14 @@ summary(object, ...)
 
 ## Value
 
-A plain `data.frame`, one row per depth: `depth`, the number of distinct
-`branches` reaching it, the `vertices` they land on, the summed `count`
-of routes through it, and `mean_branching`, the average branching
-fraction of those routes. Note `probability` in the underlying table is
-CONDITIONAL on each parent, so it is averaged rather than summed: adding
-conditional fractions across siblings would not be a probability at all.
-Depth zero is the queried vertex itself and has no parent, so its
-`mean_branching` is `NA`.
+A plain `data.frame`, one row per depth in increasing order: `depth`,
+the number of distinct `branches` reaching it, the number of distinct
+`vertices` they land on, the summed `count` of routes through it, and
+`mean_branching`, the average branching fraction of those routes. Note
+`probability` in the underlying table is CONDITIONAL on each parent, so
+it is averaged rather than summed: adding conditional fractions across
+siblings would not be a probability at all. Depth zero is the queried
+vertex itself and has no parent, so its `mean_branching` is `NA`.
 
 ## Examples
 

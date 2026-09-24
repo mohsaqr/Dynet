@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -71,9 +74,9 @@
 
 
 <dt id="arg-what">what<a class="anchor" aria-label="anchor" href="#arg-what"></a></dt>
-<dd><p><code>"paths"</code> for the endpoint summary or <code>"steps"</code> for the tidy
-reconstructed optimal routes. The latter includes endpoint-local
-<code>path_id</code> values for tied contact sequences.</p></dd>
+<dd><p><code>"paths"</code>, the default, for the endpoint summary, or <code>"steps"</code>
+for the tidy reconstructed optimal routes. The latter includes
+endpoint-local <code>path_id</code> values for tied contact sequences.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -95,6 +98,96 @@ source), <code>node</code> (the vertex occupied at that step), <code>time</code>
 reached) and <code>attained</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">reach</span> <span class="op">&lt;-</span> <span class="fu"><a href="paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">reach</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     node reachable arrival_time attained latency n_hops n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    Ana      TRUE         0.00     TRUE    0.00      0       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    Ben      TRUE         9.59     TRUE    9.59      3       3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   Cara      TRUE         6.67     TRUE    6.67      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    Dan      TRUE         7.98     TRUE    7.98      4       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5    Eve      TRUE        11.66     TRUE   11.66      4       3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   Finn      TRUE         6.96     TRUE    6.96      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   Gita      TRUE         6.36     TRUE    6.36      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   Hugo      TRUE         7.98     TRUE    7.98      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   Iris      TRUE        10.00     TRUE   10.00      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 Jonas      TRUE         2.12     TRUE    2.12      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  Kira      TRUE         6.12     TRUE    6.12      2       2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12   Leo      TRUE         9.65     TRUE    9.65      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  Mira      TRUE         6.36     TRUE    6.36      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  Nils      TRUE         7.51     TRUE    7.51      2       1</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">reach</span>, what <span class="op">=</span> <span class="st">"steps"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    endpoint path_id path_session step  node  time attained</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1       Ana       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2       Ben       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3       Ben       1         &lt;NA&gt;    1 Jonas  2.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4       Ben       1         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5       Ben       1         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6       Ben       2         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7       Ben       2         &lt;NA&gt;    1 Jonas  3.43     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8       Ben       2         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9       Ben       2         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10      Ben       3         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11      Ben       3         &lt;NA&gt;    1 Jonas  6.68     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12      Ben       3         &lt;NA&gt;    2  Kira  6.68     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13      Ben       3         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14     Cara       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15     Cara       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16      Dan       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17      Dan       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18      Dan       1         &lt;NA&gt;    2  Nils  7.51     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19      Dan       1         &lt;NA&gt;    3  Hugo  7.98     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20      Dan       1         &lt;NA&gt;    4   Dan  7.98     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21      Eve       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22      Eve       1         &lt;NA&gt;    1 Jonas  2.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23      Eve       1         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24      Eve       1         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25      Eve       1         &lt;NA&gt;    4   Eve 11.66     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26      Eve       2         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27      Eve       2         &lt;NA&gt;    1 Jonas  3.43     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28      Eve       2         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29      Eve       2         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30      Eve       2         &lt;NA&gt;    4   Eve 11.66     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31      Eve       3         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32      Eve       3         &lt;NA&gt;    1 Jonas  6.68     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33      Eve       3         &lt;NA&gt;    2  Kira  6.68     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34      Eve       3         &lt;NA&gt;    3   Ben  9.59     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35      Eve       3         &lt;NA&gt;    4   Eve 11.66     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36     Finn       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37     Finn       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38     Finn       1         &lt;NA&gt;    2  Finn  6.96     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39     Gita       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40     Gita       1         &lt;NA&gt;    1  Mira  6.36     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41     Gita       1         &lt;NA&gt;    2  Gita  6.36     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42     Hugo       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43     Hugo       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44     Hugo       1         &lt;NA&gt;    2  Nils  7.51     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45     Hugo       1         &lt;NA&gt;    3  Hugo  7.98     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46     Iris       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47     Iris       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48     Iris       1         &lt;NA&gt;    2  Finn  6.96     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49     Iris       1         &lt;NA&gt;    3  Iris 10.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50    Jonas       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51    Jonas       1         &lt;NA&gt;    1 Jonas  2.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52     Kira       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53     Kira       1         &lt;NA&gt;    1 Jonas  2.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54     Kira       1         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55     Kira       2         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56     Kira       2         &lt;NA&gt;    1 Jonas  3.43     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57     Kira       2         &lt;NA&gt;    2  Kira  6.12     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58      Leo       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59      Leo       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60      Leo       1         &lt;NA&gt;    2  Finn  6.96     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61      Leo       1         &lt;NA&gt;    3   Leo  9.65     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62     Mira       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63     Mira       1         &lt;NA&gt;    1  Mira  6.36     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64     Nils       1         &lt;NA&gt;    0   Ana  0.00     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65     Nils       1         &lt;NA&gt;    1  Cara  6.67     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66     Nils       1         &lt;NA&gt;    2  Nils  7.51     TRUE</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

@@ -19,7 +19,7 @@ head(x, n = 6L, ...)
 
 - n:
 
-  Number of rows to keep.
+  Number of rows to keep. Defaults to six.
 
 - ...:
 
@@ -29,3 +29,21 @@ head(x, n = 6L, ...)
 
 A `dynet_metric` with at most `n` rows, carrying the source counts so
 its header stays true to the series.
+
+## Examples
+
+``` r
+dn <- dynet(school_contacts)
+degree <- dyn_centrality(dn, step = 4, window = 4)
+head(degree)
+#> # Degree (node-level)
+#> # 14 vertices | 6 time points, 4 per bin | time in step
+#> # first 6 of 84 rows
+#>  time node measure value
+#>     0  Ana  degree     3
+#>     0  Ben  degree     3
+#>     0 Cara  degree     2
+#>     0  Dan  degree     5
+#>     0  Eve  degree     8
+#>     0 Finn  degree     3
+```

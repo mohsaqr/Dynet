@@ -47,7 +47,7 @@ dn
 #> # 234 more spells. summary() describes the network; plot() draws it.
 ```
 
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) inferred
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) inferred
 the format from the column names it found.
 [`summary()`](https://rdrr.io/r/base/summary.html) describes what it
 built.
@@ -55,22 +55,22 @@ built.
 ``` r
 
 summary(dn)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0829
-#> 13      temporal density   0.0285
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0829
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Fourteen pupils, 240 contact spells over 110 distinct pairs, observed
@@ -145,7 +145,7 @@ for it, not by slicing what it returned.
 ## What a snapshot cannot see
 
 Start with the graph-level view.
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 computes a structural measure once per time bin.
 
 ``` r
@@ -188,7 +188,7 @@ instead.
 
 A time-respecting path may only use edges whose timing runs forward. It
 can wait at a vertex, but it can never travel back in time.
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) follows
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) follows
 every such path out of one named vertex.
 
 ``` r
@@ -291,8 +291,8 @@ summary(into_ana)
 #> 4 reachable share        1
 #> 5  median latency     4.27
 #> 6     max latency      8.9
-#> 7     median hops       NA
-#> 8        max hops       NA
+#> 7     median hops        2
+#> 8        max hops        3
 ```
 
 ## Seeing the journeys
@@ -322,7 +322,7 @@ pupils and not three different places in the graph — they are the same
 vertex entered at 2.12, at 3.43 and at 6.68. Each entry time leaves a
 different set of onward contacts still in the future, so each one is
 genuinely a different starting point for the rest of the journey. That
-is why [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md)
+is why [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md)
 reported `n_paths = 3` for Ben earlier: the three optimal routes to Ben
 share the vertex sequence Ana → Jonas → Kira → Ben and differ only in
 when the hops fire. A flattened network would collapse all three into
@@ -345,7 +345,7 @@ routes, and `measure = "predictability"` shades each branch by how
 strongly its parent commits to it.
 
 The tree is data as well as a picture.
-[`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md)
+[`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
 returns it tidily, one row per tree node, with the route as a readable
 string, its `parent`, `depth`, the `count` of routes through it, the
 branching `probability` given its parent, and the bare `vertex` and
@@ -520,7 +520,7 @@ head(bursts)
 ### `durations()` — how long ties actually last
 
 By default
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md)
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
 counts events per pair; `measure = "mean"` gives the average length of a
 spell, and `unit` moves the question from pairs to spells or to vertex
 activity.
@@ -594,29 +594,29 @@ over the term.
 
 ## Where to go next
 
-- [`vignette("building-networks", package = "Dynet")`](https://mohsaqr.github.io/Dynet/articles/building-networks.md)
+- [`vignette("building-networks", package = "Dynet")`](https://pak.dynasite.org/Dynet/articles/building-networks.md)
   — the four log formats in detail, node attributes, observation
   windows, sessions, and the editing verbs
-  ([`add_ties()`](https://mohsaqr.github.io/Dynet/reference/add_ties.md),
-  [`set_observations()`](https://mohsaqr.github.io/Dynet/reference/set_observations.md),
-  [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md)
+  ([`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md),
+  [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md),
+  [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
   and friends).
-- **[`?paths`](https://mohsaqr.github.io/Dynet/reference/paths.md)** and
-  **[`?plot_path_trajectories`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md)**
+- **[`?paths`](https://pak.dynasite.org/Dynet/reference/paths.md)** and
+  **[`?plot_path_trajectories`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)**
   — the full traversal semantics: `traversal_time` for a cost charged
   per hop, session-bounded search, `as.data.frame(x, what = "steps")`
   for the reconstructed routes themselves, and the remaining
   trajectory-tree controls.
-- **[`?dyn_centrality`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)**
+- **[`?dyn_centrality`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)**
   and
-  **[`?metrics`](https://mohsaqr.github.io/Dynet/reference/metrics.md)**
+  **[`?metrics`](https://pak.dynasite.org/Dynet/reference/metrics.md)**
   — the complete measure catalogues. Passing a measure that does not
   exist prints the list of ones that do.
-- [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md),
-  [`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md),
-  [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md)
+- [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md),
+  [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md),
+  [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
   and
-  [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md)
+  [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
   cover two-mode projection, participation shifts, per-bin edge lists
   and static aggregation.
 

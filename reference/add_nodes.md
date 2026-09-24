@@ -13,7 +13,7 @@ add_nodes(dn, data)
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - data:
 
@@ -22,15 +22,17 @@ add_nodes(dn, data)
 
 ## Value
 
-A new `dynet` object with the added nodes represented as implicit
-always-active isolates until ties or vertex activity are supplied.
+A new `dynet` object, of the same class and structure as the input, with
+the added nodes represented as implicit always-active isolates until
+ties or vertex activity are supplied. The input is unchanged.
 
 ## Details
 
 Existing nodes and attributes are unchanged. Missing attribute values
 are filled with typed `NA`. If the source has a cograph grouping, each
-new node must supply its group through `groups` or through the source
-attribute from which that grouping was derived.
+new node must supply its group through a `groups` column in `data` or
+through the source attribute from which that grouping was derived;
+otherwise a condition of class `dynet_missing_group` is raised.
 
 ## Examples
 

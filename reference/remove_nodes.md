@@ -13,7 +13,7 @@ remove_nodes(dn, nodes, cascade = FALSE)
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - nodes:
 
@@ -22,11 +22,15 @@ remove_nodes(dn, nodes, cascade = FALSE)
 - cascade:
 
   Whether to remove every incident temporal tie and vertex activity
-  spell. The safe default rejects nodes that are not isolates.
+  spell. The safe default, `FALSE`, rejects nodes that are not isolates
+  with a condition of class `dynet_node_not_isolate`.
 
 ## Value
 
-A new internally consistent `dynet` object.
+A new internally consistent `dynet` object, of the same class and
+structure as the input, without the named vertices and – under
+`cascade = TRUE` – without their ties and vertex-activity spells. At
+least one temporal tie must remain.
 
 ## Examples
 

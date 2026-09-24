@@ -122,12 +122,13 @@ plot(
 - x:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - type:
 
-  One of `"timeline"`, `"events"`, `"activity"`, `"network"`,
-  `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or `"proximity"`.
+  One of `"timeline"` (the default), `"events"`, `"activity"`,
+  `"network"`, `"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` or
+  `"proximity"`.
 
 - at:
 
@@ -142,7 +143,8 @@ plot(
 
 - top:
 
-  For the timeline, draw only the `top` busiest vertex pairs.
+  For the timeline, draw only the `top` busiest vertex pairs. Defaults
+  to 40.
 
 - step:
 
@@ -156,7 +158,8 @@ plot(
 - omega:
 
   For `"layers"`, the weight on the identity arcs carrying a vertex
-  between adjacent slices, that is, the interlayer coupling.
+  between adjacent slices, that is, the interlayer coupling. One
+  non-negative number, `1` by default.
 
 - bins:
 
@@ -166,51 +169,53 @@ plot(
 
 - link:
 
-  Link glyph for `"events"`: `"hook"` (default), `"arc"`, `"chevron"`,
-  `"wave"` or `"bracket"`.
+  Link glyph for `"events"`: `"hook"` (the default), `"arc"`,
+  `"chevron"`, `"wave"` or `"bracket"`.
 
 - time:
 
-  Time axis for `"events"`. `"bin"` groups onsets into equal windows and
-  keeps duration honest, `"event"` gives one evenly spaced column per
-  distinct onset, `"clock"` uses true positions.
+  Time axis for `"events"`. `"bin"`, the default, groups onsets into
+  equal windows and keeps duration honest, `"event"` gives one evenly
+  spaced column per distinct onset, `"clock"` uses true positions.
 
 - aggregate:
 
   For `"events"`, fold repeat firings of one pair inside one column into
-  a single link. Binning merges distinct onsets, and without this they
-  stack as parallel bows carrying no extra reading.
+  a single link, `TRUE` by default. Binning merges distinct onsets, and
+  without this they stack as parallel bows carrying no extra reading.
 
 - nest:
 
-  For `"events"`, which links are fanned apart. `"pair"` fans only links
-  joining the same two rows in the same column; `"column"` fans every
-  link sharing a column.
+  For `"events"`, which links are fanned apart. `"pair"`, the default,
+  fans only links joining the same two rows in the same column;
+  `"column"` fans every link sharing a column.
 
 - split:
 
   For `"events"`, the share of each link that keeps its source colour
   before switching to its target's, so direction reads without
-  arrowheads.
+  arrowheads. One number between 0 and 1, `0.8` by default.
 
 - blend:
 
   For `"events"`, fade between the two endpoint colours instead of
-  switching at a boundary.
+  switching at a boundary. `FALSE` by default.
 
 - weight:
 
   For `"events"`, scale alpha and width by how often the pair occurs
   across the network, so one-off links recede and habitual ones stand
-  out.
+  out. `TRUE` by default.
 
 - node_size, node_shape, node_fill, node_border_color,
   node_border_width, node_alpha:
 
   Node aesthetics, named as in
   [`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html).
-  `NULL` uses the view's own default. For the node-link views these are
-  forwarded to splot.
+  `NULL` uses the view's own default. They are honoured by the
+  `"network"`, `"snapshots"` and `"events"` views; the `"layers"`,
+  `"heatmap"`, `"stack"` and `"proximity"` views take their renderer's
+  own arguments through `...`.
 
 - edge_color, edge_alpha, edge_width, edge_width_range, edge_style:
 
@@ -233,14 +238,14 @@ plot(
 
 - panels:
 
-  For snapshots, the maximum number of panels to draw. Bins are sampled
-  evenly across the window and the choice is reported.
+  For snapshots, the maximum number of panels to draw, 9 by default.
+  Bins are sampled evenly across the window and the choice is reported.
 
 - measure:
 
   For the proximity view, the node-level measure that line thickness
-  follows. Any measure
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
+  follows, `"degree"` by default. Any measure
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
   accepts at snapshot scope; the temporal-scope-only measures `"reach"`
   and `"reach_count"` are not available here, because the view redraws
   the measure over many short slices.
@@ -253,28 +258,35 @@ plot(
 
 - networks:
 
-  Whether the proximity view draws a network panel per phase.
+  Whether the proximity view draws a network panel per phase, `TRUE` by
+  default.
 
 - events:
 
-  Whether the proximity view marks the times edges formed.
+  Whether the proximity view marks the times edges formed, `TRUE` by
+  default.
 
 - labels:
 
-  Whether vertices are named in place of a legend: at the right-hand end
-  of each line in the proximity view, and beside each node in the
-  `"layers"` and `"stack"` views.
+  Whether vertices are named, `TRUE` by default: beside each node in the
+  `"network"`, `"snapshots"`, `"layers"` and `"stack"` views, and at the
+  right-hand end of each line in the proximity view in place of a
+  legend. The `"timeline"`, `"events"`, `"activity"` and `"heatmap"`
+  views name their axes rather than their vertices and ignore it.
+  `FALSE` is the readable choice for a network of more than a few dozen
+  vertices.
 
 - highlight:
 
   Vertex names to draw in colour in the proximity view, with the rest in
-  grey.
+  grey. `NULL`, the default, colours every vertex.
 
 - slices:
 
   How many times the proximity view measures the network across the
-  window. Smoothness comes from measuring often, never from
-  interpolation. `NULL` measures once per time bin.
+  window, 120 by default. Smoothness comes from measuring often, never
+  from interpolation. `NULL` measures once per time bin, and anything
+  else must be at least two.
 
 - window:
 
@@ -285,9 +297,10 @@ plot(
 
 - flow:
 
-  How much to round the corners of each proximity line. Rounding only
-  ever takes convex combinations of measurements, so it softens the
-  joints without letting the curve overshoot one. `0` leaves them sharp.
+  How many corner-cutting passes round each proximity line, 2 by
+  default. Rounding only ever takes convex combinations of measurements,
+  so it softens the joints without letting the curve overshoot one. `0`
+  leaves them sharp.
 
 - palette:
 
@@ -300,29 +313,61 @@ plot(
 - default_dist:
 
   Distance assumed between vertices with no path between them, in the
-  proximity view.
+  proximity view. `2` by default.
 
 - base_size:
 
-  Base font size for the ggplot views.
+  Base font size for the `"timeline"`, `"events"` and `"activity"`
+  views, 12 by default. The `"heatmap"` view is also a ggplot but is
+  sized by its own renderer.
 
 - style:
 
-  A base-graphics style list from `.dyn_style()`, used by the proximity
-  view.
+  Style constants for the proximity view's base-graphics panel: a list
+  holding `cex`, `grid`, `background`, `grid_color`, `axis_color`,
+  `text_color` and `frame_color`. The default is the package's own.
 
 - ...:
 
-  Passed to
+  Passed to the renderer the chosen view uses:
   [`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)
-  for the network, snapshot and proximity views.
+  for `"network"`, `"snapshots"` and `"proximity"`,
+  [`cograph::plot_mlna()`](https://sonsoles.me/cograph/reference/plot_mlna.html)
+  for `"layers"`,
+  [`cograph::plot_ml_heatmap()`](https://sonsoles.me/cograph/reference/plot_ml_heatmap.html)
+  for `"heatmap"` and
+  [`cograph::plot_temporal()`](https://sonsoles.me/cograph/reference/plot_temporal.html)
+  for `"stack"`. The remaining views take no further drawing arguments,
+  and a name no view can read is an error rather than a silently ignored
+  argument.
 
 ## Value
 
 For `"timeline"`, `"events"`, `"activity"` and `"heatmap"`, a `ggplot`
 object, which prints itself when the call is not assigned. For
 `"network"`, `"snapshots"`, `"layers"`, `"stack"` and `"proximity"`, the
-figure is drawn on the current device and `x` is returned invisibly.
+figure is drawn on the current device and the network is returned
+invisibly – `x` itself, or the windowed network when `start` or `end`
+was given.
+
+## Details
+
+The node-link views set a few of
+[`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)'s
+defaults before handing over: they draw no edge labels and no
+edge-colour legend (`legend_edge_colors = FALSE`, against
+[`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)'s
+own `TRUE`), colour edges a neutral grey, and size nodes and arrowheads
+from the vertex count. Naming any of those through `...` overrides it.
+
+Failures are classed conditions. `dynet_bad_input` covers every
+malformed argument, `dynet_unknown_plot_arg` a name in `...` no view can
+read, `dynet_bad_palette` an unusable `palette`, and
+`dynet_empty_result` a window, an `at` or a `step` that leaves nothing
+to draw. The proximity view adds `dynet_unknown_measure` and
+`dynet_needs_directed`. With cograph absent, the node-link views raise
+`dynet_needs_cograph` and the `"layers"`, `"heatmap"` and `"stack"`
+views `dynet_missing_package`.
 
 ## References
 

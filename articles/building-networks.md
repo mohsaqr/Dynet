@@ -12,7 +12,7 @@ declaring what the clock means, and reading back what you actually built
 before you measure anything.
 
 There is one constructor,
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md). It
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). It
 covers the four shapes relational logs arrive in, and the shape is
 inferred from the arguments you name.
 
@@ -108,22 +108,22 @@ on point contacts, because points occupy no time.
 ``` r
 
 summary(clicks)
-#>                 property    value
-#> 1                 format  contact
-#> 2               directed      yes
-#> 3               vertices       20
-#> 4            edge spells      241
-#> 5         distinct pairs      172
-#> 6              time unit     days
-#> 7          observed from        0
-#> 8            observed to 54.96387
-#> 9                   span 54.96387
-#> 10             bin width        1
-#> 11             time bins       55
-#> 12 mean snapshot density   0.0112
-#> 13      temporal density        0
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format      contact
+#> 2               directed          yes
+#> 3               vertices           20
+#> 4            edge spells          241
+#> 5         distinct pairs          172
+#> 6              time unit         days
+#> 7          observed from            0
+#> 8            observed to     54.96387
+#> 9                   span     54.96387
+#> 10             bin width            1
+#> 11             time bins           55
+#> 12 mean snapshot density       0.0112
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 `temporal density` is `0`, while `mean snapshot density` is not. The
@@ -180,7 +180,7 @@ summary(forum)
 #> 10             bin width                 1
 #> 11             time bins                55
 #> 12 mean snapshot density            0.0248
-#> 13      temporal density            0.0139
+#> 13      temporal density      not computed
 #> 14              sessions              none
 #> 15     vertex attributes role, achievement
 ```
@@ -285,22 +285,22 @@ measure anything.
 ``` r
 
 summary(school)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0829
-#> 13      temporal density   0.0285
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0829
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Row by row:
@@ -382,7 +382,7 @@ head(as.data.frame(school, what = "network"), 4)
 ## Directedness, loops, weights, node attributes
 
 These are all
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md)
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
 arguments. A small hand-written log makes each one visible:
 
 ``` r
@@ -422,7 +422,7 @@ loop means something in your design:
 ``` r
 
 dynet(tiny, loops = TRUE)
-#> Keeping 1 self-loop event(s); they are excluded from degree.
+#> Keeping 1 self-loop event(s); each adds two to its vertex's degree.
 #> # Temporal network (interval format, directed) | a cograph netobject
 #> # 3 vertices | 5 edge spells | 5 distinct pairs
 #> # observed from 0 to 6 step, binned every 1
@@ -443,22 +443,22 @@ the network’s own time unit:
 tiny_dn <- dynet(tiny, interval = 2)
 #> Dropped 1 self-loop event(s). Use loops = TRUE to keep them.
 summary(tiny_dn)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices        3
-#> 4            edge spells        4
-#> 5         distinct pairs        4
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to        5
-#> 9                   span        5
-#> 10             bin width        2
-#> 11             time bins        3
-#> 12 mean snapshot density   0.3333
-#> 13      temporal density   0.2667
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices            3
+#> 4            edge spells            4
+#> 5         distinct pairs            4
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to            5
+#> 9                   span            5
+#> 10             bin width            2
+#> 11             time bins            3
+#> 12 mean snapshot density       0.3333
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Vertex attributes come in through `nodes`. The vertex key column is
@@ -480,7 +480,7 @@ head(as.data.frame(roles, what = "nodes"), 4)
 ```
 
 Those attributes are what
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md)
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
 partitions on:
 
 ``` r
@@ -526,22 +526,22 @@ head(weekly, 3)
 
 sessioned <- dynet(weekly, session = "week")
 summary(sessioned)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0829
-#> 13      temporal density   0.0285
-#> 14              sessions        3
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0829
+#> 13      temporal density not computed
+#> 14              sessions            3
+#> 15     vertex attributes         none
 ```
 
 Every verb that takes time then takes a `sessions` argument with three
@@ -641,22 +641,22 @@ horizon of every path, declare it when you know it.
 
 bounded <- dynet(school_contacts, observation_start = 0, observation_end = 14)
 summary(bounded)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to       14
-#> 9                   span       14
-#> 10             bin width        1
-#> 11             time bins       14
-#> 12 mean snapshot density   0.0922
-#> 13      temporal density   0.0314
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to           14
+#> 9                   span           14
+#> 10             bin width            1
+#> 11             time bins           14
+#> 12 mean snapshot density       0.0922
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 The span is now 14 rather than 21.52, and both densities changed because
@@ -686,22 +686,22 @@ as.data.frame(gapped, what = "observations")
 ``` r
 
 summary(gapped)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to       21
-#> 9                   span       21
-#> 10             bin width        1
-#> 11             time bins       17
-#> 12 mean snapshot density   0.0824
-#> 13      temporal density   0.0278
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to           21
+#> 9                   span           21
+#> 10             bin width            1
+#> 11             time bins           17
+#> 12 mean snapshot density       0.0824
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Seventeen bins, not 21: the grid restarts inside each component and
@@ -711,7 +711,7 @@ the gap are excluded from the denominator instead of quietly inflating
 it.
 
 The same calendar is editable after the fact, and
-[`clear_observations()`](https://mohsaqr.github.io/Dynet/reference/clear_observations.md)
+[`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md)
 puts back the implicit continuous window:
 
 ``` r
@@ -814,9 +814,9 @@ Ana is untouched, at mean degree 2.182 either way. Ben’s mean rises from
 he was actually eligible rather than all twenty-two.
 
 The same declaration is editable.
-[`set_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/set_vertex_spells.md)
+[`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
 replaces the table,
-[`add_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/add_vertex_spells.md)
+[`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md)
 adds to it:
 
 ``` r
@@ -854,22 +854,22 @@ step2 <- add_ties(step1, data.frame(
   from = "Ana", to = "Nova", start = 4, end = 6
 ))
 summary(step2)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       15
-#> 4            edge spells      241
-#> 5         distinct pairs      111
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0723
-#> 13      temporal density   0.0252
-#> 14              sessions     none
-#> 15     vertex attributes     role
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           15
+#> 4            edge spells          241
+#> 5         distinct pairs          111
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0723
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         role
 ```
 
 Fifteen vertices, 241 spells, 111 distinct pairs, and a `role` attribute
@@ -878,22 +878,22 @@ that did not exist a moment ago. The original is untouched:
 ``` r
 
 summary(school)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       14
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0829
-#> 13      temporal density   0.0285
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0829
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Removal addresses a tie by name and time, and renaming takes a named
@@ -902,22 +902,22 @@ vector of old-to-new:
 ``` r
 
 summary(remove_ties(step2, from = "Ana", to = "Nova", start = 4))
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices       15
-#> 4            edge spells      240
-#> 5         distinct pairs      110
-#> 6              time unit     step
-#> 7          observed from        0
-#> 8            observed to    21.52
-#> 9                   span    21.52
-#> 10             bin width        1
-#> 11             time bins       22
-#> 12 mean snapshot density   0.0719
-#> 13      temporal density   0.0247
-#> 14              sessions     none
-#> 15     vertex attributes     role
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           15
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0719
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         role
 ```
 
 ``` r
@@ -929,7 +929,7 @@ tail(as.data.frame(rename_nodes(step2, c(Nova = "Nova B.")), what = "nodes"), 3)
 #> 15 Nova B. exchange
 ```
 
-[`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md)
+[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
 cuts a temporal subgraph by vertex or by an edge-level condition,
 keeping the time structure of what survives:
 
@@ -937,22 +937,22 @@ keeping the time structure of what survives:
 
 five <- induce_subgraph(school, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve"))
 summary(five)
-#>                 property    value
-#> 1                 format interval
-#> 2               directed      yes
-#> 3               vertices        5
-#> 4            edge spells       18
-#> 5         distinct pairs       11
-#> 6              time unit     step
-#> 7          observed from     3.17
-#> 8            observed to    21.33
-#> 9                   span    18.16
-#> 10             bin width        1
-#> 11             time bins       19
-#> 12 mean snapshot density   0.0684
-#> 13      temporal density   0.0193
-#> 14              sessions     none
-#> 15     vertex attributes     none
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices            5
+#> 4            edge spells           18
+#> 5         distinct pairs           11
+#> 6              time unit         step
+#> 7          observed from         3.17
+#> 8            observed to        21.33
+#> 9                   span        18.16
+#> 10             bin width            1
+#> 11             time bins           19
+#> 12 mean snapshot density       0.0684
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
 ```
 
 Note that the observed range narrowed too, from `0`–`21.52` to
@@ -965,7 +965,7 @@ With the network built and its calendar declared, the descriptive verbs
 all follow the same shape — one call, named arguments, a tidy frame
 back.
 
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 measures graph-level structure in each bin. Ask for several at once and
 they arrive stacked with a `measure` column:
 
@@ -1053,7 +1053,7 @@ metrics(school, measure = c("temporal_density", "onset_intensity"),
 #>    21  onset_intensity 0.000000000
 ```
 
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md)
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
 returns the edges themselves rather than a statistic — the network as it
 stood, one row per edge per time point. Give `at` for a single instant,
 or leave it out for the whole grid:
@@ -1071,7 +1071,7 @@ head(at_five, 5)
 #> 5    5 Mira  Ana      1        1
 ```
 
-[`events()`](https://mohsaqr.github.io/Dynet/reference/events.md) counts
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) counts
 what changed rather than what was present: how many ties formed and
 dissolved in each bin.
 
@@ -1092,7 +1092,7 @@ head(changes, 6)
 #>     2 dissolution     6
 ```
 
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md)
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
 summarises how long relationships lasted. `unit` decides what a duration
 belongs to — `"pair"` for a dyad’s whole history, `"spell"` for the raw
 episodes, `"vertex_activity"` and `"vertex_spell"` for vertex presence,
@@ -1149,7 +1149,7 @@ head(node_durations, 4)
 
 Sometimes the last step is a static picture — a figure, a handover to a
 static-network tool, a sanity check.
-[`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md)
+[`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
 flattens any range and returns a cograph network carrying every
 weighting it can compute, so you choose the one you want by name rather
 than recomputing it.

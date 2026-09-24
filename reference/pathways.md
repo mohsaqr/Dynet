@@ -3,9 +3,9 @@
 `pathways()` reports whole journeys rather than per-vertex summaries:
 one row per distinct route, ranked by how many optimal routes follow it.
 It answers "which pathways does this network actually use", where
-[`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md)
+[`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
 answers "where do the routes diverge" and
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) answers
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) answers
 "who is reachable".
 
 ## Usage
@@ -19,13 +19,15 @@ pathways(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FALSE)
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - from:
 
-  Optional source vertex. One name gives the routes leaving that vertex.
-  The default pools every vertex, which is the network-wide question,
-  and adds a `from` column naming each route's source.
+  Optional source vertex. A name gives the routes leaving that vertex,
+  and several names give the routes leaving each of them. The default,
+  `NULL`, pools every vertex, which is the network-wide question, and is
+  the only case that adds a `from` column naming each route's source; a
+  named source is already the first step of every `route` string.
 
 - top:
 
@@ -40,7 +42,7 @@ pathways(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FALSE)
 - ...:
 
   Passed to
-  [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md), so
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md), so
   `start`, `end`, `at`, `direction`, `sessions` and `traversal_time` all
   apply.
 
@@ -61,11 +63,20 @@ pathways(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FALSE)
 An object of class `dynet_pathways`, a data frame with one row per
 distinct route, most frequent first: `route`, the vertex sequence joined
 by arrows; `endpoint`, where it lands; `count`, how many optimal routes
-follow it; `share`, its fraction of the counted total; `n_hops`; and
-`arrival_time`. Pooling over every source adds `from` as the first
-column. Use
+follow it; `share`, its fraction of every counted route, so the shares
+of a result limited by `top` do not sum to one; `n_hops`; and
+`arrival_time`, the earliest time the route lands. Pooling over every
+source adds `from` as the first column. Use
 [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) for a
-plain frame.
+plain frame and `as.data.frame(x, what = "steps")` for the per-hop
+timing of the routes that were kept.
+
+An unknown `from` raises `dynet_unknown_node`; a `top` or `min_hops`
+that is not one finite number in range raises `dynet_bad_input`; and a
+query that leaves no route of at least `min_hops` hops raises
+`dynet_empty_result`. Conditions raised by
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) on the
+arguments passed through `...` reach the caller unchanged.
 
 ## Details
 
@@ -83,9 +94,9 @@ asserts it.
 
 ## See also
 
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) for
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) for
 reachability,
-[`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md)
+[`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
 for the prefix tree those routes share.
 
 ## Examples

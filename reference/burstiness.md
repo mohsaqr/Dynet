@@ -26,17 +26,19 @@ burstiness(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - measure:
 
   One or more of `"burstiness"`, `"memory"`, `"events"` and
-  `"mean_gap"`.
+  `"mean_gap"`. Defaults to the first three. Anything else raises a
+  `dynet_unknown_measure` error.
 
 - sessions:
 
-  How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  How to treat sessions: `"bounded"` (the default), `"collapse"` or
+  `"separate"`, as in
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
 
 - plot:
 

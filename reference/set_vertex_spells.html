@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,17 +60,75 @@
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>A vertex-spell data frame with <code>node</code>, <code>start</code>, and <code>end</code>, plus
-optional <code>session</code>, <code>onset_censored</code>, and <code>terminus_censored</code>. <code>NULL</code>
-clears explicit activity, making every retained node implicitly active.</p></dd>
+optional <code>session</code>, <code>onset_censored</code>, and <code>terminus_censored</code>; or the
+string <code>"ties"</code>, which declares each vertex present from the start of
+its first tie spell to the end of its last, so that a vertex is absent
+before it has had a tie and after it has had its last. Default
+<code>NULL</code>, which clears explicit activity, making every retained node
+implicitly active over observation support.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <code>dynet</code> object. Overlapping or adjacent spells are
-canonicalized exactly as in <code><a href="dynet.html">dynet()</a></code>. Canonical spell identifiers may
-therefore change.</p>
+    <p>A new <code>dynet</code> object, class
+<code>c("dynet", "netobject", "cograph_network")</code>, whose declared vertex
+activity is exactly <code>data</code> and whose edge spells, node attributes and
+metadata are those of <code>dn</code>. Overlapping or adjacent spells are
+canonicalised exactly as in <code><a href="dynet.html">dynet()</a></code>, so canonical spell identifiers may
+change. Read the result back with
+<code>as.data.frame(x, what = "vertex_spells")</code>. Raises <code>dynet_unknown_node</code>
+when <code>data</code> names a vertex the network does not have, and
+<code>dynet_bad_input</code> for a string other than <code>"ties"</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">present</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>node <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span><span class="op">)</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">enrolled</span> <span class="op">&lt;-</span> <span class="fu">set_vertex_spells</span><span class="op">(</span><span class="va">dn</span>, <span class="va">present</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">enrolled</span>, what <span class="op">=</span> <span class="st">"vertex_spells"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   vertex_spell node start end duration instant session onset_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1            1  Ana     0  10       10   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2            2  Ben     0  10       10   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   terminus_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2             FALSE</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Present from the first contact to the last, vertex by vertex.</span></span></span>
+<span class="r-in"><span><span class="va">spanned</span> <span class="op">&lt;-</span> <span class="fu">set_vertex_spells</span><span class="op">(</span><span class="va">dn</span>, <span class="st">"ties"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">spanned</span>, what <span class="op">=</span> <span class="st">"vertex_spells"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    vertex_spell  node start   end duration instant session onset_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1             1   Ana  0.14 21.52    21.38   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2             2   Ben  0.33 20.81    20.48   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3             3  Cara  0.78 20.91    20.13   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4             4   Dan  0.00 21.33    21.33   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5             5   Eve  0.43 21.12    20.69   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6             6  Finn  0.83 20.26    19.43   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7             7  Gita  0.14 20.75    20.61   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8             8  Hugo  0.43 21.38    20.95   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9             9  Iris  0.15 20.41    20.26   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10           10 Jonas  0.00 20.81    20.81   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11           11  Kira  0.33 21.38    21.05   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12           12   Leo  0.15 21.52    21.37   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13           13  Mira  0.15 20.78    20.63   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14           14  Nils  2.07 21.03    18.96   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    terminus_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9              FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14             FALSE</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

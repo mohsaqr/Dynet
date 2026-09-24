@@ -14,11 +14,11 @@ print(x, n = 10L, ...)
 - x:
 
   A `dynet_snapshot` from
-  [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md).
+  [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md).
 
 - n:
 
-  Number of rows to show.
+  Number of rows to show; ten by default.
 
 - ...:
 
@@ -31,7 +31,9 @@ print(x, n = 10L, ...)
 ## Examples
 
 ``` r
-snapshots(dynet(school_contacts), at = 3)
+dn <- dynet(school_contacts)
+bins <- snapshots(dn, at = 3)
+bins
 #> # Snapshot edges | 1 bin | 12 tie rows | time in step
 #>    time from    to weight n_spells
 #> 1     3  Ana Jonas      1        1

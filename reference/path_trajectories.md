@@ -1,7 +1,7 @@
 # Optimal temporal routes as a counted trajectory tree
 
 Turns the optimal route family returned by
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) into a
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) into a
 tidy prefix tree. Every row is one tree node: a route prefix reaching
 `vertex` at `time`, used by `count` optimal routes. A named vertex
 reached through a different temporal history is a separate row, so
@@ -23,7 +23,7 @@ path_trajectories(x, min_count = 1L, plot = FALSE)
 - x:
 
   A result from
-  [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md).
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md).
 
 - min_count:
 
@@ -46,25 +46,37 @@ path_trajectories(x, min_count = 1L, plot = FALSE)
 ## Value
 
 A `dynet_path_trajectories` data frame with one row per tree node and
-columns `node`, `parent`, `depth`, `count`, `probability`, `vertex`,
-`time`, `session` and `branch`. `depth` is the hop number from the
-queried vertex, `probability` is the branching fraction of the parent's
-routes that continue along this branch, and `branch` is the node's
-placement across the tree.
+columns `node` (the route prefix, written as `vertex@time` steps joined
+by arrows), `parent`, `depth`, `count`, `probability`, `vertex`, `time`,
+`session` and `branch`. `depth` is the hop number from the queried
+vertex, `probability` is the branching fraction of the parent's routes
+that continue along this branch and is missing at the root, which has no
+parent, and `branch` is the node's placement across the tree. The
+synthetic `(start)` root is dropped when it has a single child, which is
+the usual case; it is kept when it genuinely branches, as under
+`sessions = "separate"`, where it carries one subtree per session, has
+no `vertex` or `time`, a missing `probability`, and pushes every other
+node one hop deeper.
+
+A result that is not from
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md), or a
+`min_count` that is not one positive whole number, raises
+`dynet_bad_input`; a path result with no route step, or a `min_count` no
+prefix reaches, raises `dynet_empty_result`.
 
 ## See also
 
-[`plot_path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md)
+[`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)
 to draw the tree,
-[`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md)
+[`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md)
 for the route union as a network.
 
 ## Examples
 
 ``` r
 dn <- dynet(school_contacts)
-paths <- paths(dn, from = "Ana")
-path_trajectories(paths)
+routes <- paths(dn, from = "Ana")
+path_trajectories(routes)
 #> # Forward temporal trajectory tree from Ana
 #> # 22 nodes, 4 hops deep, 19 routes
 #>                                                         node

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -67,7 +70,7 @@
 
 
 <dt id="arg-what">what<a class="anchor" aria-label="anchor" href="#arg-what"></a></dt>
-<dd><p><code>"edges"</code> or <code>"nodes"</code>.</p></dd>
+<dd><p><code>"edges"</code>, the default, or <code>"nodes"</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -83,6 +86,44 @@ optimal route, with <code>from</code>, <code>to</code>, <code>weight</code>, <co
 <code><a href="path_network.html">path_network()</a></code> for what each column means.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">union_network</span> <span class="op">&lt;-</span> <span class="fu"><a href="path_network.html">path_network</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">union_network</span>, what <span class="op">=</span> <span class="st">"edges"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     from    to weight first_time last_time n_endpoints</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    Ana  Cara      7       6.67      6.67           7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    Ana Jonas      9       2.12      6.68           4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    Ana  Mira      2       6.36      6.36           2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    Ben   Eve      3      11.66     11.66           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   Cara  Finn      3       6.96      6.96           3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   Cara  Nils      3       7.51      7.51           3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   Finn  Iris      1      10.00     10.00           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   Finn   Leo      1       9.65      9.65           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   Hugo   Dan      1       7.98      7.98           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 Jonas  Kira      8       6.12      6.68           3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  Kira   Ben      6       9.59      9.59           2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  Mira  Gita      1       6.36      6.36           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  Nils  Hugo      2       7.98      7.98           2</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">union_network</span>, what <span class="op">=</span> <span class="st">"nodes"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     name arrival_time latency n_hops n_paths groups</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    Ana         0.00    0.00      0       1      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    Ben         9.59    9.59      3       3      3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   Cara         6.67    6.67      1       1      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    Dan         7.98    7.98      4       1      4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5    Eve        11.66   11.66      4       3      4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   Finn         6.96    6.96      2       1      2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   Gita         6.36    6.36      2       1      2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   Hugo         7.98    7.98      3       1      3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   Iris        10.00   10.00      3       1      3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 Jonas         2.12    2.12      1       1      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  Kira         6.12    6.12      2       2      2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12   Leo         9.65    9.65      3       1      3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  Mira         6.36    6.36      1       1      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  Nils         7.51    7.51      2       1      2</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

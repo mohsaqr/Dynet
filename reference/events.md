@@ -26,25 +26,32 @@ events(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - measure:
 
   One or more of `"formation"` (spells beginning in the bin),
   `"dissolution"` (spells ending in the bin), `"active"` (spells alive
   during the bin), `"new_pairs"` (vertex pairs meeting for the first
-  time), and `"formation_fraction"` (confirmed binary pair formations
-  divided by their exact two-sided inactive risk set), or
+  time), `"formation_fraction"` (confirmed binary pair formations
+  divided by their exact two-sided inactive risk set),
   `"dissolution_fraction"` (confirmed binary pair dissolutions divided
-  by their exact two-sided active risk set), or `"formation_rate"`
+  by their exact two-sided active risk set), `"formation_rate"`
   (confirmed formations divided by exact integrated inactive eligible
-  pair-time), or `"dissolution_rate"` (confirmed dissolutions divided by
-  exact integrated active eligible pair-time).
+  pair-time), and `"dissolution_rate"` (confirmed dissolutions divided
+  by exact integrated active eligible pair-time). Defaults to
+  `c("formation", "dissolution")`. Anything else raises a
+  `dynet_unknown_measure` error. The two fractions need `window = 0`
+  (`dynet_transition_requires_instant` otherwise) and the two rates need
+  a positive window (`dynet_rate_requires_positive_window`), so asking
+  for a fraction and a rate in one call raises
+  `dynet_incompatible_transition_windows`.
 
 - sessions:
 
-  How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  How to treat sessions: `"bounded"` (the default), `"collapse"` or
+  `"separate"`, as in
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
 
 - start, end:
 
@@ -62,9 +69,10 @@ events(
   the period into disjoint bins. A larger value slides an overlapping
   window; `0` samples the network at each point in time. `"all"`
   measures the whole observed period as one window, closed on the right
-  so an event at the final instant is inside it; it cannot be combined
-  with `step`, and under `sessions = "separate"` or discontinuous
-  observation it gives one window per session or observed component.
+  so an event at the final instant is inside it; naming `step` as well
+  raises a `dynet_bad_input` error, and under `sessions = "separate"` or
+  discontinuous observation it gives one window per session or observed
+  component.
 
 - plot:
 
@@ -108,7 +116,7 @@ Duplicate, overlapping, or adjacent raw spells cannot multiply
 pair-state transitions. Observation and vertex boundaries are excluded
 by two-sided eligibility. Onset censoring suppresses confirmation but
 not state; terminus censoring, weights, loops, and point contacts do not
-contribute. Collapse erases labels, bounded authorizes within sessions
+contribute. Collapse erases labels, bounded authorises within sessions
 before unioning each calendar pair, and separate returns session-local
 fractions.
 
@@ -124,34 +132,34 @@ state: one known terminus confirms a disappearance but an all-censored
 disappearance is unconfirmed. Duplicate, overlapping, adjacent, and tied
 rows are unioned; points, loops, weights, onset censoring, and
 administrative observation/activity boundaries do not create
-transitions. Collapse erases labels, bounded unions authorized
+transitions. Collapse erases labels, bounded unions authorised
 session-local states, and separate reports local rows. Positive windows
-are rejected because T04 owns dissolution rates.
+are rejected because `"dissolution_rate"` owns dissolution rates.
 
 Dissolution rate is the active-risk dual over a positive window. Its
-numerator sums confirmed T02 binary pair dissolutions at included
-timestamp batches; its denominator integrates exact eligible active
-nonloop pair-time over observation, vertex, edge, and window change
-cells. Right-censored termini retain state and exposure but do not
-confirm an event, while one known duplicate suffices. Zero active
-exposure returns `NA_real_`; positive exposure without a confirmed
-dissolution is zero. The unit is inverse network time. It is not raw
-terminus intensity, spell-duration sum, or an average of instantaneous
-fractions; positive windows are required and T04 owns this rate.
+numerator sums confirmed binary pair dissolutions at included timestamp
+batches; its denominator integrates exact eligible active nonloop
+pair-time over observation, vertex, edge, and window change cells.
+Right-censored termini retain state and exposure but do not confirm an
+event, while one known duplicate suffices. Zero active exposure returns
+`NA_real_`; positive exposure without a confirmed dissolution is zero.
+The unit is inverse network time. It is not raw terminus intensity,
+spell-duration sum, or an average of instantaneous fractions; positive
+windows are required, and this is the rate `"dissolution_rate"` reports.
 
 Formation rate is the positive-window counterpart. Its numerator sums
-the confirmed T01 binary pair formations at each included timestamp,
-while its denominator integrates exact inactive eligible nonloop
-pair-time over change-point cells cut by the window, observation
-components, vertex activity, and edge state. It is not an average of
-instantaneous fractions, a raw-onset intensity, or an ever-observed-pair
-quantity. Zero exposure returns `NA_real_`; positive exposure with no
-confirmed formation returns zero. The unit is inverse network time and
-scales inversely with positive time scaling. Points have zero exposure,
-onset censoring suppresses only confirmation, and gap/boundary,
-duplicate, overlap, adjacency, loop, weight, and session rules follow
-the exact T01 ledger. `window = 0` is rejected because T01 owns instant
-fractions.
+the confirmed binary pair formations at each included timestamp, while
+its denominator integrates exact inactive eligible nonloop pair-time
+over change-point cells cut by the window, observation components,
+vertex activity, and edge state. It is not an average of instantaneous
+fractions, a raw-onset intensity, or an ever-observed-pair quantity.
+Zero exposure returns `NA_real_`; positive exposure with no confirmed
+formation returns zero. The unit is inverse network time and scales
+inversely with positive time scaling. Points have zero exposure, onset
+censoring suppresses only confirmation, and gap/boundary, duplicate,
+overlap, adjacency, loop, weight, and session rules follow the same
+ledger as `"formation_fraction"`. `window = 0` is rejected because that
+measure owns the instantaneous fractions.
 
 ## References
 

@@ -1,11 +1,10 @@
 # People in the discussion forum
 
 Vertex attributes for
-[forum_posts](https://mohsaqr.github.io/Dynet/reference/forum_posts.md).
-Passed to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) through
-its `nodes` argument, these become available to
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md).
+[forum_posts](https://pak.dynasite.org/Dynet/reference/forum_posts.md).
+Passed to [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+through its `nodes` argument, these become available to
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md).
 
 ## Usage
 
@@ -20,16 +19,21 @@ A `data.frame` with 20 rows and 3 columns:
 - name:
 
   Character. Matches the sender and receiver names in
-  [forum_posts](https://mohsaqr.github.io/Dynet/reference/forum_posts.md).
+  [forum_posts](https://pak.dynasite.org/Dynet/reference/forum_posts.md).
 
 - role:
 
-  Character. `"Student"`, `"Teacher"` or `"Facilitator"`.
+  Character. `"Student"` (16), `"Teacher"` (3) or `"Facilitator"` (1).
 
 - achievement:
 
-  Character. `"High"`, `"Middle"` or `"Low"` for students; `NA` for
-  staff.
+  Character. `"High"`, `"Middle"` or `"Low"` for students; `NA` for the
+  four staff.
+
+## Source
+
+Simulated, not observed. Generated deterministically under a fixed seed
+by `data-raw/make-data.R`.
 
 ## Examples
 

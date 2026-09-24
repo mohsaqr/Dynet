@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,7 +60,8 @@
 
 
 <dt id="arg-row-names-optional">row.names, optional<a class="anchor" aria-label="anchor" href="#arg-row-names-optional"></a></dt>
-<dd><p>Ignored.</p></dd>
+<dd><p>Ignored; present for compatibility with the
+generic.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -66,9 +70,54 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A plain data frame, one row per ordered pair of time bins.</p>
+    <p>A plain <code>data.frame</code>, one row per ordered pair of time bins, with
+columns <code>time</code>, <code>other</code>, <code>measure</code> and <code>value</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">resemblance</span> <span class="op">&lt;-</span> <span class="fu"><a href="similarity.html">similarity</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">4</span>, window <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">resemblance</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    time other measure      value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     0     0 jaccard 1.00000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     0     4 jaccard 0.17910448</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     0     8 jaccard 0.15625000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     0    12 jaccard 0.14285714</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     0    16 jaccard 0.10416667</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     0    20 jaccard 0.09523810</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7     4     0 jaccard 0.17910448</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8     4     4 jaccard 1.00000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9     4     8 jaccard 0.33802817</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10    4    12 jaccard 0.26250000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11    4    16 jaccard 0.15625000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12    4    20 jaccard 0.06349206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13    8     0 jaccard 0.15625000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14    8     4 jaccard 0.33802817</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15    8     8 jaccard 1.00000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16    8    12 jaccard 0.31506849</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17    8    16 jaccard 0.11290323</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18    8    20 jaccard 0.10714286</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19   12     0 jaccard 0.14285714</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20   12     4 jaccard 0.26250000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21   12     8 jaccard 0.31506849</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22   12    12 jaccard 1.00000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23   12    16 jaccard 0.20967742</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24   12    20 jaccard 0.13333333</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25   16     0 jaccard 0.10416667</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26   16     4 jaccard 0.15625000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27   16     8 jaccard 0.11290323</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28   16    12 jaccard 0.20967742</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29   16    16 jaccard 1.00000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30   16    20 jaccard 0.20588235</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31   20     0 jaccard 0.09523810</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32   20     4 jaccard 0.06349206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33   20     8 jaccard 0.10714286</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34   20    12 jaccard 0.13333333</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35   20    16 jaccard 0.20588235</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36   20    20 jaccard 1.00000000</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

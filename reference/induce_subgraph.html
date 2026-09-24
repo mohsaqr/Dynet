@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -61,7 +64,8 @@ table, evaluated the way <code><a href="https://rdrr.io/r/base/subset.html" clas
 <code>room == "A" &amp; betweenness &gt; 0</code> – with any centrality it names computed
 over the whole observed period; or a character vector of names, a factor,
 a logical mask, or any data frame carrying a <code>name</code> or <code>node</code> column. Only
-ties whose two endpoints are in this set are eligible.</p></dd>
+ties whose two endpoints are in this set are eligible. Default <code>NULL</code>,
+meaning every vertex.</p></dd>
 
 
 <dt id="arg-ties">ties<a class="anchor" aria-label="anchor" href="#arg-ties"></a></dt>
@@ -70,17 +74,27 @@ evaluated the way <code><a href="https://rdrr.io/r/base/subset.html" class="exte
 <code>duration &gt; 2 &amp; weight &gt;= 1</code> – over the columns <code>as.data.frame(dn)</code>
 returns, tie attributes included; or integer row positions or a logical
 mask over that same table, in that order, a mask having exactly as many
-elements as there are spells.</p></dd>
+elements as there are spells. Default <code>NULL</code>, meaning every tie. At least
+one of <code>nodes</code> and <code>ties</code> must be supplied.</p></dd>
 
 
 <dt id="arg-keep-isolates">keep_isolates<a class="anchor" aria-label="anchor" href="#arg-keep-isolates"></a></dt>
-<dd><p>Whether named nodes without a selected tie remain.</p></dd>
+<dd><p>Whether named nodes without a selected tie remain.
+Default <code>FALSE</code>; it has an effect only when <code>nodes</code> is supplied.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <code>dynet</code> object with selected ties, nodes, vertex activity, and
-all static attributes retained.</p>
+    <p>A new <code>dynet</code> object, class
+<code>c("dynet", "netobject", "cograph_network")</code>, carrying only the selected
+spells, the vertices they touch (plus any isolate named in <code>nodes</code> when
+<code>keep_isolates = TRUE</code>), those vertices' activity spells, and all static
+node and tie attributes. Metadata is rebuilt, so the observed range and
+the canonical spell identifiers describe the subgraph, not the parent.
+Raises <code>dynet_unknown_node</code> for a name that is not a vertex,
+<code>dynet_empty_network</code> when the selection leaves no vertex or no tie, and
+<code>dynet_bad_input</code> when neither <code>nodes</code> nor <code>ties</code> is supplied or a
+selection is malformed.</p>
     </div>
 
     <div class="section level2">

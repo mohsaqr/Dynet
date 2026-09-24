@@ -12,7 +12,7 @@ before their duration is counted.
 
 ``` r
 # S3 method for class 'dynet'
-summary(object, ...)
+summary(object, temporal_density = FALSE, ...)
 ```
 
 ## Arguments
@@ -20,7 +20,16 @@ summary(object, ...)
 - object:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
+
+- temporal_density:
+
+  Whether to compute the temporal-density row. `FALSE`, the default,
+  reports `"not computed"` for it. The quantity integrates exact
+  occupancy over every eligible ordered pair, so its cost grows with the
+  square of the vertex count: on a 442-vertex forum network it takes
+  about 32 seconds, while every other row in the table is immediate.
+  Pass `TRUE` when the number is wanted.
 
 - ...:
 
@@ -65,6 +74,25 @@ Analysis and Mining*, 8, 61.
 ``` r
 dn <- dynet(school_contacts)
 summary(dn)
+#>                 property        value
+#> 1                 format     interval
+#> 2               directed          yes
+#> 3               vertices           14
+#> 4            edge spells          240
+#> 5         distinct pairs          110
+#> 6              time unit         step
+#> 7          observed from            0
+#> 8            observed to        21.52
+#> 9                   span        21.52
+#> 10             bin width            1
+#> 11             time bins           22
+#> 12 mean snapshot density       0.0829
+#> 13      temporal density not computed
+#> 14              sessions         none
+#> 15     vertex attributes         none
+
+# The temporal density is opt-in, since it is quadratic in the vertex count.
+summary(dn, temporal_density = TRUE)
 #>                 property    value
 #> 1                 format interval
 #> 2               directed      yes

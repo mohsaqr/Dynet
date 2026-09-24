@@ -44,6 +44,16 @@ dynet(forum_posts, thread = "thread", nodes = forum_people)
 # Co-presence log: actors sharing a group become connected (every member
 # pair, for the whole span of the group; attendance inside it is not used)
 dynet(seminar_attendance, actor = "student", group = "seminar")
+
+# Numbered endpoints with a node table: the vertices take the table's
+# `name`, and its `onset`/`terminus` say when each one is present
+workshops <- data.frame(vertex.id = c(1L, 2L, 3L),
+                        name = c("Ana", "Ben", "Cara"),
+                        onset = c(0, 1, 2), terminus = c(9, 9, 9))
+collaborations <- data.frame(onset = c(1, 3), terminus = c(2, 4),
+                             tail = c(1L, 2L), head = c(2L, 3L))
+dynet(collaborations, directed = FALSE, nodes = workshops,
+      vertex_spells = workshops)
 ```
 
 Column names are matched case-insensitively against a table of aliases,
@@ -147,7 +157,7 @@ vertices and edges together at the exact time. Graph denominators and
 censuses use only the eligible population; snapshot centrality retains
 the fixed node rows and reports `NA` for inactive vertices, while
 eligible isolates keep the ordinary static-kernel value.
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md)
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
 stays edge-only, so it does not fabricate rows for eligible isolates.
 Raw edge and vertex tables are never clipped or rewritten. Temporal
 paths use the same declarations as traversal gates: the named source or
@@ -168,7 +178,7 @@ opportunities before dividing. Exact contacts, exact vertex appearances,
 and observation gaps contribute no duration, while duplicates, weights,
 loops, and overlapping session labels cannot multiply exposure.
 
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 exposes that exact ledger inside every reporting window. Use
 `temporal_density` for occupancy over all eligible pair-time and
 `observed_pair_density` to condition the denominator on pairs with valid
@@ -203,9 +213,8 @@ dn2 <- remove_ties(dn2, from = "Ana", to = "New student", start = 4)
 dn2 <- remove_nodes(dn2, "New student")
 ```
 
-[`add_arcs()`](https://mohsaqr.github.io/Dynet/reference/add_arcs.md)
-and
-[`remove_arcs()`](https://mohsaqr.github.io/Dynet/reference/remove_arcs.md)
+[`add_arcs()`](https://pak.dynasite.org/Dynet/reference/add_arcs.md) and
+[`remove_arcs()`](https://pak.dynasite.org/Dynet/reference/remove_arcs.md)
 are directed-only aliases. Every mutation rebuilds the canonical spell
 identities and cograph projection together; cograph’s static setters
 should be used only on a flattened cograph copy, not to edit a temporal
@@ -238,21 +247,21 @@ observed period:
 induce_subgraph(dynet(school_contacts), degree > 16)
 ```
 
-[`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md)
+[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
 also takes `ties`, as integer row positions or a logical mask over the
 raw spell table, when a selection has to be made on the edges rather
 than the vertices.
 
-[`update_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/update_vertex_spells.md)
+[`update_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/update_vertex_spells.md)
 and
-[`remove_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/remove_vertex_spells.md)
+[`remove_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/remove_vertex_spells.md)
 complete vertex-activity editing;
-[`clear_observations()`](https://mohsaqr.github.io/Dynet/reference/clear_observations.md)
+[`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md)
 restores continuous implicit observation. Overlapping activity or
-observation spells are canonicalized after every edit.
+observation spells are canonicalised after every edit.
 
 Existing `networkDynamic` objects can enter through
-[`as_dynet()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.md),
+[`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md),
 including their activity spells, semantic vertex names, observation
 support, weights, and compatible static attributes. Collapse any range
 back to a static cograph network with duration, count, and weight
@@ -269,22 +278,22 @@ cograph::splot(flat)
 ## Measuring
 
 Verbs are named plainly:
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md),
-[`events()`](https://mohsaqr.github.io/Dynet/reference/events.md),
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md),
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md),
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md),
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md),
-[`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md),
-[`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md),
-[`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md). Two
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md),
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md),
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md),
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md),
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md),
+[`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md),
+[`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md),
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md). Two
 keep a `dyn_` prefix, and only because the plain name is already taken
 by a package you are likely to have attached:
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md),
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md),
 since cograph exports
 [`centrality()`](https://sonsoles.me/cograph/reference/centrality.html),
 and
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md),
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md),
 since sna exports `reachability()`. The prefix marks a real collision
 rather than a house style.
 
@@ -322,7 +331,7 @@ forum <- dynet(forum_posts, thread = "thread", nodes = forum_people)
 mixing(forum, attribute = "role")
 ```
 
-[`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md)
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md)
 converts uncensored observed raw spell onsets into Gibson’s thirteen
 consecutive-turn participation-shift classes. It returns fixed, typed
 totals by default; `output = "cumulative"` exposes the running state.
@@ -330,7 +339,7 @@ Use `sessions = "separate"` to retain session labels or
 `group_events = "none"` to keep simultaneous recipients as dyads.
 
 Lightweight structural descriptives stay inside
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md).
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md).
 Degree summaries, concurrent-node counts and shares, directed in/out
 2-stars, and two-paths use the same endpoint-induced snapshot semantics
 as density and the existing dyad census; no ERGM package or formula
@@ -393,28 +402,27 @@ a raw terminus intensity or spell-time sum. T03 and T04 can be requested
 together at positive width; instant dissolution fractions remain the
 `window = 0` quantity.
 
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) selects
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) selects
 shortest-foremost journeys: earliest completion first, then the fewest
 hops. Its compact endpoint table reports the exact `n_paths` over
 canonical contact sequences; the steps accessor adds endpoint-local
 `path_id` rows when tied routes are expanded.
-[`plot_path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md)
+[`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)
 draws those routes as a counted prefix tree, repeating a vertex when it
 occurs under a different temporal history; it supports top-down and
 left-to-right layouts.
 
-[`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md)
+[`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
 treats each raw spell onset as one event at each distinct incident
 vertex. It uses population gap dispersion and lag-one Pearson memory;
 bounded sessions pool only within-session gaps and never bridge session
 walls.
 
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md)
-reports raw active binary-dyad counts: ordered group cells for directed
-networks and one unordered triangle for undirected networks. Repeated
-spells and weights do not multiply a dyad; explicitly retained loops
-count once, and missing group values remain an explicit collision-safe
-level.
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) reports
+raw active binary-dyad counts: ordered group cells for directed networks
+and one unordered triangle for undirected networks. Repeated spells and
+weights do not multiply a dyad; explicitly retained loops count once,
+and missing group values remain an explicit collision-safe level.
 
 Temporal closeness is inverse mean forward latency over reachable
 nonself vertices. Immediate contacts are included: an all-zero reachable
@@ -505,9 +513,9 @@ truncated range an exact subset of the full series.
 
 ### What can be measured
 
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 covers the graph level and
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
 the vertex level. Together they cover the core graph and vertex
 statistics exposed by
 [`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html),
@@ -560,8 +568,8 @@ Domain-proximity prestige multiplies that incoming domain fraction by
 the inverse mean directed hop distance of its members. Partial domains
 remain valid and positive; unreachable vertices are excluded before
 distances are summed. This follows the published Lin/Wasserman–Faust
-equation and deliberately differs from `sna` 2.8’s `0 * Inf` behavior on
-disconnected graphs.
+equation and deliberately differs from `sna` 2.8’s `0 * Inf` behaviour
+on disconnected graphs.
 
 Eigenvector prestige uses the incoming nonnegative Perron ray of the
 binary snapshot. Raw scores have Euclidean norm one; rescaled scores sum
@@ -665,7 +673,7 @@ Reading it:
 
 - **Line thickness** follows a node-level measure — degree by default,
   any measure
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
   accepts. A vertex that is merely present looks different from one that
   is busy.
 - **Vertical marks** are times at which edges formed, shaded by how
@@ -811,10 +819,53 @@ disintegrates exactly where it is thinnest — and thin there means low
 activity, not missing data. Solid lines plus direct labels say the true
 thing.
 
+## Animating
+
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) draws
+the measurement grid as a film. It takes the same four grid arguments as
+every measuring verb, so the animation shows exactly the bins
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
+tabulates, joined by motion.
+
+``` r
+
+animate(dn, step = 2, window = 4)                       # GIF, spring layout
+animate(dn, step = 2, window = 4, file = "forum.mp4")   # video, by extension
+animate(dn, step = 2, window = 4, measure = "degree",   # node size follows a measure
+        layout = "relaxed", file = "forum.webm")
+```
+
+Each bin is drawn `tween` times (six by default). Between bins the
+vertices glide, a tie about to appear fades in dotted and green, one
+about to vanish fades out dashed and vermilion, and a vertex whose
+measure changes grows or shrinks; the motion follows the smoothstep
+curve, so each bin dwells before it changes. Tie width follows weight on
+one scale fixed across the whole animation, so the same weight has the
+same width in a quiet frame and a busy one. A strip under the network
+shows the grid, a marker at the current time, and the key.
+
+`layout` is `"spring"` (the union of every bin, laid out once),
+`"circle"`, `"oval"`, `"groups"` (one ring per partition), `"relaxed"`
+(each bin laid out again, seeded from the last, held within
+`max_displacement` and smoothed along time), or a data frame of your own
+`name`, `x`, `y`. Under every layout but `"relaxed"` a vertex never
+moves. A vertex absent from a bin is faded, parked out of sight and
+glided in when it arrives (`absent = "away"`), or hidden;
+`set_vertex_spells(dn, "ties")` declares each vertex present from its
+first tie to its last when the log itself says nothing about arrivals.
+
+The extension of `file` picks the encoder: `.gif` needs `gifski`, `.mp4`
+and `.webm` need `av`. The verb returns a tidy table with one row per
+bin (`time`, `nodes`, `ties`, `forming`, `dissolving`, the first
+rendered `frame` of the bin) invisibly;
+`as.data.frame(x, what = "frames")` maps every rendered frame to its
+time.
+
 ## What it depends on
 
 `cograph` for rendering, `ggplot2` for the time-series views. Nothing
-else.
+else. Writing an animation needs `gifski` for a GIF or `av` for a video,
+both in `Suggests`.
 
 Every metric — geodesics, Brandes betweenness, PageRank, HITS, k-cores,
 Burt’s constraint, the dyad and triad censuses — is base R matrix
@@ -827,8 +878,9 @@ installed. `igraph`, `sna`, `tsna` and `networkDynamic` appear only in
 All 78 kernel comparisons against `igraph` and `sna` agree, across
 directed and undirected graphs at three sizes. Earliest-arrival times
 agree with [`tsna::tPath`](https://rdrr.io/pkg/tsna/man/paths.html) on
-twenty source-network combinations. Two conventions differ deliberately
-and are documented where they are implemented:
+twenty source-network combinations, forward and backward, including the
+vertex-activity boundary cases. Two conventions differ deliberately and
+are documented where they are implemented:
 
 - **Closeness** uses the reachable-set normalisation from `igraph`.
   [`sna::closeness()`](https://rdrr.io/pkg/sna/man/closeness.html) sums

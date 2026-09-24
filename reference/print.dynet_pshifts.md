@@ -26,7 +26,9 @@ print(x, ...)
 ## Examples
 
 ``` r
-pshifts(dynet(school_contacts))
+dn <- dynet(school_contacts)
+shifts <- pshifts(dn)
+shifts
 #> # Participation shifts (Gibson 2003, 13 types)
 #> # 235 classified turn transitions across 4 families
 #>  shift          family count

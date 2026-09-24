@@ -3,11 +3,11 @@
 Pair unit returns one row per vertex pair and measure, summarising every
 retained raw spell they shared. Spell unit returns each retained raw
 edge identity. Vertex-activity unit returns fixed-universe vertex
-summaries; vertex-spell unit returns canonical V01 activity components.
-Duration is what separates an interval network from a contact network: a
-pair that met fifty times briefly and a pair that met once at length
-have the same edge weight in a static network and nothing else in
-common.
+summaries; vertex-spell unit returns canonical vertex-activity
+components. Duration is what separates an interval network from a
+contact network: a pair that met fifty times briefly and a pair that met
+once at length have the same edge weight in a static network and nothing
+else in common.
 
 ## Usage
 
@@ -28,45 +28,51 @@ durations(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - measure:
 
   For pair unit, one or more of `"events"` (number of spells), `"total"`
   (summed duration), `"union"` (binary pair occupancy), `"mean"`,
-  `"median"`, `"first"`, and `"last"`. For spell unit, one or more of
+  `"median"`, `"first"`, and `"last"`; its default is
+  `c("events", "total", "mean")`. For spell unit, one or more of
   `"duration"`, `"first"`, and `"last"`; its default is `"duration"`.
   Vertex-activity unit allows the pair-like measures and defaults to
   `"events"`, `"total"`, and `"union"`; vertex-spell unit allows the
   same measures as edge spell and defaults to `"duration"`. Node-ties
   unit allows `"events"` (incident raw-spell endpoint stubs), `"total"`
   (their summed endpoint-valid duration), and `"union"` (binary incident
-  calendar exposure), defaulting to events and total.
+  calendar exposure), defaulting to events and total. A measure the
+  chosen unit does not offer raises a `dynet_unknown_measure` error.
 
 - sessions:
 
-  How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  How to treat sessions: `"bounded"` (the default), `"collapse"` or
+  `"separate"`, as in
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
 
 - censored:
 
-  Whether to `"include"` known follow-up or `"exclude"` an entire edge
-  raw spell or canonical vertex component with either explicit outer
-  censor flag. Administrative observation cuts never cause exclusion.
+  Whether to `"include"` known follow-up, the default, or `"exclude"` an
+  entire edge raw spell or canonical vertex component with either
+  explicit outer censor flag. Administrative observation cuts never
+  cause exclusion.
 
 - unit:
 
-  `"pair"` retains the existing pair summary and adds union duration;
-  `"spell"` returns one row per retained raw edge-spell identity;
-  `"vertex_activity"` returns fixed-node aggregates; `"vertex_spell"`
-  returns retained canonical V01 activity identities; `"node_ties"`
-  returns fixed-node incident-tie quantities.
+  `"pair"`, the default, retains the existing pair summary and adds
+  union duration; `"spell"` returns one row per retained raw edge-spell
+  identity; `"vertex_activity"` returns fixed-node aggregates;
+  `"vertex_spell"` returns retained canonical vertex-activity
+  identities; `"node_ties"` returns fixed-node incident-tie quantities.
 
 - mode:
 
-  For `unit = "node_ties"`, `"out"`, `"in"`, or `"all"` endpoint
-  incidence. Undirected networks normalize every request to `"all"`. An
-  explicitly supplied mode is invalid for every other duration unit.
+  For `unit = "node_ties"`, `"out"` (the default), `"in"`, or `"all"`
+  endpoint incidence. Undirected networks normalise every request to
+  `"all"`. Supplying `mode` explicitly for any other duration unit
+  raises a `dynet_incompatible_duration_mode` error; leaving it at its
+  default is what makes the other units legal.
 
 - plot:
 
@@ -99,7 +105,7 @@ are eligible. Genuine eligible point contacts are retained with duration
 zero. Pair `total` sums these raw-spell durations, so overlapping
 identities intentionally multiply time; pair `union` counts binary
 calendar occupancy once. Consequently `union <= total`, and union cannot
-exceed the pair's V04 eligible opportunity time. Pair `events` counts
+exceed the pair's eligible opportunity time. Pair `events` counts
 retained raw identities. Formally, if retained raw spell `i` has
 endpoint-valid fragments `F[i]`, then
 `duration[i] = sum((b - a) for [a,b) in F[i])`. For pair `p`,
@@ -137,14 +143,14 @@ adds both endpoint stubs. A retained loop therefore contributes once to
 out, once to in, and twice to additive all-mode events/total; undirected
 results use the same two-stub rule. In contrast, node-tie `union`
 Boolean-unions all positive incident fragments, so loops, reciprocal
-overlap, duplicate rows, and simultaneous neighbors occupy calendar time
-only once. Consequently `union <= total`, and directed all equals out
-plus in only for events and total. Formally, for endpoint-stub
+overlap, duplicate rows, and simultaneous neighbours occupy calendar
+time only once. Consequently `union <= total`, and directed all equals
+out plus in only for events and total. Formally, for endpoint-stub
 multiplicity `c[v,i,m]`, retained raw identity duration `d[i]`, and
 positive support `F[i]`, node-tie events are `sum(c[v,i,m])`, total is
 `sum(c[v,i,m] * d[i])`, and union is the measure of the calendar union
 of all `F[i]` having positive multiplicity. These union values cannot
-exceed the corresponding D02 eligible vertex-activity union. Isolates,
+exceed the corresponding eligible vertex-activity union. Isolates,
 inactive vertices, and loopless singletons receive exact zeros for every
 node-tie measure. The additive quantities match
 [`tsna::tiedDuration()`](https://rdrr.io/pkg/tsna/man/tiedDuration.html)

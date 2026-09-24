@@ -113,7 +113,7 @@ rendering arguments is available here through ...."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,8 +124,11 @@ rendering arguments is available here through ...."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -262,8 +265,9 @@ rendering arguments is available here through <code>...</code>.</p>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p>One of <code>"timeline"</code>, <code>"events"</code>, <code>"activity"</code>, <code>"network"</code>,
-<code>"snapshots"</code>, <code>"layers"</code>, <code>"heatmap"</code>, <code>"stack"</code> or <code>"proximity"</code>.</p></dd>
+<dd><p>One of <code>"timeline"</code> (the default), <code>"events"</code>, <code>"activity"</code>,
+<code>"network"</code>, <code>"snapshots"</code>, <code>"layers"</code>, <code>"heatmap"</code>, <code>"stack"</code> or
+<code>"proximity"</code>.</p></dd>
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
@@ -278,7 +282,8 @@ windowed, and an empty window is an error rather than an empty panel.</p></dd>
 
 
 <dt id="arg-top">top<a class="anchor" aria-label="anchor" href="#arg-top"></a></dt>
-<dd><p>For the timeline, draw only the <code>top</code> busiest vertex pairs.</p></dd>
+<dd><p>For the timeline, draw only the <code>top</code> busiest vertex pairs.
+Defaults to 40.</p></dd>
 
 
 <dt id="arg-step">step<a class="anchor" aria-label="anchor" href="#arg-step"></a></dt>
@@ -292,7 +297,8 @@ single panel. <code>NULL</code> uses the construction interval.</p></dd>
 
 <dt id="arg-omega">omega<a class="anchor" aria-label="anchor" href="#arg-omega"></a></dt>
 <dd><p>For <code>"layers"</code>, the weight on the identity arcs carrying a
-vertex between adjacent slices, that is, the interlayer coupling.</p></dd>
+vertex between adjacent slices, that is, the interlayer coupling. One
+non-negative number, <code>1</code> by default.</p></dd>
 
 
 <dt id="arg-bins">bins<a class="anchor" aria-label="anchor" href="#arg-bins"></a></dt>
@@ -302,48 +308,51 @@ precedence when both are given.</p></dd>
 
 
 <dt id="arg-link">link<a class="anchor" aria-label="anchor" href="#arg-link"></a></dt>
-<dd><p>Link glyph for <code>"events"</code>: <code>"hook"</code> (default), <code>"arc"</code>,
+<dd><p>Link glyph for <code>"events"</code>: <code>"hook"</code> (the default), <code>"arc"</code>,
 <code>"chevron"</code>, <code>"wave"</code> or <code>"bracket"</code>.</p></dd>
 
 
 <dt id="arg-time">time<a class="anchor" aria-label="anchor" href="#arg-time"></a></dt>
-<dd><p>Time axis for <code>"events"</code>. <code>"bin"</code> groups onsets into equal
-windows and keeps duration honest, <code>"event"</code> gives one evenly spaced
-column per distinct onset, <code>"clock"</code> uses true positions.</p></dd>
+<dd><p>Time axis for <code>"events"</code>. <code>"bin"</code>, the default, groups onsets
+into equal windows and keeps duration honest, <code>"event"</code> gives one evenly
+spaced column per distinct onset, <code>"clock"</code> uses true positions.</p></dd>
 
 
 <dt id="arg-aggregate">aggregate<a class="anchor" aria-label="anchor" href="#arg-aggregate"></a></dt>
 <dd><p>For <code>"events"</code>, fold repeat firings of one pair inside one
-column into a single link. Binning merges distinct onsets, and without
-this they stack as parallel bows carrying no extra reading.</p></dd>
+column into a single link, <code>TRUE</code> by default. Binning merges distinct
+onsets, and without this they stack as parallel bows carrying no extra
+reading.</p></dd>
 
 
 <dt id="arg-nest">nest<a class="anchor" aria-label="anchor" href="#arg-nest"></a></dt>
-<dd><p>For <code>"events"</code>, which links are fanned apart. <code>"pair"</code> fans
-only links joining the same two rows in the same column; <code>"column"</code> fans
-every link sharing a column.</p></dd>
+<dd><p>For <code>"events"</code>, which links are fanned apart. <code>"pair"</code>, the
+default, fans only links joining the same two rows in the same column;
+<code>"column"</code> fans every link sharing a column.</p></dd>
 
 
 <dt id="arg-split">split<a class="anchor" aria-label="anchor" href="#arg-split"></a></dt>
 <dd><p>For <code>"events"</code>, the share of each link that keeps its source
 colour before switching to its target's, so direction reads without
-arrowheads.</p></dd>
+arrowheads. One number between 0 and 1, <code>0.8</code> by default.</p></dd>
 
 
 <dt id="arg-blend">blend<a class="anchor" aria-label="anchor" href="#arg-blend"></a></dt>
 <dd><p>For <code>"events"</code>, fade between the two endpoint colours instead
-of switching at a boundary.</p></dd>
+of switching at a boundary. <code>FALSE</code> by default.</p></dd>
 
 
 <dt id="arg-weight">weight<a class="anchor" aria-label="anchor" href="#arg-weight"></a></dt>
 <dd><p>For <code>"events"</code>, scale alpha and width by how often the pair
 occurs across the network, so one-off links recede and habitual ones
-stand out.</p></dd>
+stand out. <code>TRUE</code> by default.</p></dd>
 
 
 <dt id="arg-node-size-node-shape-node-fill-node-border-color-node-border-width-node-alpha">node_size, node_shape, node_fill, node_border_color, node_border_width, node_alpha<a class="anchor" aria-label="anchor" href="#arg-node-size-node-shape-node-fill-node-border-color-node-border-width-node-alpha"></a></dt>
 <dd><p>Node aesthetics, named as in <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>. <code>NULL</code> uses the view's
-own default. For the node-link views these are forwarded to splot.</p></dd>
+own default. They are honoured by the <code>"network"</code>, <code>"snapshots"</code> and
+<code>"events"</code> views; the <code>"layers"</code>, <code>"heatmap"</code>, <code>"stack"</code> and
+<code>"proximity"</code> views take their renderer's own arguments through <code>...</code>.</p></dd>
 
 
 <dt id="arg-edge-color-edge-alpha-edge-width-edge-width-range-edge-style">edge_color, edge_alpha, edge_width, edge_width_range, edge_style<a class="anchor" aria-label="anchor" href="#arg-edge-color-edge-alpha-edge-width-edge-width-range-edge-style"></a></dt>
@@ -364,16 +373,17 @@ in <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="exter
 
 
 <dt id="arg-panels">panels<a class="anchor" aria-label="anchor" href="#arg-panels"></a></dt>
-<dd><p>For snapshots, the maximum number of panels to draw. Bins are
-sampled evenly across the window and the choice is reported.</p></dd>
+<dd><p>For snapshots, the maximum number of panels to draw, 9 by
+default. Bins are sampled evenly across the window and the choice is
+reported.</p></dd>
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
 <dd><p>For the proximity view, the node-level measure that line
-thickness follows. Any measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code> accepts at snapshot
-scope; the temporal-scope-only measures <code>"reach"</code> and <code>"reach_count"</code>
-are not available here, because the view redraws the measure over many
-short slices.</p></dd>
+thickness follows, <code>"degree"</code> by default. Any measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code>
+accepts at snapshot scope; the temporal-scope-only measures <code>"reach"</code> and
+<code>"reach_count"</code> are not available here, because the view redraws the
+measure over many short slices.</p></dd>
 
 
 <dt id="arg-phases">phases<a class="anchor" aria-label="anchor" href="#arg-phases"></a></dt>
@@ -383,28 +393,34 @@ has them and three phases otherwise.</p></dd>
 
 
 <dt id="arg-networks">networks<a class="anchor" aria-label="anchor" href="#arg-networks"></a></dt>
-<dd><p>Whether the proximity view draws a network panel per phase.</p></dd>
+<dd><p>Whether the proximity view draws a network panel per phase,
+<code>TRUE</code> by default.</p></dd>
 
 
 <dt id="arg-events">events<a class="anchor" aria-label="anchor" href="#arg-events"></a></dt>
-<dd><p>Whether the proximity view marks the times edges formed.</p></dd>
+<dd><p>Whether the proximity view marks the times edges formed,
+<code>TRUE</code> by default.</p></dd>
 
 
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
-<dd><p>Whether vertices are named in place of a legend: at the
-right-hand end of each line in the proximity view, and beside each node
-in the <code>"layers"</code> and <code>"stack"</code> views.</p></dd>
+<dd><p>Whether vertices are named, <code>TRUE</code> by default: beside each
+node in the <code>"network"</code>, <code>"snapshots"</code>, <code>"layers"</code> and <code>"stack"</code> views,
+and at the right-hand end of each line in the proximity view in place of
+a legend. The <code>"timeline"</code>, <code>"events"</code>, <code>"activity"</code> and <code>"heatmap"</code>
+views name their axes rather than their vertices and ignore it. <code>FALSE</code>
+is the readable choice for a network of more than a few dozen vertices.</p></dd>
 
 
 <dt id="arg-highlight">highlight<a class="anchor" aria-label="anchor" href="#arg-highlight"></a></dt>
 <dd><p>Vertex names to draw in colour in the proximity view, with
-the rest in grey.</p></dd>
+the rest in grey. <code>NULL</code>, the default, colours every vertex.</p></dd>
 
 
 <dt id="arg-slices">slices<a class="anchor" aria-label="anchor" href="#arg-slices"></a></dt>
 <dd><p>How many times the proximity view measures the network across
-the window. Smoothness comes from measuring often, never from
-interpolation. <code>NULL</code> measures once per time bin.</p></dd>
+the window, 120 by default. Smoothness comes from measuring often, never
+from interpolation. <code>NULL</code> measures once per time bin, and anything else
+must be at least two.</p></dd>
 
 
 <dt id="arg-window">window<a class="anchor" aria-label="anchor" href="#arg-window"></a></dt>
@@ -415,9 +431,10 @@ most vertices are isolated.</p></dd>
 
 
 <dt id="arg-flow">flow<a class="anchor" aria-label="anchor" href="#arg-flow"></a></dt>
-<dd><p>How much to round the corners of each proximity line. Rounding
-only ever takes convex combinations of measurements, so it softens the
-joints without letting the curve overshoot one. <code>0</code> leaves them sharp.</p></dd>
+<dd><p>How many corner-cutting passes round each proximity line, 2 by
+default. Rounding only ever takes convex combinations of measurements, so
+it softens the joints without letting the curve overshoot one. <code>0</code> leaves
+them sharp.</p></dd>
 
 
 <dt id="arg-palette">palette<a class="anchor" aria-label="anchor" href="#arg-palette"></a></dt>
@@ -430,21 +447,28 @@ of <code>n</code> returning <code>n</code> colours.</p></dd>
 
 <dt id="arg-default-dist">default_dist<a class="anchor" aria-label="anchor" href="#arg-default-dist"></a></dt>
 <dd><p>Distance assumed between vertices with no path between
-them, in the proximity view.</p></dd>
+them, in the proximity view. <code>2</code> by default.</p></dd>
 
 
 <dt id="arg-base-size">base_size<a class="anchor" aria-label="anchor" href="#arg-base-size"></a></dt>
-<dd><p>Base font size for the ggplot views.</p></dd>
+<dd><p>Base font size for the <code>"timeline"</code>, <code>"events"</code> and
+<code>"activity"</code> views, 12 by default. The <code>"heatmap"</code> view is also a ggplot
+but is sized by its own renderer.</p></dd>
 
 
 <dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
-<dd><p>A base-graphics style list from <code>.dyn_style()</code>, used by the
-proximity view.</p></dd>
+<dd><p>Style constants for the proximity view's base-graphics panel:
+a list holding <code>cex</code>, <code>grid</code>, <code>background</code>, <code>grid_color</code>, <code>axis_color</code>,
+<code>text_color</code> and <code>frame_color</code>. The default is the package's own.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Passed to <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code> for the network, snapshot and
-proximity views.</p></dd>
+<dd><p>Passed to the renderer the chosen view uses: <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>
+for <code>"network"</code>, <code>"snapshots"</code> and <code>"proximity"</code>, <code><a href="https://sonsoles.me/cograph/reference/plot_mlna.html" class="external-link">cograph::plot_mlna()</a></code>
+for <code>"layers"</code>, <code><a href="https://sonsoles.me/cograph/reference/plot_ml_heatmap.html" class="external-link">cograph::plot_ml_heatmap()</a></code> for <code>"heatmap"</code> and
+<code><a href="https://sonsoles.me/cograph/reference/plot_temporal.html" class="external-link">cograph::plot_temporal()</a></code> for <code>"stack"</code>. The remaining views take no
+further drawing arguments, and a name no view can read is an error rather
+than a silently ignored argument.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -452,7 +476,24 @@ proximity views.</p></dd>
     <p>For <code>"timeline"</code>, <code>"events"</code>, <code>"activity"</code> and <code>"heatmap"</code>, a
 <code>ggplot</code> object, which prints itself when the call is not assigned. For
 <code>"network"</code>, <code>"snapshots"</code>, <code>"layers"</code>, <code>"stack"</code> and <code>"proximity"</code>, the
-figure is drawn on the current device and <code>x</code> is returned invisibly.</p>
+figure is drawn on the current device and the network is returned
+invisibly – <code>x</code> itself, or the windowed network when <code>start</code> or <code>end</code>
+was given.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The node-link views set a few of <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>'s defaults before
+handing over: they draw no edge labels and no edge-colour legend
+(<code>legend_edge_colors = FALSE</code>, against <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>'s own <code>TRUE</code>),
+colour edges a neutral grey, and size nodes and arrowheads from the vertex
+count. Naming any of those through <code>...</code> overrides it.</p>
+<p>Failures are classed conditions. <code>dynet_bad_input</code> covers every malformed
+argument, <code>dynet_unknown_plot_arg</code> a name in <code>...</code> no view can read,
+<code>dynet_bad_palette</code> an unusable <code>palette</code>, and <code>dynet_empty_result</code> a
+window, an <code>at</code> or a <code>step</code> that leaves nothing to draw. The proximity view
+adds <code>dynet_unknown_measure</code> and <code>dynet_needs_directed</code>. With cograph
+absent, the node-link views raise <code>dynet_needs_cograph</code> and the
+<code>"layers"</code>, <code>"heatmap"</code> and <code>"stack"</code> views <code>dynet_missing_package</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

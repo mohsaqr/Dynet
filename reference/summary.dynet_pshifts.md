@@ -21,10 +21,12 @@ summary(object, ...)
 
 ## Value
 
-A plain `data.frame`, one row per shift family: `family`, its `count`,
-the `share` of all classified transitions it accounts for, and
-`top_shift`, the single most frequent shift type within it. `share` is
-`NaN` when nothing was classified.
+A plain `data.frame`, one row per shift family, ordered by descending
+`count`: `family`, its `count`, the `share` of all classified
+transitions it accounts for, and `top_shift`, the single most frequent
+shift type within it. `share` is `NaN` when nothing was classified. The
+family totals are sums of the `count` column as it stands, so they are
+transition counts for an `output = "final"` result.
 
 ## Examples
 

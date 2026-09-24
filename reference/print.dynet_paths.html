@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,7 +60,7 @@
 
 
 <dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
-<dd><p>Number of rows to show.</p></dd>
+<dd><p>Number of rows to show. Defaults to twelve.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -69,6 +72,38 @@
     <p><code>x</code>, invisibly.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘Ana’, from t = 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 13 of 13 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   node reachable arrival_time attained latency n_hops n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ana      TRUE         0.00     TRUE    0.00      0       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ben      TRUE         9.59     TRUE    9.59      3       3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cara      TRUE         6.67     TRUE    6.67      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Dan      TRUE         7.98     TRUE    7.98      4       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Eve      TRUE        11.66     TRUE   11.66      4       3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Finn      TRUE         6.96     TRUE    6.96      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Gita      TRUE         6.36     TRUE    6.36      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Hugo      TRUE         7.98     TRUE    7.98      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Iris      TRUE        10.00     TRUE   10.00      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Jonas      TRUE         2.12     TRUE    2.12      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE         6.12     TRUE    6.12      2       2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE         9.65     TRUE    9.65      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">routes</span>, n <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘Ana’, from t = 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 13 of 13 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  node reachable arrival_time attained latency n_hops n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana      TRUE         0.00     TRUE    0.00      0       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ben      TRUE         9.59     TRUE    9.59      3       3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Cara      TRUE         6.67     TRUE    6.67      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Dan      TRUE         7.98     TRUE    7.98      4       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 10 more rows. summary() aggregates them; plot() draws the tree.</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

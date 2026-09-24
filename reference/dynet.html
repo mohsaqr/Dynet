@@ -25,6 +25,11 @@ connected for the span of that group. Name actor and group.
 
 Every other column of data is kept as a tie attribute: it appears in
 as.data.frame() and can be selected on with induce_subgraph(ties = ).
+The exceptions are the canonical spell fields themselves – duration,
+weight, session, thread, onset_censored and terminus_censored –
+which are dropped even when they were never named as arguments, because the
+spell table owns those names. A non-atomic column raises
+dynet_bad_tie_attribute, and a factor is carried as character.
 Co-presence logs keep none, because their rows are memberships rather than
 ties.
 Column names are resolved case-insensitively from a table of aliases, so
@@ -74,6 +79,11 @@ connected for the span of that group. Name actor and group.
 
 Every other column of data is kept as a tie attribute: it appears in
 as.data.frame() and can be selected on with induce_subgraph(ties = ).
+The exceptions are the canonical spell fields themselves – duration,
+weight, session, thread, onset_censored and terminus_censored –
+which are dropped even when they were never named as arguments, because the
+spell table owns those names. A non-atomic column raises
+dynet_bad_tie_attribute, and a factor is carried as character.
 Co-presence logs keep none, because their rows are memberships rather than
 ties.
 Column names are resolved case-insensitively from a table of aliases, so
@@ -105,7 +115,7 @@ observation limits or used to alter eligibility."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,8 +126,11 @@ observation limits or used to alter eligibility."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -160,6 +173,11 @@ connected for the span of that group. Name <code>actor</code> and <code>group</c
 
 </dl><p>Every other column of <code>data</code> is kept as a tie attribute: it appears in
 <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> and can be selected on with <code>induce_subgraph(ties = )</code>.
+The exceptions are the canonical spell fields themselves – <code>duration</code>,
+<code>weight</code>, <code>session</code>, <code>thread</code>, <code>onset_censored</code> and <code>terminus_censored</code> –
+which are dropped even when they were never named as arguments, because the
+spell table owns those names. A non-atomic column raises
+<code>dynet_bad_tie_attribute</code>, and a factor is carried as character.
 Co-presence logs keep none, because their rows are memberships rather than
 ties.</p>
 <p>Column names are resolved case-insensitively from a table of aliases, so
@@ -269,19 +287,25 @@ every row counts once.</p></dd>
 
 <dt id="arg-nodes">nodes<a class="anchor" aria-label="anchor" href="#arg-nodes"></a></dt>
 <dd><p>Optional data frame of vertex attributes. The vertex key is
-auto-detected, or given as the first column.</p></dd>
+auto-detected (<code>node</code>, <code>vertex.id</code>, <code>id</code>, <code>name</code>, ...), or given as the
+first column. When the key is not <code>name</code> and the table also has a
+<code>name</code> column, the vertices are named by <code>name</code>: edge endpoints and
+vertex spells given by key are translated, and the key stays on the
+node table as an attribute. A key with no row in <code>nodes</code> keeps the key
+as its name, with a <code>dynet_unnamed_nodes</code> warning.</p></dd>
 
 
 <dt id="arg-groups">groups<a class="anchor" aria-label="anchor" href="#arg-groups"></a></dt>
 <dd><p>Name of a column in <code>nodes</code> to use as the vertex partition.
 Written into the places cograph looks for it, so <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>
-colours and groups by it without further argument.</p></dd>
+colours and groups by it without further argument. A name that is not a
+column of <code>nodes</code> raises a condition of class <code>dynet_unknown_attribute</code>.</p></dd>
 
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
-<dd><p>One of <code>"auto"</code>, <code>"interval"</code>, <code>"contact"</code>, <code>"threaded"</code>,
-<code>"copresence"</code>. <code>"auto"</code> infers the format from the arguments you name
-and the columns present.</p></dd>
+<dd><p>One of <code>"auto"</code> (the default), <code>"interval"</code>, <code>"contact"</code>,
+<code>"threaded"</code>, <code>"copresence"</code>. <code>"auto"</code> infers the format from the
+arguments you name and the columns present.</p></dd>
 
 
 <dt id="arg-thread-clock">thread_clock<a class="anchor" aria-label="anchor" href="#arg-thread-clock"></a></dt>
@@ -294,18 +318,19 @@ the convention of the <em>Trees of Thought</em> study. Requires <code>thread</co
 
 
 <dt id="arg-directed">directed<a class="anchor" aria-label="anchor" href="#arg-directed"></a></dt>
-<dd><p>Whether edges are directed. Co-presence networks are always
-undirected.</p></dd>
+<dd><p>Whether edges are directed, <code>TRUE</code> by default. Co-presence
+networks are always undirected.</p></dd>
 
 
 <dt id="arg-interval">interval<a class="anchor" aria-label="anchor" href="#arg-interval"></a></dt>
-<dd><p>Width of one time bin, in the network's time unit.</p></dd>
+<dd><p>Width of one time bin, in the network's time unit. Defaults
+to <code>1</code>.</p></dd>
 
 
 <dt id="arg-time-unit">time_unit<a class="anchor" aria-label="anchor" href="#arg-time-unit"></a></dt>
 <dd><p>Unit for converting <code>Date</code>/<code>POSIXct</code>/character times:
-<code>"auto"</code>, <code>"seconds"</code>, <code>"minutes"</code>, <code>"hours"</code>, <code>"days"</code> or <code>"weeks"</code>.
-Numeric times are left alone and reported as <code>"step"</code>.</p></dd>
+<code>"auto"</code> (the default), <code>"seconds"</code>, <code>"minutes"</code>, <code>"hours"</code>, <code>"days"</code> or
+<code>"weeks"</code>. Numeric times are left alone and reported as <code>"step"</code>.</p></dd>
 
 
 <dt id="arg-observation-start-observation-end">observation_start, observation_end<a class="anchor" aria-label="anchor" href="#arg-observation-start-observation-end"></a></dt>
@@ -319,15 +344,20 @@ Raw spell endpoints returned by <code><a href="https://rdrr.io/r/base/as.data.fr
 
 
 <dt id="arg-observation-spells">observation_spells<a class="anchor" aria-label="anchor" href="#arg-observation-spells"></a></dt>
-<dd><p>Optional data frame with <code>start</code> and <code>end</code> columns
-defining discontinuous observed support. Overlapping and adjacent positive
-intervals are merged; isolated points are retained. This is mutually
-exclusive with <code>observation_start</code> and <code>observation_end</code>.</p></dd>
+<dd><p>Optional data frame with exactly two columns,
+<code>start</code> and <code>end</code>, defining discontinuous observed support. Overlapping
+and adjacent positive intervals are merged; isolated points are retained.
+This is mutually exclusive with <code>observation_start</code> and
+<code>observation_end</code>; supplying both raises a condition of class
+<code>dynet_conflicting_observation</code>.</p></dd>
 
 
 <dt id="arg-loops">loops<a class="anchor" aria-label="anchor" href="#arg-loops"></a></dt>
-<dd><p>Whether to keep self-loops. <code>FALSE</code> drops them with a message,
-which is almost always what relational logs need.</p></dd>
+<dd><p>Whether to keep self-loops. <code>FALSE</code>, the default, drops them
+with a message, which is almost always what relational logs need; <code>TRUE</code>
+keeps them and reports how many. A kept loop <strong>is</strong> counted by degree, and
+contributes two to it, since both of its endpoint stubs are incident to
+the same vertex.</p></dd>
 
 
 <dt id="arg-onset-censored-terminus-censored">onset_censored, terminus_censored<a class="anchor" aria-label="anchor" href="#arg-onset-censored-terminus-censored"></a></dt>
@@ -338,11 +368,16 @@ zero-duration point.</p></dd>
 
 
 <dt id="arg-vertex-spells">vertex_spells<a class="anchor" aria-label="anchor" href="#arg-vertex-spells"></a></dt>
-<dd><p>Optional tidy vertex-activity table with exact columns
-<code>node</code>, <code>start</code>, and <code>end</code>, plus optional <code>session</code>, <code>onset_censored</code>, and
-<code>terminus_censored</code>. Positive spells use <code>[start,end)</code> and points are exact.
-Overlapping and adjacent positive spells are unioned independently by node
-and session. A vertex absent from this table remains active at all times.</p></dd>
+<dd><p>Optional tidy vertex-activity table: one row per
+period in which a vertex is present, with a node column (<code>node</code>,
+<code>vertex.id</code>, <code>name</code>, ...) and a start and end column (<code>start</code>/<code>end</code>,
+<code>onset</code>/<code>terminus</code>, ...), resolved through the same alias table as
+<code>data</code>, plus optional exact columns <code>session</code>, <code>onset_censored</code>, and
+<code>terminus_censored</code>. Any other column is ignored, so a node table that
+carries entry and exit times can be passed as it is. Positive spells
+use <code>[start,end)</code> and points are exact. Overlapping and adjacent
+positive spells are unioned independently by node and session. A
+vertex absent from this table remains active at all times.</p></dd>
 
 </dl></div>
     <div class="section level2">

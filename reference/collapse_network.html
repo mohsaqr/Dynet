@@ -11,7 +11,7 @@ duration summaries, so choosing one weighting does not discard the others."></he
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,8 +22,11 @@ duration summaries, so choosing one weighting does not discard the others."></he
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -70,27 +73,30 @@ duration summaries, so choosing one weighting does not discard the others.</p>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
-<dd><p>Collapse bounds. Defaults to the observed range. Positive
-intervals are clipped to <code>[start, end)</code>; genuine points at either bound
-are retained.</p></dd>
+<dd><p>Collapse bounds. Default to the observed range. Positive
+intervals are clipped to <code>[start, end]</code>; genuine points at either bound
+are retained. An <code>end</code> before <code>start</code> raises a <code>dynet_bad_input</code> error.</p></dd>
 
 
 <dt id="arg-weight">weight<a class="anchor" aria-label="anchor" href="#arg-weight"></a></dt>
-<dd><p>Edge field used as the cograph weight: <code>"binary"</code>,
-<code>"union_duration"</code>, <code>"total_duration"</code>, <code>"duration_fraction"</code>,
+<dd><p>Edge field used as the cograph weight: <code>"binary"</code> (the
+default), <code>"union_duration"</code>, <code>"total_duration"</code>, <code>"duration_fraction"</code>,
 <code>"spell_count"</code>, <code>"weight_sum"</code>, <code>"weighted_duration"</code>, or
-<code>"latest_weight"</code>.</p></dd>
+<code>"latest_weight"</code>. Every field is present in the edge table whichever one
+is chosen; this names only the one cograph draws with.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>Session handling. <code>"collapse"</code> erases session labels,
-<code>"bounded"</code> respects session-specific endpoint activity before pooling,
-and <code>"separate"</code> returns one collapsed cograph network per session.</p></dd>
+<dd><p>Session handling. <code>"bounded"</code>, the default, respects
+session-specific endpoint activity before pooling, <code>"collapse"</code> erases
+session labels, and <code>"separate"</code> returns one collapsed cograph network
+per session.</p></dd>
 
 
 <dt id="arg-censored">censored<a class="anchor" aria-label="anchor" href="#arg-censored"></a></dt>
 <dd><p>Whether raw edge and vertex identities carrying an explicit
-censor flag are included.</p></dd>
+censor flag are <code>"include"</code>d, the default, or <code>"exclude"</code>d. Exclusion
+drops the whole raw identity, never one observed fragment alone.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -110,9 +116,10 @@ duration, summed), <code>latest_weight</code> (the weight of the last spell to e
 <code>first</code> and <code>last</code> (the pair's earliest onset and latest terminus), and
 the <code>activity.duration</code> and <code>activity.count</code> aliases for compatibility
 with <code><a href="https://rdrr.io/pkg/networkDynamic/man/network.collapse.html" class="external-link">networkDynamic::network.collapse()</a></code>.</p>
-<p>The node table carries one row per vertex, with <code>name</code>,
-<code>activity_duration</code> (time the vertex was active, overlaps counted once)
-and its <code>activity.duration</code> alias.</p>
+<p>The node table carries one row per vertex, with <code>name</code>, any static vertex
+attributes the network was built with, <code>activity_duration</code> (time the
+vertex was active, overlaps counted once) and its <code>activity.duration</code>
+alias.</p>
     </div>
 
     <div class="section level2">

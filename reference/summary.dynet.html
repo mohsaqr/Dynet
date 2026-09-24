@@ -19,7 +19,7 @@ before their duration is counted."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,8 +30,11 @@ before their duration is counted."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -63,7 +66,7 @@ before their duration is counted.</p>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S3 method for class 'dynet'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">object</span>, temporal_density <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -72,6 +75,15 @@ before their duration is counted.</p>
 
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
 <dd><p>A temporal network from <code><a href="dynet.html">dynet()</a></code>.</p></dd>
+
+
+<dt id="arg-temporal-density">temporal_density<a class="anchor" aria-label="anchor" href="#arg-temporal-density"></a></dt>
+<dd><p>Whether to compute the temporal-density row.
+<code>FALSE</code>, the default, reports <code>"not computed"</code> for it. The quantity
+integrates exact occupancy over every eligible ordered pair, so its cost
+grows with the square of the vertex count: on a 442-vertex forum network
+it takes about 32 seconds, while every other row in the table is
+immediate. Pass <code>TRUE</code> when the number is wanted.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -114,6 +126,25 @@ Mining</em>, 8, 61.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 property        value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                 format     interval</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2               directed          yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3               vertices           14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4            edge spells          240</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5         distinct pairs          110</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6              time unit         step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7          observed from            0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8            observed to        21.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9                   span        21.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10             bin width            1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11             time bins           22</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 mean snapshot density       0.0829</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13      temporal density not computed</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14              sessions         none</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15     vertex attributes         none</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The temporal density is opt-in, since it is quadratic in the vertex count.</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dn</span>, temporal_density <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 property    value</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1                 format interval</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2               directed      yes</span>

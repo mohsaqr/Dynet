@@ -29,10 +29,13 @@ as.data.frame(x, row.names = NULL, optional = FALSE, ...)
 
 ## Value
 
-A plain `data.frame`, one row per shift type: `shift`, `family` and
-`count`, preceded by `session` when the result is session-local. The
-thirteen Gibson shift types are always present, including those with a
-count of zero.
+A plain `data.frame` carrying the same rows and columns as `x`. For a
+result built with `output = "final"` that is one row per shift type –
+`shift`, `family` and `count` – preceded by `session` when the result is
+session-local; the thirteen Gibson shift types are always present,
+including those with a count of zero. For `output = "cumulative"` it is
+thirteen rows per classified turn, adding `sequence`, `event`, `time`,
+`speaker`, `target` and `group` ahead of `shift`, `family` and `count`.
 
 ## Examples
 

@@ -25,7 +25,7 @@ as.data.frame(
 - x:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - row.names:
 
@@ -37,11 +37,12 @@ as.data.frame(
 
 - what:
 
-  `"edges"` for raw edge spells, `"observed_edges"` for derived
-  observation fragments, `"observations"` for canonical observed
-  support, `"vertex_spells"` for canonical declared vertex activity,
-  `"nodes"` for the vertex table, `"bins"` for the measurement grid, or
-  `"network"` for the aggregate edge list cograph renders.
+  Which table to return: `"edges"`, the default, for raw edge spells,
+  `"observed_edges"` for derived observation fragments, `"observations"`
+  for canonical observed support, `"vertex_spells"` for canonical
+  declared vertex activity, `"nodes"` for the vertex table, `"bins"` for
+  the measurement grid, or `"network"` for the aggregate edge list
+  cograph renders.
 
 - measure:
 
@@ -49,15 +50,26 @@ as.data.frame(
   only for `what = "nodes"`. Each becomes one column holding the value
   over the whole observed period, so the vertex table can be filtered or
   ranked without a second call. Any measure
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
   accepts at snapshot scope is allowed, plus `"indegree"` and
-  `"outdegree"`.
+  `"outdegree"`; anything else raises a `dynet_unknown_measure` error,
+  and a `measure` that is not a character vector raises
+  `dynet_bad_input`. Naming it for any other `what` raises a
+  `dynet_bad_input` error too.
 
-- sessions, start, end:
+- sessions:
 
-  Passed to
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
-  when `measure` is given, and ignored otherwise.
+  How sessions are treated while `measure` is computed: `"bounded"` (the
+  default), `"collapse"` or `"separate"`, as in
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
+  Ignored when `measure` is not given.
+
+- start, end:
+
+  Measurement bounds passed to
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  when `measure` is given, and ignored otherwise. Default to the
+  observed range.
 
 - ...:
 
@@ -80,10 +92,10 @@ log, `group` for a co-presence log.
 `"observed_edges"`: one row per derived observation fragment, with
 `raw_spell`, `observation` and `fragment` locating it, `from`, `to`,
 `start`, `end` (clipped to the observation), `raw_start`, `raw_end` (as
-supplied), `weight`, `instant`, `duration`, and the strict
-`left_observation_censored` and `right_observation_censored` flags.
-`session` and the explicit `onset_censored`/`terminus_censored` flags
-are copied unchanged from the raw spell when the network carries them.
+supplied), `weight`, `instant`, the strict `left_observation_censored`
+and `right_observation_censored` flags, and `duration`. `session` and
+the explicit `onset_censored`/`terminus_censored` flags are copied
+unchanged from the raw spell when the network carries them.
 
 `"vertex_spells"`: one row per maximal declared activity component, with
 `vertex_spell`, `node`, `start`, `end`, `duration`, `instant`,
@@ -106,7 +118,8 @@ the summed `weight` cograph renders.
 
 ``` r
 dn <- dynet(school_contacts)
-head(as.data.frame(dn))
+spells <- as.data.frame(dn)
+head(spells)
 #>    from   to start  end duration weight
 #> 1 Jonas  Dan  0.00 1.10     1.10      1
 #> 2  Gita  Ana  0.14 0.98     0.84      1

@@ -20,8 +20,13 @@ summary(object, by = NULL, ...)
 
 - by:
 
-  Grouping for the summary: `"node"` (the default for node-level
-  measures), `"time"`, or `"measure"`.
+  Grouping for the summary: `"node"`, `"time"` or `"measure"`. The
+  default, `NULL`, groups by `"node"` when the measure has a `node`
+  column and by `"measure"` otherwise. A `session` column, when the
+  measure has one, and `measure` itself are always part of the grouping
+  as well. A grouping the measure has no column for – `"node"` on a
+  graph-level series, say – is dropped rather than raising, leaving the
+  grouping the measure does carry.
 
 - ...:
 

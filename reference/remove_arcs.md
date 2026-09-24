@@ -1,7 +1,7 @@
 # Remove directed temporal arcs
 
 The same operation as
-[`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md),
 with one extra guarantee: the network must already be directed, so a
 `from`/`to` pair names one arc and not both orientations. Removing an
 arc from an undirected network raises a condition of class
@@ -26,7 +26,7 @@ remove_arcs(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - ties:
 
@@ -38,9 +38,12 @@ remove_arcs(
 
 - from, to, start, end, session:
 
-  Optional selectors combined by conjunction. When `ties` is supplied,
-  these selectors must be omitted. On undirected networks `from` and
-  `to` must be supplied together and their order is ignored.
+  Optional selectors combined by conjunction. `start` and `end` match a
+  spell's own boundary, compared with the package's magnitude-relative
+  time tolerance rather than exactly, so a selector written `0.3` still
+  matches a spell that accumulated as `0.1 + 0.1 + 0.1`. When `ties` is
+  supplied, these selectors must be omitted. On undirected networks
+  `from` and `to` must be supplied together and their order is ignored.
 
 ## Value
 
@@ -49,7 +52,7 @@ structure as the input.
 
 ## See also
 
-[`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md),
 which does not require a directed network.
 
 ## Examples

@@ -15,7 +15,7 @@ Name, Label, and then vertex.names, in that order."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,8 +26,11 @@ Name, Label, and then vertex.names, in that order."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -90,29 +93,34 @@ grouping variable.</p></dd>
 
 
 <dt id="arg-weight-attribute">weight_attribute<a class="anchor" aria-label="anchor" href="#arg-weight-attribute"></a></dt>
-<dd><p>Static edge attribute used as spell weight. Supply
-<code>NULL</code> to use unit weights.</p></dd>
+<dd><p>Static edge attribute used as spell weight,
+<code>"weight"</code> by default. Supply <code>NULL</code> to use unit weights. A name that is
+not a static edge attribute of <code>x</code> also yields unit weights.</p></dd>
 
 
 <dt id="arg-session-attribute">session_attribute<a class="anchor" aria-label="anchor" href="#arg-session-attribute"></a></dt>
 <dd><p>Optional static edge attribute used as the spell
-session label.</p></dd>
+session label. <code>NULL</code>, the default, leaves the network unsessioned; a
+name that is not a static edge attribute raises a condition of class
+<code>dynet_unknown_attribute</code>.</p></dd>
 
 
 <dt id="arg-interval">interval<a class="anchor" aria-label="anchor" href="#arg-interval"></a></dt>
-<dd><p>Positive measurement interval. <code>NULL</code> uses the legacy
-observation time increment when available, otherwise one.</p></dd>
+<dd><p>Positive measurement interval. <code>NULL</code>, the default, uses the
+legacy observation time increment when available, otherwise one.</p></dd>
 
 
 <dt id="arg-active-default">active_default<a class="anchor" aria-label="anchor" href="#arg-active-default"></a></dt>
 <dd><p>Whether legacy edges with no explicit activity spell
 are active over the observation period, matching the same argument in
-<code>networkDynamic</code>.</p></dd>
+<code>networkDynamic</code>. <code>TRUE</code> by default.</p></dd>
 
 
 <dt id="arg-import-edge-attributes">import_edge_attributes<a class="anchor" aria-label="anchor" href="#arg-import-edge-attributes"></a></dt>
 <dd><p>Whether to retain compatible static legacy
-edge attributes on the raw Dynet spell ledger.</p></dd>
+edge attributes on the raw Dynet spell ledger. <code>TRUE</code> by default; an
+attribute whose name would collide with a canonical spell column is
+prefixed with <code>edge_</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -121,17 +129,50 @@ edge attributes on the raw Dynet spell ledger.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>dynet</code> object carrying <code>legacy_source = "networkDynamic"</code> in
-its metadata.</p>
+    <p>A <code><a href="dynet.html">dynet()</a></code> temporal network: an object of class
+<code>c("dynet", "netobject", "cograph_network")</code> whose spell table has one row
+per imported edge-activity spell, with the legacy vertex and edge
+attributes, observation support, vertex activity and censor flags carried
+across. Its metadata additionally carries <code>legacy_source = "networkDynamic"</code>, the chosen <code>legacy_name_attribute</code>, the retained
+<code>legacy_edge_attributes</code> and any <code>legacy_edge_attribute_renames</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Dynamic edge attributes other than activity itself are not part of the
 <code>networkDynamic</code> spell-list interface and are therefore not imported.
 Ordinary per-edge attributes are repeated onto every imported spell of the
-corresponding aggregate edge.</p>
+corresponding aggregate edge, matched on the canonical endpoint order
+<code><a href="dynet.html">dynet()</a></code> stores, so an undirected pair carries its own attributes.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="as_dynet.html">as_dynet()</a></code>, the generic.</p></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"networkDynamic"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"network"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">spells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, terminus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                       tail <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, head <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">legacy</span> <span class="op">&lt;-</span> <span class="fu">networkDynamic</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/networkDynamic/man/networkDynamic.html" class="external-link">networkDynamic</a></span><span class="op">(</span>edge.spells <span class="op">=</span> <span class="va">spells</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">network</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/network/man/attribute.methods.html" class="external-link">set.vertex.attribute</a></span><span class="op">(</span><span class="va">legacy</span>, <span class="st">"Name"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="as_dynet.html">as_dynet</a></span><span class="op">(</span><span class="va">legacy</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initializing base.net of size 3 imputed from maximum vertex id in edge records</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Created net.obs.period to describe network</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Network observation period info:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Number of observation spells: 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Maximal time range observed: 0 until 3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Temporal mode: continuous </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Time unit: unknown </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Suggested time increment: NA </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   from to start end duration weight onset_censored terminus_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    A  B     0   2        2      1          FALSE             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    B  C     1   3        2      1          FALSE             FALSE</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

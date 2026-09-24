@@ -5,7 +5,7 @@ other, giving the pairwise similarity matrix as a tidy frame. This
 answers how much the network at one moment resembles the network at
 another, which no single-bin measure reports and which the formation and
 dissolution quantities in
-[`events()`](https://mohsaqr.github.io/Dynet/reference/events.md) only
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) only
 address between neighbouring bins.
 
 Coefficients are computed by
@@ -31,7 +31,7 @@ similarity(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - method:
 
@@ -40,19 +40,29 @@ similarity(
 
 - sessions:
 
-  How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  How to treat sessions when the layers are built: `"bounded"` (the
+  default) and `"collapse"` differ in whether a session wall gates a tie
+  into its bin. Unlike
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md),
+  `"separate"` adds no `session` column here: layers are keyed on time
+  alone, so two session-local bins sharing a time are compared as one
+  layer.
 
 - start, end:
 
   First and last time to measure. Default to the observed range.
 
-- step, window:
+- step:
 
-  How often to measure and how much time each measurement covers.
-  Default to the interval the network was built with. `window = "all"`
-  is rejected here, because a similarity matrix of one bin against
-  itself says nothing.
+  How often to measure. Defaults to the interval the network was built
+  with.
+
+- window:
+
+  How much time each measurement covers. Defaults to `step`.
+  `window = "all"` measures the whole observed period as a single bin
+  and so leaves nothing to compare; it raises `dynet_empty_result`, as
+  does any other grid that yields fewer than two bins.
 
 - plot:
 
@@ -73,13 +83,17 @@ bins and columns `time`, `other`, `measure` and `value`. The diagonal is
 included and is one for every coefficient except `"hamming"`, where
 identical layers differ in nothing and score zero. `"pearson"` reaches
 one only to floating-point accuracy, so compare it with a tolerance
-rather than with `==`.
+rather than with `==`. The frame is returned invisibly when
+`plot = TRUE` has drawn the figure.
+
+The coefficients come from cograph, which is a hard dependency of Dynet;
+a namespace that cannot be loaded raises `dynet_needs_cograph`.
 
 ## See also
 
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md)
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
 for the networks being compared,
-[`events()`](https://mohsaqr.github.io/Dynet/reference/events.md) for
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) for
 formation and dissolution between neighbouring bins.
 
 ## Examples

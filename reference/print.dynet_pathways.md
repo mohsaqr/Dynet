@@ -25,12 +25,16 @@ print(x, n = 12L, ...)
 
 ## Value
 
-`x`, invisibly.
+`x`, invisibly. Called for the side effect of printing a header giving
+the number of distinct routes and of optimal routes counted, followed by
+the first `n` rows.
 
 ## Examples
 
 ``` r
-pathways(dynet(school_contacts), from = "Ana")
+dn <- dynet(school_contacts)
+routes <- pathways(dn, from = "Ana")
+print(routes)
 #> # Time-respecting pathways (5 distinct routes)
 #> # 7 optimal routes counted
 #>                               route endpoint count     share n_hops

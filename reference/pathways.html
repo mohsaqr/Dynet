@@ -15,7 +15,7 @@ answers "who is reachable".'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,8 +26,11 @@ answers "who is reachable".'></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -68,9 +71,11 @@ answers "who is reachable".</p>
 
 
 <dt id="arg-from">from<a class="anchor" aria-label="anchor" href="#arg-from"></a></dt>
-<dd><p>Optional source vertex. One name gives the routes leaving that
-vertex. The default pools every vertex, which is the network-wide
-question, and adds a <code>from</code> column naming each route's source.</p></dd>
+<dd><p>Optional source vertex. A name gives the routes leaving that
+vertex, and several names give the routes leaving each of them. The
+default, <code>NULL</code>, pools every vertex, which is the network-wide question,
+and is the only case that adds a <code>from</code> column naming each route's source;
+a named source is already the first step of every <code>route</code> string.</p></dd>
 
 
 <dt id="arg-top">top<a class="anchor" aria-label="anchor" href="#arg-top"></a></dt>
@@ -101,9 +106,17 @@ the result when the figure needs arguments of its own.</p></dd>
     <p>An object of class <code>dynet_pathways</code>, a data frame with one row per
 distinct route, most frequent first: <code>route</code>, the vertex sequence joined
 by arrows; <code>endpoint</code>, where it lands; <code>count</code>, how many optimal routes
-follow it; <code>share</code>, its fraction of the counted total; <code>n_hops</code>; and
-<code>arrival_time</code>. Pooling over every source adds <code>from</code> as the first
-column. Use <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> for a plain frame.</p>
+follow it; <code>share</code>, its fraction of every counted route, so the shares of
+a result limited by <code>top</code> do not sum to one; <code>n_hops</code>; and
+<code>arrival_time</code>, the earliest time the route lands. Pooling over every
+source adds <code>from</code> as the first column. Use <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> for a plain
+frame and <code>as.data.frame(x, what = "steps")</code> for the per-hop timing of
+the routes that were kept.</p>
+<p>An unknown <code>from</code> raises <code>dynet_unknown_node</code>; a <code>top</code> or <code>min_hops</code> that
+is not one finite number in range raises <code>dynet_bad_input</code>; and a query
+that leaves no route of at least <code>min_hops</code> hops raises
+<code>dynet_empty_result</code>. Conditions raised by <code><a href="paths.html">paths()</a></code> on the arguments
+passed through <code>...</code> reach the caller unchanged.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

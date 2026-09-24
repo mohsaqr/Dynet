@@ -14,7 +14,7 @@ plot(x, base_size = 12, palette = "okabe", ...)
 - x:
 
   A `dynet_snapshot` from
-  [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md).
+  [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md).
 
 - base_size:
 
@@ -23,7 +23,7 @@ plot(x, base_size = 12, palette = "okabe", ...)
 - palette:
 
   Palette specification, as in
-  [`plot.dynet()`](https://mohsaqr.github.io/Dynet/reference/plot.dynet.md).
+  [`plot.dynet()`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md).
 
 - ...:
 
@@ -31,7 +31,9 @@ plot(x, base_size = 12, palette = "okabe", ...)
 
 ## Value
 
-A `ggplot` object.
+A `ggplot` object, faceted by session when the result carries one. A
+result in which no tie is active raises an error of class
+`dynet_empty_result` rather than drawing an empty panel.
 
 ## Examples
 

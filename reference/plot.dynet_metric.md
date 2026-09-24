@@ -29,16 +29,22 @@ plot(
 - type:
 
   `"line"` for trajectories over time, `"heatmap"` for a vertex-by-time
-  tile plot, `"ridge"` for small multiples per measure.
+  tile plot, `"ridge"` for small multiples per measure. Ignored for a
+  measure with no time axis.
 
 - highlight:
 
   Optional character vector of vertex names to draw in colour, with
-  everything else in grey. Useful when there are many vertices.
+  everything else in grey. Useful when there are many vertices. Ignored
+  for a measure with no time axis.
 
 - top:
 
-  Draw only the `top` vertices by mean value. `NULL` draws all.
+  How many rows to draw. For a measure taken over time, the `top`
+  vertices with the largest mean value; `NULL`, the default, draws every
+  vertex. For a measure with no time axis, the `top` rows with the
+  largest absolute value, defaulting to `30`, with a subtitle naming how
+  many of how many are shown.
 
 - palette:
 
@@ -55,7 +61,16 @@ plot(
 
 ## Value
 
-A `ggplot` object.
+A `ggplot` object. Drawing happens when that object is printed, so the
+plot is the return value here rather than a side effect.
+
+## Details
+
+A measure with no time axis, such as reachability or
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
+has no trajectory to draw and is shown as a bar panel instead, one bar
+per vertex or pair and one facet per measure. `type` and `highlight`
+have nothing to act on there and are ignored.
 
 ## Examples
 

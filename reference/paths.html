@@ -31,7 +31,7 @@ edge-row order or duplicate spell rows."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,8 +42,11 @@ edge-row order or duplicate spell rows."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -102,13 +105,20 @@ edge-row order or duplicate spell rows.</p>
 
 
 <dt id="arg-from">from<a class="anchor" aria-label="anchor" href="#arg-from"></a></dt>
-<dd><p>Name of the vertex to start from.</p></dd>
+<dd><p>Name of the one vertex the search is anchored on: the source of
+a forward search, the target of a backward one.</p></dd>
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
 <dd><p>Forward source-availability time or backward arrival deadline.
-Defaults to the start of the observation window for forward paths and its
-end for backward paths. Date and date-time values use the network's time
+An explicit <code>at</code> is used exactly: a source that is not present at that
+instant reaches nothing. The default, <code>NULL</code>, lets the vertex supply its
+own anchor. A vertex with declared spells (see <code><a href="set_vertex_spells.html">set_vertex_spells()</a></code>)
+starts at the first instant it is present inside the window, or at the
+last instant searching backward; a vertex with no declared spells starts
+at the window bound, which is <code>start</code> for a forward search and <code>end</code> for a
+backward one, each defaulting in turn to the matching end of the
+observation window. Date and date-time values use the network's time
 scale. It cannot be combined with <code>start</code> or <code>end</code>.</p></dd>
 
 
@@ -144,32 +154,51 @@ the result when the figure needs arguments of its own.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>"dynet_paths"</code>: a tidy data frame with one row
 per vertex and columns <code>node</code>, <code>reachable</code>, <code>arrival_time</code>, <code>attained</code>
-(whether that optimum itself is realized), <code>latency</code> (time taken from the
-source), <code>n_hops</code>, and the exact count <code>n_paths</code>. Bounded mode adds <code>path_session</code> and
-<code>n_best_sessions</code>; separate mode adds <code>session</code> and <code>origin</code>. Use
-<code>as.data.frame(x, what = "steps")</code> for every reconstructed optimal route;
-its endpoint-local <code>path_id</code> distinguishes tied atom sequences.</p>
+(whether that optimum itself is realised), <code>latency</code> (elapsed time
+between the origin and <code>arrival_time</code>, in either direction), <code>n_hops</code>,
+and the exact count <code>n_paths</code>. Bounded mode adds
+<code>path_session</code> and <code>n_best_sessions</code>; separate mode adds <code>session</code> and
+<code>origin</code>, one complete vertex block per session. Use
+<code>as.data.frame(x, what = "steps")</code> for every reconstructed optimal route:
+one row per vertex visited, with <code>endpoint</code>, <code>path_id</code> (endpoint-local,
+distinguishing tied atom sequences), <code>path_session</code>, <code>step</code>, <code>node</code>,
+<code>time</code> and <code>attained</code>, preceded by <code>session</code> in separate mode.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A valid forward journey has distinct vertices, hop-entry times <code>x</code>, and
-completion times <code>y = x + traversal_time</code>. The source is ready at <code>start</code>,
-each later entry is no earlier than the preceding completion, and final
-completion is at or before <code>end</code>. At zero duration, entry and completion
-coincide and recover P01's nondecreasing traversal times. The empty journey
-reaches the source at <code>start</code>. With <code>at</code>, that value supplies <code>start</code> for
-forward paths or <code>end</code> for backward paths. Cycles are unnecessary for reach
-and earliest arrival because deleting a repeated-vertex section and waiting
-at that vertex preserves every later hop.</p>
+completion times <code>y = x + traversal_time</code>. The source is ready at the
+resolved origin, each later entry is no earlier than the preceding
+completion, and final completion is at or before <code>end</code>. At zero duration,
+entry and completion coincide, recovering the nondecreasing hop times
+described above. The empty journey reaches the source at the origin. With
+<code>at</code>, that value is both the origin and the window bound: <code>start</code> for
+forward paths or <code>end</code> for backward paths. Cycles are unnecessary for
+reach and earliest
+arrival because deleting a repeated-vertex section and waiting at that
+vertex preserves every later hop.</p>
+<p>The origin is anchored at the source's own presence. Without <code>at</code>, a vertex
+with declared spells starts at the first instant it is present inside the
+window, or at the last instant when searching backward, so a vertex that
+enters the network late is never scored from a time before it existed; a
+vertex with no declared spells starts at the window bound. A vertex that is
+never present inside the window has no valid anchor, so every row of its
+result, the source row included, is unreachable. The resolved origin is
+reported in the printed header; under <code>sessions = "separate"</code>, where every
+session resolves its own, it is reported in the <code>origin</code> column instead.</p>
 <p><code>start</code> and <code>end</code> form a closed bound on the complete journey: entry may
 equal <code>start</code> and completion may equal <code>end</code>. This does not close interval
 activity on the right. At zero duration, an event or interval onset at
 <code>end</code> is eligible while an interval terminating there cannot be entered.
 With positive duration, no nonempty hop can both enter and complete at
 <code>end</code>; <code>start = end</code> therefore leaves only the empty journey.</p>
-<p>Declared vertex activity gates traversal appearances. The forward source
-must be active exactly at <code>start</code>, and the backward target exactly at <code>end</code>;
-otherwise every fixed-universe row, including the anchor, is unreachable.
+<p>Declared vertex activity gates traversal appearances. The anchor must be
+valid: the forward source must be active exactly at the resolved origin,
+and the backward target either active there or leaving exactly there, since
+a spell's terminus is the last instant that vertex exists even though
+presence is half-open. An invalid anchor – which an explicit <code>at</code> outside
+the source's own spells produces – leaves every fixed-universe row,
+including the anchor row itself, unreachable.
 After a valid anchor, waiting may cross inactive periods. A zero-duration
 hop requires both endpoints at its time. A positive-duration interval hop
 requires both endpoints continuously on the closed traversal from entry
@@ -180,8 +209,11 @@ canonical contact remain one path atom and cannot multiply <code>n_paths</code>.
 <p>For backward paths, <code>arrival_time</code> is the latest-departure supremum for a
 journey ending at the named target by the resolved <code>end</code>, and <code>latency</code> is
 <code>end</code> minus that value. A supremum at an interval's excluded terminus need
-not itself be an attainable departure.</p>
-<p>With <code>sessions = "bounded"</code>, each endpoint is optimized across complete
+not itself be an attainable departure. Such an endpoint is still reachable
+and still reports its route family: <code>n_hops</code>, <code>n_paths</code> and the steps of
+the routes that approach the supremum are those of the family, and
+<code>attained = FALSE</code> records that the instant itself is not realised.</p>
+<p>With <code>sessions = "bounded"</code>, each endpoint is optimised across complete
 session-specific searches. A unique winner is named in <code>path_session</code>; ties
 leave it missing and are counted in <code>n_best_sessions</code>. No merged predecessor
 tree is exposed. The steps accessor retains a complete route from every tied
@@ -197,19 +229,36 @@ exactly at the component terminus is allowed. A point event triggers at its
 timestamp and arrives after the same duration; it does not represent
 continued edge activity. The query <code>end</code> bounds completion, not only entry.</p>
 <p>Optimal forward journeys are shortest foremost: final completion is
-minimized first and hop count second. Journey identity is the ordered
-sequence of canonical oriented contacts. Duplicate points, overlapping or
+minimised first (foremost) and hop count second (shortest). Backward
+journeys mirror it, maximising the departure time first and minimising hop
+count second. There is no criterion argument: this is the only criterion
+<code>paths()</code> offers, and it is recorded on the result as
+<code>"foremost_then_shortest"</code>. A fastest journey, which minimises elapsed time
+rather than arrival time, is a different optimum and is not computed here.
+Journey identity is the ordered sequence of canonical oriented contacts.
+Duplicate points, overlapping or
 touching interval segmentation, weights, and waiting schedules do not
 multiply paths; genuinely recurrent contacts do. <code>n_paths</code> is exact through
 <code>2^53</code>, after which a <code>dynet_path_overflow</code> condition is raised. The empty
-journey has one path, an unreachable endpoint has zero, and an unattained
-backward supremum has zero because it has no maximizing journey.</p>
+journey has one path and an unreachable endpoint has none.</p>
+<p>Failures are classed. An unknown <code>from</code> raises <code>dynet_unknown_vertex</code>; a
+<code>from</code> that is not one name, a negative <code>traversal_time</code>, combining <code>at</code>
+with <code>start</code> or <code>end</code>, or a window that cannot hold a journey, raises
+<code>dynet_bad_input</code>; a window disjoint from explicit observation raises
+<code>dynet_outside_observation</code>; a count beyond <code>2^53</code> raises
+<code>dynet_path_overflow</code>; and expanding more than a million routes through
+<code>as.data.frame(x, what = "steps")</code> raises
+<code>dynet_path_expansion_too_large</code>, which the compact <code>n_paths</code> column
+answers instead.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Kempe, D., Kleinberg, J., &amp; Kumar, A. (2002). Connectivity and inference
 problems for temporal networks. <em>Journal of Computer and System Sciences</em>,
 64(4), 820-842.</p>
+<p>Bui-Xuan, B., Ferreira, A., &amp; Jarry, A. (2003). Computing shortest, fastest,
+and foremost journeys in dynamic networks. <em>International Journal of
+Foundations of Computer Science</em>, 14(2), 267-285.</p>
 <p>Holme, P., &amp; Saramaki, J. (2012). Temporal networks. <em>Physics Reports</em>,
 519(3), 97-125.</p>
 <p>Casteigts, A., Corsini, A., &amp; Sarkar, W. (2024). Simple, strict, proper,
@@ -220,7 +269,8 @@ Science</em>, 991, 114434.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">routes</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘Ana’, from t = 0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 13 of 13 other vertices | time in step</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   node reachable arrival_time attained latency n_hops n_paths</span>
@@ -237,6 +287,16 @@ Science</em>, 991, 114434.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE         6.12     TRUE    6.12      2       2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE         9.65     TRUE    9.65      3       1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          property   value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1          source     Ana</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2       direction forward</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3       reachable      13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 reachable share       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  median latency    7.51</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     max latency   11.66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7     median hops       2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8        max hops       4</span>
 <span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘Ana’, from t = 0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 12 of 13 other vertices | time in step</span>
@@ -254,17 +314,23 @@ Science</em>, 991, 114434.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE         6.12     TRUE    6.12      2       2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE         9.65     TRUE    9.65      3       1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
-<span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          property   value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1          source     Ana</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2       direction forward</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3       reachable      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 reachable share       1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  median latency    7.51</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6     max latency   11.66</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7     median hops       2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8        max hops       4</span>
+<span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, direction <span class="op">=</span> <span class="st">"backward"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths into ‘Ana’, from t = 21.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 13 of 13 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   node reachable arrival_time attained latency n_hops n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ana      TRUE        21.52     TRUE    0.00      0       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ben      TRUE        17.14    FALSE    4.38      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cara      TRUE        20.33    FALSE    1.19      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Dan      TRUE        21.33    FALSE    0.19      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Eve      TRUE        15.73    FALSE    5.79      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Finn      TRUE        20.26    FALSE    1.26      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Gita      TRUE        16.76    FALSE    4.76      3       2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Hugo      TRUE        19.80    FALSE    1.72      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Iris      TRUE        17.57    FALSE    3.95      3       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Jonas      TRUE        20.46    FALSE    1.06      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE        16.86    FALSE    4.66      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE        12.62    FALSE    8.90      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

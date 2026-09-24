@@ -3,7 +3,7 @@
 Posts in a course discussion forum over roughly eight weeks. Each row is
 one post directed at an earlier poster in the same thread. Because a
 post has a timestamp but no end, the duration of the tie has to be
-derived: [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md)
+derived: [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
 treats a post as active until the last post in its thread, so a message
 that provoked a long argument stays live longer than one that fell flat.
 
@@ -27,16 +27,22 @@ A `data.frame` with 241 rows and 4 columns:
 
 - timestamp:
 
-  `POSIXct`. When the post was made.
+  `POSIXct` (UTC). When the post was made. Posts run from 2024-09-02 to
+  2024-10-27, just under eight weeks.
 
 - thread:
 
-  Character. The discussion thread it belongs to.
+  Character. The discussion thread it belongs to; 62 threads.
+
+## Source
+
+Simulated, not observed. Generated deterministically under a fixed seed
+by `data-raw/make-data.R`.
 
 ## Details
 
 Pairs with
-[forum_people](https://mohsaqr.github.io/Dynet/reference/forum_people.md),
+[forum_people](https://pak.dynasite.org/Dynet/reference/forum_people.md),
 which carries the roles used for mixing analysis.
 
 ## Examples

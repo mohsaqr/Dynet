@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,8 +33,11 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+<li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -67,7 +70,7 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/mohsaqr/Dynet" class="external-link">Dynet</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span></code></pre></div>
 <p>A temporal network is a relational log plus a clock. Everything Dynet
 measures depends on that clock being right, so this vignette is about
 the first half of the work: getting a log into a <code>dynet</code>
@@ -158,22 +161,22 @@ you measure: quantities that integrate occupied time over the clock are
 exactly zero on point contacts, because points occupy no time.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">clicks</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format  contact</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       20</span></span>
-<span><span class="co">#&gt; 4            edge spells      241</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      172</span></span>
-<span><span class="co">#&gt; 6              time unit     days</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to 54.96387</span></span>
-<span><span class="co">#&gt; 9                   span 54.96387</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       55</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0112</span></span>
-<span><span class="co">#&gt; 13      temporal density        0</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format      contact</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           20</span></span>
+<span><span class="co">#&gt; 4            edge spells          241</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          172</span></span>
+<span><span class="co">#&gt; 6              time unit         days</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to     54.96387</span></span>
+<span><span class="co">#&gt; 9                   span     54.96387</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           55</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0112</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p><code>temporal density</code> is <code>0</code>, while
 <code>mean snapshot density</code> is not. The snapshot measures ask
 whether a tie was present anywhere inside a bin; the integrated measures
@@ -224,7 +227,7 @@ is not zero:</p>
 <span><span class="co">#&gt; 10             bin width                 1</span></span>
 <span><span class="co">#&gt; 11             time bins                55</span></span>
 <span><span class="co">#&gt; 12 mean snapshot density            0.0248</span></span>
-<span><span class="co">#&gt; 13      temporal density            0.0139</span></span>
+<span><span class="co">#&gt; 13      temporal density      not computed</span></span>
 <span><span class="co">#&gt; 14              sessions              none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes role, achievement</span></span></code></pre></div>
 </div>
@@ -319,22 +322,22 @@ two-column description, one row per property. Read it before you measure
 anything.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0829</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0285</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0829</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Row by row:</p>
 <ul>
 <li>
@@ -452,7 +455,7 @@ by default with a message — almost always what a relational log needs.
 Keep them if the loop means something in your design:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, loops <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Keeping 1 self-loop event(s); they are excluded from degree.</span></span>
+<span><span class="co">#&gt; Keeping 1 self-loop event(s); each adds two to its vertex's degree.</span></span>
 <span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
 <span><span class="co">#&gt; # 3 vertices | 5 edge spells | 5 distinct pairs</span></span>
 <span><span class="co">#&gt; # observed from 0 to 6 step, binned every 1</span></span>
@@ -469,22 +472,22 @@ measurement verb, in the network’s own time unit:</p>
 <code class="sourceCode R"><span><span class="va">tiny_dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, interval <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dropped 1 self-loop event(s). Use loops = TRUE to keep them.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">tiny_dn</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices        3</span></span>
-<span><span class="co">#&gt; 4            edge spells        4</span></span>
-<span><span class="co">#&gt; 5         distinct pairs        4</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to        5</span></span>
-<span><span class="co">#&gt; 9                   span        5</span></span>
-<span><span class="co">#&gt; 10             bin width        2</span></span>
-<span><span class="co">#&gt; 11             time bins        3</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.3333</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.2667</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices            3</span></span>
+<span><span class="co">#&gt; 4            edge spells            4</span></span>
+<span><span class="co">#&gt; 5         distinct pairs            4</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to            5</span></span>
+<span><span class="co">#&gt; 9                   span            5</span></span>
+<span><span class="co">#&gt; 10             bin width            2</span></span>
+<span><span class="co">#&gt; 11             time bins            3</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.3333</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Vertex attributes come in through <code>nodes</code>. The vertex key
 column is auto-detected, and <code>groups</code> names one attribute to
 use as the vertex partition — written into the places cograph looks for
@@ -536,22 +539,22 @@ three weeks of contact give three weekly sessions:</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sessioned</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">weekly</span>, session <span class="op">=</span> <span class="st">"week"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">sessioned</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0829</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0285</span></span>
-<span><span class="co">#&gt; 14              sessions        3</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0829</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions            3</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Every verb that takes time then takes a <code>sessions</code>
 argument with three settings, and the choice changes the answer rather
 than the formatting. Temporal paths show it most sharply:</p>
@@ -636,22 +639,22 @@ and the horizon of every path, declare it when you know it.</p>
 <div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bounded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span>, observation_start <span class="op">=</span> <span class="fl">0</span>, observation_end <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">bounded</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to       14</span></span>
-<span><span class="co">#&gt; 9                   span       14</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       14</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0922</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0314</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to           14</span></span>
+<span><span class="co">#&gt; 9                   span           14</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           14</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0922</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>The span is now 14 rather than 21.52, and both densities changed
 because the exposure they divide by changed. This is an administrative
 limit, not a filter: the raw spell boundaries are untouched, and
@@ -672,22 +675,22 @@ adjacent spells are merged into canonical components.</p>
 <span><span class="co">#&gt; 2           2    12  21        9   FALSE</span></span></code></pre></div>
 <div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">gapped</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to       21</span></span>
-<span><span class="co">#&gt; 9                   span       21</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       17</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0824</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0278</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to           21</span></span>
+<span><span class="co">#&gt; 9                   span           21</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           17</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0824</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Seventeen bins, not 21: the grid restarts inside each component and
 never creates a bin that lies entirely in the gap. Exposure sums the
 component durations rather than taking the hull, so events falling in
@@ -806,63 +809,63 @@ cograph’s static setters.</p>
 <span>  from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"Nova"</span>, start <span class="op">=</span> <span class="fl">4</span>, end <span class="op">=</span> <span class="fl">6</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">step2</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       15</span></span>
-<span><span class="co">#&gt; 4            edge spells      241</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      111</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0723</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0252</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     role</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           15</span></span>
+<span><span class="co">#&gt; 4            edge spells          241</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          111</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0723</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         role</span></span></code></pre></div>
 <p>Fifteen vertices, 241 spells, 111 distinct pairs, and a
 <code>role</code> attribute that did not exist a moment ago. The
 original is untouched:</p>
 <div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0829</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0285</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0829</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Removal addresses a tie by name and time, and renaming takes a named
 vector of old-to-new:</p>
 <div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="../reference/remove_ties.html">remove_ties</a></span><span class="op">(</span><span class="va">step2</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"Nova"</span>, start <span class="op">=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       15</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0719</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0247</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     role</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           15</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0719</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         role</span></span></code></pre></div>
 <div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="../reference/rename_nodes.html">rename_nodes</a></span><span class="op">(</span><span class="va">step2</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Nova <span class="op">=</span> <span class="st">"Nova B."</span><span class="op">)</span><span class="op">)</span>, what <span class="op">=</span> <span class="st">"nodes"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       name     role</span></span>
@@ -875,22 +878,22 @@ survives:</p>
 <div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">five</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">school</span>, nodes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span>, <span class="st">"Dan"</span>, <span class="st">"Eve"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">five</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices        5</span></span>
-<span><span class="co">#&gt; 4            edge spells       18</span></span>
-<span><span class="co">#&gt; 5         distinct pairs       11</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from     3.17</span></span>
-<span><span class="co">#&gt; 8            observed to    21.33</span></span>
-<span><span class="co">#&gt; 9                   span    18.16</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       19</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0684</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0193</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices            5</span></span>
+<span><span class="co">#&gt; 4            edge spells           18</span></span>
+<span><span class="co">#&gt; 5         distinct pairs           11</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from         3.17</span></span>
+<span><span class="co">#&gt; 8            observed to        21.33</span></span>
+<span><span class="co">#&gt; 9                   span        18.16</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           19</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0684</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Note that the observed range narrowed too, from
 <code>0</code>–<code>21.52</code> to
 <code>3.17</code>–<code>21.33</code>: these five students’ first contact

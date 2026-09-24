@@ -12,6 +12,7 @@ as.data.frame(
   optional = FALSE,
   layout = c("long", "wide"),
   what = c("values", "diagnostics"),
+  top = NULL,
   ...
 )
 ```
@@ -35,7 +36,9 @@ as.data.frame(
   `"long"` gives one row per observation, which is the default and the
   shape every other verb expects. `"wide"` spreads time across columns,
   giving one row per vertex (or per measure for graph-level quantities),
-  which is convenient for exporting a table.
+  which is convenient for exporting a table. A measure with no time
+  axis, such as reachability, is spread by measure instead: one row per
+  vertex with one column per measure.
 
 - what:
 
@@ -49,6 +52,14 @@ as.data.frame(
   `eigen_residual` for the eigen step. A result with nothing to report
   gives a zero-row frame of those same columns rather than `NULL`.
 
+- top:
+
+  Keep only the `top` vertices with the largest mean value, and order
+  the result from largest to smallest. A single positive number; `NULL`,
+  the default, keeps every row in the measure's own order. It selects
+  vertices, so it applies to `what = "values"` on a measure that has a
+  `node` column; anything else raises a `dynet_bad_input` error.
+
 - ...:
 
   Ignored.
@@ -59,14 +70,20 @@ A plain `data.frame`. Long layout carries `measure` and `value` with one
 row per observation, alongside whichever columns say what was measured:
 `session` when the network has sessions, `time` for anything measured on
 a grid of bins, `node` for a vertex-level quantity, `from` and `to` for
-a pair-level one, `vertex_spell` and `implicit` for per-spell vertex
-durations from
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md),
+a pair-level one, `raw_spell` for per-spell edge durations and
+`vertex_spell` with `implicit` for per-spell vertex durations from
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
 and `from_group` and `to_group` for
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md). A
-graph-level series carries `time`, `measure` and `value` alone. In wide
-layout the identifying columns come first and the remaining columns are
-the time points, one per bin.
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md). A
+graph-level series carries `time`, `measure` and `value` alone.
+
+Wide layout puts the identifying columns first and spreads what varies
+across the rest. A measure taken on a grid of bins spreads time: one
+column per bin, named `t` followed by the bin's time, leaving one row
+per vertex and measure. A measure with no time axis, such as
+reachability, spreads the measures instead: one column per measure,
+leaving one row per vertex. A measure with no time axis and only one
+measure is already wide and comes back unchanged.
 
 ## Examples
 
@@ -414,6 +431,118 @@ as.data.frame(degree, layout = "wide")
 #> 12   1   0   1   1
 #> 13   2   2   2   0
 #> 14   0   1   3   1
+as.data.frame(degree, top = 5)
+#>     time  node measure value
+#> 1      0 Jonas  degree     2
+#> 2      1 Jonas  degree     2
+#> 3      2 Jonas  degree     3
+#> 4      3 Jonas  degree     4
+#> 5      4 Jonas  degree     1
+#> 6      5 Jonas  degree     1
+#> 7      6 Jonas  degree     4
+#> 8      7 Jonas  degree     5
+#> 9      8 Jonas  degree     6
+#> 10     9 Jonas  degree     5
+#> 11    10 Jonas  degree     3
+#> 12    11 Jonas  degree     2
+#> 13    12 Jonas  degree     3
+#> 14    13 Jonas  degree     7
+#> 15    14 Jonas  degree     7
+#> 16    15 Jonas  degree     2
+#> 17    16 Jonas  degree     1
+#> 18    17 Jonas  degree     0
+#> 19    18 Jonas  degree     2
+#> 20    19 Jonas  degree     1
+#> 21    20 Jonas  degree     2
+#> 22    21 Jonas  degree     0
+#> 23     0  Kira  degree     2
+#> 24     1  Kira  degree     2
+#> 25     2  Kira  degree     3
+#> 26     3  Kira  degree     2
+#> 27     4  Kira  degree     3
+#> 28     5  Kira  degree     4
+#> 29     6  Kira  degree     6
+#> 30     7  Kira  degree     1
+#> 31     8  Kira  degree     2
+#> 32     9  Kira  degree     4
+#> 33    10  Kira  degree     2
+#> 34    11  Kira  degree     3
+#> 35    12  Kira  degree     1
+#> 36    13  Kira  degree     3
+#> 37    14  Kira  degree     5
+#> 38    15  Kira  degree     2
+#> 39    16  Kira  degree     3
+#> 40    17  Kira  degree     2
+#> 41    18  Kira  degree     1
+#> 42    19  Kira  degree     2
+#> 43    20  Kira  degree     3
+#> 44    21  Kira  degree     2
+#> 45     0  Hugo  degree     1
+#> 46     1  Hugo  degree     0
+#> 47     2  Hugo  degree     1
+#> 48     3  Hugo  degree     1
+#> 49     4  Hugo  degree     0
+#> 50     5  Hugo  degree     1
+#> 51     6  Hugo  degree     6
+#> 52     7  Hugo  degree     5
+#> 53     8  Hugo  degree     5
+#> 54     9  Hugo  degree     4
+#> 55    10  Hugo  degree     2
+#> 56    11  Hugo  degree     1
+#> 57    12  Hugo  degree     2
+#> 58    13  Hugo  degree     2
+#> 59    14  Hugo  degree     6
+#> 60    15  Hugo  degree     3
+#> 61    16  Hugo  degree     2
+#> 62    17  Hugo  degree     1
+#> 63    18  Hugo  degree     0
+#> 64    19  Hugo  degree     2
+#> 65    20  Hugo  degree     3
+#> 66    21  Hugo  degree     3
+#> 67     0   Eve  degree     2
+#> 68     1   Eve  degree     4
+#> 69     2   Eve  degree     2
+#> 70     3   Eve  degree     3
+#> 71     4   Eve  degree     1
+#> 72     5   Eve  degree     3
+#> 73     6   Eve  degree     4
+#> 74     7   Eve  degree     2
+#> 75     8   Eve  degree     1
+#> 76     9   Eve  degree     1
+#> 77    10   Eve  degree     1
+#> 78    11   Eve  degree     1
+#> 79    12   Eve  degree     2
+#> 80    13   Eve  degree     6
+#> 81    14   Eve  degree     8
+#> 82    15   Eve  degree     5
+#> 83    16   Eve  degree     0
+#> 84    17   Eve  degree     0
+#> 85    18   Eve  degree     1
+#> 86    19   Eve  degree     0
+#> 87    20   Eve  degree     2
+#> 88    21   Eve  degree     1
+#> 89     0  Mira  degree     3
+#> 90     1  Mira  degree     2
+#> 91     2  Mira  degree     0
+#> 92     3  Mira  degree     0
+#> 93     4  Mira  degree     1
+#> 94     5  Mira  degree     1
+#> 95     6  Mira  degree     3
+#> 96     7  Mira  degree     3
+#> 97     8  Mira  degree     5
+#> 98     9  Mira  degree     1
+#> 99    10  Mira  degree     5
+#> 100   11  Mira  degree     4
+#> 101   12  Mira  degree     4
+#> 102   13  Mira  degree     6
+#> 103   14  Mira  degree     1
+#> 104   15  Mira  degree     1
+#> 105   16  Mira  degree     2
+#> 106   17  Mira  degree     2
+#> 107   18  Mira  degree     2
+#> 108   19  Mira  degree     2
+#> 109   20  Mira  degree     2
+#> 110   21  Mira  degree     0
 as.data.frame(degree, what = "diagnostics")
 #>  [1] session              time                 stage               
 #>  [4] status               reason               iterations          

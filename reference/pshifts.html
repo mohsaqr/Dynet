@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -60,25 +63,34 @@
 
 
 <dl><dt id="arg-dn">dn<a class="anchor" aria-label="anchor" href="#arg-dn"></a></dt>
-<dd><p>A directed temporal network from <code><a href="dynet.html">dynet()</a></code>.</p></dd>
+<dd><p>A directed temporal network from <code><a href="dynet.html">dynet()</a></code>. An undirected network
+raises an error of class <code>dynet_needs_directed</code>.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>Session aggregation policy.</p></dd>
+<dd><p>Session aggregation policy: <code>"bounded"</code> (the default) reads
+each session as its own turn sequence and pools the counts, <code>"collapse"</code>
+erases session labels and reads one calendar-ordered sequence, and
+<code>"separate"</code> reports each session on its own rows. <code>"separate"</code> needs a
+network built with a session column and raises <code>dynet_no_sessions</code>
+otherwise.</p></dd>
 
 
 <dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
-<dd><p>Return final class totals or cumulative rows.</p></dd>
+<dd><p><code>"final"</code> (the default) for one row per shift class,
+<code>"cumulative"</code> for the running class vector at every turn.</p></dd>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
 <dd><p>Optional inclusive query limits; each query is a fresh
-sequence and never uses a predecessor outside the range.</p></dd>
+sequence and never uses a predecessor outside the range. A network built
+from dates may be addressed with dates.</p></dd>
 
 
 <dt id="arg-group-events">group_events<a class="anchor" aria-label="anchor" href="#arg-group-events"></a></dt>
 <dd><p>Infer one group-directed turn from simultaneous distinct
-recipients (<code>"simultaneous"</code>), or retain every dyadic row (<code>"none"</code>).
+recipients (<code>"simultaneous"</code>, the default), or retain every dyadic row
+(<code>"none"</code>).
 Several turns at one instant are ordered by speaker, then group turn
 before dyadic turn, then target, each in the network's vertex order; the
 classification of consecutive turns depends on that order, so under
@@ -103,7 +115,11 @@ Gibson label), <code>family</code> (the label's group) and <code>count</code>.
 per classified turn, with <code>sequence</code> and <code>event</code> locating the turn in its
 sequence, <code>time</code>, <code>speaker</code>, <code>target</code> and <code>group</code> describing the turn,
 and <code>shift</code>, <code>family</code> and <code>count</code> carrying the running total of that
-class up to and including the turn.</p>
+class up to and including the turn. Either shape gains a leading
+<code>session</code> column under <code>sessions = "separate"</code>, which reports each
+session on its own rows; <code>"bounded"</code> and <code>"collapse"</code> carry no session
+column. Print it, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> it, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> it, or take the plain frame
+with <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -114,6 +130,20 @@ Gibson's fixed thirteen labels. Session and component walls, loops, ties,
 duplicate multiplicity, and simultaneous-recipient group inference are
 retained in metadata. <code>output = "final"</code> emits one typed row per class;
 <code>output = "cumulative"</code> emits the running class vector for each turn.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="conditions">Conditions<a class="anchor" aria-label="anchor" href="#conditions"></a></h2>
+
+
+<p>Errors: <code>dynet_needs_directed</code> (an undirected network; the class vector is
+<code>c("dynet_needs_directed", "dynet_bad_input")</code>), <code>dynet_no_sessions</code>
+(<code>sessions = "separate"</code> without a session column),
+<code>dynet_outside_observation</code> (the requested range misses observed support;
+it also carries <code>dynet_bad_input</code>),
+and <code>dynet_bad_input</code> for every other broken contract – <code>dn</code> not a
+<code>dynet</code>, and a <code>start</code> or <code>end</code> that is not a single finite time. An
+unmatched <code>sessions</code>, <code>output</code> or <code>group_events</code> is rejected by
+<code><a href="https://rdrr.io/r/base/match.arg.html" class="external-link">match.arg()</a></code> and is a plain error, not a classed one.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

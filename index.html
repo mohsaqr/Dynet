@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,8 +35,11 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="articles/dynet.html">Getting started with Dynet</a></li>
+<li><a class="dropdown-item" href="articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -69,7 +72,7 @@
 </h2>
 <p>One constructor covers the four shapes relational logs arrive in. The shape is inferred from the arguments you name.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/mohsaqr/Dynet" class="external-link">Dynet</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Interval log: each row carries its own start and end</span></span>
 <span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
@@ -82,7 +85,17 @@
 <span></span>
 <span><span class="co"># Co-presence log: actors sharing a group become connected (every member</span></span>
 <span><span class="co"># pair, for the whole span of the group; attendance inside it is not used)</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Numbered endpoints with a node table: the vertices take the table's</span></span>
+<span><span class="co"># `name`, and its `onset`/`terminus` say when each one is present</span></span>
+<span><span class="va">workshops</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>vertex.id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span>, <span class="fl">3L</span><span class="op">)</span>,</span>
+<span>                        name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span><span class="op">)</span>,</span>
+<span>                        onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, terminus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">9</span>, <span class="fl">9</span>, <span class="fl">9</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">collaborations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>, terminus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span>,</span>
+<span>                             tail <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span>, head <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2L</span>, <span class="fl">3L</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">collaborations</span>, directed <span class="op">=</span> <span class="cn">FALSE</span>, nodes <span class="op">=</span> <span class="va">workshops</span>,</span>
+<span>      vertex_spells <span class="op">=</span> <span class="va">workshops</span><span class="op">)</span></span></code></pre></div>
 <p>Column names are matched case-insensitively against a table of aliases, so <code>Sender</code>/<code>Receiver</code>, <code>source</code>/<code>target</code> and <code>onset</code>/<code>terminus</code> all work without being spelled out. Times may be numeric, <code>Date</code>, <code>POSIXct</code> or character date-time strings; date-time input is converted to elapsed time in a unit chosen to suit the span, and the unit is reported.</p>
 <p>When the study window is known independently of the event log, declare it on construction:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
@@ -154,7 +167,7 @@
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span>, <span class="va">degree</span> <span class="op">&gt;</span> <span class="fl">16</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="reference/induce_subgraph.html">induce_subgraph()</a></code> also takes <code>ties</code>, as integer row positions or a logical mask over the raw spell table, when a selection has to be made on the edges rather than the vertices.</p>
-<p><code><a href="reference/update_vertex_spells.html">update_vertex_spells()</a></code> and <code><a href="reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> complete vertex-activity editing; <code><a href="reference/clear_observations.html">clear_observations()</a></code> restores continuous implicit observation. Overlapping activity or observation spells are canonicalized after every edit.</p>
+<p><code><a href="reference/update_vertex_spells.html">update_vertex_spells()</a></code> and <code><a href="reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> complete vertex-activity editing; <code><a href="reference/clear_observations.html">clear_observations()</a></code> restores continuous implicit observation. Overlapping activity or observation spells are canonicalised after every edit.</p>
 <p>Existing <code>networkDynamic</code> objects can enter through <code><a href="reference/as_dynet.html">as_dynet()</a></code>, including their activity spells, semantic vertex names, observation support, weights, and compatible static attributes. Collapse any range back to a static cograph network with duration, count, and weight summaries:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/as_dynet.html">as_dynet</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">"legacy-network.rds"</span><span class="op">)</span><span class="op">)</span></span>
@@ -358,7 +371,7 @@
 <p>Two notes on cost and on well-posedness, because both bite in practice. <code>flow_betweenness</code> solves a maximum flow for every ordered pair with and without every vertex, so it is cubic in the vertex count times a flow solve – fine on a classroom, slow on a cohort. Eigenvector centrality is unique when the Perron eigenvalue has a one-dimensional eigenspace; strong connectivity is a sufficient condition. Disconnected snapshots with equally dominant components can admit more than one correct answer.</p>
 <p>Row-column-normalized indegree prestige is defined only when every active binary dyad belongs to a perfect matching of the full vertex matrix. Undefined blocks are reported as <code>NA</code> with a classed warning. Every feasible score is necessarily uniform (one raw, or <code>1/n</code> rescaled), so this option diagnoses a balancing transform rather than ranking vertices.</p>
 <p>Domain prestige counts the distinct other vertices that can reach each vertex by any directed path in the active snapshot. It is incoming static transitive reach, not chronology-aware temporal reach through the raw spells; loops never credit self. <code>rescale = TRUE</code> turns the counts into shares of all reachable ordered nonself pairs, with an all-zero block reported as <code>NaN</code>.</p>
-<p>Domain-proximity prestige multiplies that incoming domain fraction by the inverse mean directed hop distance of its members. Partial domains remain valid and positive; unreachable vertices are excluded before distances are summed. This follows the published Lin/Wasserman–Faust equation and deliberately differs from <code>sna</code> 2.8’s <code>0 * Inf</code> behavior on disconnected graphs.</p>
+<p>Domain-proximity prestige multiplies that incoming domain fraction by the inverse mean directed hop distance of its members. Partial domains remain valid and positive; unreachable vertices are excluded before distances are summed. This follows the published Lin/Wasserman–Faust equation and deliberately differs from <code>sna</code> 2.8’s <code>0 * Inf</code> behaviour on disconnected graphs.</p>
 <p>Eigenvector prestige uses the incoming nonnegative Perron ray of the binary snapshot. Raw scores have Euclidean norm one; rescaled scores sum to one. Zero-radius or nonunique Perron blocks are <code>NA</code> with a classed warning instead of an arbitrary eigensolver basis. Periodic cycles remain valid because their real Perron ray is unique even when complex roots share its modulus.</p>
 <p>Row-normalized eigenvector prestige first gives every active sender one unit split equally across its distinct outgoing binary dyads, then solves the same certified incoming Perron equation. Zero sender rows remain zero, retained loops enter the row denominator, and session union occurs before normalization. Use <code>prestige = "eigenvector.rownorm"</code>.</p>
 <p>Column-normalized eigenvector prestige instead divides each nonzero binary receiver column by its incoming-dyad count before the certified solve; zero columns remain zero. When every vertex has positive indegree, every certified score is necessarily uniform. Nonuniform defined rankings arise only when a zero-indegree vertex is present. Use <code>prestige = "eigenvector.colnorm"</code>.</p>
@@ -511,15 +524,28 @@
 </div>
 </div>
 <div class="section level2">
+<h2 id="animating">Animating<a class="anchor" aria-label="anchor" href="#animating"></a>
+</h2>
+<p><code><a href="reference/animate.html">animate()</a></code> draws the measurement grid as a film. It takes the same four grid arguments as every measuring verb, so the animation shows exactly the bins <code><a href="reference/snapshots.html">snapshots()</a></code> tabulates, joined by motion.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>                       <span class="co"># GIF, spring layout</span></span>
+<span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, file <span class="op">=</span> <span class="st">"forum.mp4"</span><span class="op">)</span>   <span class="co"># video, by extension</span></span>
+<span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,   <span class="co"># node size follows a measure</span></span>
+<span>        layout <span class="op">=</span> <span class="st">"relaxed"</span>, file <span class="op">=</span> <span class="st">"forum.webm"</span><span class="op">)</span></span></code></pre></div>
+<p>Each bin is drawn <code>tween</code> times (six by default). Between bins the vertices glide, a tie about to appear fades in dotted and green, one about to vanish fades out dashed and vermilion, and a vertex whose measure changes grows or shrinks; the motion follows the smoothstep curve, so each bin dwells before it changes. Tie width follows weight on one scale fixed across the whole animation, so the same weight has the same width in a quiet frame and a busy one. A strip under the network shows the grid, a marker at the current time, and the key.</p>
+<p><code>layout</code> is <code>"spring"</code> (the union of every bin, laid out once), <code>"circle"</code>, <code>"oval"</code>, <code>"groups"</code> (one ring per partition), <code>"relaxed"</code> (each bin laid out again, seeded from the last, held within <code>max_displacement</code> and smoothed along time), or a data frame of your own <code>name</code>, <code>x</code>, <code>y</code>. Under every layout but <code>"relaxed"</code> a vertex never moves. A vertex absent from a bin is faded, parked out of sight and glided in when it arrives (<code>absent = "away"</code>), or hidden; <code>set_vertex_spells(dn, "ties")</code> declares each vertex present from its first tie to its last when the log itself says nothing about arrivals.</p>
+<p>The extension of <code>file</code> picks the encoder: <code>.gif</code> needs <code>gifski</code>, <code>.mp4</code> and <code>.webm</code> need <code>av</code>. The verb returns a tidy table with one row per bin (<code>time</code>, <code>nodes</code>, <code>ties</code>, <code>forming</code>, <code>dissolving</code>, the first rendered <code>frame</code> of the bin) invisibly; <code>as.data.frame(x, what = "frames")</code> maps every rendered frame to its time.</p>
+</div>
+<div class="section level2">
 <h2 id="what-it-depends-on">What it depends on<a class="anchor" aria-label="anchor" href="#what-it-depends-on"></a>
 </h2>
-<p><code>cograph</code> for rendering, <code>ggplot2</code> for the time-series views. Nothing else.</p>
+<p><code>cograph</code> for rendering, <code>ggplot2</code> for the time-series views. Nothing else. Writing an animation needs <code>gifski</code> for a GIF or <code>av</code> for a video, both in <code>Suggests</code>.</p>
 <p>Every metric — geodesics, Brandes betweenness, PageRank, HITS, k-cores, Burt’s constraint, the dyad and triad censuses — is base R matrix algebra, so measurement works on a machine with no graph package installed. <code>igraph</code>, <code>sna</code>, <code>tsna</code> and <code>networkDynamic</code> appear only in <code>Suggests</code>, where the test suite uses them to check the numbers.</p>
 </div>
 <div class="section level2">
 <h2 id="how-the-numbers-were-checked">How the numbers were checked<a class="anchor" aria-label="anchor" href="#how-the-numbers-were-checked"></a>
 </h2>
-<p>All 78 kernel comparisons against <code>igraph</code> and <code>sna</code> agree, across directed and undirected graphs at three sizes. Earliest-arrival times agree with <code><a href="https://rdrr.io/pkg/tsna/man/paths.html" class="external-link">tsna::tPath</a></code> on twenty source-network combinations. Two conventions differ deliberately and are documented where they are implemented:</p>
+<p>All 78 kernel comparisons against <code>igraph</code> and <code>sna</code> agree, across directed and undirected graphs at three sizes. Earliest-arrival times agree with <code><a href="https://rdrr.io/pkg/tsna/man/paths.html" class="external-link">tsna::tPath</a></code> on twenty source-network combinations, forward and backward, including the vertex-activity boundary cases. Two conventions differ deliberately and are documented where they are implemented:</p>
 <ul>
 <li>
 <strong>Closeness</strong> uses the reachable-set normalisation from <code>igraph</code>. <code><a href="https://rdrr.io/pkg/sna/man/closeness.html" class="external-link">sna::closeness()</a></code> sums distance over unreachable vertices too, so it returns zero for every vertex as soon as the graph is disconnected — and every snapshot of a temporal network is disconnected.</li>

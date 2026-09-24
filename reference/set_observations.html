@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,19 +60,38 @@
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>Optional data frame with <code>start</code> and <code>end</code> observation
-components. Overlapping and adjacent positive components are merged.</p></dd>
+components. Overlapping and adjacent positive components are merged.
+Default <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
-<dd><p>Optional scalar continuous bounds used instead of <code>data</code>.</p></dd>
+<dd><p>Optional scalar continuous bounds used instead of <code>data</code>,
+each defaulting to <code>NULL</code>. Supply exactly one of <code>data</code> or the
+<code>start</code>/<code>end</code> pair; supplying both, or neither, is an error.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <code>dynet</code> object. Raw edge and vertex spells are unchanged;
-only the non-destructive measurement view is replaced.</p>
+    <p>A new <code>dynet</code> object, class
+<code>c("dynet", "netobject", "cograph_network")</code>. Raw edge and vertex spells
+are unchanged – <code>as.data.frame(x)</code> still returns the originals – and
+only the non-destructive measurement view is replaced, so every verb now
+clips exposure and path horizons to this support. Read the components
+back with <code>as.data.frame(x, what = "observations")</code>, one row per
+component with <code>observation</code>, <code>start</code>, <code>end</code>, <code>duration</code> and <code>instant</code>.
+Raises <code>dynet_bad_input</code> when neither or both of <code>data</code> and the bounds
+are given.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">first_week</span> <span class="op">&lt;-</span> <span class="fu">set_observations</span><span class="op">(</span><span class="va">dn</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">first_week</span>, what <span class="op">=</span> <span class="st">"observations"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   observation start end duration instant</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1           1     0   7        7   FALSE</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

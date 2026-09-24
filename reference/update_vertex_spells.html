@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,20 +60,44 @@
 
 <dt id="arg-spells">spells<a class="anchor" aria-label="anchor" href="#arg-spells"></a></dt>
 <dd><p>Integer positions or a logical mask over canonical vertex
-activity.</p></dd>
+activity, as returned by <code>as.data.frame(dn, what = "vertex_spells")</code>.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
-<dd><p>One row or one row per selected component, containing fields to
-replace.</p></dd>
+<dd><p>A data frame with one row, or one row per selected component,
+containing the fields to replace: <code>node</code>, <code>start</code>, <code>end</code>, <code>session</code>,
+<code>onset_censored</code> or <code>terminus_censored</code>. Any other column name raises
+<code>dynet_unknown_column</code>, so a misspelled field is refused rather than
+quietly doing nothing.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <code>dynet</code> object. Updated components are canonicalized with the
-retained components, so overlaps can merge and identifiers can change.</p>
+    <p>A new <code>dynet</code> object, class
+<code>c("dynet", "netobject", "cograph_network")</code>. Updated components are
+canonicalised with the retained components, so overlaps can merge and
+spell identifiers can change. Raises <code>dynet_bad_input</code> when <code>spells</code> is
+not a valid selection, when <code>data</code> is malformed or of the wrong height,
+or when it names the read-only derived columns <code>vertex_spell</code>,
+<code>duration</code> or <code>instant</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">present</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>node <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span><span class="op">)</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">enrolled</span> <span class="op">&lt;-</span> <span class="fu"><a href="set_vertex_spells.html">set_vertex_spells</a></span><span class="op">(</span><span class="va">dn</span>, <span class="va">present</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">extended</span> <span class="op">&lt;-</span> <span class="fu">update_vertex_spells</span><span class="op">(</span><span class="va">enrolled</span>, spells <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                                 data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>end <span class="op">=</span> <span class="fl">12</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">extended</span>, what <span class="op">=</span> <span class="st">"vertex_spells"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   vertex_spell node start end duration instant session onset_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1            1  Ana     0  12       12   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2            2  Ben     0  10       10   FALSE    &lt;NA&gt;          FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   terminus_censored</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1             FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2             FALSE</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

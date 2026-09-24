@@ -17,12 +17,12 @@ plot(x, palette = "okabe", ...)
 - x:
 
   A result from
-  [`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md).
+  [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md).
 
 - palette:
 
   Palette specification, as in
-  [`plot.dynet()`](https://mohsaqr.github.io/Dynet/reference/plot.dynet.md).
+  [`plot.dynet()`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md).
 
 - ...:
 

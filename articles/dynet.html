@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,8 +33,11 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+<li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -112,22 +115,22 @@ each row is one contact, with its own start and end time.</p>
 found. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> describes what it built.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 property    value</span></span>
-<span><span class="co">#&gt; 1                 format interval</span></span>
-<span><span class="co">#&gt; 2               directed      yes</span></span>
-<span><span class="co">#&gt; 3               vertices       14</span></span>
-<span><span class="co">#&gt; 4            edge spells      240</span></span>
-<span><span class="co">#&gt; 5         distinct pairs      110</span></span>
-<span><span class="co">#&gt; 6              time unit     step</span></span>
-<span><span class="co">#&gt; 7          observed from        0</span></span>
-<span><span class="co">#&gt; 8            observed to    21.52</span></span>
-<span><span class="co">#&gt; 9                   span    21.52</span></span>
-<span><span class="co">#&gt; 10             bin width        1</span></span>
-<span><span class="co">#&gt; 11             time bins       22</span></span>
-<span><span class="co">#&gt; 12 mean snapshot density   0.0829</span></span>
-<span><span class="co">#&gt; 13      temporal density   0.0285</span></span>
-<span><span class="co">#&gt; 14              sessions     none</span></span>
-<span><span class="co">#&gt; 15     vertex attributes     none</span></span></code></pre></div>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0829</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
 <p>Fourteen pupils, 240 contact spells over 110 distinct pairs, observed
 across about 21.5 time steps. Note the last two rows of that table: the
 <em>mean snapshot density</em> and the <em>temporal density</em> are not
@@ -314,8 +317,8 @@ forwards.</p>
 <span><span class="co">#&gt; 4 reachable share        1</span></span>
 <span><span class="co">#&gt; 5  median latency     4.27</span></span>
 <span><span class="co">#&gt; 6     max latency      8.9</span></span>
-<span><span class="co">#&gt; 7     median hops       NA</span></span>
-<span><span class="co">#&gt; 8        max hops       NA</span></span></code></pre></div>
+<span><span class="co">#&gt; 7     median hops        2</span></span>
+<span><span class="co">#&gt; 8        max hops        3</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="seeing-the-journeys">Seeing the journeys<a class="anchor" aria-label="anchor" href="#seeing-the-journeys"></a>

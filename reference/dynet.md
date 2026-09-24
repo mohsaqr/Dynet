@@ -27,8 +27,13 @@ inferred from the arguments you name:
 
 Every other column of `data` is kept as a tie attribute: it appears in
 [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) and can
-be selected on with `induce_subgraph(ties = )`. Co-presence logs keep
-none, because their rows are memberships rather than ties.
+be selected on with `induce_subgraph(ties = )`. The exceptions are the
+canonical spell fields themselves – `duration`, `weight`, `session`,
+`thread`, `onset_censored` and `terminus_censored` – which are dropped
+even when they were never named as arguments, because the spell table
+owns those names. A non-atomic column raises `dynet_bad_tie_attribute`,
+and a factor is carried as character. Co-presence logs keep none,
+because their rows are memberships rather than ties.
 
 Column names are resolved case-insensitively from a table of aliases, so
 `Sender`/`Receiver`, `source`/`target` and `onset`/`terminus` are all
@@ -140,20 +145,27 @@ dynet(
 - nodes:
 
   Optional data frame of vertex attributes. The vertex key is
-  auto-detected, or given as the first column.
+  auto-detected (`node`, `vertex.id`, `id`, `name`, ...), or given as
+  the first column. When the key is not `name` and the table also has a
+  `name` column, the vertices are named by `name`: edge endpoints and
+  vertex spells given by key are translated, and the key stays on the
+  node table as an attribute. A key with no row in `nodes` keeps the key
+  as its name, with a `dynet_unnamed_nodes` warning.
 
 - groups:
 
   Name of a column in `nodes` to use as the vertex partition. Written
   into the places cograph looks for it, so
   [`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)
-  colours and groups by it without further argument.
+  colours and groups by it without further argument. A name that is not
+  a column of `nodes` raises a condition of class
+  `dynet_unknown_attribute`.
 
 - format:
 
-  One of `"auto"`, `"interval"`, `"contact"`, `"threaded"`,
-  `"copresence"`. `"auto"` infers the format from the arguments you name
-  and the columns present.
+  One of `"auto"` (the default), `"interval"`, `"contact"`,
+  `"threaded"`, `"copresence"`. `"auto"` infers the format from the
+  arguments you name and the columns present.
 
 - thread_clock:
 
@@ -166,18 +178,18 @@ dynet(
 
 - directed:
 
-  Whether edges are directed. Co-presence networks are always
-  undirected.
+  Whether edges are directed, `TRUE` by default. Co-presence networks
+  are always undirected.
 
 - interval:
 
-  Width of one time bin, in the network's time unit.
+  Width of one time bin, in the network's time unit. Defaults to `1`.
 
 - time_unit:
 
-  Unit for converting `Date`/`POSIXct`/character times: `"auto"`,
-  `"seconds"`, `"minutes"`, `"hours"`, `"days"` or `"weeks"`. Numeric
-  times are left alone and reported as `"step"`.
+  Unit for converting `Date`/`POSIXct`/character times: `"auto"` (the
+  default), `"seconds"`, `"minutes"`, `"hours"`, `"days"` or `"weeks"`.
+  Numeric times are left alone and reported as `"step"`.
 
 - observation_start, observation_end:
 
@@ -193,15 +205,20 @@ dynet(
 
 - observation_spells:
 
-  Optional data frame with `start` and `end` columns defining
-  discontinuous observed support. Overlapping and adjacent positive
-  intervals are merged; isolated points are retained. This is mutually
-  exclusive with `observation_start` and `observation_end`.
+  Optional data frame with exactly two columns, `start` and `end`,
+  defining discontinuous observed support. Overlapping and adjacent
+  positive intervals are merged; isolated points are retained. This is
+  mutually exclusive with `observation_start` and `observation_end`;
+  supplying both raises a condition of class
+  `dynet_conflicting_observation`.
 
 - loops:
 
-  Whether to keep self-loops. `FALSE` drops them with a message, which
-  is almost always what relational logs need.
+  Whether to keep self-loops. `FALSE`, the default, drops them with a
+  message, which is almost always what relational logs need; `TRUE`
+  keeps them and reports how many. A kept loop **is** counted by degree,
+  and contributes two to it, since both of its endpoint stubs are
+  incident to the same vertex.
 
 - onset_censored, terminus_censored:
 
@@ -211,12 +228,16 @@ dynet(
 
 - vertex_spells:
 
-  Optional tidy vertex-activity table with exact columns `node`,
-  `start`, and `end`, plus optional `session`, `onset_censored`, and
-  `terminus_censored`. Positive spells use `[start,end)` and points are
-  exact. Overlapping and adjacent positive spells are unioned
-  independently by node and session. A vertex absent from this table
-  remains active at all times.
+  Optional tidy vertex-activity table: one row per period in which a
+  vertex is present, with a node column (`node`, `vertex.id`, `name`,
+  ...) and a start and end column (`start`/`end`, `onset`/`terminus`,
+  ...), resolved through the same alias table as `data`, plus optional
+  exact columns `session`, `onset_censored`, and `terminus_censored`.
+  Any other column is ignored, so a node table that carries entry and
+  exit times can be passed as it is. Positive spells use `[start,end)`
+  and points are exact. Overlapping and adjacent positive spells are
+  unioned independently by node and session. A vertex absent from this
+  table remains active at all times.
 
 ## Value
 

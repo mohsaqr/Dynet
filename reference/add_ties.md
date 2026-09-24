@@ -13,7 +13,7 @@ add_ties(dn, data, loops = FALSE)
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - data:
 
@@ -23,12 +23,14 @@ add_ties(dn, data, loops = FALSE)
 
 - loops:
 
-  Whether added self-loops are permitted.
+  Whether added self-loops are permitted. `FALSE`, the default, raises a
+  condition of class `dynet_loop_not_allowed`.
 
 ## Value
 
-A new `dynet` object. The input is unchanged; canonical temporal ties
-and every flattened cograph field are rebuilt together.
+A new `dynet` object, of the same class and structure as the input. The
+input is unchanged; canonical temporal ties and every flattened cograph
+field are rebuilt together.
 
 ## Details
 

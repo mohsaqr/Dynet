@@ -54,7 +54,7 @@ numerical disagreements to hide with a tolerance.
 The first work cycle repairs quantities that can currently be wrong or
 depend on an unstated convention.
 
-1.  [`summary.dynet()`](https://mohsaqr.github.io/Dynet/reference/summary.dynet.md)
+1.  [`summary.dynet()`](https://pak.dynasite.org/Dynet/reference/summary.dynet.md)
     sums raw spell durations. Three identical `A -> B` spells over
     `[0, 10)` produce temporal density `1.5`; occupancy must use the
     union of active intervals.
@@ -220,7 +220,7 @@ Reusable static fixtures include a single arc, reciprocated pair, chain,
 fork, diamond, cycle, star, disconnected components, complete graph,
 brokerage triangle, repeated spells, and a separate loop case. Empty
 behavior is tested through an empty measurement window or private kernel
-because [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md)
+because [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
 does not currently construct an edgeless object.
 
 Reusable temporal fixtures include a valid chronological chain,
@@ -377,9 +377,9 @@ carries whether each supremum is attained. This state prevents an exact
 event from composing through an interval’s excluded terminus.
 
 **Public surface:** no new argument. `at` is the backward deadline in
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) and
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md).
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) exposes
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) and
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md).
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) exposes
 logical `attained` beside the reported optimum.
 
 **Fixtures:** one arc before, at, inside, and after its bounds; a
@@ -407,8 +407,8 @@ feature into P01’s boundary repair.
 **Status:** complete in 0.3.5.
 
 **Approved public surface:**
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) and
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md)
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) and
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
 gain named `start` and `end` bounds. Existing `at` remains a
 compatibility alias for `start` in forward queries and `end` in backward
 queries; mixing `at` with a canonical bound is an error. For
@@ -516,10 +516,10 @@ mutants fail.
 **Status:** complete in 0.3.7.
 
 **Public surface:** add a final `traversal_time = 0` argument to
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md),
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md),
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md),
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md),
 and
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
 It is one constant nonnegative finite duration per hop, not an
 edge-weight interpretation. A numeric value is measured in the network’s
 stored time unit. A scalar `difftime` is converted for calendar networks
@@ -649,7 +649,7 @@ bounded reach.
 **Approved public surface:** existing `forward_reach`, `backward_reach`,
 and temporal centrality `reach` remain source-excluding proportions. Add
 a final `measure = "reach"` argument to
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md),
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md),
 accepting any requested order of `"reach"` and `"reach_count"`; counts
 use the distinct long-form measure names `forward_reach_count` and
 `backward_reach_count`. Temporal centrality accepts `reach_count`
@@ -661,7 +661,7 @@ requested temporal centrality measures are `reach` or `reach_count`
 only.
 
 Within each session,
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md)
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
 retains direction-major order, then requested-measure order, then vertex
 order. Count values remain numeric in the standard `value` column. No
 wide count/proportion columns, quantity column, or renamed
@@ -675,7 +675,7 @@ and separate sessions with the fixed global denominator.
 **Oracle:** literal reachable sets; count/proportion identity;
 later-start, earlier-end, and larger-duration monotonicity; same-window
 forward/backward relation transposition; equality between forward
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md)
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
 and temporal centrality; and full-census
 [`tsna::tReach()`](https://rdrr.io/pkg/tsna/man/reachable_set_sizes.html)
 only where the underlying P01–P05 journey definitions match. Installed
@@ -1188,7 +1188,7 @@ result. Positive scaling preserves events, burstiness, and memory while
 multiplying `mean_gap`.
 
 **Public surface:** retain
-[`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md)
+[`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
 and its existing four measure names. Results publish
 `event_identity = "incident_spell_start"`, `dispersion = "population"`,
 `memory = "lag1_pearson"`, `loop_contribution = "one_event"`,
@@ -1285,8 +1285,8 @@ session-local default grid. Consequently separate tables are not
 generally additive to the collapsed table.
 
 **Public surface:** retain
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md) and
-its arguments. `value` remains a raw, unnormalized binary-dyad count;
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) and its
+arguments. `value` remains a raw, unnormalized binary-dyad count;
 weighted mixing is not added, and any future weight-sum quantity needs a
 distinct public name. Directed display labels use `"A -> B"`; undirected
 labels change to the truthful `"A -- B"`. Structured `from_group` and
@@ -2423,9 +2423,9 @@ indicator; explicit censor state belongs to O03.
 
 **Public surface:** add `observation_start = NULL` and
 `observation_end = NULL` to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md). The
-tidy spell accessor continues to return one raw input-derived spell per
-row with original `start` and `end`. Observation metadata supplies
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). The tidy
+spell accessor continues to return one raw input-derived spell per row
+with original `start` and `end`. Observation metadata supplies
 `event_range` and `observation` only when a bound was explicitly
 requested.
 
@@ -2534,7 +2534,7 @@ metadata records `observation_gap_waiting = "allowed"` and
 `latency_clock = "calendar"`.
 
 **Public surface:** add `observation_spells = NULL` to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md);
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md);
 `as.data.frame(dn, what = "observations")` returns canonical components
 and `as.data.frame(dn, what = "observed_edges")` returns the measurement
 fragments and their provenance.
@@ -2579,8 +2579,8 @@ unknown boundary clipped to it.
 
 **Definition:** add explicit interval-format column selectors
 `onset_censored = NULL` and `terminus_censored = NULL` to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md). They
-are never auto-detected. A selected column must be strictly logical and
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). They are
+never auto-detected. A selected column must be strictly logical and
 complete; an omitted side is all false. Either selector is incompatible
 with contact, threaded, or co-presence construction and raises
 `dynet_incompatible_censor`; malformed values raise `dynet_bad_censor`,
@@ -2618,7 +2618,7 @@ onset sequence.
 All censored spells retain their known observed follow-up in snapshots,
 paths, density, and exposure. Add `censored = c("include", "exclude")`
 to
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md),
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
 defaulting to `"include"` for compatibility. Inclusion summarizes all
 eligible raw spells; exclusion first removes any raw spell with either
 explicit censor flag and then calculates the existing raw-spell
@@ -2687,7 +2687,7 @@ introducing a general mutable attribute framework or changing
 measurements before their own V02–V04 contracts.
 
 **Public surface:** append `vertex_spells = NULL` to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) so
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) so
 existing positional calls are unchanged. A non-`NULL` table has the
 exact required columns `node`, `start`, and `end`, and may additionally
 have the exact columns `session`, `onset_censored`, and
@@ -2847,7 +2847,7 @@ are binary-presence one; snapshot `weight` and `n_spells` aggregate only
 the raw active rows surviving endpoint filtering.
 
 **Node and graph output:** snapshot
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
 retains one row per fixed vertex/time/measure. Each kernel is computed
 on the eligible principal submatrix and expanded to fixed vertex order;
 every inactive value is typed `NA_real_`, never zero or a dropped row.
@@ -2877,10 +2877,10 @@ hierarchy, and LUBness are `NaN`. Centralization is always `NA` below
 three eligible vertices.
 
 **Other affected verbs:**
-[`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md)
-retains A02’s fixed complete group cell support but counts only
-endpoint-valid dyads.
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md)
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) retains
+A02’s fixed complete group cell support but counts only endpoint-valid
+dyads.
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
 emits only endpoint-valid edge rows and preserves weights and spell
 counts from surviving raw rows; it remains edge-only and does not
 fabricate rows for eligible isolates. Snapshot plotting and proximity
@@ -2956,9 +2956,9 @@ bounded and separate searches use global plus matching session activity
 and never cross a session wall.
 
 Apply this definition without a new public argument to
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md), both
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md), both
 directions of
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md),
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md),
 and temporal reach, closeness, and betweenness. Output stays
 fixed-universe. V03 changes feasible journey families only: V04 owns
 risk-set denominators, and event/duration measures stay unchanged.
@@ -3015,7 +3015,7 @@ or denominator. A zero eligible opportunity integral is undefined
 positive opportunity integral with no eligible edge occupancy is zero.
 
 V04 changes current
-[`summary.dynet()`](https://mohsaqr.github.io/Dynet/reference/summary.dynet.md)
+[`summary.dynet()`](https://pak.dynasite.org/Dynet/reference/summary.dynet.md)
 temporal density and its internal `.temporal_density()` only. Snapshot
 density already follows V02. Raw event counts and durations remain
 unchanged; D04 will expose additional occupancy and onset-intensity
@@ -3311,8 +3311,8 @@ library `/private/tmp/dynet-d03-library` pass. Final review is clear.
 ### D04 — Temporal edge-density variants
 
 **Purpose:** generalize C01 through
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
-using O and V semantics.
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) using
+O and V semantics.
 
 **Status:** complete in Dynet 0.3.34. Four exact window-integrated
 selectors, global endpoint-valid pair cohorts, raw-onset exposure,
@@ -4076,7 +4076,7 @@ aligned discrete fractions with matching batch-state semantics.
 **Purpose:** implement Gibson’s 13 classes.
 
 **Candidate public surface:** a dedicated
-[`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md) verb
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md) verb
 returning one tidy row per class, or one row per event and class for
 cumulative output.
 
@@ -4279,12 +4279,12 @@ attribute, and preprocessing rules do not define Dynet semantics.
 **Status:** complete as a deliberately bounded descriptive extension.
 Dynet does not implement an ERGM formula ecosystem and does not require
 `ergm`. Existing
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 selectors already cover isolates, directed dyad census, density,
 reciprocity, transitivity, triads, and mixing.
 
 Add only the missing low-cost descriptive selectors through
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md):
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md):
 `degree_mean`, `degree_variance`, `degree_min`, `degree_max`,
 `concurrent_nodes`, `concurrent_share`, `in_2stars`, `out_2stars`, and
 `two_paths`. All use the binary loop-free endpoint-induced snapshot.
@@ -4305,15 +4305,14 @@ explicitly optional backlog rather than completion criteria.
 **Status:** complete for Dynet 0.3.41. Cograph mutation helpers operate
 only on the flattened graph and cannot preserve Dynet’s temporal spell
 ledger. Dynet therefore exposes
-[`add_nodes()`](https://mohsaqr.github.io/Dynet/reference/add_nodes.md),
-[`remove_nodes()`](https://mohsaqr.github.io/Dynet/reference/remove_nodes.md),
-[`add_ties()`](https://mohsaqr.github.io/Dynet/reference/add_ties.md),
+[`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md),
+[`remove_nodes()`](https://pak.dynasite.org/Dynet/reference/remove_nodes.md),
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md),
 and
-[`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md),
 plus directed-only
-[`add_arcs()`](https://mohsaqr.github.io/Dynet/reference/add_arcs.md)
-and
-[`remove_arcs()`](https://mohsaqr.github.io/Dynet/reference/remove_arcs.md)
+[`add_arcs()`](https://pak.dynasite.org/Dynet/reference/add_arcs.md) and
+[`remove_arcs()`](https://pak.dynasite.org/Dynet/reference/remove_arcs.md)
 aliases. Every operation returns a rebuilt object and leaves its input
 unchanged.
 
@@ -4336,9 +4335,9 @@ General data wrangling, spreadsheet I/O, sequence analysis, clustering,
 psychometric networks, and generic plotting remain external.
 
 The compatibility layer adds
-[`as_dynet.networkDynamic()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.networkDynamic.md)
+[`as_dynet.networkDynamic()`](https://pak.dynasite.org/Dynet/reference/as_dynet.networkDynamic.md)
 and exact static
-[`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md)
+[`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
 cograph output; node/tie attribute edits and renaming; vertex-activity,
 observation, and session edits; temporal subgraphs; loop-free
 descriptive replacements for ERGM `meandeg`, `idegree1.5`, `odegree1.5`,

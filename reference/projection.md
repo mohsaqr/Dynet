@@ -1,10 +1,10 @@
 # Project a temporal network into directed vertex-time states
 
-`projection()` discretizes a temporal network into snapshot slices and
-connects each vertex state to its realization in the next slice. Within
+`projection()` discretises a temporal network into snapshot slices and
+connects each vertex state to its realisation in the next slice. Within
 a slice it uses the same independently aggregated, endpoint-induced
 snapshot as
-[`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md).
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md).
 Identity arcs always point forward and carry the coupling weight
 `omega`. The result is a tidy projection object rather than a bare
 matrix.
@@ -28,11 +28,12 @@ projection(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - sessions:
 
-  Session handling. `"collapse"` erases labels. For a sessioned network,
+  Session handling: `"bounded"` (the default), `"collapse"` or
+  `"separate"`. `"collapse"` erases labels. For a sessioned network,
   `"bounded"` and `"separate"` both preserve disjoint session-local
   projection blocks so identity arcs never cross a wall.
 
@@ -54,8 +55,9 @@ projection(
 
   Weight on the identity arcs that carry a vertex from one slice to the
   next, that is, the interlayer coupling of the time-expanded network.
-  One keeps an identity arc as heavy as a unit contact; zero leaves the
-  slices uncoupled. Must be a single non-negative number.
+  One, the default, keeps an identity arc as heavy as a unit contact;
+  zero leaves the slices uncoupled. Must be a single finite non-negative
+  number, or a `dynet_bad_input` error is raised.
 
 ## Value
 
@@ -68,7 +70,7 @@ An object of class `dynet_projection`. Use
 Every fixed-universe vertex receives one state in every emitted slice.
 `active` records whether the vertex was eligible in that slice. Identity
 arcs are retained through inactive slices because Dynet permits waiting
-through vertex inactivity; inactive states simply have no incident
+through vertex inactivity; inactive states have no incident
 endpoint-induced within-slice edge. Consecutive observed slices are also
 linked across an observation gap, matching Dynet's calendar-time waiting
 convention.

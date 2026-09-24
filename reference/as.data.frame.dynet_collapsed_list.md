@@ -30,7 +30,9 @@ as.data.frame(x, row.names = NULL, optional = FALSE, session = NULL, ...)
 - session:
 
   Optional session name. Supply one to get that session's table alone,
-  without the `session` key; the default stacks them all.
+  without the `session` key; the default, `NULL`, stacks them all. A
+  name that is not one of the collapsed sessions raises a
+  `dynet_unknown_session` error.
 
 - ...:
 
@@ -40,7 +42,7 @@ as.data.frame(x, row.names = NULL, optional = FALSE, session = NULL, ...)
 
 A plain `data.frame`, one row per collapsed pair per session, with
 `session` first and then the columns
-[`as.data.frame.dynet_collapsed()`](https://mohsaqr.github.io/Dynet/reference/as.data.frame.dynet_collapsed.md)
+[`as.data.frame.dynet_collapsed()`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_collapsed.md)
 returns.
 
 ## Examples

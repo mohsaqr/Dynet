@@ -44,7 +44,7 @@ as.data.frame(
 ## Value
 
 A plain `data.frame` with the columns described in
-[`pathways()`](https://mohsaqr.github.io/Dynet/reference/pathways.md),
+[`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md),
 most frequent first, or the per-step table when `what = "steps"`.
 
 ## Examples

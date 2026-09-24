@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -65,6 +68,36 @@
     <p><code>x</code>, invisibly.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">collapsed</span> <span class="op">&lt;-</span> <span class="fu"><a href="collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">collapsed</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Collapsed temporal network | 14 vertices | 110 edges | weight: binary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 0 to 21.52 step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  from    to binary union_duration total_duration duration_fraction spell_count</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Cara      1           0.10           0.10       0.004646840           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana   Dan      1           1.02           1.02       0.047397770           3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Gita      1           1.99           2.11       0.092472119           5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Iris      1           0.50           0.50       0.023234201           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana Jonas      1           2.34           2.34       0.108736059           4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Kira      1           0.11           0.11       0.005111524           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  weight_sum weighted_duration latest_weight first  last activity.duration</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           1              0.10             1  6.67  6.77              0.10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           3              1.02             1 12.04 20.10              1.02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           5              2.11             1  6.57 14.16              1.99</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           1              0.50             1 13.80 14.30              0.50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           4              2.34             1  2.12  9.13              2.34</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           1              0.11             1 11.60 11.71              0.11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  activity.count</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               1</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

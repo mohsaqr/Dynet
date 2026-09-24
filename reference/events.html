@@ -15,7 +15,7 @@ one that constantly re-forms them."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,8 +26,11 @@ one that constantly re-forms them."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -80,17 +83,23 @@ one that constantly re-forms them.</p>
 <dd><p>One or more of <code>"formation"</code> (spells beginning in the bin),
 <code>"dissolution"</code> (spells ending in the bin), <code>"active"</code> (spells alive
 during the bin), <code>"new_pairs"</code> (vertex pairs meeting for the first time),
-and <code>"formation_fraction"</code> (confirmed binary pair formations divided by
-their exact two-sided inactive risk set), or <code>"dissolution_fraction"</code>
+<code>"formation_fraction"</code> (confirmed binary pair formations divided by
+their exact two-sided inactive risk set), <code>"dissolution_fraction"</code>
 (confirmed binary pair dissolutions divided by their exact two-sided
-active risk set), or <code>"formation_rate"</code> (confirmed formations divided by
-exact integrated inactive eligible pair-time), or <code>"dissolution_rate"</code>
+active risk set), <code>"formation_rate"</code> (confirmed formations divided by
+exact integrated inactive eligible pair-time), and <code>"dissolution_rate"</code>
 (confirmed dissolutions divided by exact integrated active eligible
-pair-time).</p></dd>
+pair-time). Defaults to <code>c("formation", "dissolution")</code>. Anything else
+raises a <code>dynet_unknown_measure</code> error. The two fractions need
+<code>window = 0</code> (<code>dynet_transition_requires_instant</code> otherwise) and the two
+rates need a positive window (<code>dynet_rate_requires_positive_window</code>), so
+asking for a fraction and a rate in one call raises
+<code>dynet_incompatible_transition_windows</code>.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>.</p></dd>
+<dd><p>How to treat sessions: <code>"bounded"</code> (the default),
+<code>"collapse"</code> or <code>"separate"</code>, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>.</p></dd>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
@@ -108,9 +117,10 @@ built with.</p></dd>
 which tiles the period into disjoint bins. A larger value slides an
 overlapping window; <code>0</code> samples the network at each point in time.
 <code>"all"</code> measures the whole observed period as one window, closed on the
-right so an event at the final instant is inside it; it cannot be combined
-with <code>step</code>, and under <code>sessions = "separate"</code> or discontinuous
-observation it gives one window per session or observed component.</p></dd>
+right so an event at the final instant is inside it; naming <code>step</code> as well
+raises a <code>dynet_bad_input</code> error, and under <code>sessions = "separate"</code> or
+discontinuous observation it gives one window per session or observed
+component.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>
@@ -148,7 +158,7 @@ onset at <code>t</code>. The ratio is in <code>[0,1]</code>; zero risk returns <
 transitions. Observation and vertex boundaries are excluded by two-sided
 eligibility. Onset censoring suppresses confirmation but not state;
 terminus censoring, weights, loops, and point contacts do not contribute.
-Collapse erases labels, bounded authorizes within sessions before unioning
+Collapse erases labels, bounded authorises within sessions before unioning
 each calendar pair, and separate returns session-local fractions.</p>
 <p>Dissolution fraction is the dual exact-time quantity. For each nonloop pair,
 let <code>E-</code> and <code>E+</code> be binary-union state on the symbolic one-sided limits and
@@ -161,21 +171,22 @@ Censor flags do not change state: one known terminus confirms a disappearance
 but an all-censored disappearance is unconfirmed. Duplicate, overlapping,
 adjacent, and tied rows are unioned; points, loops, weights, onset censoring,
 and administrative observation/activity boundaries do not create transitions.
-Collapse erases labels, bounded unions authorized session-local states, and
-separate reports local rows. Positive windows are rejected because T04 owns
+Collapse erases labels, bounded unions authorised session-local states, and
+separate reports local rows. Positive windows are rejected because
+<code>"dissolution_rate"</code> owns
 dissolution rates.</p>
 <p>Dissolution rate is the active-risk dual over a positive window. Its
-numerator sums confirmed T02 binary pair dissolutions at included timestamp
+numerator sums confirmed binary pair dissolutions at included timestamp
 batches; its denominator integrates exact eligible active nonloop pair-time
 over observation, vertex, edge, and window change cells. Right-censored
 termini retain state and exposure but do not confirm an event, while one
 known duplicate suffices. Zero active exposure returns <code>NA_real_</code>; positive
 exposure without a confirmed dissolution is zero. The unit is inverse
 network time. It is not raw terminus intensity, spell-duration sum, or an
-average of instantaneous fractions; positive windows are required and T04
-owns this rate.</p>
+average of instantaneous fractions; positive windows are required, and this
+is the rate <code>"dissolution_rate"</code> reports.</p>
 <p>Formation rate is the positive-window counterpart. Its numerator sums the
-confirmed T01 binary pair formations at each included timestamp, while its
+confirmed binary pair formations at each included timestamp, while its
 denominator integrates exact inactive eligible nonloop pair-time over
 change-point cells cut by the window, observation components, vertex
 activity, and edge state. It is not an average of instantaneous fractions,
@@ -184,8 +195,9 @@ returns <code>NA_real_</code>; positive exposure with no confirmed formation ret
 zero. The unit is inverse network time and scales inversely with positive
 time scaling. Points have zero exposure, onset censoring suppresses only
 confirmation, and gap/boundary, duplicate, overlap, adjacency, loop,
-weight, and session rules follow the exact T01 ledger. <code>window = 0</code> is
-rejected because T01 owns instant fractions.</p>
+weight, and session rules follow the same ledger as
+<code>"formation_fraction"</code>. <code>window = 0</code> is rejected because that measure owns
+the instantaneous fractions.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

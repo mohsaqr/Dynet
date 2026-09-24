@@ -79,13 +79,13 @@ reading:
   activity, the second counts non-isolates.
 - `collapse_network(start = t, end = t)` returns **zero** edges, so
   `networkDynamic`’s `%k%` maps to `snapshots(..., window = 0)`, not to
-  [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md).
+  [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md).
 
 ## Correction to an earlier assessment
 
 `networkx-temporal`’s `to_unrolled()` was initially recorded as a Dynet
 gap. It is not. Dynet’s
-[`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md)
+[`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
 is the time-expanded graph: it emits one state per node per slice with
 an `active` flag, plus `within_slice` arcs and forward weight-1
 `identity_arc` rows that are exactly `to_unrolled()`’s edge couplings.
@@ -107,7 +107,7 @@ builds the supra-adjacency matrix with interlayer coupling `omega` and
 `diagonal` / `full` / `custom` coupling. Both were verified live.
 
 Dynet now exposes the edge-set form directly as
-[`similarity()`](https://mohsaqr.github.io/Dynet/reference/similarity.md),
+[`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md),
 returning one row per ordered pair of bins, and `projection(omega = )`
 sets the weight on the identity arcs that carry a node between slices –
 the interlayer coupling of the time-expanded network. What remains
@@ -127,48 +127,48 @@ confirm it exists and returns. 34 exported functions.
 
 | Function | What it does |
 |----|----|
-| [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) | Build a temporal network from an interval, contact, threaded or co-presence log. Carries directedness, loops, weights, node attributes, sessions, observation windows and vertex-activity spells. |
-| [`as_dynet()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.md) | Coerce from another representation; [`as_dynet.networkDynamic()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.networkDynamic.md) imports a `networkDynamic` object. |
-| [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md) | Flatten to a static `cograph` netobject, retaining activity duration, activity count, additive duration and weighted duration as selectable weights. |
-| [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md) | Temporal subgraph by node or tie predicate. |
-| [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md) | Time-projected network. |
+| [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) | Build a temporal network from an interval, contact, threaded or co-presence log. Carries directedness, loops, weights, node attributes, sessions, observation windows and vertex-activity spells. |
+| [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md) | Coerce from another representation; [`as_dynet.networkDynamic()`](https://pak.dynasite.org/Dynet/reference/as_dynet.networkDynamic.md) imports a `networkDynamic` object. |
+| [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md) | Flatten to a static `cograph` netobject, retaining activity duration, activity count, additive duration and weighted duration as selectable weights. |
+| [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md) | Temporal subgraph by node or tie predicate. |
+| [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md) | Time-projected network. |
 
 ## Editing (all immutable — each returns a new network)
 
-[`add_nodes()`](https://mohsaqr.github.io/Dynet/reference/add_nodes.md),
-[`add_ties()`](https://mohsaqr.github.io/Dynet/reference/add_ties.md),
-[`add_arcs()`](https://mohsaqr.github.io/Dynet/reference/add_arcs.md),
-[`add_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/add_vertex_spells.md),
-[`remove_nodes()`](https://mohsaqr.github.io/Dynet/reference/remove_nodes.md),
-[`remove_ties()`](https://mohsaqr.github.io/Dynet/reference/remove_ties.md),
-[`remove_arcs()`](https://mohsaqr.github.io/Dynet/reference/remove_arcs.md),
-[`remove_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/remove_vertex_spells.md),
-[`rename_nodes()`](https://mohsaqr.github.io/Dynet/reference/rename_nodes.md),
-[`rename_sessions()`](https://mohsaqr.github.io/Dynet/reference/rename_sessions.md),
-[`update_nodes()`](https://mohsaqr.github.io/Dynet/reference/update_nodes.md),
-[`update_ties()`](https://mohsaqr.github.io/Dynet/reference/update_ties.md),
-[`update_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/update_vertex_spells.md),
-[`set_observations()`](https://mohsaqr.github.io/Dynet/reference/set_observations.md),
-[`clear_observations()`](https://mohsaqr.github.io/Dynet/reference/clear_observations.md),
-[`set_tie_sessions()`](https://mohsaqr.github.io/Dynet/reference/set_tie_sessions.md),
-[`set_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/set_vertex_spells.md).
+[`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md),
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md),
+[`add_arcs()`](https://pak.dynasite.org/Dynet/reference/add_arcs.md),
+[`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md),
+[`remove_nodes()`](https://pak.dynasite.org/Dynet/reference/remove_nodes.md),
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md),
+[`remove_arcs()`](https://pak.dynasite.org/Dynet/reference/remove_arcs.md),
+[`remove_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/remove_vertex_spells.md),
+[`rename_nodes()`](https://pak.dynasite.org/Dynet/reference/rename_nodes.md),
+[`rename_sessions()`](https://pak.dynasite.org/Dynet/reference/rename_sessions.md),
+[`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md),
+[`update_ties()`](https://pak.dynasite.org/Dynet/reference/update_ties.md),
+[`update_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/update_vertex_spells.md),
+[`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md),
+[`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md),
+[`set_tie_sessions()`](https://pak.dynasite.org/Dynet/reference/set_tie_sessions.md),
+[`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md).
 
 ## Measurement verbs
 
 | Verb | Selector argument | Vocabulary |
 |----|----|----|
-| [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md) | `measure=`, `scope="snapshot"` | degree, strength, prestige, closeness, betweenness, eigenvector, pagerank, hub, authority, coreness, constraint, power, harary, information, load, flow_betweenness, diffusion, reach, reach_count |
-| [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md) | `measure=`, `scope="temporal"` | closeness, betweenness, reach, reach_count — the only four defined over time rather than per snapshot |
-| [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md) | `prestige=` | indegree, indegree.rownorm, indegree.rowcolnorm, domain, domain.proximity, eigenvector, eigenvector.rownorm, eigenvector.colnorm, eigenvector.rowcolnorm |
-| [`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md) | `measure=` | 40 selectors: density, edges, active_nodes, isolates, transitivity, reciprocity, components, components_strong, largest_component, mean_distance, diameter, mutual, asymmetric, null, assortativity, centralization_degree, centralization_betweenness, centralization_closeness, triads (16 classes), connectedness, efficiency, hierarchy, lubness, degree_mean, degree_variance, degree_min, degree_max, mean_degree, indegree_1_5, outdegree_1_5, triangles, concurrent_nodes, concurrent_share, in_2stars, out_2stars, two_paths, temporal_density, observed_pair_density, onset_intensity, observed_pair_onset_intensity |
-| [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) | `direction=`, `traversal_time=`, bounds | Time-respecting journeys, shortest-foremost criterion, exact multiplicity |
-| [`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md) | `direction=`, `measure=` | Forward/backward temporal reach and reach counts |
-| [`events()`](https://mohsaqr.github.io/Dynet/reference/events.md) | `measure=` | formation, dissolution (fractions and rates) |
-| [`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md) | `measure=`, `unit=` | events/total/mean over pair, spell, vertex_activity, vertex_spell, node_ties |
-| [`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md) | `measure=` | burstiness, memory, events |
-| [`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md) | `attribute=` | Attribute mixing over active dyads |
-| [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md) | `at=`, `step=`, `window=` | Discrete time slices |
-| [`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md) | — | Participation shifts |
+| [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md) | `measure=`, `scope="snapshot"` | degree, strength, prestige, closeness, betweenness, eigenvector, pagerank, hub, authority, coreness, constraint, power, harary, information, load, flow_betweenness, diffusion, reach, reach_count |
+| [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md) | `measure=`, `scope="temporal"` | closeness, betweenness, reach, reach_count — the only four defined over time rather than per snapshot |
+| [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md) | `prestige=` | indegree, indegree.rownorm, indegree.rowcolnorm, domain, domain.proximity, eigenvector, eigenvector.rownorm, eigenvector.colnorm, eigenvector.rowcolnorm |
+| [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) | `measure=` | 40 selectors: density, edges, active_nodes, isolates, transitivity, reciprocity, components, components_strong, largest_component, mean_distance, diameter, mutual, asymmetric, null, assortativity, centralization_degree, centralization_betweenness, centralization_closeness, triads (16 classes), connectedness, efficiency, hierarchy, lubness, degree_mean, degree_variance, degree_min, degree_max, mean_degree, indegree_1_5, outdegree_1_5, triangles, concurrent_nodes, concurrent_share, in_2stars, out_2stars, two_paths, temporal_density, observed_pair_density, onset_intensity, observed_pair_onset_intensity |
+| [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) | `direction=`, `traversal_time=`, bounds | Time-respecting journeys, shortest-foremost criterion, exact multiplicity |
+| [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md) | `direction=`, `measure=` | Forward/backward temporal reach and reach counts |
+| [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) | `measure=` | formation, dissolution (fractions and rates) |
+| [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md) | `measure=`, `unit=` | events/total/mean over pair, spell, vertex_activity, vertex_spell, node_ties |
+| [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md) | `measure=` | burstiness, memory, events |
+| [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) | `attribute=` | Attribute mixing over active dyads |
+| [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md) | `at=`, `step=`, `window=` | Discrete time slices |
+| [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md) | — | Participation shifts |
 
 Every measurement verb also takes
 `sessions = c("bounded","collapse","separate")` and the windowing
@@ -178,9 +178,9 @@ arguments `start`, `end`, `step`, `window`.
 
 | Function | What it does |
 |----|----|
-| [`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md) | The optimal route family as a tidy prefix tree, one row per node. |
-| [`plot_path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md) | Draws that tree; `measure = c("frequency","time","predictability")`, `orientation`, `min_count`. |
-| [`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md) | The union of optimal route hops as a static network. |
+| [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md) | The optimal route family as a tidy prefix tree, one row per node. |
+| [`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md) | Draws that tree; `measure = c("frequency","time","predictability")`, `orientation`, `min_count`. |
+| [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md) | The union of optimal route hops as a static network. |
 
 Every result class carries
 [`print()`](https://rdrr.io/r/base/print.html),
@@ -246,7 +246,7 @@ Legend for **Status**: `equivalent` / `partial` / `none` / `n/a`
 | Function | What it does | Dynet equivalent | Status |
 |----|----|----|----|
 | `%k%` | Infix for `network.collapse`: collapse the network *at one time point* into a plain static `network`. | `snapshots(dn, start = t, end = t, window = 0)` | `partial` — **\[verified\]** at `t = 3` both return the same 4 arcs (Nils→Eve, Iris→Finn, Hugo→Kira, Gita→Jonas). But Dynet returns a tidy edge table, not a `network` object, and `collapse_network(dn, start = 3, end = 3)` returns **0 edges** (zero-width windows carry no duration), so the point form has no `collapse_network` route. |
-| `%t%` | Infix for `network.extract`: return a *reduced `networkDynamic`* holding only elements active at a point/interval. | `set_observations(dn, start = , end = )` | `partial` — **\[verified\]** `set_observations(dn, 0, 5)` narrows `meta$time_range` and all downstream measurement, but keeps all 240 spells; it does not return a smaller, truncated, re-censored temporal object. [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md) subsets by `nodes`/`ties` only, never by time. |
+| `%t%` | Infix for `network.extract`: return a *reduced `networkDynamic`* holding only elements active at a point/interval. | `set_observations(dn, start = , end = )` | `partial` — **\[verified\]** `set_observations(dn, 0, 5)` narrows `meta$time_range` and all downstream measurement, but keeps all 240 spells; it does not return a smaller, truncated, re-censored temporal object. [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md) subsets by `nodes`/`ties` only, never by time. |
 | `activate.edge.attribute` | Set a temporally-extended attribute (TEA) on edges over a spell. | — | `none` — Dynet vertex/edge attributes are **static** (`dynet(nodes = )`); **\[verified\]** `dn$nodes` carries only `id`, `label`, `name`, `x`, `y`, and `summary(dn)` reports `vertex attributes: none`. There is no time-varying attribute machinery at all. |
 | `activate.edge.value` | Same as above but writes into the edge *value* (`mel`) slot rather than an attribute list. | — | `none` — no TEA support. |
 | `activate.edges` | Add a spell of activity to existing edges (`onset`/`terminus`/`length`/`at`, edge set `e`). | `add_ties(dn, data = data.frame(from, to, start, end))` | `partial` — **\[verified\]** `add_ties` grew the spell table 240 → 241. But `add_ties` is keyed by endpoint names and always creates a spell row; it cannot address an existing edge by id and cannot use `length =`/`at =` shorthand. |
@@ -271,19 +271,19 @@ Legend for **Status**: `equivalent` / `partial` / `none` / `n/a`
 | `deactivate.vertices` | Remove a spell of vertex activity, optionally cascading to incident edges. | `remove_vertex_spells(dn, spells = )` (cascade: `remove_nodes(dn, nodes, cascade = TRUE)`) | `partial` — **\[verified\]** `remove_vertex_spells` drops whole spell rows by index (3 → 2). It removes a listed spell, not an arbitrary time interval, and the `deactivate.edges = TRUE` cascade is only available on `remove_nodes`, which deletes the node entirely. |
 | `delete.edge.activity` | Strip all timing information from given edges, leaving them always-active. | `clear_observations(dn)` | `partial` — **\[verified\]** `clear_observations(dn)` runs, but it clears the *observation window*, not per-element spells; there is no verb that makes a selected tie timeless. |
 | `delete.vertex.activity` | Strip all vertex timing information, leaving vertices always-active. | `set_vertex_spells(dn, data = NULL)` | `partial` — resets vertex activity to the implicit always-on default for the whole network; cannot be scoped to a vertex subset. Read from [`args()`](https://rdrr.io/r/base/args.html), not run for the `NULL` case. |
-| `dyads.age.at` | Age (time since spell onset) of the edge joining given tail/head pairs at a query time; returns vector, edgelist or matrix. | — | `none` — **\[verified\]** `dyads.age.at(nd, at = 1, tails = 10, heads = 4)` = 1. Dynet has no tie-age-at-time verb; [`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md) gives completed spell durations, not elapsed age at a query instant. |
+| `dyads.age.at` | Age (time since spell onset) of the edge joining given tail/head pairs at a query time; returns vector, edgelist or matrix. | — | `none` — **\[verified\]** `dyads.age.at(nd, at = 1, tails = 10, heads = 4)` = 1. Dynet has no tie-age-at-time verb; [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md) gives completed spell durations, not elapsed age at a query instant. |
 | `edge.pid.check` | Verify the edge persistent-id attribute is valid. | — | `n/a` — pid bookkeeping; Dynet keys everything by vertex/tie name, so pids do not exist. |
 | `edges.age.at` | Age of each edge’s currently-active spell at a query time. | — | `none` — **\[verified\]** `edges.age.at(nd, at = 1)` returns `1, NA, NA, …`. No Dynet counterpart. |
-| `get.change.times` | Every unique time at which any vertex, edge, or TEA changes state. | `events(dn, measure = c("formation", "dissolution"))` | `partial` — **\[verified\]** `get.change.times(nd)` returns 404 unique change points; [`events()`](https://mohsaqr.github.io/Dynet/reference/events.md) returns *counts per bin* (`time = 0, formation = 11, dissolution = 7`), never the change-point vector itself. No Dynet verb returns unique change times. |
+| `get.change.times` | Every unique time at which any vertex, edge, or TEA changes state. | `events(dn, measure = c("formation", "dissolution"))` | `partial` — **\[verified\]** `get.change.times(nd)` returns 404 unique change points; [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) returns *counts per bin* (`time = 0, formation = 11, dissolution = 7`), never the change-point vector itself. No Dynet verb returns unique change times. |
 | `get.dyads.active` | Matrix of tail/head pairs joined by an edge active in the query spell. | `snapshots(dn, start = , end = , window = )` | `equivalent` — **\[verified\]** at `t = 3`, `get.dyads.active` returned pairs (14,5)(9,6)(8,11)(7,10) and `snapshots(dn, start = 3, end = 3, window = 0)` returned Nils→Eve, Iris→Finn, Hugo→Kira, Gita→Jonas — the same four arcs. Dynet returns a tidy data frame instead of a matrix. |
 | `get.edge.activity` | Per-edge list of activity spells, or a flat spell-list data frame. | `as.data.frame(dn)` / `durations(dn, unit = "spell")` | `partial` — **\[verified\]** `get.edge.activity(as.spellList = TRUE)` gives 231×8 with `onset.censored`/`terminus.censored`/`edge.id`; Dynet’s `as.data.frame(dn)` gives the 240 raw spells and `durations(dn, unit = "spell")` gives one duration per raw spell. Spell merging and per-edge list form are missing. |
 | `get.edge.attribute.active` | Query an edge TEA at a time/interval, with `rule = any/all/earliest/latest`. | — | `none` — no TEA. |
 | `get.edge.id` | Look up an edge id from its persistent id. | — | `n/a` — pid plumbing. |
 | `get.edge.pid` | Look up an edge persistent id from its id. | — | `n/a` — pid plumbing. |
 | `get.edge.value.active` | Query a time-varying edge *value* at a time/interval. | — | `none` — Dynet weights are per-spell constants (`weight` column), not queryable TEAs. |
-| `get.edgeIDs.active` | Edge ids incident on `v` and active in the query spell, by `out`/`in`/`combined` neighbourhood. | — | `partial` — no Dynet verb returns incident tie ids for a vertex in a window. The closest is filtering [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md) output, which is user-side subsetting, not a verb. Read from help; not run against Dynet. |
+| `get.edgeIDs.active` | Edge ids incident on `v` and active in the query spell, by `out`/`in`/`combined` neighbourhood. | — | `partial` — no Dynet verb returns incident tie ids for a vertex in a window. The closest is filtering [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md) output, which is user-side subsetting, not a verb. Read from help; not run against Dynet. |
 | `get.edges.active` | The edge objects incident on `v` and active in the query spell. | `snapshots(dn, start = , end = , window = )` | `partial` — **\[verified\]** `get.edges.active(nd, v = 10, at = 0.5)` returns 1 edge. Dynet returns the whole window’s edge table; there is no `node =` argument to restrict it to one vertex’s incident ties. |
-| `get.neighborhood.active` | Vertex ids adjacent to `v` in the query spell (`out`/`in`/`combined`). | — | `none` — **\[verified\]** `get.neighborhood.active(nd, v = 10, at = 0.5)` = vertex 4. Dynet has no time-scoped neighbourhood verb. [`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md) answers a different question (time-respecting reach over the whole window, not one-step neighbours in a window). |
+| `get.neighborhood.active` | Vertex ids adjacent to `v` in the query spell (`out`/`in`/`combined`). | — | `none` — **\[verified\]** `get.neighborhood.active(nd, v = 10, at = 0.5)` = vertex 4. Dynet has no time-scoped neighbourhood verb. [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md) answers a different question (time-respecting reach over the whole window, not one-step neighbours in a window). |
 | `get.network.attribute.active` | Query a network-level TEA at a time/interval. | — | `none` — no TEA. |
 | `get.networks` | List of collapsed static networks sampled periodically (start/end/increment or onset/terminus vectors). | `snapshots(dn, start = , end = , step = , window = )` | `equivalent` — **\[verified\]** `get.networks(nd, start = 0, end = 20, time.increment = 5)` gave edge counts **40, 60, 62, 33**; `snapshots(dn, start = 0, end = 20, step = 5, window = 5)` gave per-bin counts **40, 60, 62, 33** (plus a fifth bin at t = 20 with 17, since Dynet also reports the trailing bin). Dynet returns one tidy `time`/`from`/`to`/`weight`/`n_spells` frame instead of a list of `network` objects. |
 | `get.vertex.activity` | Per-vertex activity spells, or a flat spell list. | `durations(dn, unit = "vertex_spell")` | `partial` — **\[verified\]** `get.vertex.activity(as.spellList = TRUE)` gives a 14×6 spell frame with censor flags; `durations(dn, unit = "vertex_spell")` gives one row per vertex spell with `duration` and an `implicit` flag, and `dn$vertex_spells` holds the raw table. Dynet has no verb returning onset/terminus columns for vertex spells directly. |
@@ -299,7 +299,7 @@ Legend for **Status**: `equivalent` / `partial` / `none` / `n/a`
 | `list.vertex.attributes.active` | Names of vertex attributes active in the query spell. | — | `none` — no TEA. |
 | `network.collapse` | Collapse a time range into a plain static `network`, aggregating TEAs onto it. | `collapse_network(dn, start = , end = , weight = , censored = )` | `partial` — **\[verified\]** identical edge sets: `network.collapse(nd, 0, 5)` = 40 edges vs `collapse_network(dn, start = 0, end = 5)` = 40; `network.collapse(nd, 3, 4)` = 12 vs `collapse_network(dn, 3, 4)` = 12. Dynet is **richer on weights** (`binary`, `union_duration`, `total_duration`, `duration_fraction`, `spell_count`, `weight_sum`, `weighted_duration`, `latest_weight` — all returned as columns at once). Missing: the `at =` point form (returns 0 edges) and TEA-attribute aggregation rules. |
 | `network.dyadcount.active` | Count of dyads whose *vertices* are active in the query spell (the density denominator). | — | `none` — **\[verified\]** `network.dyadcount.active(nd, 1, 2)` = 182, and Dynet’s `density` at that bin is 8/182 = 0.0439560, so the denominator is used internally — but no `measure` returns it. |
-| `network.dynamic.check` | Audit an object for malformed activity matrices (vertex/edge/dyad/TEA/`net.obs.period` checks). | — | `partial` — **\[verified\]** `network.dynamic.check(nd)` returns a named list of seven logical check vectors. Dynet validates at construction ([`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) raises classed conditions) but exports no standalone audit verb and returns no check report. |
+| `network.dynamic.check` | Audit an object for malformed activity matrices (vertex/edge/dyad/TEA/`net.obs.period` checks). | — | `partial` — **\[verified\]** `network.dynamic.check(nd)` returns a named list of seven logical check vectors. Dynet validates at construction ([`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) raises classed conditions) but exports no standalone audit verb and returns no check report. |
 | `network.edgecount.active` | Number of edges active in the query spell. | `metrics(dn, measure = "edges", start = , end = , window = )` | `equivalent` — **\[verified\]** `network.edgecount.active(nd, onset = 1, terminus = 2)` = 8; `metrics(dn, measure = "edges", start = 1, end = 2, step = 1, window = 1)` = 8 at `time = 1`. |
 | `network.extract` | Return a *reduced `networkDynamic`* containing only elements active at a point/interval, with optional truncation and re-censoring. | `set_observations(dn, start = , end = )` | `partial` — **\[verified\]** `set_observations` narrows the window but keeps all 240 spells; **\[verified\]** `network.extract(nd, 0, 5)` returns a genuine 40-edge `networkDynamic`. Dynet cannot return a time-truncated temporal object. |
 | `network.naedgecount.active` | Number of missing (`NA`) edges active in the query spell. | — | `none` — Dynet has no `NA`-edge concept; missingness is not represented in the spell table. |
@@ -372,19 +372,19 @@ Legend for **Status**: `equivalent` / `partial` / `none` / `n/a`
 - **Element age at a time point.** `edges.age.at`, `vertices.age.at`,
   `dyads.age.at` measure time elapsed since the current spell’s onset.
   Dynet’s
-  [`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md)
+  [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
   measures completed spell lengths — a different quantity.
 - **Returning a time-truncated temporal object.** `network.extract` /
   `%t%` hand back a real, smaller `networkDynamic` with truncation and
   re-censoring. Dynet’s
-  [`set_observations()`](https://mohsaqr.github.io/Dynet/reference/set_observations.md)
+  [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
   only narrows metadata (all 240 spells were retained in the test), and
-  [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md)
+  [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
   subsets by nodes/ties, never by time.
 - **Unique change times.** `get.change.times` returned 404 change points
   on the test network. Dynet’s
-  [`events()`](https://mohsaqr.github.io/Dynet/reference/events.md)
-  gives per-bin counts and no verb returns the change-point vector.
+  [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) gives
+  per-bin counts and no verb returns the change-point vector.
 - **Spell-level surgery and repair.** `adjust.activity` (affine
   rescaling of every spell), `reconcile.vertex.activity` /
   `reconcile.edge.activity` (forcing vertex and edge spells into mutual
@@ -427,10 +427,10 @@ with `tsna`, which was not part of this comparison.)*
   `paths(dn, from = , direction = , traversal_time = , start = , end = )`
   returns a tidy frame of `reachable`, `arrival_time`, `latency`,
   `n_hops`, `n_paths` per target, with
-  [`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md)
+  [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
   giving the prefix tree (route counts, branching probabilities,
   repeated vertices under different histories) and
-  [`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md)
+  [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md)
   giving the induced path network. `networkDynamic` has no path
   machinery whatsoever.
 - **Temporal reachability and temporal centrality.**
@@ -455,7 +455,7 @@ with `tsna`, which was not part of this comparison.)*
   so an overlapping sliding window is one argument, not a loop over
   `get.networks()`.
 - **Richer collapse weights in one call.**
-  [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md)
+  [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
   returns `binary`, `union_duration`, `total_duration`,
   `duration_fraction`, `spell_count`, `weight_sum`, `weighted_duration`
   and `latest_weight` as columns simultaneously; `network.collapse`
@@ -525,7 +525,7 @@ were used:
   construction;
 - a 5-vertex / 14-spell `networkDynamic` for the `tsna` side, converted
   with
-  [`as_dynet()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.md),
+  [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md),
   so both packages see literally the same spell data.
 
 Everything else is marked *doc only*.
@@ -535,19 +535,19 @@ Everything else is marked *doc only*.
 `sna` is a **static** network library. Dynet is a temporal one. Where
 Dynet has a match for an `sna` statistic, the match is almost always
 **“the same statistic recomputed on each time bin”** —
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md) and
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) and
 `dyn_centrality(scope = "snapshot")` slice the timeline and hand the
 slice to the same formula. That is a time series of a static index,
 *not* a temporal generalisation of it. Only four quantities in Dynet are
 genuinely temporal (`scope = "temporal"`: closeness, betweenness, reach,
 reach_count) plus
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md),
-[`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md),
-[`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md),
-[`events()`](https://mohsaqr.github.io/Dynet/reference/events.md),
-[`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md),
-[`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md) and
-[`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md).
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md),
+[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md),
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md),
+[`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md),
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md) and
+[`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md).
 
 In the other direction: 273 `sna` exports, and roughly 40 of them have
 any Dynet counterpart at all. `sna` covers whole research programmes —
@@ -563,8 +563,8 @@ not trying to attempt.
 `tsna` is the closest thing to a direct predecessor: same problem, same
 `networkDynamic` substrate. Dynet reproduces most of it and is a
 superset in several places. Dynet reads `networkDynamic` directly via
-[`as_dynet()`](https://mohsaqr.github.io/Dynet/reference/as_dynet.md),
-so every row below was checked on the *same* object.
+[`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md), so
+every row below was checked on the *same* object.
 
 | Function | What it does | Dynet equivalent | Status |
 |----|----|----|----|
@@ -584,8 +584,8 @@ so every row below was checked on the *same* object.
 | `tiedDuration` | Duration a vertex spends tied to at least one other, or the count of such episodes. | `durations(dn, measure = "total", unit = "node_ties")` / `measure = "events"` | **equivalent** — verified numerically (10,10,9,7,6 and 4,3,3,2,2). Beware: passing `mode = "all"` instead of the default `mode = "out"` returns the *sum* over incident ties (19,16,16,16,17), a different quantity. |
 | `tSnaStats` | Applies any `sna` graph- or vertex-level statistic at a series of timepoints. | `metrics(dn, measure = ...)` / `dyn_centrality(dn, measure = ..., scope = "snapshot")` | partial — verified numerically for `gden` and `connectedness` (both series identical). `tSnaStats` is a generic bridge to all 273 `sna` exports; Dynet’s is a fixed, curated selector list. Wider where they overlap, narrower overall. |
 | `tErgmStats` | Evaluates arbitrary `ergm` summary terms at a series of timepoints. | `metrics(dn, measure = c("edges", "triangles", "mean_degree", "in_2stars", "out_2stars", "indegree_1_5", "outdegree_1_5", "concurrent_nodes", "two_paths"))` | partial — verified numerically for `~edges + triangle + meandeg`, all six bins identical. Dynet hard-codes a dozen ERGM-flavoured statistics; `tErgmStats` accepts any ergm formula. |
-| `timeProjectedNetwork` | Builds the time-expanded (“multi-slice”) static network: one vertex per (vertex, slice), identity arcs forward in time, edges within slices. | `projection(dn, step = 1)` | partial — verified structurally: `timeProjectedNetwork` gave 50 vertices / 87 edges; [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md) returned 50 (node, slice) state rows with `state`, `slice`, `time`, `start`, `end`, `node`, `active`. Same object, tidy frame instead of a `network`; Dynet does not expose the identity/contact arc list as a graph. |
-| `pShiftCount` | Counts Gibson’s 13 participation shifts in a relational event sequence. | `pshifts(dn)` | **equivalent** (doc only) — `pShiftCount` could **not** be run in this session: it requires `relevent`, which is not installed (“there is no package called ‘relevent’”). Dynet’s [`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md) ran and returned all 13 shift types grouped into the four Gibson families (turn receiving / claiming / usurping / continuing) plus `output = "cumulative"`. |
+| `timeProjectedNetwork` | Builds the time-expanded (“multi-slice”) static network: one vertex per (vertex, slice), identity arcs forward in time, edges within slices. | `projection(dn, step = 1)` | partial — verified structurally: `timeProjectedNetwork` gave 50 vertices / 87 edges; [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md) returned 50 (node, slice) state rows with `state`, `slice`, `time`, `start`, `end`, `node`, `active`. Same object, tidy frame instead of a `network`; Dynet does not expose the identity/contact arc list as a graph. |
+| `pShiftCount` | Counts Gibson’s 13 participation shifts in a relational event sequence. | `pshifts(dn)` | **equivalent** (doc only) — `pShiftCount` could **not** be run in this session: it requires `relevent`, which is not installed (“there is no package called ‘relevent’”). Dynet’s [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md) ran and returned all 13 shift types grouped into the four Gibson families (turn receiving / claiming / usurping / continuing) plus `output = "cumulative"`. |
 
 **tsna coverage:** 12 of 18 exports have an equivalent, 5 partial, 1
 plumbing. Nothing in `tsna` is absent from Dynet in kind, though
@@ -599,7 +599,7 @@ a closed selector list.
 ## 2.1 Centrality and prestige (19)
 
 This block plus
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md) is
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) is
 essentially the whole overlap between the two packages.
 `dyn_centrality(scope = "snapshot")` runs these formulas on each time
 bin; on a network with a single bin the result *is* the `sna` result,
@@ -652,9 +652,9 @@ returns literal `NaN` rather than a silent number.
 ## 2.2 Structure, census and graph-level indices (31)
 
 Dynet’s
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md) is
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) is
 the counterpart to this whole block. Its selector list, read from
-[`?metrics`](https://mohsaqr.github.io/Dynet/reference/metrics.md) and
+[`?metrics`](https://pak.dynasite.org/Dynet/reference/metrics.md) and
 confirmed by running each one: `density`, `edges`, `active_nodes`,
 `isolates`, `transitivity`, `reciprocity`, `components`,
 `components_strong`, `largest_component`, `mean_distance`, `diameter`,
@@ -702,7 +702,7 @@ analogue.
 | `nties` | Number of *possible* ties given size, mode and diagonal policy. | — | n/a (denominator helper; Dynet computes it internally for `density`) |
 | `gliop` | Applies a binary operator to a graph-level index computed on two graphs. | — | n/a (helper for `cugtest`/`qaptest`) |
 | `eval.edgeperturbation` | Effect on a structural index of adding/removing a single edge. | — | none |
-| `centralgraph` | The “central graph” (elementwise median) of a stack of labelled graphs. | — | none — Dynet’s [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md) aggregates a *timeline*, not a stack of parallel observations. |
+| `centralgraph` | The “central graph” (elementwise median) of a stack of labelled graphs. | — | none — Dynet’s [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md) aggregates a *timeline*, not a stack of parallel observations. |
 
 Dynet-side selectors verified numerically against hand-computed `sna`
 quantities in this session: `degree_mean` = `mean(degree(A))`,
@@ -720,7 +720,7 @@ quantities in this session: `degree_mean` = `mean(degree(A))`,
 | `bicomponents_R` | Pure-R implementation behind `bicomponent.dist`. | — | n/a |
 | `component.dist` | Component membership and the component size distribution (weak/strong/unilateral/recursive). | `metrics(dn, measure = c("components", "components_strong", "largest_component"))` | partial — verified numerically for the weak and strong component *counts* and for the largest-component share. Dynet returns counts and a share, not per-vertex membership or the full size distribution. |
 | `component_dist_R` | Pure-R implementation behind `component.dist`. | — | n/a |
-| `component.largest` | The largest component, as a membership indicator or an induced subgraph. | `metrics(dn, measure = "largest_component")` | partial — verified numerically that Dynet’s value is `max(csize)/n`, i.e. the *share*, not the vertex set. [`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md) can extract a set but will not find it for you. |
+| `component.largest` | The largest component, as a membership indicator or an induced subgraph. | `metrics(dn, measure = "largest_component")` | partial — verified numerically that Dynet’s value is `max(csize)/n`, i.e. the *share*, not the vertex set. [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md) can extract a set but will not find it for you. |
 | `component.size.byvertex` | Size of each vertex’s own component. | — | none |
 | `compsizes_R` | Pure-R implementation behind `component.size.byvertex`. | — | n/a |
 | `components` | Number of maximal components (weak or strong). | `metrics(dn, measure = "components")` / `"components_strong"` | **equivalent** — verified numerically for both. |
@@ -738,7 +738,7 @@ quantities in this session: `degree_mean` = `mean(degree(A))`,
 | `maxflow` | Maximum flow between vertex pairs (Edmonds-Karp). | — | none as a verb — used internally by `dyn_centrality(measure = "flow_betweenness")`, which was verified against [`sna::flowbet`](https://rdrr.io/pkg/sna/man/flowbet.html). |
 | `maxflow_EK_R` | Pure-R Edmonds-Karp backend. | — | n/a |
 | `neighborhood` | Adjacency at a given geodesic order (in/out/total/union), cumulative or not. | — | none |
-| `reachability` | Full binary reachability matrix. | `dyn_reachability(dn)` (temporal), or `dyn_centrality(measure = "prestige", prestige = "domain")` (per snapshot) | partial — verified numerically that Dynet’s snapshot `domain` prestige + 1 equals `rowSums(reachability(A))` on the fully-connected fixture. Dynet’s [`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md) is the genuinely temporal version and is *not* the same object: it respects time order, so it cannot run backwards through the timeline the way the static closure does. |
+| `reachability` | Full binary reachability matrix. | `dyn_reachability(dn)` (temporal), or `dyn_centrality(measure = "prestige", prestige = "domain")` (per snapshot) | partial — verified numerically that Dynet’s snapshot `domain` prestige + 1 equals `rowSums(reachability(A))` on the fully-connected fixture. Dynet’s [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md) is the genuinely temporal version and is *not* the same object: it respects time order, so it cannot run backwards through the timeline the way the static closure does. |
 | `reachability_R` | Pure-R implementation behind `reachability`. | — | n/a |
 | `ego.extract` | Extracts egocentric (ego + alters) subnetworks. | `induce_subgraph(dn, nodes = ...)` | partial (doc only) — Dynet induces on a supplied node set; it does not compute the neighbourhood for you. |
 
@@ -851,7 +851,7 @@ simulation.
 Dynet plots its own result objects
 ([`plot()`](https://rdrr.io/r/graphics/plot.default.html) methods on
 `dynet`, `dynet_metric`, `dynet_paths`, plus
-[`plot_path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md));
+[`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md));
 it does not ship a layout engine. Layout in this ecosystem is
 `cograph`’s job, not Dynet’s. Every row here is therefore `none` or
 `n/a`.
@@ -925,7 +925,7 @@ it does not ship a layout engine. Layout in this ecosystem is
 | `write.dl` | Writes graphs in UCINET DL format. | — | none |
 | `write.nos` | Writes graphs in Neo-OrgStat format. | — | none |
 | `sr2css` | Converts a row-wise self-report matrix to a CSS array with missing observations. | — | none |
-| `stackcount` | Number of graphs in a stack. | — | n/a — Dynet’s analogue is the number of time bins, implicit in any [`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md) result. |
+| `stackcount` | Number of graphs in a stack. | — | n/a — Dynet’s analogue is the number of time bins, implicit in any [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) result. |
 | `symmetrize` | Symmetrises an adjacency matrix (weak/strong/upper/lower rules). | `dynet(data, directed = FALSE)` | partial — verified numerically that Dynet’s undirected `density` and `transitivity` equal `gden`/`gtrans` on `symmetrize(A, rule = "weak")`. Only the weak rule is reachable; the other three are not. |
 | `gapply` | Applies a function over each vertex’s neighbourhood. | — | none |
 | `aggarray3d_R` | Internal 3D array aggregation helper. | — | n/a |
@@ -1077,14 +1077,14 @@ construction.
 *open-ended* bridges — any `sna` statistic, any `ergm` term, evaluated
 over time. Dynet answers the same need with a closed, curated selector
 list (40 in
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md), 17+
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md), 17+
 in
-[`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md)).
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)).
 Where they overlap Dynet is richer and tidier; where a user wants a
 statistic outside the list, `tsna` can still get it and Dynet cannot.
 `timeProjectedNetwork` also returns a real `network` object that
 downstream static tools can consume, where
-[`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md)
+[`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
 returns a tidy state frame.
 
 ------------------------------------------------------------------------
@@ -1112,7 +1112,7 @@ forbidden from crossing a class period, a lab session or a conversation.
 timeline.
 
 **Exact window-integrated occupancy.**
-[`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md)’s
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)’s
 `temporal_density`, `observed_pair_density`, `onset_intensity` and
 `observed_pair_onset_intensity` integrate exact edge state over observed
 time with an explicit eligibility ledger, distinguishing “no edge” from
@@ -1126,22 +1126,22 @@ Goh-Barabasi burstiness `B`, the memory coefficient `M`, and event
 counts per vertex. Neither package has it.
 
 **Participation shifts without a dependency.**
-[`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md)
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md)
 computes all thirteen Gibson shifts grouped into four families, with
 `output = "cumulative"`, in base Dynet.
 [`tsna::pShiftCount`](https://rdrr.io/pkg/tsna/man/pShiftCount.html)
 needs `relevent`, which was not installed here and so could not be run.
 
 **Path objects you can do something with.**
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) returns
-a tidy frame with `reachable`, `arrival_time`, `attained`, `latency`,
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) returns a
+tidy frame with `reachable`, `arrival_time`, `attained`, `latency`,
 `n_hops` and `n_paths` per vertex;
-[`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md)
+[`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md)
 turns it into an edge frame with `weight`, `first_time`, `last_time` and
 `n_endpoints`;
-[`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md)
+[`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
 turns it into a prefix tree with per-branch `count` and `probability`;
-[`plot_path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/plot_path_trajectories.md)
+[`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)
 draws it by frequency, time or predictability. `tsna` returns a `tPath`
 list and a `network`, and stops there.
 
@@ -1151,7 +1151,7 @@ list and a `network`, and stops there.
 `remove_nodes`, `remove_vertex_spells`, `rename_nodes`,
 `rename_sessions`, `set_observations`, `set_tie_sessions`,
 `set_vertex_spells`, `clear_observations` — plus
-[`induce_subgraph()`](https://mohsaqr.github.io/Dynet/reference/induce_subgraph.md).
+[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md).
 `networkDynamic` has activation primitives, but they are a lower-level
 API, and `tsna` itself adds no editing verbs.
 
@@ -1270,7 +1270,7 @@ beyond that, it does so in **community detection on the supra-adjacency
 matrix** (multislice modularity, Leiden, spectral clustering, with a GPU
 path) and in **drawing**. Snapshot-set similarity and the
 supra-adjacency matrix itself are *not* gaps: see the correction above –
-[`similarity()`](https://mohsaqr.github.io/Dynet/reference/similarity.md)
+[`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
 and `projection(omega = )` cover them, on top of cograph.
 
 `Dynet` is a **temporal-mathematics** library. Its core object is a
@@ -1306,7 +1306,7 @@ temporal verbs. Rows below say so explicitly.
 | `tx.from_static(graph)` | Wraps one static NetworkX graph as a 1-snapshot temporal graph. | — (a `dynet` always carries time; a static graph is not a valid input) | none |
 | `tx.from_snapshots(graphs)` | Builds a `TemporalGraph` from a list/dict of NetworkX graphs. | — (no list-of-graphs ingest) | none |
 | `tx.from_events(events, directed, multigraph, node_attrs, edge_attrs)` | Builds from edge-level events: 3-tuples `(u,v,t)` or 4-tuples `(u,v,t,δ)` where δ is `+1`/`-1` (add/delete) or a float duration. | `dynet(data, from =, to =, time =)` for 3-tuples; `dynet(data, from =, to =, start =, duration =)` for the float-δ form. The `+1/-1` toggle form has no direct ingest. | partial |
-| `tx.from_unrolled(UTG, delta)` | **Inverse** of `to_unrolled()`: recovers a temporal graph from a time-expanded static graph whose nodes are `'a_0'`, `'a_1'`, … | — Dynet’s [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md) is one-way; there is no inverse verb | none |
+| `tx.from_unrolled(UTG, delta)` | **Inverse** of `to_unrolled()`: recovers a temporal graph from a time-expanded static graph whose nodes are `'a_0'`, `'a_1'`, … | — Dynet’s [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md) is one-way; there is no inverse verb | none |
 | `tx.from_pandas(edgelist, source, target, ...)` | NetworkX graph (or list of them) from a pandas edge list. | `dynet(data, from =, to =, ...)` — Dynet’s only ingest is a data frame, so this is its native path | equivalent |
 | `tx.from_numpy` / `tx.from_scipy` | Graph from a dense / sparse adjacency matrix. | — (no matrix ingest) | none |
 | `tx.from_multigraph(graph)` / `tx.to_multigraph(graph)` | Cast between multigraph and simple-graph flavours. | — (Dynet has no multigraph *type*; multiplicity lives in `n_spells`) | none |
@@ -1348,7 +1348,7 @@ temporal verbs. Rows below say so explicitly.
 
 | Python API | What it does | Dynet equivalent | Status |
 |----|----|----|----|
-| `TG.slice(bins, attr, level, axis, qcut, duplicates, rank_first, sort, names, as_view, fillna, inplace, applymap, apply_func)` | **The central verb.** Re-cuts the temporal graph into `bins` snapshots by an edge- or node-level `attr` (or by order of appearance), optionally quantile-cut, optionally with custom 2-tuple intervals; returns views by default. | Dynet has no persistent sliced object. Binning is an *argument* on every time-varying verb: `start =`, `end =`, `step =`, `window =` on [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md), [`metrics()`](https://mohsaqr.github.io/Dynet/reference/metrics.md), [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md), [`events()`](https://mohsaqr.github.io/Dynet/reference/events.md), [`mixing()`](https://mohsaqr.github.io/Dynet/reference/mixing.md), [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md). `window = 0` samples an exact point. Quantile binning (`qcut`) has no equivalent. | partial |
+| `TG.slice(bins, attr, level, axis, qcut, duplicates, rank_first, sort, names, as_view, fillna, inplace, applymap, apply_func)` | **The central verb.** Re-cuts the temporal graph into `bins` snapshots by an edge- or node-level `attr` (or by order of appearance), optionally quantile-cut, optionally with custom 2-tuple intervals; returns views by default. | Dynet has no persistent sliced object. Binning is an *argument* on every time-varying verb: `start =`, `end =`, `step =`, `window =` on [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md), [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md), [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md), [`events()`](https://pak.dynasite.org/Dynet/reference/events.md), [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md), [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md). `window = 0` samples an exact point. Quantile binning (`qcut`) has no equivalent. | partial |
 | `TG.flatten()` | `slice(bins=1)` — one snapshot holding everything, still a `TemporalGraph`. | `collapse_network(dn, weight = "binary")` | equivalent |
 | `tx.to_snapshots(TG, to=, as_view=)` | Returns the list of per-snapshot graphs (optionally converted to another library). | `snapshots(dn, at =, start =, end =, step =, window =)` — returns a tidy `time`/`from`/`to`/`weight`/`n_spells` frame, **not** a list of graph objects | partial |
 | `tx.to_static(graph, to=, directed=, multigraph=, index=)` | Collapses everything into one static graph. Dynamic node attributes are lost. | `collapse_network(dn, weight = c("binary", "union_duration", "total_duration", "duration_fraction", "spell_count", "weight_sum", "weighted_duration", "latest_weight"), censored =)` — Dynet is **richer** here: eight weighting schemes plus censoring policy, versus Python’s plain union | equivalent |
@@ -1356,7 +1356,7 @@ temporal verbs. Rows below say so explicitly.
 | `tx.to_unrolled(TG, to=, delta=, edge_couplings=, node_copies=, node_index=)` | **The time-expanded graph.** One static graph containing every node-copy `(v, t)` plus “edge couplings” joining `(v,t)` to `(v,t+1)`. `delta` adds cross-time edges `(u_t, v_{t+δ})` for the Kim & Anderson (2012) time-series representation. `node_copies` ∈ `'all'` / `'fill'` / `'persist'` controls which snapshots get copies. Unlike `to_static()`, dynamic node attributes survive. | **`projection(dn, start =, end =, step =, window =, sessions =)`** — this is Dynet’s time-expanded network. `as.data.frame(x, what = "vertices")` gives one vertex-time `state` per node per slice with an `active` flag; `as.data.frame(x, what = "edges")` gives within-slice arcs plus forward-pointing weight-1 `identity_arc` couplings. Dynet always emits every vertex in every slice (≡ `node_copies = 'all'`) and always couples forward only. **Not covered:** the `delta` cross-time-edge variant, `node_copies = 'fill' / 'persist'`, and returning a real graph object. | partial |
 | `tx.from_unrolled(UTG, delta=)` | Inverse of the above. | — | none |
 | `tx.to_adjacency_matrix(graph, weight=, device=, dtype=, format=)` | Single sparse adjacency matrix combining all snapshots (CPU or GPU). | — no public matrix accessor; `as.data.frame(collapse_network(dn))` is the tidy union edge list instead (Dynet deliberately returns tidy frames, never bare matrices) | partial |
-| `tx.to_supra_adjacency_matrix(graph, weight=, interslice_weight=, interslice_weights=, interslice_couple=, interslice_directed=, return_offsets=, device=, dtype=, format=)` | Block matrix: intra-slice adjacencies on the diagonal, inter-slice identity couplings off it. `interslice_couple` ∈ `'shared'` / `'all'` / `'first'`; couplings can be directed; per-pair coupling weights supported. Feeds the community-detection module. | — Dynet’s [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md) *is* the same object in edge-list form (identity arcs = couplings), but there is no supra-matrix accessor and no per-pair coupling-weight control | partial |
+| `tx.to_supra_adjacency_matrix(graph, weight=, interslice_weight=, interslice_weights=, interslice_couple=, interslice_directed=, return_offsets=, device=, dtype=, format=)` | Block matrix: intra-slice adjacencies on the diagonal, inter-slice identity couplings off it. `interslice_couple` ∈ `'shared'` / `'all'` / `'first'`; couplings can be directed; per-pair coupling weights supported. Feeds the community-detection module. | — Dynet’s [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md) *is* the same object in edge-list form (identity arcs = couplings), but there is no supra-matrix accessor and no per-pair coupling-weight control | partial |
 | `tx.propagate_snapshots(TG, method='ffill'|'bfill', delta=)` | Carries nodes and edges forward (or backward) across snapshots so they persist. | — (Dynet interval spells persist by construction; there is no ffill/bfill on a contact network) | none |
 | `tx.combine_snapshots(graphs)` | Union of snapshot *t* across several temporal graphs of equal length. | — | none |
 | `tx.utils.temporal_split(graph, train_split, val_split, attr=)` | Disjoint train/val/test masks over time intervals, for ML. | — | none |
@@ -1463,7 +1463,7 @@ this comparison.
 
 | Python API | What it does | Dynet equivalent | Status |
 |----|----|----|----|
-| `tx.read_graph(file, format=, **kw)` | Reads a `TemporalGraph` from a ZIP containing `{name}_{t}.{ext}` snapshot files, in any NetworkX-supported format (GraphML, GEXF, …). | — Dynet has no graph-file reader; input is always a data frame via [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) | none |
+| `tx.read_graph(file, format=, **kw)` | Reads a `TemporalGraph` from a ZIP containing `{name}_{t}.{ext}` snapshot files, in any NetworkX-supported format (GraphML, GEXF, …). | — Dynet has no graph-file reader; input is always a data frame via [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) | none |
 | `tx.write_graph(TG, file=, format=, makedirs=, compression=, compresslevel=, allowZip64=, **kw)` | Writes each snapshot to its own file inside a ZIP; returns bytes if no file given. | — | none |
 
 ## 11. Drawing
@@ -1475,7 +1475,7 @@ this comparison.
 | `tx.draw_networkx_nodes` / `draw_networkx_edges` / `draw_networkx_labels` / `draw_networkx_edge_labels` | Element-level NetworkX drawing primitives, lifted over snapshots. | — Dynet’s plotting is verb-level, not primitive-level | none |
 | `tx.layout(TG, layout='random', *a, **kw)` | Node positions from any NetworkX layout algorithm, shared across snapshots. | — layout is chosen internally by `plot(dn, type = "network")` | none |
 | `tx.unrolled_layout(UTG, nodes)` | Positions for an unrolled graph: node on one axis, time on the other. | `plot(dn, type = "proximity", slices =, measure =, flow =)` — Dynet’s proximity timeline is the same node-by-time layout idea, drawn as trajectories rather than as a node-link diagram | partial |
-| — | — | `plot_path_trajectories(x, measure = c("frequency", "time", "predictability"), orientation =, min_count =)` on a [`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md) result | n/a |
+| — | — | `plot_path_trajectories(x, measure = c("frequency", "time", "predictability"), orientation =, min_count =)` on a [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md) result | n/a |
 | — | — | `plot(metrics(dn, measure = ...))`, `plot(events(dn, measure = ...))`, `plot(paths(dn, from = ...))` — S3 plot methods on every result class | n/a |
 
 ## 12. Generators and bundled datasets
@@ -1508,11 +1508,11 @@ the Python API.
 | `durations(dn, measure = c("events", "total", "mean"), unit = c("pair", "spell", "vertex_activity", "vertex_spell", "node_ties"), mode =, censored =)` | Duration and exposure accounting at five different units, with an explicit `censored = c("include", "exclude")` policy. | — | none |
 | `events(dn, measure = c("formation", "dissolution", "active", "new_pairs", "formation_fraction", "dissolution_fraction", "formation_rate", "dissolution_rate"))` | Tie formation and dissolution counts, fractions and **rates** per bin — turnover dynamics. | closest is `temporal_edge_similarity()`, which measures pairwise set overlap rather than directional formation/dissolution | none |
 | `pshifts(dn, output = c("final", "cumulative"), group_events =)` | Gibson (2003) participation shifts: the fixed thirteen classes of turn-taking transition, final totals or the cumulative running vector. | — | none |
-| `path_trajectories(x, min_count = 1L)` and `path_network(x)` | Reduce a [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md) result to recurring trajectories / a path network. | — | none |
+| `path_trajectories(x, min_count = 1L)` and `path_network(x)` | Reduce a [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) result to recurring trajectories / a path network. | — | none |
 | `metrics(dn, measure = c("temporal_density", "observed_pair_density", "onset_intensity", "observed_pair_onset_intensity"))` | Observation-window-aware density and onset intensity — denominators built from what was actually watched, not from `n(n-1)`. | — | none |
 | `metrics(dn, measure = c("connectedness", "efficiency", "hierarchy", "lubness"))` | Krackhardt’s four graph-level indices of hierarchy, per bin. | — | none |
 | `metrics(dn, measure = c("concurrent_nodes", "concurrent_share"))` | Concurrency — how much of the network is simultaneously partnered, the key quantity in epidemic network models. | — | none |
-| [`set_observations()`](https://mohsaqr.github.io/Dynet/reference/set_observations.md), [`clear_observations()`](https://mohsaqr.github.io/Dynet/reference/clear_observations.md), `onset_censored`/`terminus_censored` on [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) | Explicit observation windows and left/right censoring flags, threaded through every verb’s `censored =` argument. | — `networkx-temporal` has no notion of censoring or of an observation window distinct from the data range | none |
+| [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md), [`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md), `onset_censored`/`terminus_censored` on [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) | Explicit observation windows and left/right censoring flags, threaded through every verb’s `censored =` argument. | — `networkx-temporal` has no notion of censoring or of an observation window distinct from the data range | none |
 | `dynet(data, format = c("auto", "interval", "contact", "threaded", "copresence"), session =, thread =, actor =, group =)` | Ingests four different relational data shapes, including **threaded** discussion data and **copresence** data, and carries session structure. | — | none |
 
 ------------------------------------------------------------------------
@@ -1537,7 +1537,7 @@ the Python API.
 - **The supra-adjacency matrix as a first-class object**, with
   `interslice_couple` (`'shared'`/`'all'`/`'first'`), directed
   couplings, and per-pair coupling weights. Dynet’s
-  [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md)
+  [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
   encodes the same structure but only as tidy edge rows, always
   forward-coupled, without per-pair weights.
 - **Graph file I/O** — `read_graph()`/`write_graph()` round-trip a
@@ -1551,7 +1551,7 @@ the Python API.
 - **`to_unrolled(delta=...)`** — the cross-time edge variant
   `(u_t, v_{t+δ})` giving the Kim & Anderson (2012) time-series
   representation, and `node_copies='fill'/'persist'`. Dynet’s
-  [`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md)
+  [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
   covers the base unrolled graph but not these variants, and has no
   inverse (`from_unrolled()`).
 - **`propagate_snapshots()`, `combine_snapshots()`, `temporal_split()`**
@@ -1570,15 +1570,15 @@ the Python API.
 ## What Dynet does that `networkx-temporal` does not
 
 - **Time-respecting paths.**
-  [`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md)
-  returns shortest-foremost journeys with `arrival_time`, `latency`,
-  `n_hops`, `n_paths` and an explicit `reachable`/`attained`
-  distinction, under a defined traversal semantics (nondecreasing times,
-  unlimited waiting, half-open interval spells, exact-timestamp rule for
-  point events, per-hop `traversal_time` cost). `networkx-temporal` has
-  no path machinery at all.
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) returns
+  shortest-foremost journeys with `arrival_time`, `latency`, `n_hops`,
+  `n_paths` and an explicit `reachable`/`attained` distinction, under a
+  defined traversal semantics (nondecreasing times, unlimited waiting,
+  half-open interval spells, exact-timestamp rule for point events,
+  per-hop `traversal_time` cost). `networkx-temporal` has no path
+  machinery at all.
 - **Temporal reachability.**
-  [`dyn_reachability()`](https://mohsaqr.github.io/Dynet/reference/dyn_reachability.md)
+  [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
   computes forward and backward reachable set sizes and proportions per
   vertex, with closed traversal-time bounds and a backward-deadline
   formulation. No Python counterpart.
@@ -1591,28 +1591,28 @@ the Python API.
   row-column-normalised prestige and domain/domain-proximity prestige on
   the reachability graph.
 - **Burstiness and memory** —
-  [`burstiness()`](https://mohsaqr.github.io/Dynet/reference/burstiness.md)
+  [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
   implements the Goh–Barabási burstiness coefficient and the memory
   coefficient on inter-event times. Nothing comparable exists on the
   Python side.
 - **Observation windows and censoring as first-class semantics.**
   `observation_start`, `observation_end`, `observation_spells`,
   `onset_censored`, `terminus_censored`,
-  [`set_observations()`](https://mohsaqr.github.io/Dynet/reference/set_observations.md),
+  [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md),
   and a `censored = c("include", "exclude")` argument threaded through
-  [`durations()`](https://mohsaqr.github.io/Dynet/reference/durations.md)
+  [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
   and
-  [`collapse_network()`](https://mohsaqr.github.io/Dynet/reference/collapse_network.md).
+  [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md).
   This is the difference between “no tie was observed” and “no tie
   existed”, and `networkx-temporal` does not model it.
 - **Declared vertex activity spells** — nodes have their own
   onset/terminus independent of their ties
-  ([`set_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/set_vertex_spells.md),
-  [`add_vertex_spells()`](https://mohsaqr.github.io/Dynet/reference/add_vertex_spells.md),
+  ([`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md),
+  [`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md),
   …), and path traversal respects them. In `networkx-temporal` a node
   exists in a snapshot iff it appears there.
 - **Sessions** —
-  [`set_tie_sessions()`](https://mohsaqr.github.io/Dynet/reference/set_tie_sessions.md),
+  [`set_tie_sessions()`](https://pak.dynasite.org/Dynet/reference/set_tie_sessions.md),
   and a `sessions = c("bounded", "collapse", "separate")` argument on
   nearly every verb, so that time-respecting paths can be forbidden from
   crossing a session wall. No analogue.
@@ -1620,9 +1620,9 @@ the Python API.
   `durations(unit = c("pair", "spell", "vertex_activity", "vertex_spell", "node_ties"))`
   with `measure = c("events", "total", "mean")`.
 - **Tie turnover rates** —
-  [`events()`](https://mohsaqr.github.io/Dynet/reference/events.md)
-  gives formation/dissolution counts, fractions **and rates** plus
-  `new_pairs` per bin, which is the directional turnover
+  [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) gives
+  formation/dissolution counts, fractions **and rates** plus `new_pairs`
+  per bin, which is the directional turnover
   `temporal_edge_similarity()` only sees symmetrically.
 - **Eight weighting schemes when collapsing to a static network** —
   `collapse_network(weight = c("binary", "union_duration", "total_duration", "duration_fraction", "spell_count", "weight_sum", "weighted_duration", "latest_weight"))`.
@@ -1635,14 +1635,14 @@ the Python API.
 - **Krackhardt’s four hierarchy indices** — `connectedness`,
   `efficiency`, `hierarchy`, `lubness`, per bin.
 - **Gibson participation shifts** —
-  [`pshifts()`](https://mohsaqr.github.io/Dynet/reference/pshifts.md),
+  [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md),
   the fixed thirteen turn-taking classes, final or cumulative, with
   simultaneous-recipient group inference.
 - **Time-varying mixing matrices** — `mixing(dn, attribute = ...)` per
   bin.
 - **Path trajectory analysis and its plot** —
-  [`path_trajectories()`](https://mohsaqr.github.io/Dynet/reference/path_trajectories.md),
-  [`path_network()`](https://mohsaqr.github.io/Dynet/reference/path_network.md),
+  [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md),
+  [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md),
   `plot_path_trajectories(measure = c("frequency", "time", "predictability"))`.
 - **Four relational data ingest formats** —
   `format = c("interval", "contact", "threaded", "copresence")`, so
@@ -1660,7 +1660,7 @@ the Python API.
 
 An earlier pass flagged **`to_unrolled()` as a genuine Dynet gap**. That
 is wrong, and the table above reflects the corrected finding: Dynet’s
-**[`projection()`](https://mohsaqr.github.io/Dynet/reference/projection.md)**
+**[`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)**
 *is* the time-expanded / vertex-time-state network. Confirmed by running
 it — `as.data.frame(projection(dn), what = "vertices")` emits one
 `state` per node per slice with an `active` flag, and `what = "edges"`

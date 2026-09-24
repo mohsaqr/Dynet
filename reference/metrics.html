@@ -13,7 +13,7 @@ silent in week five."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,8 +24,11 @@ silent in week five."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -75,7 +78,8 @@ silent in week five.</p>
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
-<dd><p>One or more of <code>"density"</code>, <code>"edges"</code>, <code>"active_nodes"</code>,
+<dd><p>One or more measure names, <code>"density"</code> by default:
+<code>"density"</code>, <code>"edges"</code>, <code>"active_nodes"</code>,
 <code>"isolates"</code>, <code>"transitivity"</code>, <code>"reciprocity"</code>, <code>"components"</code>,
 <code>"components_strong"</code>, <code>"largest_component"</code>, <code>"mean_distance"</code>,
 <code>"diameter"</code>, <code>"mutual"</code>,
@@ -83,18 +87,27 @@ silent in week five.</p>
 <code>"centralization_degree"</code>, <code>"centralization_betweenness"</code>,
 <code>"centralization_closeness"</code>, <code>"triads"</code>, <code>"connectedness"</code>,
 <code>"efficiency"</code>, <code>"hierarchy"</code>, <code>"lubness"</code>. <code>"triads"</code> expands to the
-sixteen triad classes; the last four are Krackhardt's indices of
-hierarchy. Lightweight structural summaries are <code>"degree_mean"</code>,
+sixteen triad classes; those four are Krackhardt's indices of how far a
+directed network departs from a pure out-tree, only one of which is
+hierarchy itself. Lightweight structural summaries are <code>"degree_mean"</code>,
 <code>"degree_variance"</code>, <code>"degree_min"</code>, <code>"degree_max"</code>,
 <code>"mean_degree"</code>, <code>"indegree_1_5"</code>, <code>"outdegree_1_5"</code>, <code>"triangles"</code>,
 <code>"concurrent_nodes"</code>, <code>"concurrent_share"</code>, <code>"in_2stars"</code>,
 <code>"out_2stars"</code>, and <code>"two_paths"</code>. Exact window-integrated quantities are <code>"temporal_density"</code>,
 <code>"observed_pair_density"</code>, <code>"onset_intensity"</code>, and
-<code>"observed_pair_onset_intensity"</code>.</p></dd>
+<code>"observed_pair_onset_intensity"</code>. Any other name raises an error of
+class <code>dynet_unknown_measure</code>. Eight of these read direction and need a
+directed network, raising <code>dynet_needs_directed</code> on an undirected one:
+<code>"reciprocity"</code>, <code>"mutual"</code>, <code>"asymmetric"</code>, <code>"null"</code>, <code>"in_2stars"</code>,
+<code>"out_2stars"</code>, <code>"indegree_1_5"</code> and <code>"outdegree_1_5"</code>.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>.</p></dd>
+<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>:
+<code>"bounded"</code> (the default) keeps each session apart while pooling the
+reported rows, <code>"collapse"</code> ignores session labels, and <code>"separate"</code>
+reports each session on its own rows and needs a network built with a
+session column, raising <code>dynet_no_sessions</code> otherwise.</p></dd>
 
 
 <dt id="arg-sample">sample<a class="anchor" aria-label="anchor" href="#arg-sample"></a></dt>
@@ -133,8 +146,12 @@ the result when the figure needs arguments of its own.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>dynet_metric</code> at graph level: one row per time point and
-measure, with columns <code>session</code> (when present), <code>time</code>, <code>measure</code> and
-<code>value</code>.</p>
+measure, with columns <code>session</code> (only under <code>sessions = "separate"</code>, the
+one mode that keeps session labels apart), <code>time</code>, <code>measure</code> and <code>value</code>.
+<code>"triads"</code> contributes sixteen rows per time point, whose <code>measure</code>
+entries are <code>triad_003</code>, <code>triad_012</code>, ..., <code>triad_300</code>. Print it,
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> it, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> it, or take the plain frame with
+<code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -211,6 +228,21 @@ undirected two-paths count each unordered wedge once. Empty eligible
 snapshots return zero for all selectors.</p>
     </div>
     <div class="section level2">
+    <h2 id="conditions">Conditions<a class="anchor" aria-label="anchor" href="#conditions"></a></h2>
+
+
+<p>Errors: <code>dynet_unknown_measure</code> (a name outside the forty above),
+<code>dynet_needs_directed</code> (one of the eight direction-reading selectors on an
+undirected network), <code>dynet_no_sessions</code> (<code>sessions = "separate"</code> without a
+session column), <code>dynet_outside_observation</code> (the requested range misses
+observed support; it also carries <code>dynet_bad_input</code>), and
+<code>dynet_bad_input</code> for every other broken contract –
+<code>dn</code> not a <code>dynet</code>, a non-character <code>measure</code>, an empty <code>measure</code>, an
+out-of-range <code>start</code>, <code>end</code>, <code>step</code> or <code>window</code>, <code>end</code> before <code>start</code>, and
+<code>step</code> combined with <code>window = "all"</code>.</p>
+<p>Warning: <code>dynet_deprecated</code> for the retired <code>sample</code> argument.</p>
+    </div>
+    <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Freeman, L. C. (1979). Centrality in social networks: conceptual
 clarification. <em>Social Networks</em>, 1, 215-239.
@@ -229,6 +261,12 @@ processes: a large sample study. <em>Annals of Statistics</em>, 10, 1100-1120.
 <p>Krackhardt, D. (1994). Graph theoretical dimensions of informal
 organizations. In <em>Computational Organization Theory</em> (pp. 89-111).
 Lawrence Erlbaum.</p>
+<p>Newman, M. E. J. (2002). Assortative mixing in networks. <em>Physical Review
+Letters</em>, 89, 208701. <a href="https://doi.org/10.1103/PhysRevLett.89.208701" class="external-link">doi:10.1103/PhysRevLett.89.208701</a></p>
+<p>Holland, P. W., &amp; Leinhardt, S. (1976). Local structure in social networks.
+<em>Sociological Methodology</em>, 7, 1-45. <a href="https://doi.org/10.2307/270703" class="external-link">doi:10.2307/270703</a></p>
+<p>Wasserman, S., &amp; Faust, K. (1994). <em>Social Network Analysis: Methods and
+Applications</em>. Cambridge University Press.</p>
     </div>
 
     <div class="section level2">

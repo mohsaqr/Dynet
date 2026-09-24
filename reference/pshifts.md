@@ -21,29 +21,38 @@ pshifts(
 - dn:
 
   A directed temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). An
+  undirected network raises an error of class `dynet_needs_directed`.
 
 - sessions:
 
-  Session aggregation policy.
+  Session aggregation policy: `"bounded"` (the default) reads each
+  session as its own turn sequence and pools the counts, `"collapse"`
+  erases session labels and reads one calendar-ordered sequence, and
+  `"separate"` reports each session on its own rows. `"separate"` needs
+  a network built with a session column and raises `dynet_no_sessions`
+  otherwise.
 
 - output:
 
-  Return final class totals or cumulative rows.
+  `"final"` (the default) for one row per shift class, `"cumulative"`
+  for the running class vector at every turn.
 
 - start, end:
 
   Optional inclusive query limits; each query is a fresh sequence and
-  never uses a predecessor outside the range.
+  never uses a predecessor outside the range. A network built from dates
+  may be addressed with dates.
 
 - group_events:
 
   Infer one group-directed turn from simultaneous distinct recipients
-  (`"simultaneous"`), or retain every dyadic row (`"none"`). Several
-  turns at one instant are ordered by speaker, then group turn before
-  dyadic turn, then target, each in the network's vertex order; the
-  classification of consecutive turns depends on that order, so under
-  `"none"` a batch of simultaneous replies is read in vertex order.
+  (`"simultaneous"`, the default), or retain every dyadic row
+  (`"none"`). Several turns at one instant are ordered by speaker, then
+  group turn before dyadic turn, then target, each in the network's
+  vertex order; the classification of consecutive turns depends on that
+  order, so under `"none"` a batch of simultaneous replies is read in
+  vertex order.
 
 - plot:
 
@@ -67,7 +76,13 @@ per turn and class, that is thirteen rows per classified turn, with
 `sequence` and `event` locating the turn in its sequence, `time`,
 `speaker`, `target` and `group` describing the turn, and `shift`,
 `family` and `count` carrying the running total of that class up to and
-including the turn.
+including the turn. Either shape gains a leading `session` column under
+`sessions = "separate"`, which reports each session on its own rows;
+`"bounded"` and `"collapse"` carry no session column. Print it,
+[`summary()`](https://rdrr.io/r/base/summary.html) it,
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) it, or take the
+plain frame with
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html).
 
 ## Details
 
@@ -79,6 +94,19 @@ ties, duplicate multiplicity, and simultaneous-recipient group inference
 are retained in metadata. `output = "final"` emits one typed row per
 class; `output = "cumulative"` emits the running class vector for each
 turn.
+
+## Conditions
+
+Errors: `dynet_needs_directed` (an undirected network; the class vector
+is `c("dynet_needs_directed", "dynet_bad_input")`), `dynet_no_sessions`
+(`sessions = "separate"` without a session column),
+`dynet_outside_observation` (the requested range misses observed
+support; it also carries `dynet_bad_input`), and `dynet_bad_input` for
+every other broken contract – `dn` not a `dynet`, and a `start` or `end`
+that is not a single finite time. An unmatched `sessions`, `output` or
+`group_events` is rejected by
+[`match.arg()`](https://rdrr.io/r/base/match.arg.html) and is a plain
+error, not a classed one.
 
 ## References
 

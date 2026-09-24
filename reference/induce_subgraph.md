@@ -22,7 +22,7 @@ induce_subgraph(dn, nodes = NULL, ties = NULL, keep_isolates = FALSE)
   any centrality it names computed over the whole observed period; or a
   character vector of names, a factor, a logical mask, or any data frame
   carrying a `name` or `node` column. Only ties whose two endpoints are
-  in this set are eligible.
+  in this set are eligible. Default `NULL`, meaning every vertex.
 
 - ties:
 
@@ -31,16 +31,27 @@ induce_subgraph(dn, nodes = NULL, ties = NULL, keep_isolates = FALSE)
   – `course == "g1"`, `duration > 2 & weight >= 1` – over the columns
   `as.data.frame(dn)` returns, tie attributes included; or integer row
   positions or a logical mask over that same table, in that order, a
-  mask having exactly as many elements as there are spells.
+  mask having exactly as many elements as there are spells. Default
+  `NULL`, meaning every tie. At least one of `nodes` and `ties` must be
+  supplied.
 
 - keep_isolates:
 
-  Whether named nodes without a selected tie remain.
+  Whether named nodes without a selected tie remain. Default `FALSE`; it
+  has an effect only when `nodes` is supplied.
 
 ## Value
 
-A new `dynet` object with selected ties, nodes, vertex activity, and all
-static attributes retained.
+A new `dynet` object, class
+`c("dynet", "netobject", "cograph_network")`, carrying only the selected
+spells, the vertices they touch (plus any isolate named in `nodes` when
+`keep_isolates = TRUE`), those vertices' activity spells, and all static
+node and tie attributes. Metadata is rebuilt, so the observed range and
+the canonical spell identifiers describe the subgraph, not the parent.
+Raises `dynet_unknown_node` for a name that is not a vertex,
+`dynet_empty_network` when the selection leaves no vertex or no tie, and
+`dynet_bad_input` when neither `nodes` nor `ties` is supplied or a
+selection is malformed.
 
 ## Examples
 

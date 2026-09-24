@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,16 +60,42 @@
 
 <dt id="arg-mapping">mapping<a class="anchor" aria-label="anchor" href="#arg-mapping"></a></dt>
 <dd><p>A named character vector whose names are old node names and
-values are replacements, or a two-column data frame named <code>old</code> and
-<code>new</code>.</p></dd>
+values are replacements, a two-column data frame named <code>old</code> and <code>new</code>,
+or the name of one vertex attribute (given through <code>dynet(nodes = )</code>)
+whose values become the node names. The attribute must be complete and
+unique.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A new <code>dynet</code> object with edge endpoints, node attributes, vertex
-activity, cograph labels, and groups renamed together.</p>
+    <p>A new <code>dynet</code> object, class
+<code>c("dynet", "netobject", "cograph_network")</code>, with edge endpoints, node
+attributes, vertex activity, cograph labels, and groups renamed together.
+Raises <code>dynet_unknown_node</code> when an old name is not a vertex,
+<code>dynet_duplicate_node</code> when a replacement collides with a name that is
+being kept, <code>dynet_unknown_attribute</code> when <code>mapping</code> names a column that
+is not a vertex attribute, and <code>dynet_bad_input</code> otherwise.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">renamed</span> <span class="op">&lt;-</span> <span class="fu">rename_nodes</span><span class="op">(</span><span class="va">dn</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Ana <span class="op">=</span> <span class="st">"Anna"</span>, Ben <span class="op">=</span> <span class="st">"Benjamin"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">renamed</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Temporal network (interval format, directed) | a cograph netobject</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 14 vertices | 240 edge spells | 110 distinct pairs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # observed from 0 to 21.52 step, binned every 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   from       to start  end duration weight</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Jonas      Dan  0.00 1.10     1.10      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Gita     Anna  0.14 0.98     0.84      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo     Mira  0.15 0.42     0.27      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo     Iris  0.15 0.96     0.81      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Kira Benjamin  0.33 0.69     0.36      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo     Iris  0.38 0.50     0.12      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 234 more spells. summary() describes the network; plot() draws it.</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

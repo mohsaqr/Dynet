@@ -33,6 +33,15 @@ A `data.frame` with 240 rows and 4 columns:
 
   Numeric. Day the contact ended.
 
+The fourteen students are `Ana`, `Ben`, `Cara`, `Dan`, `Eve`, `Finn`,
+`Gita`, `Hugo`, `Iris`, `Jonas`, `Kira`, `Leo`, `Mira` and `Nils`; times
+run from day 0 to day 21.52.
+
+## Source
+
+Simulated, not observed. Generated deterministically under a fixed seed
+by `data-raw/make-data.R`.
+
 ## Examples
 
 ``` r

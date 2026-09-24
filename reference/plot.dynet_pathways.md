@@ -34,6 +34,7 @@ plot(x, top = 12L, labels = TRUE, base_size = 12, ...)
 
   Base font size, as in
   [`ggplot2::theme_minimal()`](https://ggplot2.tidyverse.org/reference/ggtheme.html).
+  Defaults to twelve.
 
 - ...:
 
@@ -41,7 +42,8 @@ plot(x, top = 12L, labels = TRUE, base_size = 12, ...)
 
 ## Value
 
-A `ggplot` object.
+A `ggplot` object. A `top`, `labels` or `base_size` that is not one
+valid value raises `dynet_bad_input`.
 
 ## Details
 

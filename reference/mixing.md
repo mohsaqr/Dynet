@@ -6,7 +6,7 @@ one cannot: not whether high and low achievers mixed, but *when* they
 did, and whether the pattern held or decayed.
 
 The grouping variable comes from the vertex attributes supplied to
-[`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) through
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) through
 its `nodes` argument.
 
 ## Usage
@@ -30,17 +30,22 @@ mixing(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md) built
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) built
   with vertex attributes.
 
 - attribute:
 
-  Name of a column in the vertex table.
+  Name of a column in the vertex table. A name the network does not
+  carry raises an error of class `dynet_unknown_attribute` that lists
+  the attributes it does have.
 
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
+  needs a network built with a session column and raises
+  `dynet_no_sessions` otherwise.
 
 - sample:
 
@@ -82,11 +87,13 @@ mixing(
 ## Value
 
 A `dynet_metric` at graph level with one row per time point and group
-pair. Directed `measure` labels use `"A -> B"`; undirected labels use
-`"A -- B"`. `value` is the active binary-dyad count, and the
-authoritative `from_group` and `to_group` columns identify the cell.
-Attributes record unit, pair-domain, normalization, weight, loop,
-missing-group, and session-aggregation conventions.
+pair. The columns are `session` (only under `sessions = "separate"`, the
+one mode that keeps session labels apart), `time`, `measure`, `value`,
+`from_group` and `to_group`. Directed `measure` labels use `"A -> B"`;
+undirected labels use `"A -- B"`. `value` is the active binary-dyad
+count, and the authoritative `from_group` and `to_group` columns
+identify the cell. Attributes record unit, pair-domain, normalisation,
+weight, loop, missing-group, and session-aggregation conventions.
 
 ## Details
 
@@ -103,7 +110,7 @@ unordered group pair, with display labels such as `"A -- B"`. A
 within-group edge or loop contributes once to its diagonal cell. The
 group stub margin is \$\$d_a=2M\_{aa}+\sum\_{b\ne
 a}M\_{\min(a,b),\max(a,b)},\$\$ so the margins sum to twice the table
-total. These are unnormalized counts, not Newman's mixing proportions.
+total. These are unnormalised counts, not Newman's mixing proportions.
 
 Missing attribute values are retained as a collision-safe explicit group
 ordered after observed labels. Bounded and collapsed modes both use the
@@ -113,6 +120,18 @@ group universe. Every supported cell is emitted, including zeros.
 Declared vertex activity first induces the endpoint-valid snapshot. The
 complete group-cell universe remains fixed, but inactive vertices and
 eligible isolates contribute no dyad.
+
+## Conditions
+
+Errors: `dynet_unknown_attribute` (no such vertex attribute),
+`dynet_no_sessions` (`sessions = "separate"` without a session column),
+`dynet_outside_observation` (the requested range misses observed
+support; it also carries `dynet_bad_input`), and `dynet_bad_input` for
+every other broken contract – `dn` not a `dynet`, an `attribute` that is
+not a single column name, and an out-of-range `start`, `end`, `step` or
+`window`.
+
+Warning: `dynet_deprecated` for the retired `sample` argument.
 
 ## References
 

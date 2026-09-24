@@ -14,7 +14,7 @@ summary(object, ...)
 - object:
 
   A `dynet_snapshot` from
-  [`snapshots()`](https://mohsaqr.github.io/Dynet/reference/snapshots.md).
+  [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md).
 
 - ...:
 

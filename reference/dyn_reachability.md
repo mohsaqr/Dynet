@@ -28,7 +28,7 @@ dyn_reachability(
 - dn:
 
   A temporal network from
-  [`dynet()`](https://mohsaqr.github.io/Dynet/reference/dynet.md).
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
 
 - direction:
 
@@ -37,15 +37,21 @@ dyn_reachability(
 
 - at:
 
-  Forward source-availability time or backward arrival deadline.
-  Defaults to the beginning or end of each observed period,
-  respectively. Date and date-time values use the network's time scale.
-  It cannot be combined with `start` or `end`.
+  Forward source-availability time or backward arrival deadline,
+  defaulting to the beginning or end of each observed period
+  respectively. Unlike in
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) it sets
+  only the traversal window, because every vertex is then anchored at
+  its own presence inside that window: a vertex with declared spells
+  starts at the first instant it is present there, or at the last
+  instant searching backward, and one with no declared spells starts at
+  the window bound. Date and date-time values use the network's time
+  scale. It cannot be combined with `start` or `end`.
 
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://mohsaqr.github.io/Dynet/reference/dyn_centrality.md).
+  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
 
 - start, end:
 
@@ -61,7 +67,7 @@ dyn_reachability(
 
   One or both of `"reach"`, the proportion of other vertices, and
   `"reach_count"`, their number. The source vertex is excluded from
-  both.
+  both. Defaults to `"reach"`.
 
 - plot:
 
@@ -77,26 +83,35 @@ dyn_reachability(
 
 ## Value
 
-A `dynet_metric` at node level. Proportion measures are named
-`forward_reach` and `backward_reach`; counts are named
+A `dynet_metric` at node level: a tidy data frame with one row per
+vertex per requested measure, columns `node`, `measure` and `value`,
+preceded by `session` under `sessions = "separate"`. Proportion measures
+are named `forward_reach` and `backward_reach`; counts are named
 `forward_reach_count` and `backward_reach_count`.
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) returns
+the plain frame.
 
 ## Details
 
 Reachability uses
-[`paths()`](https://mohsaqr.github.io/Dynet/reference/paths.md)
-traversal semantics: nondecreasing times, unlimited waiting, half-open
-interval spells, and a separate exact timestamp rule for point events.
-Positive `traversal_time` requires interval occupancy to finish within
-continuous pair activity and delays a point-trigger arrival. Declared
-vertex activity additionally requires an exact active query anchor and
-active hop endpoints. Waiting after a valid anchor may cross vertex
-inactivity; interval traversal requires both endpoints continuously
-through completion, while a delayed point requires the receiver again at
-completion. For backward reachability, the resolved `end` is a common
-deadline and latest-departure suprema determine whether a vertex can
-reach the target. The canonical `start` and `end` bounds apply one
-closed traversal-time window to both forward and backward queries.
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) traversal
+semantics: nondecreasing times, unlimited waiting, half-open interval
+spells, and a separate exact timestamp rule for point events. Positive
+`traversal_time` requires interval occupancy to finish within continuous
+pair activity and delays a point-trigger arrival. Declared vertex
+activity additionally requires active hop endpoints and a valid anchor,
+and every vertex is anchored at its own presence: each search starts at
+that vertex's first instant inside the window, or its last instant
+searching backward, rather than at the window bound. A vertex never
+present inside the window reaches nothing, which is reported as zero
+rather than as a missing row. Waiting after a valid anchor may cross
+vertex inactivity; interval traversal requires both endpoints
+continuously through completion, while a delayed point requires the
+receiver again at completion. For backward reachability, the resolved
+`end` is a common deadline and latest-departure suprema determine
+whether a vertex can reach the target. The canonical `start` and `end`
+bounds apply one closed traversal-time window to both forward and
+backward queries.
 
 The source is excluded: a count is the number of distinct other vertices
 in the reachable set, not the number of journeys. A proportion divides
@@ -108,6 +123,20 @@ In separate-session output, a session entirely outside a one-sided bound
 contributes zero-reach rows rather than aborting the complete result.
 Its missing implicit bound is clamped to the supplied bound, producing
 the empty journey at that boundary and no eligible hop.
+
+Failures are classed. An unrecognised `measure` raises
+`dynet_unknown_measure`; a malformed `measure`, a negative
+`traversal_time`, `at` combined with `start` or `end`, or a window that
+cannot hold a journey raises `dynet_bad_input`; and a window disjoint
+from explicit observation raises `dynet_outside_observation`.
+
+## References
+
+Holme, P. (2005). Network reachability of real-world contact sequences.
+*Physical Review E*, 71(4), 046119.
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+519(3), 97-125.
 
 ## Examples
 

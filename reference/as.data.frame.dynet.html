@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,8 +18,11 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
-    <li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/dynet.html">Getting started with Dynet</a></li>
+    <li><a class="dropdown-item" href="../articles/building-networks.html">Building and inspecting a temporal network</a></li>
+    <li><a class="dropdown-item" href="../articles/function-catalogue.html">Function catalogue</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -76,11 +79,12 @@
 
 
 <dt id="arg-what">what<a class="anchor" aria-label="anchor" href="#arg-what"></a></dt>
-<dd><p><code>"edges"</code> for raw edge spells, <code>"observed_edges"</code> for derived
-observation fragments, <code>"observations"</code> for canonical observed support,
-<code>"vertex_spells"</code> for canonical declared vertex activity, <code>"nodes"</code> for
-the vertex table, <code>"bins"</code> for the measurement grid, or <code>"network"</code> for
-the aggregate edge list cograph renders.</p></dd>
+<dd><p>Which table to return: <code>"edges"</code>, the default, for raw edge
+spells, <code>"observed_edges"</code> for derived observation fragments,
+<code>"observations"</code> for canonical observed support, <code>"vertex_spells"</code> for
+canonical declared vertex activity, <code>"nodes"</code> for the vertex table,
+<code>"bins"</code> for the measurement grid, or <code>"network"</code> for the aggregate edge
+list cograph renders.</p></dd>
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
@@ -88,12 +92,21 @@ the aggregate edge list cograph renders.</p></dd>
 with, valid only for <code>what = "nodes"</code>. Each becomes one column holding the
 value over the whole observed period, so the vertex table can be filtered
 or ranked without a second call. Any measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code> accepts at
-snapshot scope is allowed, plus <code>"indegree"</code> and <code>"outdegree"</code>.</p></dd>
+snapshot scope is allowed, plus <code>"indegree"</code> and <code>"outdegree"</code>; anything
+else raises a <code>dynet_unknown_measure</code> error, and a <code>measure</code> that is not a
+character vector raises <code>dynet_bad_input</code>. Naming it for any other <code>what</code>
+raises a <code>dynet_bad_input</code> error too.</p></dd>
 
 
-<dt id="arg-sessions-start-end">sessions, start, end<a class="anchor" aria-label="anchor" href="#arg-sessions-start-end"></a></dt>
-<dd><p>Passed to <code><a href="dyn_centrality.html">dyn_centrality()</a></code> when <code>measure</code> is
-given, and ignored otherwise.</p></dd>
+<dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
+<dd><p>How sessions are treated while <code>measure</code> is computed:
+<code>"bounded"</code> (the default), <code>"collapse"</code> or <code>"separate"</code>, as in
+<code><a href="dyn_centrality.html">dyn_centrality()</a></code>. Ignored when <code>measure</code> is not given.</p></dd>
+
+
+<dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
+<dd><p>Measurement bounds passed to <code><a href="dyn_centrality.html">dyn_centrality()</a></code> when
+<code>measure</code> is given, and ignored otherwise. Default to the observed range.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -114,8 +127,9 @@ a co-presence log.</p>
 <p><code>"observed_edges"</code>: one row per derived observation fragment, with
 <code>raw_spell</code>, <code>observation</code> and <code>fragment</code> locating it, <code>from</code>, <code>to</code>,
 <code>start</code>, <code>end</code> (clipped to the observation), <code>raw_start</code>, <code>raw_end</code> (as
-supplied), <code>weight</code>, <code>instant</code>, <code>duration</code>, and the strict
-<code>left_observation_censored</code> and <code>right_observation_censored</code> flags.
+supplied), <code>weight</code>, <code>instant</code>, the strict
+<code>left_observation_censored</code> and <code>right_observation_censored</code> flags, and
+<code>duration</code>.
 <code>session</code> and the explicit <code>onset_censored</code>/<code>terminus_censored</code> flags are
 copied unchanged from the raw spell when the network carries them.</p>
 <p><code>"vertex_spells"</code>: one row per maximal declared activity component, with
@@ -136,7 +150,8 @@ summed <code>weight</code> cograph renders.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spells</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    from   to start  end duration weight</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 Jonas  Dan  0.00 1.10     1.10      1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2  Gita  Ana  0.14 0.98     0.84      1</span>
