@@ -393,3 +393,27 @@ test_that("flow is an argument and zero leaves the joints sharp", {
   expect_error(plot(dn, type = "proximity", flow = -1),
                class = "dynet_bad_input")
 })
+
+test_that("highlight on a mixing result selects a group's flows by name", {
+  skip_if_not_installed("ggplot2")
+  fn <- quiet_dynet(forum_posts, thread = "thread", nodes = forum_people)
+  mix <- mixing(fn, attribute = "role")
+  p <- plot(mix, highlight = "Teacher")
+  built <- ggplot2::ggplot_build(p)
+  # Invariant: with g groups a group name selects 2g - 1 ordered pairs, the
+  # row and the column of the mixing table minus the shared diagonal cell.
+  g <- length(unique(as.data.frame(mix)$from_group))
+  coloured <- built$data[[2]]
+  expect_equal(length(unique(coloured$group)), 2L * g - 1L)
+  # The measure spelling still works and selects exactly one series.
+  one <- ggplot2::ggplot_build(plot(mix, highlight = "Teacher -> Student"))
+  expect_equal(length(unique(one$data[[2]]$group)), 1L)
+})
+
+test_that("a highlight that matches nothing is an error, not a grey plot", {
+  skip_if_not_installed("ggplot2")
+  dn <- quiet_dynet(school_contacts)
+  deg <- dyn_centrality(dn, measure = "degree")
+  expect_error(plot(deg, highlight = "Nobody"), class = "dynet_unknown_highlight")
+  expect_error(plot(deg, highlight = 1), class = "simpleError")
+})

@@ -5,12 +5,14 @@
 \alias{mooc_people}
 \title{Participants in a MOOC discussion forum}
 \format{
-A data frame with 445 rows and 2 columns:
+A data frame with 445 rows and 3 columns:
 \describe{
 \item{name}{Character. Participant identifier, matching the \code{sender}
 and \code{receiver} columns of \link{mooc_posts}.}
 \item{experience}{Integer. Self-reported experience level: \code{1} expert,
 \code{2} student, \code{3} teacher.}
+\item{expert_level}{Character. The same level as \code{Expert}, \code{Student}
+or \code{Teacher}.}
 }
 }
 \source{
@@ -22,8 +24,8 @@ mooc_people
 \description{
 The participant table accompanying \link{mooc_posts}: every person who appears
 as a sender or a receiver there, with the self-reported experience level
-the chapter recodes into \code{Expert}, \code{Student} and \code{Teacher} and then uses
-as the mixing attribute.
+as the chapter's integer code and as the label it recodes the code into
+and uses as the mixing attribute.
 }
 \examples{
 participants <- dynet(mooc_posts, from = "sender", to = "receiver",

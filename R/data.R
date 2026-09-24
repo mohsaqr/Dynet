@@ -228,15 +228,17 @@
 #'
 #' The participant table accompanying [mooc_posts]: every person who appears
 #' as a sender or a receiver there, with the self-reported experience level
-#' the chapter recodes into `Expert`, `Student` and `Teacher` and then uses
-#' as the mixing attribute.
+#' as the chapter's integer code and as the label it recodes the code into
+#' and uses as the mixing attribute.
 #'
-#' @format A data frame with 445 rows and 2 columns:
+#' @format A data frame with 445 rows and 3 columns:
 #' \describe{
 #'   \item{name}{Character. Participant identifier, matching the `sender`
 #'     and `receiver` columns of [mooc_posts].}
 #'   \item{experience}{Integer. Self-reported experience level: `1` expert,
 #'     `2` student, `3` teacher.}
+#'   \item{expert_level}{Character. The same level as `Expert`, `Student`
+#'     or `Teacher`.}
 #' }
 #' @source As [mooc_posts].
 #' @seealso [mooc_posts]; `vignette("ch17-temporal-networks")`.

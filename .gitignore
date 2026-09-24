@@ -31,3 +31,6 @@ vignettes/articles/animating_files/
 
 # Local pkgdown build output; the site is built by CI onto gh-pages
 docs/
+
+# Beatrina notebook caches written beside a vignette when it is run in Beatrina
+*_beatrina/

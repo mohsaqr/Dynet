@@ -397,6 +397,33 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
   out
 }
 
+#' Which rows of a metric frame does `highlight` select?
+#'
+#' A series is highlighted when its grouping value (vertex or measure name) is
+#' named, or, for a mixing table carrying `from_group` and `to_group`, when
+#' either endpoint group is named. `NULL` highlights everything. A `highlight`
+#' that matches no series is a mistake and is reported as one.
+#'
+#' @param df The plain data frame of a `dynet_metric`, with a `.grp` column.
+#' @param highlight Character vector or `NULL`.
+#' @return Logical vector, one entry per row of `df`.
+#' @noRd
+.highlight_rows <- function(df, highlight) {
+  if (is.null(highlight)) return(rep(TRUE, nrow(df)))
+  stopifnot("`highlight` must be a character vector" = is.character(highlight))
+  hit <- df$.grp %in% highlight
+  if (all(c("from_group", "to_group") %in% names(df))) {
+    hit <- hit | df$from_group %in% highlight | df$to_group %in% highlight
+  }
+  if (!any(hit)) {
+    stop(errorCondition(
+      sprintf("`highlight` matches no series: %s.",
+              paste(sQuote(highlight), collapse = ", ")),
+      class = c("dynet_unknown_highlight", "dynet_bad_input"), call = NULL))
+  }
+  hit
+}
+
 #' Plot a temporal measure
 #'
 #' Draws the quantity against time. Node-level measures are drawn as one line
@@ -412,9 +439,13 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 #' @param type `"line"` for trajectories over time, `"heatmap"` for a
 #'   vertex-by-time tile plot, `"ridge"` for small multiples per measure.
 #'   Ignored for a measure with no time axis.
-#' @param highlight Optional character vector of vertex names to draw in
-#'   colour, with everything else in grey. Useful when there are many
-#'   vertices. Ignored for a measure with no time axis.
+#' @param highlight Optional character vector naming the series to draw in
+#'   colour, with everything else in grey: vertex names for a node-level
+#'   measure, measure names for a graph-level one. For a [mixing()] result a
+#'   group name selects every flow into or out of that group, so
+#'   `highlight = "Teacher"` colours the teacher rows and columns of the mixing
+#'   table. A name that matches nothing raises an error of class
+#'   `dynet_unknown_highlight`. Ignored for a measure with no time axis.
 #' @param top How many rows to draw. For a measure taken over time, the `top`
 #'   vertices with the largest mean value; `NULL`, the default, draws every
 #'   vertex. For a measure with no time axis, the `top` rows with the largest
@@ -457,7 +488,8 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 
   grp <- if (has_node) "node" else "measure"
   df$.grp <- df[[grp]]
-  df$.hl <- if (is.null(highlight)) TRUE else df$.grp %in% highlight
+  df$.hl <- .highlight_rows(df, highlight)
+  n_hl <- length(unique(df$.grp[df$.hl]))
 
   n_grp <- length(unique(df$.grp))
   p <- ggplot2::ggplot(df, ggplot2::aes(x = time, y = value, group = .grp))
@@ -476,9 +508,9 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
       ggplot2::geom_line(data = df[df$.hl, , drop = FALSE],
                          ggplot2::aes(colour = .grp, linetype = .grp),
                          linewidth = 0.8) +
-      ggplot2::scale_colour_manual(values = .dyn_palette(palette, length(highlight)),
+      ggplot2::scale_colour_manual(values = .dyn_palette(palette, n_hl),
                                    name = NULL) +
-      ggplot2::scale_linetype_manual(values = rep(1:6, length.out = length(highlight)),
+      ggplot2::scale_linetype_manual(values = rep(1:6, length.out = n_hl),
                                      name = NULL)
   }
 

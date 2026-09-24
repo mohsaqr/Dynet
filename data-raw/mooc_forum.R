@@ -54,6 +54,10 @@ mooc_people <- data.frame(
   experience = as.integer(nodes$experience),
   stringsAsFactors = FALSE
 )
+# The chapter recodes the integer level into three labels and mixes on them;
+# shipping the label spares every analysis the recode.
+mooc_people$expert_level <- c("Expert", "Student", "Teacher")[mooc_people$experience]
+stopifnot("an experience code is outside 1:3" = !anyNA(mooc_people$expert_level))
 
 # Every participant named in the log must be in the node table, or `dynet()`
 # would silently carry an unnamed vertex.

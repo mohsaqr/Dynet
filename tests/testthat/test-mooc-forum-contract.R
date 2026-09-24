@@ -16,11 +16,14 @@ test_that("the bundled MOOC data has the documented shape", {
   expect_false(anyNA(mooc_posts$timestamp))
   expect_identical(length(unique(mooc_posts$discussion)), 338L)
 
-  expect_identical(names(mooc_people), c("name", "experience"))
+  expect_identical(names(mooc_people), c("name", "experience", "expert_level"))
   expect_identical(nrow(mooc_people), 445L)
   expect_type(mooc_people$name, "character")
   expect_type(mooc_people$experience, "integer")
   expect_setequal(unique(mooc_people$experience), c(1L, 2L, 3L))
+  # The label is a pure recode of the code, so the two columns agree row by row.
+  expect_identical(mooc_people$expert_level,
+                   c("Expert", "Student", "Teacher")[mooc_people$experience])
 
   # The data contract the vignette depends on: every poster is a known
   # participant, so `dynet(nodes = )` never invents an unnamed vertex.
@@ -28,31 +31,25 @@ test_that("the bundled MOOC data has the documented shape", {
   expect_true(all(posters %in% mooc_people$name))
 })
 
-test_that("the chapter pipeline reproduces its published counts", {
-  replies <- subset(mooc_posts, sender != receiver)
-  busy <- names(which(table(replies$discussion) > 1))
-  exchanges <- subset(replies, discussion %in% busy)
-  expect_identical(nrow(exchanges), 2406L)
-  expect_identical(length(unique(exchanges$discussion)), 299L)
-
-  people <- transform(
-    mooc_people,
-    expert_level = as.character(factor(experience, levels = c(1L, 2L, 3L),
-                                       labels = c("Expert", "Student", "Teacher")))
-  )
-  dn_full <- quiet_dynet(exchanges, from = "sender", to = "receiver",
+test_that("min_thread_posts reproduces the chapter's counts in one call", {
+  dn_full <- quiet_dynet(mooc_posts, from = "sender", to = "receiver",
                          time = "timestamp", thread = "discussion",
-                         nodes = people, time_unit = "days",
-                         directed = TRUE, loops = FALSE)
-  dn <- induce_subgraph(dn_full, degree > 20)
+                         nodes = mooc_people, time_unit = "days",
+                         min_thread_posts = 2)
+  spells <- as.data.frame(dn_full)
+  expect_identical(nrow(spells), 2406L)
+  expect_identical(length(unique(spells$thread)), 299L)
+  vertices <- as.data.frame(dn_full, what = "nodes")
+  expect_identical(nrow(vertices), 441L)
 
-  vertices <- as.data.frame(dn, what = "nodes")
-  expect_identical(nrow(vertices), 45L)
-  expect_true("444" %in% vertices$name)
+  dn <- induce_subgraph(dn_full, degree > 20)
+  active <- as.data.frame(dn, what = "nodes")
+  expect_identical(nrow(active), 45L)
+  expect_true("444" %in% active$name)
 
   # 428, not the chapter's 433: the five extra ties are pairs the chapter
   # admits before dropping single-post discussions, which networkDynamic then
-  # leaves active for all time. Documented in the vignette's "what differs".
+  # leaves active for all time.
   scalars <- metrics(dn, measure = c("edges", "density"), window = "all")
   measured <- as.data.frame(scalars)
   expect_equal(measured$value[measured$measure == "edges"], 428)
@@ -60,21 +57,12 @@ test_that("the chapter pipeline reproduces its published counts", {
                tolerance = 1e-6)
 })
 
-test_that("the mixing attribute the chapter uses covers every active vertex", {
-  people <- transform(
-    mooc_people,
-    expert_level = as.character(factor(experience, levels = c(1L, 2L, 3L),
-                                       labels = c("Expert", "Student", "Teacher")))
-  )
-  replies <- subset(mooc_posts, sender != receiver)
-  busy <- names(which(table(replies$discussion) > 1))
-  exchanges <- subset(replies, discussion %in% busy)
-  dn_full <- quiet_dynet(exchanges, from = "sender", to = "receiver",
+test_that("the shipped mixing attribute covers every active vertex", {
+  dn_full <- quiet_dynet(mooc_posts, from = "sender", to = "receiver",
                          time = "timestamp", thread = "discussion",
-                         nodes = people, time_unit = "days",
-                         directed = TRUE, loops = FALSE)
+                         nodes = mooc_people, time_unit = "days",
+                         min_thread_posts = 2)
   dn <- induce_subgraph(dn_full, degree > 20)
-
   vertices <- as.data.frame(dn, what = "nodes")
   expect_false(anyNA(vertices$expert_level))
 

@@ -11,6 +11,7 @@ Construction, measurement and visualisation of temporal networks. Networks are b
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://pak.dynasite.org/Dynet}
   \item \url{https://github.com/mohsaqr/Dynet}
   \item Report bugs at \url{https://github.com/mohsaqr/Dynet/issues}
 }

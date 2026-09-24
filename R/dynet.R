@@ -119,7 +119,14 @@
 #'   with a message, which is almost always what relational logs need; `TRUE`
 #'   keeps them and reports how many. A kept loop **is** counted by degree, and
 #'   contributes two to it, since both of its endpoint stubs are incident to
-#'   the same vertex.
+#'   the same vertex. In a threaded log a dropped self-reply is dropped
+#'   before the thread's lifetime is computed, so it neither opens a tie nor
+#'   keeps its thread alive.
+#' @param min_thread_posts For a threaded log, the smallest number of posts a
+#'   thread must hold, after self-loops have been dropped, for its posts to
+#'   enter the network. The default `1` keeps every thread; `2` drops threads
+#'   that never became an exchange, the rule of Saqr (2024). Dropped threads
+#'   are reported with a message. Requires `thread`.
 #' @param onset_censored,terminus_censored Optional logical column names for
 #'   explicit raw interval-boundary censor state. These selectors are available
 #'   only for interval input, are never auto-detected, and may not flag a
@@ -190,7 +197,7 @@ dynet <- function(data,
                   directed = TRUE, interval = 1, time_unit = "auto",
                   observation_start = NULL, observation_end = NULL,
                   observation_spells = NULL,
-                  loops = FALSE,
+                  loops = FALSE, min_thread_posts = 1L,
                   onset_censored = NULL, terminus_censored = NULL,
                   vertex_spells = NULL) {
 
@@ -216,6 +223,10 @@ dynet <- function(data,
       is.logical(directed) && length(directed) == 1L && !is.na(directed),
     "`loops` must be a single TRUE or FALSE."               =
       is.logical(loops) && length(loops) == 1L && !is.na(loops),
+    "`min_thread_posts` must be a single whole number of at least 1." =
+      is.numeric(min_thread_posts) && length(min_thread_posts) == 1L &&
+      is.finite(min_thread_posts) && min_thread_posts >= 1 &&
+      min_thread_posts == trunc(min_thread_posts),
     "`interval` must be a single positive number."          =
       is.numeric(interval) && length(interval) == 1L && is.finite(interval) &&
       interval > 0,
@@ -226,6 +237,11 @@ dynet <- function(data,
 
   format <- .infer_format(data, format, thread = thread, actor = actor,
                           group = group, end = end, duration = duration)
+  if (min_thread_posts > 1 && !identical(format, "threaded")) {
+    stop(errorCondition(
+      "`min_thread_posts` needs a threaded log: name the `thread` column.",
+      class = c("dynet_needs_thread", "dynet_bad_input"), call = NULL))
+  }
   censor_explicit <- !is.null(onset_censored) || !is.null(terminus_censored)
   if (censor_explicit && !identical(format, "interval")) {
     stop(errorCondition(
@@ -238,7 +254,9 @@ dynet <- function(data,
     copresence = .build_copresence(data, actor, group, time, start, end,
                                    session, time_unit),
     threaded   = .build_threaded(data, from, to, time, thread, session,
-                                 time_unit, thread_clock = thread_clock),
+                                 time_unit, thread_clock = thread_clock,
+                                 loops = loops,
+                                 min_thread_posts = as.integer(min_thread_posts)),
     contact    = .build_contact(data, from, to, time, session, time_unit),
     interval   = .build_interval(data, from, to, start, end, duration, session,
                                  time_unit)
@@ -1072,11 +1090,16 @@ dynet <- function(data,
 #' @param time_unit Requested time unit.
 #' @param thread_clock `"absolute"`, the default, keeps every post on the
 #'   calendar; `"relative"` re-bases each thread on its own first post.
+#' @param loops Whether self-replies are kept. When they are not, they are
+#'   removed here, before thread lifetimes are computed, so a dropped post
+#'   cannot extend the thread it belonged to.
+#' @param min_thread_posts Threads with fewer surviving posts are dropped.
 #' @return A list with `edges` (carrying an extra `thread` column),
 #'   `time_unit`, `origin`, `row_index`, `node_pool` and `used`.
 #' @noRd
 .build_threaded <- function(data, from, to, time, thread, session, time_unit,
-                            thread_clock = "absolute") {
+                            thread_clock = "absolute", loops = FALSE,
+                            min_thread_posts = 1L) {
   base <- .build_contact(data, from, to, time, session, time_unit)
   th_col <- .resolve_column(data, thread, "thread", arg = "thread")
   if (is.null(th_col)) {
@@ -1089,6 +1112,34 @@ dynet <- function(data,
   if (anyNA(th)) {
     stop(errorCondition("The thread column must not contain NA values.",
                         class = "dynet_bad_input", call = NULL))
+  }
+  # A dropped self-reply must not keep its thread alive, and a thread that
+  # never became an exchange is dropped whole: both filters run before the
+  # thread lifetimes are computed from the posts that remain.
+  keep <- rep(TRUE, nrow(base$edges))
+  is_loop <- base$edges$from == base$edges$to
+  if (!loops && any(is_loop)) {
+    message(sprintf("Dropped %d self-loop event(s). Use loops = TRUE to keep them.",
+                    sum(is_loop)))
+    keep <- !is_loop
+  }
+  if (min_thread_posts > 1L) {
+    size <- tapply(keep, th, sum)
+    thin <- keep & as.numeric(size[th]) < min_thread_posts
+    if (any(thin)) {
+      message(sprintf("Dropped %d thread(s) with fewer than %d post(s), %d post(s) in all.",
+                      length(unique(th[thin])), min_thread_posts, sum(thin)))
+      keep <- keep & !thin
+    }
+  }
+  if (!any(keep)) {
+    stop(errorCondition("No edge events remain after cleaning.",
+                        class = "dynet_empty_network", call = NULL))
+  }
+  if (!all(keep)) {
+    base$edges <- base$edges[keep, , drop = FALSE]
+    base$row_index <- base$row_index[keep]
+    th <- th[keep]
   }
   last_post <- tapply(base$edges$start, th, max)
   base$edges$end <- as.numeric(last_post[th])

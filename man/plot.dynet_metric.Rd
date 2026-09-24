@@ -21,9 +21,13 @@
 vertex-by-time tile plot, \code{"ridge"} for small multiples per measure.
 Ignored for a measure with no time axis.}
 
-\item{highlight}{Optional character vector of vertex names to draw in
-colour, with everything else in grey. Useful when there are many
-vertices. Ignored for a measure with no time axis.}
+\item{highlight}{Optional character vector naming the series to draw in
+colour, with everything else in grey: vertex names for a node-level
+measure, measure names for a graph-level one. For a \code{\link[=mixing]{mixing()}} result a
+group name selects every flow into or out of that group, so
+\code{highlight = "Teacher"} colours the teacher rows and columns of the mixing
+table. A name that matches nothing raises an error of class
+\code{dynet_unknown_highlight}. Ignored for a measure with no time axis.}
 
 \item{top}{How many rows to draw. For a measure taken over time, the \code{top}
 vertices with the largest mean value; \code{NULL}, the default, draws every

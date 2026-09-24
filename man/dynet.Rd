@@ -28,6 +28,7 @@ dynet(
   observation_end = NULL,
   observation_spells = NULL,
   loops = FALSE,
+  min_thread_posts = 1L,
   onset_censored = NULL,
   terminus_censored = NULL,
   vertex_spells = NULL
@@ -114,7 +115,15 @@ This is mutually exclusive with \code{observation_start} and
 with a message, which is almost always what relational logs need; \code{TRUE}
 keeps them and reports how many. A kept loop \strong{is} counted by degree, and
 contributes two to it, since both of its endpoint stubs are incident to
-the same vertex.}
+the same vertex. In a threaded log a dropped self-reply is dropped
+before the thread's lifetime is computed, so it neither opens a tie nor
+keeps its thread alive.}
+
+\item{min_thread_posts}{For a threaded log, the smallest number of posts a
+thread must hold, after self-loops have been dropped, for its posts to
+enter the network. The default \code{1} keeps every thread; \code{2} drops threads
+that never became an exchange, the rule of Saqr (2024). Dropped threads
+are reported with a message. Requires \code{thread}.}
 
 \item{onset_censored, terminus_censored}{Optional logical column names for
 explicit raw interval-boundary censor state. These selectors are available

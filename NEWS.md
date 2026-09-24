@@ -1,3 +1,30 @@
+# Dynet 0.4.11
+
+## Breaking changes
+
+* In a threaded log, a self-reply that `loops = FALSE` drops is now removed
+  before the thread's lifetime is computed, so a dropped post no longer keeps
+  its thread alive. Threaded networks built from logs with self-replies can
+  have shorter spells than before; `loops = TRUE` is unchanged.
+
+## New features
+
+* `dynet()` gains `min_thread_posts`: for a threaded log, threads with fewer
+  surviving posts are dropped whole and reported with a message, so the
+  "threads that never became an exchange" rule of the chapter-17 analysis is
+  one argument rather than a hand-written filter. Requires `thread`; a value
+  below 1 or a non-threaded log raises `dynet_bad_input` /
+  `dynet_needs_thread`.
+* `plot()` on a `mixing()` result accepts a group name in `highlight`, which
+  colours every flow into or out of that group. A `highlight` that matches no
+  series raises `dynet_unknown_highlight` instead of drawing everything grey.
+* `mooc_people` carries `expert_level`, the chapter's label for the
+  experience code, so the mixing attribute needs no recode.
+* `set_tie_sessions()` gains `breaks` and `labels`: sessions can be cut on
+  the time axis (`breaks = c(7, 14)` gives three weeks) instead of being
+  derived by hand as a column and matched positionally against the spell
+  table.
+
 # Dynet 0.4.7
 
 ## Breaking changes

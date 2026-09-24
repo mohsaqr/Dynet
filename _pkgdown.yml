@@ -13,19 +13,17 @@ articles:
 
 - title: Tutorials
   desc: >
-    Longer walks through one verb or one dataset. Website-only: the animation
-    tutorial writes GIF and video files, which need gifski and av.
+    One verb or one dataset at a time. Website-only: the animation tutorial
+    writes GIF and video files, which need gifski and av.
   contents:
   - articles/animating
   - articles/mooc-posts
 
-- title: Reproductions
+- title: Case studies
   desc: >
-    Published analyses re-run with Dynet's verbs. The LA Methods chapter
-    ships with the package and runs on bundled data. The two articles below
-    are website-only, built from the working tree rather than the source
-    tarball: one repeats that chapter from the published CSV files with a
-    tidyverse pipeline, the other runs the Trees of Thought study end to end.
+    Complete analyses of real data. The MOOC forum case study ships with the
+    package on bundled data; the second MOOC document builds the same network
+    from the published CSV files; the Trees of Thought study is website-only.
   contents:
   - ch17-temporal-networks
   - articles/ch17-published-data

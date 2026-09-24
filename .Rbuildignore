@@ -25,3 +25,5 @@
 ^_pkgdown\.yml$
 ^pkgdown$
 ^vignettes/articles$
+^README\.Rmd$
+^vignettes/.*_beatrina$

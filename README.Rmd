@@ -1,0 +1,435 @@
+---
+output: github_document
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 120,
+  out.width = "100%"
+)
+```
+
+# Dynet
+
+The Dynet R package provides functions for constructing, measuring and
+visualising temporal networks, that is, networks whose ties are located in
+time. A network is built with one constructor from any of four kinds of
+relational log: interval logs with a start and an end per tie, contact logs of
+instantaneous events, threaded logs such as forum or chat data, and
+co-presence logs where actors sharing a group become connected. Measurement
+covers time-varying centrality, graph-level structure, tie formation and
+dissolution, tie duration, burstiness, group mixing, time-respecting paths,
+reachability and temporal centrality. Every function returns a data frame with
+one row per observation, addressed by vertex name, so results are read, plotted
+and modelled without further manipulation. The implementation is base R; the
+values are checked against the `igraph`, `sna` and `tsna` packages in the test
+suite. Drawing is delegated to `cograph`, of which every Dynet network is an
+instance.
+
+## Temporal networks
+
+A social network is usually recorded as a set of ties between actors, and the
+ties are then analysed as if they had all existed at once. Most relational data
+are not like that. Conversations, messages, meetings and collaborations happen
+at particular moments and last for particular lengths of time. A temporal
+network keeps this information: each tie is a *spell*, a pair of actors together
+with the time at which the tie began and the time at which it ended, or a single
+instant when the tie has no duration (Holme and Saramäki, 2012). The same pair of
+actors may have many spells.
+
+Aggregating the spells into one static network loses two things. The first is
+duration and intensity: a pair that spoke once for a minute and a pair that
+worked together every day become the same edge. The second, and more
+consequential, is order. In a static network, a tie from A to B and a tie from B
+to C imply a path from A to C. In a temporal network they imply a path only if
+the tie from B to C is still active at, or begins after, the moment the tie from
+A to B delivered something to B. A path that respects this constraint is called
+a *time-respecting path* (Kempe, Kleinberg and Kumar, 2002). Because the
+constraint is one-directional, temporal reachability is not symmetric even in an
+undirected network, and a static network systematically overstates how many
+actors can reach one another (Moody, 2002). Measures built on time-respecting
+paths, such as temporal closeness and temporal betweenness, describe the network
+as a medium through which something can travel (Pan and Saramäki, 2011;
+Nicosia et al., 2013). Measures built on the timing of a single actor's events,
+such as burstiness and memory, describe the rhythm of activity itself (Goh and
+Barabási, 2008).
+
+Measures of a temporal network are computed in one of two ways. Density,
+reciprocity, transitivity, centrality and the counts of ties formed and
+dissolved are computed within windows of time: the observation period is
+divided into windows, which may tile it or overlap, each window is measured as
+a static network, and the result is a time series whose resolution is set by
+the width of the window. Reachability, latency, temporal closeness and temporal
+betweenness are computed on the spells directly, along time-respecting paths,
+and have no static counterpart: they report the earliest time at which one
+actor can reach another, how many distinct routes achieve it, and how much of
+the network is reachable from a given moment. In educational research these
+methods have been used to study how collaboration unfolds within a course and
+which students act as bridges over time (Saqr and Nouri, 2020; Saqr, 2024).
+
+Relational logs arrive in different shapes, and the shape determines how spells
+are defined. An *interval* log records a start and an end for every row. A
+*contact* log records only a timestamp, so every spell is a point. A *threaded*
+log, typical of discussion forums, records a timestamp and the thread a message
+belongs to; following Saqr and Nouri (2020), a message is taken to be active
+from the moment it is posted until the thread falls silent, so a message that
+provoked a long discussion stays live longer than one that did not. A
+*co-presence* log records which actors attended which occasion; every pair of
+attendees is connected for the span of the occasion. Dynet reads all four with
+one function and infers the shape from the arguments given to it.
+
+## Installation
+
+Dynet is not on CRAN. The development version is installed from the author's
+R-universe repository, which also resolves its `cograph` dependency, or from
+GitHub. These commands are not evaluated when this page is rendered.
+
+```{r install, eval = FALSE}
+install.packages("Dynet",
+                 repos = c("https://mohsaqr.r-universe.dev",
+                           "https://cloud.r-project.org"))
+
+# or from GitHub
+remotes::install_github("mohsaqr/Dynet")
+```
+
+## Data
+
+Four bundled logs are used below. `school_contacts` is a simulated interval log
+of 240 face-to-face contacts among fourteen named students, with time in
+arbitrary units over about 21.5 units. `forum_posts` is a simulated threaded log
+of 241 posts by twenty participants over eight weeks, with a companion table
+`forum_people` that gives each participant a role. `seminar_attendance` is a
+simulated co-presence log of which students attended which weekly seminar. The
+package also ships `mooc_posts`, the 2,529 posts of a real MOOC discussion forum
+analysed in Saqr (2024), and `thought_chains`, the reply table of the *Trees of
+Thought* study.
+
+```{r data}
+library(Dynet)
+head(school_contacts)
+```
+
+Each row is one contact from one student to another, with the time it began and
+the time it ended.
+
+## Building a network
+
+To build a temporal network from an interval log, we call `dynet()` with the
+log. The columns `from`, `to`, `start` and `end` are recognised by name;
+`sender` and `receiver`, `source` and `target`, `onset` and `terminus`, and
+several other spellings are accepted as well, and times may be numeric, dates or
+date-times. Printing the network describes its format and shows the first
+spells.
+
+```{r build}
+dn <- dynet(school_contacts)
+dn
+```
+
+To see the network's dimensions in one table, we call `summary()`. The mean
+snapshot density is the average over one-unit bins of the share of pairs that
+are connected in the bin.
+
+```{r summary}
+summary(dn)
+```
+
+The other three log shapes are built with the same function. For a contact log,
+we name the timestamp column in `time`. For a threaded log, we name the thread
+column in `thread`, and pass the participant table to `nodes` so that its
+attributes travel with the network. For a co-presence log, we name the actor
+column in `actor` and the occasion column in `group`.
+
+```{r shapes}
+contacts <- dynet(forum_posts, time = "timestamp")
+forum <- dynet(forum_posts, thread = "thread", nodes = forum_people)
+seminars <- dynet(seminar_attendance, actor = "student", group = "seminar")
+forum
+```
+
+The threaded network reports its time in days, because the log carried
+date-times; the unit is chosen to suit the span and is stated in every result.
+
+To draw the spells over time, we call `plot()` on the network. Each horizontal
+segment is one spell.
+
+```{r plot-spells}
+plot(dn)
+```
+
+## Measuring in windows
+
+Every measuring function that returns a time series takes the same four
+arguments. `start` and `end` bound the period, `step` is the interval between
+measurements, and `window` is the length of time each measurement covers. When
+`window` equals `step`, the windows tile the period; when `window` is larger,
+they overlap and the series is a rolling one; when `window` is zero, the network
+is sampled at each instant. The defaults tile the observed period into unit
+bins.
+
+To obtain a graph-level measure in each window, we call `metrics()` with the
+network and `measure` for the statistic. Here density is measured every unit
+over a rolling window of seven units.
+
+```{r metrics}
+density <- metrics(dn, measure = "density", step = 1, window = 7)
+density
+```
+
+To summarise a series, we call `summary()` on it. The table reports one row per
+measure with its mean, spread, range and the time at which it peaked.
+
+```{r metrics-summary}
+summary(density)
+```
+
+To draw the series, we call `plot()` on it.
+
+```{r metrics-plot}
+plot(density)
+```
+
+Several measures may be requested in one call; they arrive stacked in one data
+frame with a `measure` column. The graph-level catalogue includes density,
+reciprocity, transitivity, the dyad and triad censuses, component counts,
+centralisation and the Krackhardt indices, and is listed in `?metrics`.
+
+## Vertex measures
+
+To obtain a centrality for every vertex in every window, we call
+`dyn_centrality()` with the network and `measure` for the index. The result has
+one row per vertex per time point.
+
+```{r centrality}
+degree <- dyn_centrality(dn, measure = "degree")
+degree
+```
+
+To reduce the series to one row per vertex, we call `summary()` on it. The
+`peak_time` column gives the time at which each vertex was most central.
+
+```{r centrality-summary}
+summary(degree)
+```
+
+The measures above are computed on the network as it stands in each window.
+To compute a centrality on time-respecting paths across the whole period
+instead, we set `scope` to `"temporal"`. Temporal closeness is the inverse of
+the mean time a vertex needs to reach the others; it has one value per vertex,
+not one per window.
+
+```{r temporal-closeness}
+closeness <- dyn_centrality(dn, measure = "closeness", scope = "temporal")
+closeness
+```
+
+On a directed network, `mode` selects whether incoming, outgoing or all ties are
+counted. The vertex-level catalogue includes degree, strength, closeness,
+betweenness, eigenvector centrality, PageRank, hub and authority scores,
+coreness, Burt's constraint and several prestige indices, and is listed in
+`?dyn_centrality`.
+
+## Time-respecting paths
+
+To find the earliest time-respecting path from one vertex to every other, we
+call `paths()` with the network and `from` for the source. The result has one
+row per vertex. `arrival_time` is the earliest moment the vertex can be
+reached, `latency` is that moment minus the time the source started, `n_hops`
+is the number of ties the earliest route uses, and `n_paths` is the number of
+distinct routes that arrive equally early.
+
+```{r paths}
+from_ana <- paths(dn, from = "Ana")
+from_ana
+```
+
+To summarise the reachable set, we call `summary()` on the result.
+
+```{r paths-summary}
+summary(from_ana)
+```
+
+Ana reaches every other student within four hops. Three of them, Ben, Eve and
+Finn, never meet her directly and are joined to her only through intermediaries
+whose contacts happened in the right order. The same question
+asked from a later starting point has a different answer, because the contacts
+that carried the earlier routes have already passed. To start the search later,
+we set `start`.
+
+```{r paths-late}
+from_ana_late <- paths(dn, from = "Ana", start = 18)
+summary(from_ana_late)
+```
+
+To list the routes themselves, we call `pathways()` with the network and
+`from` for the source. Each row is one distinct sequence of vertices, with the
+number of earliest routes that follow it.
+
+```{r pathways}
+pathways(dn, from = "Ana")
+```
+
+To draw the routes as a tree, we call `plot()` on the paths result. A vertex
+appears more than once when it is entered at different times, because each entry
+time leaves a different set of onward contacts available.
+
+```{r paths-plot, fig.height = 5}
+plot(from_ana)
+```
+
+To obtain the share of the network each vertex can reach, or be reached from,
+we call `dyn_reachability()` with the network; `direction` selects forward,
+backward or both.
+
+## Tie dynamics and timing
+
+To count the ties that form and dissolve in each window, we call `events()`
+with the network. The default measures are formation and dissolution.
+
+```{r events}
+turnover <- events(dn)
+summary(turnover)
+```
+
+To measure how long ties last, we call `durations()` with the network and
+`measure` for the statistic. With `measure = "mean"` the result is the mean
+spell length of each pair; `unit` moves the question from pairs to individual
+spells or to vertex activity.
+
+```{r durations}
+lengths <- durations(dn, measure = "mean")
+lengths
+```
+
+To measure whether a vertex's contacts are regular or clustered in time, we call
+`burstiness()` with the network. Burstiness compares the dispersion of the gaps
+between a vertex's events with the exponential reference: 1 is the bursty limit,
+0 the Poisson reference and -1 perfectly regular activity. Memory is the
+correlation between consecutive gaps.
+
+```{r burstiness}
+rhythm <- burstiness(dn)
+summary(rhythm)
+```
+
+## Mixing between groups
+
+To count ties within and between groups of vertices, we call `mixing()` with
+the network and `attribute` for the vertex attribute that defines the groups.
+The forum network carries a `role` attribute from `forum_people`. A `step`
+wider than the observation period collapses the counts into one table; the
+default reports them per window.
+
+```{r mixing}
+mixing(forum, attribute = "role", step = 60)
+```
+
+## Static views of a temporal network
+
+To reduce a temporal network to a weighted static network, we call
+`collapse_network()` with the network and `weight` for the aggregation rule.
+The result is a `cograph` network and can be drawn and measured as one.
+
+```{r collapse}
+flat <- collapse_network(dn, weight = "union_duration")
+flat
+```
+
+To restrict a network to some of its vertices, we call `induce_subgraph()` with
+the network and a condition on the vertex table in `nodes`. A centrality named
+in the condition is computed over the whole observed period.
+
+```{r induce}
+core <- induce_subgraph(dn, degree > 16)
+core
+```
+
+To list the ties active in one window, we call `snapshots()` with the network
+and `at` for the time.
+
+```{r snapshots}
+snapshots(dn, at = 3)
+```
+
+## Editing a network
+
+Editing functions return a new network and leave the input unchanged. To add a
+vertex, we call `add_nodes()` with a table of names and attributes. To add a
+tie, we call `add_ties()` with a table of spells. `remove_nodes()`,
+`remove_ties()`, `update_nodes()`, `update_ties()`, `rename_nodes()`,
+`set_vertex_spells()` and `set_observations()` complete the set.
+
+```{r edit}
+dn2 <- add_nodes(dn, data.frame(name = "Omar"))
+dn2 <- add_ties(dn2, data.frame(from = "Ana", to = "Omar", start = 4, end = 6))
+dn2
+```
+
+## Drawing and animating
+
+A Dynet network is a `cograph` network, so every `cograph` drawing function
+applies to it directly. `plot()` adds the views that concern time. To draw the
+network as it stands in one window, we set `type` to `"network"` and give the
+time in `at`. To draw a sequence of windows as small multiples with a shared
+layout, we set `type` to `"snapshots"`. To draw the proximity timeline, in which
+vertices that interact are placed near each other and their positions are
+followed through time, we set `type` to `"proximity"`. The proximity timeline
+is described in the article on drawing.
+
+To animate the measurement windows, we call `animate()` with the same four grid
+arguments as the measuring functions and a file name whose extension selects the
+encoder; `.gif` needs the `gifski` package and `.mp4` or `.webm` the `av`
+package. The article on animating shows the result.
+
+## Documentation
+
+- `vignette("dynet")` walks through one analysis from log to result.
+- `vignette("building-networks")` covers the four log shapes, vertex
+  attributes, observation windows, sessions and censoring.
+- `vignette("ch17-temporal-networks")` re-runs the temporal network chapter of
+  *Learning Analytics Methods and Tutorials* on the bundled MOOC forum.
+- The package website at <https://pak.dynasite.org/Dynet/> adds a function
+  catalogue, tutorials on animation and on the MOOC data, and a full
+  reproduction of the *Trees of Thought* study.
+
+## References
+
+Butts, C. T. (2008). A relational event framework for social action.
+*Sociological Methodology*, 38(1), 155–200.
+
+Goh, K.-I., & Barabási, A.-L. (2008). Burstiness and memory in complex systems.
+*EPL (Europhysics Letters)*, 81(4), 48002.
+
+Holme, P., & Saramäki, J. (2012). Temporal networks. *Physics Reports*, 519(3),
+97–125.
+
+Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
+problems for temporal networks. *Journal of Computer and System Sciences*,
+64(4), 820–842.
+
+Masuda, N., & Lambiotte, R. (2016). *A guide to temporal networks*. World
+Scientific.
+
+Moody, J. (2002). The importance of relationship timing for diffusion. *Social
+Forces*, 81(1), 25–56.
+
+Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
+(2013). Graph metrics for temporal networks. In P. Holme & J. Saramäki (Eds.),
+*Temporal networks* (pp. 15–40). Springer.
+
+Pan, R. K., & Saramäki, J. (2011). Path lengths, correlations, and centrality
+in temporal networks. *Physical Review E*, 84(1), 016105.
+
+Saqr, M. (2024). Temporal network analysis: Introduction, methods and analysis
+with R. In M. Saqr & S. López-Pernas (Eds.), *Learning analytics methods and
+tutorials: A practical guide using R*. Springer.
+
+Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis to
+understand and improve collaborative learning. In *Proceedings of the Tenth
+International Conference on Learning Analytics & Knowledge* (pp. 314–319). ACM.

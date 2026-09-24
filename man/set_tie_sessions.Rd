@@ -4,37 +4,48 @@
 \alias{set_tie_sessions}
 \title{Assign or remove tie sessions}
 \usage{
-set_tie_sessions(dn, session = NULL)
+set_tie_sessions(dn, session = NULL, breaks = NULL, labels = NULL)
 }
 \arguments{
 \item{dn}{A temporal network.}
 
 \item{session}{A complete, nonempty character vector of length one or the
 raw tie count; a length-one value labels every spell. Default \code{NULL},
-which removes all tie-session walls and erases session labels on vertex
-activity.
+which, when \code{breaks} is also \code{NULL}, removes all tie-session walls and
+erases session labels on vertex activity.
 
 \strong{A vector of the full length is matched positionally against the spell
 table, not against the data frame the network was built from.}
 \code{\link[=dynet]{dynet()}} sorts spells by \code{start}, \code{end}, \code{from} and \code{to}, so the two
-orders coincide only when the input was already in that order. Derive the
-labels from \code{as.data.frame(dn)}, which is the spell table itself, rather
-than from the original log.}
+orders coincide only when the input was already in that order. To cut
+sessions by time, use \code{breaks} instead.}
+
+\item{breaks}{Optional increasing numeric vector of cut points on the
+network's time axis. A spell belongs to the session of the interval its
+\code{start} falls in: before the first break, between two breaks, or from the
+last break on, so \code{k} breaks give \code{k + 1} sessions. Mutually exclusive
+with \code{session}.}
+
+\item{labels}{Optional character vector naming the \code{k + 1} sessions that
+\code{breaks} defines, in time order. The default is \code{session_1},
+\code{session_2} and so on.}
 }
 \value{
 A new \code{dynet} object, class
 \code{c("dynet", "netobject", "cograph_network")}, with a \code{session} column on
 the spell table and the session scheme recorded in its metadata, or with
-both removed when \code{session = NULL}. Raises \code{dynet_bad_input} when
-\code{session} has neither length one nor the raw tie count, or carries \code{NA}
-or blank labels.
+both removed when neither \code{session} nor \code{breaks} is given. Raises
+\code{dynet_bad_input} when \code{session} has neither length one nor the raw tie
+count, or carries \code{NA} or blank labels; when \code{session} and \code{breaks} are
+both given; when \code{breaks} is not increasing and finite; or when \code{labels}
+does not have one more element than \code{breaks}.
 }
 \description{
 Assign or remove tie sessions
 }
 \examples{
 dn <- dynet(school_contacts)
-weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
-labelled <- set_tie_sessions(dn, session = weeks)
-labelled
+weeks <- set_tie_sessions(dn, breaks = c(7, 14),
+                          labels = c("week_1", "week_2", "week_3"))
+weeks
 }

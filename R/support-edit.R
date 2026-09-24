@@ -362,30 +362,61 @@ clear_observations <- function(dn) {
 #' @param dn A temporal network.
 #' @param session A complete, nonempty character vector of length one or the
 #'   raw tie count; a length-one value labels every spell. Default `NULL`,
-#'   which removes all tie-session walls and erases session labels on vertex
-#'   activity.
+#'   which, when `breaks` is also `NULL`, removes all tie-session walls and
+#'   erases session labels on vertex activity.
 #'
 #'   **A vector of the full length is matched positionally against the spell
 #'   table, not against the data frame the network was built from.**
 #'   [dynet()] sorts spells by `start`, `end`, `from` and `to`, so the two
-#'   orders coincide only when the input was already in that order. Derive the
-#'   labels from `as.data.frame(dn)`, which is the spell table itself, rather
-#'   than from the original log.
+#'   orders coincide only when the input was already in that order. To cut
+#'   sessions by time, use `breaks` instead.
+#' @param breaks Optional increasing numeric vector of cut points on the
+#'   network's time axis. A spell belongs to the session of the interval its
+#'   `start` falls in: before the first break, between two breaks, or from the
+#'   last break on, so `k` breaks give `k + 1` sessions. Mutually exclusive
+#'   with `session`.
+#' @param labels Optional character vector naming the `k + 1` sessions that
+#'   `breaks` defines, in time order. The default is `session_1`,
+#'   `session_2` and so on.
 #' @return A new `dynet` object, class
 #'   `c("dynet", "netobject", "cograph_network")`, with a `session` column on
 #'   the spell table and the session scheme recorded in its metadata, or with
-#'   both removed when `session = NULL`. Raises `dynet_bad_input` when
-#'   `session` has neither length one nor the raw tie count, or carries `NA`
-#'   or blank labels.
+#'   both removed when neither `session` nor `breaks` is given. Raises
+#'   `dynet_bad_input` when `session` has neither length one nor the raw tie
+#'   count, or carries `NA` or blank labels; when `session` and `breaks` are
+#'   both given; when `breaks` is not increasing and finite; or when `labels`
+#'   does not have one more element than `breaks`.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' weeks <- with(school_contacts, ifelse(start < 7, "week_1", "later"))
-#' labelled <- set_tie_sessions(dn, session = weeks)
-#' labelled
+#' weeks <- set_tie_sessions(dn, breaks = c(7, 14),
+#'                           labels = c("week_1", "week_2", "week_3"))
+#' weeks
 #' @export
-set_tie_sessions <- function(dn, session = NULL) {
+set_tie_sessions <- function(dn, session = NULL, breaks = NULL, labels = NULL) {
   .check_dynet(dn, "bounded")
   n <- nrow(dn$spells)
+  if (!is.null(session) && !is.null(breaks)) {
+    stop(errorCondition(
+      "Give either `session` labels or `breaks` on the time axis, not both.",
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (!is.null(breaks)) {
+    if (!is.numeric(breaks) || !length(breaks) || anyNA(breaks) ||
+        any(!is.finite(breaks)) || is.unsorted(breaks, strictly = TRUE)) {
+      stop(errorCondition(
+        "`breaks` must be a strictly increasing vector of finite times.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    k <- length(breaks) + 1L
+    if (is.null(labels)) labels <- paste0("session_", seq_len(k))
+    if (!is.character(labels) || length(labels) != k || anyNA(labels) ||
+        any(!nzchar(trimws(labels))) || anyDuplicated(labels)) {
+      stop(errorCondition(
+        sprintf("`labels` must give %d distinct nonempty names, one per session.", k),
+        class = "dynet_bad_input", call = NULL))
+    }
+    session <- labels[findInterval(dn$spells$start, breaks) + 1L]
+  }
   if (is.null(session)) {
     value <- rep(NA_character_, n)
   } else {
