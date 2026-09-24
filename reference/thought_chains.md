@@ -101,7 +101,7 @@ dynet(thought_chains, thread = "discussion")
 #> Dropped 9452 self-loop event(s). Use loops = TRUE to keep them.
 #> # Temporal network (threaded format, directed) | a cograph netobject
 #> # 9 vertices | 13565 edge spells | 71 distinct pairs
-#> # observed from 0.0028125 to 1865.447 days, binned every 1
+#> # observed from 0.0028125 to 1865.419 days, binned every 1
 #> # 5 sessions: A, B, C, D, E
 #> 
 #>        from         to       start      end duration weight session thread

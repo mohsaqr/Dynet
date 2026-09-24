@@ -89,6 +89,7 @@ dynet(
   observation_end = NULL,
   observation_spells = NULL,
   loops = FALSE,
+  min_thread_posts = 1L,
   onset_censored = NULL,
   terminus_censored = NULL,
   vertex_spells = NULL
@@ -218,7 +219,17 @@ dynet(
   message, which is almost always what relational logs need; `TRUE`
   keeps them and reports how many. A kept loop **is** counted by degree,
   and contributes two to it, since both of its endpoint stubs are
-  incident to the same vertex.
+  incident to the same vertex. In a threaded log a dropped self-reply is
+  dropped before the thread's lifetime is computed, so it neither opens
+  a tie nor keeps its thread alive.
+
+- min_thread_posts:
+
+  For a threaded log, the smallest number of posts a thread must hold,
+  after self-loops have been dropped, for its posts to enter the
+  network. The default `1` keeps every thread; `2` drops threads that
+  never became an exchange, the rule of Saqr (2024). Dropped threads are
+  reported with a message. Requires `thread`.
 
 - onset_censored, terminus_censored:
 

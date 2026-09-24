@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,24 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.11" id="dynet-0411">Dynet 0.4.11<a class="anchor" aria-label="anchor" href="#dynet-0411"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-0-4-11">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-4-11"></a></h3>
+<ul><li>In a threaded log, a self-reply that <code>loops = FALSE</code> drops is now removed before the thread’s lifetime is computed, so a dropped post no longer keeps its thread alive. Threaded networks built from logs with self-replies can have shorter spells than before; <code>loops = TRUE</code> is unchanged.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-features-0-4-11">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-11"></a></h3>
+<ul><li>
+<code><a href="../reference/dynet.html">dynet()</a></code> gains <code>min_thread_posts</code>: for a threaded log, threads with fewer surviving posts are dropped whole and reported with a message, so the “threads that never became an exchange” rule of the chapter-17 analysis is one argument rather than a hand-written filter. Requires <code>thread</code>; a value below 1 or a non-threaded log raises <code>dynet_bad_input</code> / <code>dynet_needs_thread</code>.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on a <code><a href="../reference/mixing.html">mixing()</a></code> result accepts a group name in <code>highlight</code>, which colours every flow into or out of that group. A <code>highlight</code> that matches no series raises <code>dynet_unknown_highlight</code> instead of drawing everything grey.</li>
+<li>
+<code>mooc_people</code> carries <code>expert_level</code>, the chapter’s label for the experience code, so the mixing attribute needs no recode.</li>
+<li>
+<code><a href="../reference/set_tie_sessions.html">set_tie_sessions()</a></code> gains <code>breaks</code> and <code>labels</code>: sessions can be cut on the time axis (<code>breaks = c(7, 14)</code> gives three weeks) instead of being derived by hand as a column and matched positionally against the spell table.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.7" id="dynet-047">Dynet 0.4.7<a class="anchor" aria-label="anchor" href="#dynet-047"></a></h2>
 <div class="section level3">

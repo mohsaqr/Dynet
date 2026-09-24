@@ -19,6 +19,8 @@ ecosystem.
 
 Useful links:
 
+- <https://pak.dynasite.org/Dynet>
+
 - <https://github.com/mohsaqr/Dynet>
 
 - Report bugs at <https://github.com/mohsaqr/Dynet/issues>

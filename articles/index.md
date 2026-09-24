@@ -11,26 +11,24 @@
 
 ### Tutorials
 
-Longer walks through one verb or one dataset. Website-only: the
-animation tutorial writes GIF and video files, which need gifski and av.
+One verb or one dataset at a time. Website-only: the animation tutorial
+writes GIF and video files, which need gifski and av.
 
 - [Animating a temporal
   network](https://pak.dynasite.org/Dynet/articles/animating.md):
 - [The MOOC forum
   data](https://pak.dynasite.org/Dynet/articles/mooc-posts.md):
 
-### Reproductions
+### Case studies
 
-Published analyses re-run with Dynet’s verbs. The LA Methods chapter
-ships with the package and runs on bundled data. The two articles below
-are website-only, built from the working tree rather than the source
-tarball: one repeats that chapter from the published CSV files with a
-tidyverse pipeline, the other runs the Trees of Thought study end to
-end.
+Complete analyses of real data. The MOOC forum case study ships with the
+package on bundled data; the second MOOC document builds the same
+network from the published CSV files; the Trees of Thought study is
+website-only.
 
-- [Temporal network analysis: the LA Methods chapter with
-  Dynet](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md):
-- [Chapter 17 from the published data
+- [Case study: A MOOC discussion forum as a temporal
+  network](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md):
+- [The MOOC forum from the published
   files](https://pak.dynasite.org/Dynet/articles/ch17-published-data.md):
-- [Trees of Thought: temporal-network reproduction with
-  Dynet](https://pak.dynasite.org/Dynet/articles/thought-chains.md):
+- [Case study: How kinds of contribution follow one another in course
+  discussions](https://pak.dynasite.org/Dynet/articles/thought-chains.md):

@@ -11,7 +11,7 @@ carried by colour and line type together, never by colour alone."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,9 +80,13 @@ Ignored for a measure with no time axis.</p></dd>
 
 
 <dt id="arg-highlight">highlight<a class="anchor" aria-label="anchor" href="#arg-highlight"></a></dt>
-<dd><p>Optional character vector of vertex names to draw in
-colour, with everything else in grey. Useful when there are many
-vertices. Ignored for a measure with no time axis.</p></dd>
+<dd><p>Optional character vector naming the series to draw in
+colour, with everything else in grey: vertex names for a node-level
+measure, measure names for a graph-level one. For a <code><a href="mixing.html">mixing()</a></code> result a
+group name selects every flow into or out of that group, so
+<code>highlight = "Teacher"</code> colours the teacher rows and columns of the mixing
+table. A name that matches nothing raises an error of class
+<code>dynet_unknown_highlight</code>. Ignored for a measure with no time axis.</p></dd>
 
 
 <dt id="arg-top">top<a class="anchor" aria-label="anchor" href="#arg-top"></a></dt>

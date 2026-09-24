@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,507 +59,492 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="dynet">Dynet<a class="anchor" aria-label="anchor" href="#dynet"></a>
 </h1></div>
-<p>Temporal network construction, measurement and visualisation in R.</p>
-<p>A static network says two people are connected. A temporal network says when, for how long, and in which order — and refuses to let a path run backwards in time. Aggregating time away inflates connectivity and hides the dynamics; every verb here keeps time in the result.</p>
+<p>The Dynet R package provides functions for constructing, measuring and visualising temporal networks, that is, networks whose ties are located in time. A network is built with one constructor from any of four kinds of relational log: interval logs with a start and an end per tie, contact logs of instantaneous events, threaded logs such as forum or chat data, and co-presence logs where actors sharing a group become connected. Measurement covers time-varying centrality, graph-level structure, tie formation and dissolution, tie duration, burstiness, group mixing, time-respecting paths, reachability and temporal centrality. Every function returns a data frame with one row per observation, addressed by vertex name, so results are read, plotted and modelled without further manipulation. The implementation is base R; the values are checked against the <code>igraph</code>, <code>sna</code> and <code>tsna</code> packages in the test suite. Drawing is delegated to <code>cograph</code>, of which every Dynet network is an instance.</p>
 <div class="section level2">
-<h2 id="two-commitments">Two commitments<a class="anchor" aria-label="anchor" href="#two-commitments"></a>
+<h2 id="temporal-networks">Temporal networks<a class="anchor" aria-label="anchor" href="#temporal-networks"></a>
 </h2>
-<p><strong>Vertices are named, never numbered.</strong> <code>paths(dn, from = "Ana")</code>. There is no vertex index to look up first, and no result that hands you an integer where you expected a person. (The aggregate edge table uses integer endpoints because that is cograph’s schema, but nothing in the public surface exposes them — <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> returns names, in every layout.)</p>
-<p><strong>Every verb returns a tidy data frame.</strong> One row per observation, with the columns you would expect. No matrices, no nested lists, no named list of matrices when you ask for sessions. Nothing in this package asks you to reach into an object with <code>$</code> or to subset a result to make it readable.</p>
+<p>A social network is usually recorded as a set of ties between actors, and the ties are then analysed as if they had all existed at once. Most relational data are not like that. Conversations, messages, meetings and collaborations happen at particular moments and last for particular lengths of time. A temporal network keeps this information: each tie is a <em>spell</em>, a pair of actors together with the time at which the tie began and the time at which it ended, or a single instant when the tie has no duration (Holme and Saramäki, 2012). The same pair of actors may have many spells.</p>
+<p>Aggregating the spells into one static network loses two things. The first is duration and intensity: a pair that spoke once for a minute and a pair that worked together every day become the same edge. The second, and more consequential, is order. In a static network, a tie from A to B and a tie from B to C imply a path from A to C. In a temporal network they imply a path only if the tie from B to C is still active at, or begins after, the moment the tie from A to B delivered something to B. A path that respects this constraint is called a <em>time-respecting path</em> (Kempe, Kleinberg and Kumar, 2002). Because the constraint is one-directional, temporal reachability is not symmetric even in an undirected network, and a static network systematically overstates how many actors can reach one another (Moody, 2002). Measures built on time-respecting paths, such as temporal closeness and temporal betweenness, describe the network as a medium through which something can travel (Pan and Saramäki, 2011; Nicosia et al., 2013). Measures built on the timing of a single actor’s events, such as burstiness and memory, describe the rhythm of activity itself (Goh and Barabási, 2008).</p>
+<p>Measures of a temporal network are computed in one of two ways. Density, reciprocity, transitivity, centrality and the counts of ties formed and dissolved are computed within windows of time: the observation period is divided into windows, which may tile it or overlap, each window is measured as a static network, and the result is a time series whose resolution is set by the width of the window. Reachability, latency, temporal closeness and temporal betweenness are computed on the spells directly, along time-respecting paths, and have no static counterpart: they report the earliest time at which one actor can reach another, how many distinct routes achieve it, and how much of the network is reachable from a given moment. In educational research these methods have been used to study how collaboration unfolds within a course and which students act as bridges over time (Saqr and Nouri, 2020; Saqr, 2024).</p>
+<p>Relational logs arrive in different shapes, and the shape determines how spells are defined. An <em>interval</em> log records a start and an end for every row. A <em>contact</em> log records only a timestamp, so every spell is a point. A <em>threaded</em> log, typical of discussion forums, records a timestamp and the thread a message belongs to; following Saqr and Nouri (2020), a message is taken to be active from the moment it is posted until the thread falls silent, so a message that provoked a long discussion stays live longer than one that did not. A <em>co-presence</em> log records which actors attended which occasion; every pair of attendees is connected for the span of the occasion. Dynet reads all four with one function and infers the shape from the arguments given to it.</p>
+</div>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>Dynet is not on CRAN. The development version is installed from the author’s R-universe repository, which also resolves its <code>cograph</code> dependency, or from GitHub. These commands are not evaluated when this page is rendered.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Dynet"</span>,</span>
+<span>                 repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"https://mohsaqr.r-universe.dev"</span>,</span>
+<span>                           <span class="st">"https://cloud.r-project.org"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># or from GitHub</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"mohsaqr/Dynet"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
+</h2>
+<p>Four bundled logs are used below. <code>school_contacts</code> is a simulated interval log of 240 face-to-face contacts among fourteen named students, with time in arbitrary units over about 21.5 units. <code>forum_posts</code> is a simulated threaded log of 241 posts by twenty participants over eight weeks, with a companion table <code>forum_people</code> that gives each participant a role. <code>seminar_attendance</code> is a simulated co-presence log of which students attended which weekly seminar. The package also ships <code>mooc_posts</code>, the 2,529 posts of a real MOOC discussion forum analysed in Saqr (2024), and <code>thought_chains</code>, the reply table of the <em>Trees of Thought</em> study.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    from   to start  end</span></span>
+<span><span class="co">#&gt; 1 Jonas  Dan  0.00 1.10</span></span>
+<span><span class="co">#&gt; 2  Gita  Ana  0.14 0.98</span></span>
+<span><span class="co">#&gt; 3   Leo Mira  0.15 0.42</span></span>
+<span><span class="co">#&gt; 4   Leo Iris  0.15 0.96</span></span>
+<span><span class="co">#&gt; 5  Kira  Ben  0.33 0.69</span></span>
+<span><span class="co">#&gt; 6   Leo Iris  0.38 0.50</span></span></code></pre></div>
+<p>Each row is one contact from one student to another, with the time it began and the time it ended.</p>
 </div>
 <div class="section level2">
 <h2 id="building-a-network">Building a network<a class="anchor" aria-label="anchor" href="#building-a-network"></a>
 </h2>
-<p>One constructor covers the four shapes relational logs arrive in. The shape is inferred from the arguments you name.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Interval log: each row carries its own start and end</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Contact log: instantaneous events, no duration</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, time <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Threaded log: a post stays active until its thread falls silent</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Co-presence log: actors sharing a group become connected (every member</span></span>
-<span><span class="co"># pair, for the whole span of the group; attendance inside it is not used)</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Numbered endpoints with a node table: the vertices take the table's</span></span>
-<span><span class="co"># `name`, and its `onset`/`terminus` say when each one is present</span></span>
-<span><span class="va">workshops</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>vertex.id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span>, <span class="fl">3L</span><span class="op">)</span>,</span>
-<span>                        name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span><span class="op">)</span>,</span>
-<span>                        onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, terminus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">9</span>, <span class="fl">9</span>, <span class="fl">9</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">collaborations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>, terminus <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span>,</span>
-<span>                             tail <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span>, head <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2L</span>, <span class="fl">3L</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">collaborations</span>, directed <span class="op">=</span> <span class="cn">FALSE</span>, nodes <span class="op">=</span> <span class="va">workshops</span>,</span>
-<span>      vertex_spells <span class="op">=</span> <span class="va">workshops</span><span class="op">)</span></span></code></pre></div>
-<p>Column names are matched case-insensitively against a table of aliases, so <code>Sender</code>/<code>Receiver</code>, <code>source</code>/<code>target</code> and <code>onset</code>/<code>terminus</code> all work without being spelled out. Times may be numeric, <code>Date</code>, <code>POSIXct</code> or character date-time strings; date-time input is converted to elapsed time in a unit chosen to suit the span, and the unit is reported.</p>
-<p>When the study window is known independently of the event log, declare it on construction:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span></span>
-<span>  <span class="va">school_contacts</span>,</span>
-<span>  observation_start <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  observation_end <span class="op">=</span> <span class="fl">20</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Observation bounds clip analytical exposure and constrain path horizons without rewriting the source spells. Positive intervals use their half-open intersection with the study window; genuine point contacts at either limit are retained. <code>as.data.frame(dn)</code> still returns the original spell boundaries, and clipping never fabricates formation, dissolution, or censoring events.</p>
-<p>For interrupted observation, supply the observed spells directly:</p>
+<p>To build a temporal network from an interval log, we call <code><a href="reference/dynet.html">dynet()</a></code> with the log. The columns <code>from</code>, <code>to</code>, <code>start</code> and <code>end</code> are recognised by name; <code>sender</code> and <code>receiver</code>, <code>source</code> and <code>target</code>, <code>onset</code> and <code>terminus</code>, and several other spellings are accepted as well, and times may be numeric, dates or date-times. Printing the network describes its format and shows the first spells.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span></span>
-<span>  <span class="va">school_contacts</span>,</span>
-<span>  observation_spells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">12</span><span class="op">)</span>,</span>
-<span>    end <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">20</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span>, what <span class="op">=</span> <span class="st">"observations"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span>, what <span class="op">=</span> <span class="st">"observed_edges"</span><span class="op">)</span></span></code></pre></div>
-<p>Overlapping or adjacent observation spells are normalized into canonical components. Exposure denominators sum their durations rather than using the hull, events in gaps are excluded, and an edge spanning a gap is exposed as separate administratively censored fragments without changing its raw row. Measurement grids restart within components and never create gap-only bins. Temporal paths may wait at a persistent vertex across an observation gap, but every positive-duration interval traversal must fit inside one observed fragment. A point contact still triggers its configured delayed arrival; session boundaries remain path walls.</p>
-<p>When interval limits are themselves censored, name strict logical source columns explicitly (<code>interval_log</code> here and below stands for your own log):</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span></span>
-<span>  <span class="va">interval_log</span>,</span>
-<span>  onset_censored <span class="op">=</span> <span class="st">"left_censored"</span>,</span>
-<span>  terminus_censored <span class="op">=</span> <span class="st">"right_censored"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>These are raw-data states, not inferred observation cuts. A censored onset is not counted as a formation or burst event, and a censored terminus is not a dissolution, but all known activity still contributes to snapshots, paths, density, and observed exposure. <code>durations(censored = "include")</code> retains that known follow-up; <code>censored = "exclude"</code> restricts summaries to raw spells whose two boundaries are known. Observed fragments expose raw censor flags and administrative observation-cut flags separately.</p>
-<p>When the eligible vertex population itself changes, provide a separate tidy activity table:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span></span>
-<span>  <span class="va">interval_log</span>,</span>
-<span>  vertex_spells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    node <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span>,</span>
-<span>    start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">8</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>    end <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">12</span>, <span class="fl">10</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span>, what <span class="op">=</span> <span class="st">"vertex_spells"</span><span class="op">)</span></span></code></pre></div>
-<p>Positive vertex spells use <code>[start, end)</code> and points are exact. Overlapping or adjacent declarations are unioned per named vertex; a point at an interval’s excluded terminus remains a separate active instant. Vertices not declared in the table remain statically eligible, and names appearing only in the activity table join the fixed vertex universe. Snapshot verbs independently take the any-time union of vertex activity and edge activity over a positive window, then remove edges whose endpoints are not eligible. A point snapshot instead evaluates vertices and edges together at the exact time. Graph denominators and censuses use only the eligible population; snapshot centrality retains the fixed node rows and reports <code>NA</code> for inactive vertices, while eligible isolates keep the ordinary static-kernel value. <code><a href="reference/snapshots.html">snapshots()</a></code> stays edge-only, so it does not fabricate rows for eligible isolates. Raw edge and vertex tables are never clipped or rewritten. Temporal paths use the same declarations as traversal gates: the named source or backward target must be active at the query anchor, and every hop requires active endpoints. Waiting after a valid anchor may cross an inactive period. A positive-duration interval traversal requires both endpoints throughout the traversal; a delayed point contact requires both endpoints at its trigger and the receiver again at completion. Activity may split the feasible times of a contact without multiplying path identity or counts. Whole-window risk sets use a separate integrated contract.</p>
-<p>Whole-window temporal density integrates occupied pair-time over the exact eligible pair-time risk set. Thus a period with two eligible vertices and a period with four eligible vertices contribute different numbers of relational opportunities; Dynet integrates those opportunities before dividing. Exact contacts, exact vertex appearances, and observation gaps contribute no duration, while duplicates, weights, loops, and overlapping session labels cannot multiply exposure.</p>
-<p><code><a href="reference/metrics.html">metrics()</a></code> exposes that exact ledger inside every reporting window. Use <code>temporal_density</code> for occupancy over all eligible pair-time and <code>observed_pair_density</code> to condition the denominator on pairs with valid evidence anywhere in the stored history. The matching <code>onset_intensity</code> and <code>observed_pair_onset_intensity</code> selectors count known raw spell starts per unit of those two opportunity clocks. A point contact adds an onset but no duration; an onset-censored start does not count. The existing <code>density</code> selector remains the any-time snapshot density, so it can intentionally differ from integrated occupancy in a positive window.</p>
-<p>The threaded format is worth naming explicitly. Forum and chat data carry a timestamp and no end, so the duration of a tie has to be derived. Dynet applies the rule from Saqr and Nouri (2020): a post is active from the moment it appears until the last post in the same thread, so a message that provoked a long argument stays live longer than one that fell flat. Deriving that by hand takes a grouped mutate before you can build anything; here it is one argument.</p>
-</div>
-<div class="section level2">
-<h2 id="editing-without-breaking-time">Editing without breaking time<a class="anchor" aria-label="anchor" href="#editing-without-breaking-time"></a>
-</h2>
-<p>Dynet objects are immutable: editing returns a rebuilt object and leaves the source unchanged. Add isolates before referring to them as tie endpoints, then add or remove temporal identities by name and time:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/add_nodes.html">add_nodes</a></span><span class="op">(</span><span class="va">dn</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"New student"</span>, role <span class="op">=</span> <span class="st">"student"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/add_ties.html">add_ties</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"New student"</span>, start <span class="op">=</span> <span class="fl">4</span>, end <span class="op">=</span> <span class="fl">6</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/remove_ties.html">remove_ties</a></span><span class="op">(</span><span class="va">dn2</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"New student"</span>, start <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/remove_nodes.html">remove_nodes</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="st">"New student"</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/add_arcs.html">add_arcs()</a></code> and <code><a href="reference/remove_arcs.html">remove_arcs()</a></code> are directed-only aliases. Every mutation rebuilds the canonical spell identities and cograph projection together; cograph’s static setters should be used only on a flattened cograph copy, not to edit a temporal Dynet object.</p>
-<p>The rest of the temporal state is editable by the same immutable contract. The tables named below (<code>activity_table</code>, <code>new_activity</code>, <code>observed_periods</code>, <code>session_labels</code>) are stand-ins for your own data, so this block is a shape reference rather than a runnable chunk:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/update_nodes.html">update_nodes</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"Ana"</span>, role <span class="op">=</span> <span class="st">"facilitator"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rename_nodes.html">rename_nodes</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Ana <span class="op">=</span> <span class="st">"Ana S."</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/update_ties.html">update_ties</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>kind <span class="op">=</span> <span class="st">"reply"</span>, weight <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/set_vertex_spells.html">set_vertex_spells</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="va">activity_table</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/add_vertex_spells.html">add_vertex_spells</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="va">new_activity</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/set_observations.html">set_observations</a></span><span class="op">(</span><span class="va">dn2</span>, data <span class="op">=</span> <span class="va">observed_periods</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/set_tie_sessions.html">set_tie_sessions</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="va">session_labels</span><span class="op">)</span></span>
-<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/rename_sessions.html">rename_sessions</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>old <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>A temporal subgraph is induced by a condition on the vertex table, evaluated the way <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> evaluates one, with any centrality it names computed over the whole observed period:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span>, <span class="va">degree</span> <span class="op">&gt;</span> <span class="fl">16</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/induce_subgraph.html">induce_subgraph()</a></code> also takes <code>ties</code>, as integer row positions or a logical mask over the raw spell table, when a selection has to be made on the edges rather than the vertices.</p>
-<p><code><a href="reference/update_vertex_spells.html">update_vertex_spells()</a></code> and <code><a href="reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> complete vertex-activity editing; <code><a href="reference/clear_observations.html">clear_observations()</a></code> restores continuous implicit observation. Overlapping activity or observation spells are canonicalised after every edit.</p>
-<p>Existing <code>networkDynamic</code> objects can enter through <code><a href="reference/as_dynet.html">as_dynet()</a></code>, including their activity spells, semantic vertex names, observation support, weights, and compatible static attributes. Collapse any range back to a static cograph network with duration, count, and weight summaries:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/as_dynet.html">as_dynet</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">"legacy-network.rds"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">flat</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">dn</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>                         weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span></span>
-<span><span class="fu">cograph</span><span class="fu">::</span><span class="fu"><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot</a></span><span class="op">(</span><span class="va">flat</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="measuring">Measuring<a class="anchor" aria-label="anchor" href="#measuring"></a>
-</h2>
-<p>Verbs are named plainly: <code><a href="reference/paths.html">paths()</a></code>, <code><a href="reference/events.html">events()</a></code>, <code><a href="reference/metrics.html">metrics()</a></code>, <code><a href="reference/snapshots.html">snapshots()</a></code>, <code><a href="reference/durations.html">durations()</a></code>, <code><a href="reference/mixing.html">mixing()</a></code>, <code><a href="reference/burstiness.html">burstiness()</a></code>, <code><a href="reference/projection.html">projection()</a></code>, <code><a href="reference/pshifts.html">pshifts()</a></code>. Two keep a <code>dyn_</code> prefix, and only because the plain name is already taken by a package you are likely to have attached: <code><a href="reference/dyn_centrality.html">dyn_centrality()</a></code>, since cograph exports <code><a href="https://sonsoles.me/cograph/reference/centrality.html" class="external-link">centrality()</a></code>, and <code><a href="reference/dyn_reachability.html">dyn_reachability()</a></code>, since sna exports <code>reachability()</code>. The prefix marks a real collision rather than a house style.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"degree"</span>, <span class="st">"betweenness"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"closeness"</span>, scope <span class="op">=</span> <span class="st">"temporal"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"reciprocity"</span>, <span class="st">"transitivity"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"degree_mean"</span>, <span class="st">"concurrent_share"</span>, <span class="st">"two_paths"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temporal_density"</span>, <span class="st">"onset_intensity"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"formation_fraction"</span>, start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>           window <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, unit <span class="op">=</span> <span class="st">"vertex_activity"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, unit <span class="op">=</span> <span class="st">"vertex_spell"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, unit <span class="op">=</span> <span class="st">"node_ties"</span>, mode <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/burstiness.html">burstiness</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/path_network.html">path_network</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">routes</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/plot_path_trajectories.html">plot_path_trajectories</a></span><span class="op">(</span><span class="va">routes</span>, measure <span class="op">=</span> <span class="st">"frequency"</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/dyn_reachability.html">dyn_reachability</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/pshifts.html">pshifts</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">dn</span>, at <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/similarity.html">similarity</a></span><span class="op">(</span><span class="va">dn</span>, method <span class="op">=</span> <span class="st">"jaccard"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/projection.html">projection</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">dn</span>, weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span></span>
-<span></span>
+<span><span class="va">dn</span></span>
+<span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
+<span><span class="co">#&gt; # 14 vertices | 240 edge spells | 110 distinct pairs</span></span>
+<span><span class="co">#&gt; # observed from 0 to 21.52 step, binned every 1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   from   to start  end duration weight</span></span>
+<span><span class="co">#&gt;  Jonas  Dan  0.00 1.10     1.10      1</span></span>
+<span><span class="co">#&gt;   Gita  Ana  0.14 0.98     0.84      1</span></span>
+<span><span class="co">#&gt;    Leo Mira  0.15 0.42     0.27      1</span></span>
+<span><span class="co">#&gt;    Leo Iris  0.15 0.96     0.81      1</span></span>
+<span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
+<span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
+<span><span class="co">#&gt; # 234 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
+<p>To see the network’s dimensions in one table, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>. The mean snapshot density is the average over one-unit bins of the share of pairs that are connected in the bin.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                 property        value</span></span>
+<span><span class="co">#&gt; 1                 format     interval</span></span>
+<span><span class="co">#&gt; 2               directed          yes</span></span>
+<span><span class="co">#&gt; 3               vertices           14</span></span>
+<span><span class="co">#&gt; 4            edge spells          240</span></span>
+<span><span class="co">#&gt; 5         distinct pairs          110</span></span>
+<span><span class="co">#&gt; 6              time unit         step</span></span>
+<span><span class="co">#&gt; 7          observed from            0</span></span>
+<span><span class="co">#&gt; 8            observed to        21.52</span></span>
+<span><span class="co">#&gt; 9                   span        21.52</span></span>
+<span><span class="co">#&gt; 10             bin width            1</span></span>
+<span><span class="co">#&gt; 11             time bins           22</span></span>
+<span><span class="co">#&gt; 12 mean snapshot density       0.0829</span></span>
+<span><span class="co">#&gt; 13      temporal density not computed</span></span>
+<span><span class="co">#&gt; 14              sessions         none</span></span>
+<span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
+<p>The other three log shapes are built with the same function. For a contact log, we name the timestamp column in <code>time</code>. For a threaded log, we name the thread column in <code>thread</code>, and pass the participant table to <code>nodes</code> so that its attributes travel with the network. For a co-presence log, we name the actor column in <code>actor</code> and the occasion column in <code>group</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">contacts</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, time <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span><span class="va">forum</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">forum</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/pshifts.html">pshifts()</a></code> converts uncensored observed raw spell onsets into Gibson’s thirteen consecutive-turn participation-shift classes. It returns fixed, typed totals by default; <code>output = "cumulative"</code> exposes the running state. Use <code>sessions = "separate"</code> to retain session labels or <code>group_events = "none"</code> to keep simultaneous recipients as dyads.</p>
-<p>Lightweight structural descriptives stay inside <code><a href="reference/metrics.html">metrics()</a></code>. Degree summaries, concurrent-node counts and shares, directed in/out 2-stars, and two-paths use the same endpoint-induced snapshot semantics as density and the existing dyad census; no ERGM package or formula interface is required.</p>
-<p>Duration units stay explicit: pair summaries and raw edge spells use <code>pair</code> and <code>spell</code>, while fixed-universe vertex-presence summaries and canonical V01 activity components use <code>vertex_activity</code> and <code>vertex_spell</code>. Vertex <code>total</code> sums retained component durations; <code>union</code> measures binary vertex-time once. Wholly undeclared vertices are represented by one measurement-only implicit always-active component over observed support.</p>
-<p>Node-tie duration keeps multiplicity and exposure separate. <code>events</code> and <code>total</code> count/sum incident raw-spell endpoint stubs (so a loop contributes once to each directed margin), while <code>union</code> measures the calendar time with at least one qualifying incident tie. Out, in, and all modes never silently mix these two quantities.</p>
-<p>Raw formation counts and formation transitions are deliberately different. <code>formation</code> counts known raw spell starts, including point contacts and redundant starts on an already-active pair. <code>formation_fraction</code> instead asks, at one exact time, what share of two-sided eligible pairs that were inactive immediately before the whole timestamp batch became active immediately after. Duplicate, overlapping, and adjacent spells are binary-unioned; points do not change persistent state; observation or vertex entry/exit cannot fabricate a transition. Use <code>window = 0</code>; positive-window turnover rates are separate quantities.</p>
-<p><code>dissolution_fraction</code> is the dual exact-time quantity: confirmed binary active-to-inactive pair-union transitions divided by all two-sided eligible pairs active immediately before the complete timestamp batch. A positive raw spell ending at the timestamp with a known terminus confirms the transition; duplicate, overlapping, adjacent, and tied rows are unioned, so raw terminus counts are not the numerator. Stable active pairs remain in the denominator, zero active risk is <code>NA</code>, and positive risk without a confirmed end is zero. Points, loops, weights, onset censoring, observation/activity boundaries, and all-censored endings do not create confirmed transitions. Use <code>events(dn, "dissolution_fraction", start = t, end = t, window = 0)</code>; positive-width dissolution rates are reserved for T04.</p>
-<p><code>formation_rate</code> is the positive-window version of the formation transition: its numerator sums confirmed binary pair formations at included timestamp batches, while its denominator is exact integrated inactive eligible nonloop pair-time across observation/activity/edge change cells. It is not a raw-onset count or an average of instantaneous fractions. Zero exposure is <code>NA</code>, positive exposure with no confirmed formation is zero, and the unit is inverse network time. Use <code>events(dn, "formation_rate", start = lo, end = hi, window = hi - lo)</code>; instantaneous formation fractions remain the <code>window = 0</code> quantity.</p>
-<p><code>dissolution_rate</code> is the active-risk dual: confirmed binary pair dissolutions per exact integrated active eligible pair-time over a positive window. Known right-censored termini retain exposure but do not confirm an event; zero active exposure is <code>NA</code>, while positive exposure without a confirmed dissolution is zero. It is an inverse-time rate, not a raw terminus intensity or spell-time sum. T03 and T04 can be requested together at positive width; instant dissolution fractions remain the <code>window = 0</code> quantity.</p>
-<p><code><a href="reference/paths.html">paths()</a></code> selects shortest-foremost journeys: earliest completion first, then the fewest hops. Its compact endpoint table reports the exact <code>n_paths</code> over canonical contact sequences; the steps accessor adds endpoint-local <code>path_id</code> rows when tied routes are expanded. <code><a href="reference/plot_path_trajectories.html">plot_path_trajectories()</a></code> draws those routes as a counted prefix tree, repeating a vertex when it occurs under a different temporal history; it supports top-down and left-to-right layouts.</p>
-<p><code><a href="reference/burstiness.html">burstiness()</a></code> treats each raw spell onset as one event at each distinct incident vertex. It uses population gap dispersion and lag-one Pearson memory; bounded sessions pool only within-session gaps and never bridge session walls.</p>
-<p><code><a href="reference/mixing.html">mixing()</a></code> reports raw active binary-dyad counts: ordered group cells for directed networks and one unordered triangle for undirected networks. Repeated spells and weights do not multiply a dyad; explicitly retained loops count once, and missing group values remain an explicit collision-safe level.</p>
-<p>Temporal closeness is inverse mean forward latency over reachable nonself vertices. Immediate contacts are included: an all-zero reachable family has infinite closeness, while a source reaching nobody has value zero. Explicit <code>start</code> and <code>end</code> bounds, traversal duration, and session walls use the same contract as temporal paths.</p>
-<p>Temporal betweenness distributes each reachable ordered source-target pair’s dependency over every canonical shortest-foremost journey. It reports the raw sum: tied routes and tied winning sessions split one pair’s credit exactly, and source/target endpoints receive none. Undirected contacts still use ordered pairs because chronological reach need not be symmetric.</p>
-<p>Ask for several measures in one call and they arrive stacked in one frame with a <code>measure</code> column. Every result prints, summarises and plots:</p>
+<span><span class="va">seminars</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span>
+<span><span class="va">forum</span></span>
+<span><span class="co">#&gt; # Temporal network (threaded format, directed) | a cograph netobject</span></span>
+<span><span class="co">#&gt; # 20 vertices | 241 edge spells | 172 distinct pairs</span></span>
+<span><span class="co">#&gt; # observed from 0 to 54.96387 days, binned every 1</span></span>
+<span><span class="co">#&gt; # vertex attributes: role, achievement</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;        from         to     start      end duration weight    thread</span></span>
+<span><span class="co">#&gt;  student_14 student_05 0.0000000 2.296969 2.296969      1 thread_47</span></span>
+<span><span class="co">#&gt;  student_10 student_05 0.7257216 2.296969 1.571247      1 thread_47</span></span>
+<span><span class="co">#&gt;   teacher_A student_09 0.8559934 3.235993 2.380000      1 thread_11</span></span>
+<span><span class="co">#&gt;  student_04 student_05 1.1715344 2.296969 1.125435      1 thread_47</span></span>
+<span><span class="co">#&gt;  student_02 student_09 1.2382611 3.235993 1.997732      1 thread_11</span></span>
+<span><span class="co">#&gt;  student_06  teacher_A 1.9797595 3.235993 1.256234      1 thread_11</span></span>
+<span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
+<p>The threaded network reports its time in days, because the log carried date-times; the unit is chosen to suit the span and is stated in every result.</p>
+<p>To draw the spells over time, we call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on the network. Each horizontal segment is one spell.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-plot-spells-1.png" alt="" width="100%"></p>
+</div>
+<div class="section level2">
+<h2 id="measuring-in-windows">Measuring in windows<a class="anchor" aria-label="anchor" href="#measuring-in-windows"></a>
+</h2>
+<p>Every measuring function that returns a time series takes the same four arguments. <code>start</code> and <code>end</code> bound the period, <code>step</code> is the interval between measurements, and <code>window</code> is the length of time each measurement covers. When <code>window</code> equals <code>step</code>, the windows tile the period; when <code>window</code> is larger, they overlap and the series is a rolling one; when <code>window</code> is zero, the network is sampled at each instant. The defaults tile the observed period into unit bins.</p>
+<p>To obtain a graph-level measure in each window, we call <code><a href="reference/metrics.html">metrics()</a></code> with the network and <code>measure</code> for the statistic. Here density is measured every unit over a rolling window of seven units.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">density</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
+<span><span class="va">density</span></span>
+<span><span class="co">#&gt; # Density (graph-level)</span></span>
+<span><span class="co">#&gt; # 22 time points, step 1, window 7 (rolling) | time in step</span></span>
+<span><span class="co">#&gt;  time measure     value</span></span>
+<span><span class="co">#&gt;     0 density 0.3241758</span></span>
+<span><span class="co">#&gt;     1 density 0.3461538</span></span>
+<span><span class="co">#&gt;     2 density 0.3571429</span></span>
+<span><span class="co">#&gt;     3 density 0.3791209</span></span>
+<span><span class="co">#&gt;     4 density 0.3681319</span></span>
+<span><span class="co">#&gt;     5 density 0.3791209</span></span>
+<span><span class="co">#&gt;     6 density 0.3791209</span></span>
+<span><span class="co">#&gt;     7 density 0.3791209</span></span>
+<span><span class="co">#&gt;     8 density 0.3956044</span></span>
+<span><span class="co">#&gt;     9 density 0.3736264</span></span>
+<span><span class="co">#&gt;    10 density 0.3626374</span></span>
+<span><span class="co">#&gt;    11 density 0.3351648</span></span>
+<span><span class="co">#&gt; # 10 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>To summarise a series, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on it. The table reports one row per measure with its mean, spread, range and the time at which it peaked.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   measure  n     mean       sd        min       max peak_time</span></span>
+<span><span class="co">#&gt; 1 density 22 0.285964 0.111584 0.03296703 0.3956044         8</span></span></code></pre></div>
+<p>To draw the series, we call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on it.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-metrics-plot-1.png" alt="" width="100%"></p>
+<p>Several measures may be requested in one call; they arrive stacked in one data frame with a <code>measure</code> column. The graph-level catalogue includes density, reciprocity, transitivity, the dyad and triad censuses, component counts, centralisation and the Krackhardt indices, and is listed in <code><a href="reference/metrics.html">?metrics</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="vertex-measures">Vertex measures<a class="anchor" aria-label="anchor" href="#vertex-measures"></a>
+</h2>
+<p>To obtain a centrality for every vertex in every window, we call <code><a href="reference/dyn_centrality.html">dyn_centrality()</a></code> with the network and <code>measure</code> for the index. The result has one row per vertex per time point.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<span><span class="va">degree</span></span>
+<span><span class="co">#&gt; # Degree (node-level)</span></span>
+<span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
+<span><span class="co">#&gt;  time  node measure value</span></span>
+<span><span class="co">#&gt;     0   Ana  degree     1</span></span>
+<span><span class="co">#&gt;     0   Ben  degree     1</span></span>
+<span><span class="co">#&gt;     0  Cara  degree     1</span></span>
+<span><span class="co">#&gt;     0   Dan  degree     1</span></span>
+<span><span class="co">#&gt;     0   Eve  degree     2</span></span>
+<span><span class="co">#&gt;     0  Finn  degree     1</span></span>
+<span><span class="co">#&gt;     0  Gita  degree     1</span></span>
+<span><span class="co">#&gt;     0  Hugo  degree     1</span></span>
+<span><span class="co">#&gt;     0  Iris  degree     2</span></span>
+<span><span class="co">#&gt;     0 Jonas  degree     2</span></span>
+<span><span class="co">#&gt;     0  Kira  degree     2</span></span>
+<span><span class="co">#&gt;     0   Leo  degree     2</span></span>
+<span><span class="co">#&gt; # 296 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>To reduce the series to one row per vertex, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on it. The <code>peak_time</code> column gives the time at which each vertex was most central.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">deg</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">deg</span><span class="op">)</span>                        <span class="co"># one row per vertex, with the peak time</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">deg</span>, by <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span>           <span class="co"># one row per time point</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">deg</span><span class="op">)</span>                  <span class="co"># the plain long frame</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">deg</span>, layout <span class="op">=</span> <span class="st">"wide"</span><span class="op">)</span> <span class="co"># vertices by time, for export</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">deg</span>, top <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="snapshot-scope-and-temporal-scope">Snapshot scope and temporal scope<a class="anchor" aria-label="anchor" href="#snapshot-scope-and-temporal-scope"></a>
-</h3>
-<p><code>scope = "snapshot"</code> measures the network as it stands in each bin, giving a trajectory of ordinary centrality. <code>scope = "temporal"</code> measures the vertex against time-respecting paths across the whole window. The second has no static counterpart: it cannot travel backwards in time, so it is never inflated the way a flattened network is. Temporal closeness is the inverse mean latency, so a source whose every reachable vertex is reached at zero latency (simultaneous contacts, common in contact logs) scores <code>Inf</code>; give <code>traversal_time</code> a positive value to score such data. Explicit vertex activity gates these temporal paths; an inactive source has zero temporal reach and closeness, while fixed node rows and fixed risk-set denominators are retained.</p>
-</div>
-<div class="section level3">
-<h3 id="when-the-network-is-measured">When the network is measured<a class="anchor" aria-label="anchor" href="#when-the-network-is-measured"></a>
-</h3>
-<p>Four arguments decide it, on every verb that returns a time series (<code>dyn_centrality</code>, <code>metrics</code>, <code>events</code>, <code>mixing</code>, <code>snapshots</code>):</p>
-<table class="table">
-<thead><tr>
-<th>argument</th>
-<th>meaning</th>
-<th><code><a href="https://rdrr.io/pkg/tsna/man/tSnaStats.html" class="external-link">tsna::tSnaStats()</a></code></th>
-</tr></thead>
-<tbody>
-<tr>
-<td>
-<code>start</code>, <code>end</code>
-</td>
-<td>first and last measurement</td>
-<td>
-<code>start</code>, <code>end</code>
-</td>
-</tr>
-<tr>
-<td><code>step</code></td>
-<td>how often to measure</td>
-<td><code>time.interval</code></td>
-</tr>
-<tr>
-<td><code>window</code></td>
-<td>how much time each measurement covers</td>
-<td><code>aggregate.dur</code></td>
-</tr>
-</tbody>
-</table>
-<p><code>step</code> and <code>window</code> are separate on purpose, and that is the whole point. A measurement every day covering the last seven days is a <strong>rolling window</strong>:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">degree</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     node measure  n     mean       sd min max peak_time</span></span>
+<span><span class="co">#&gt; 1    Ana  degree 22 2.181818 2.015095   0   7         6</span></span>
+<span><span class="co">#&gt; 2    Ben  degree 22 2.000000 1.234427   0   4         4</span></span>
+<span><span class="co">#&gt; 3   Cara  degree 22 2.227273 1.342770   0   5         4</span></span>
+<span><span class="co">#&gt; 4    Dan  degree 22 2.090909 1.444500   1   5        13</span></span>
+<span><span class="co">#&gt; 5    Eve  degree 22 2.272727 2.051290   0   8        14</span></span>
+<span><span class="co">#&gt; 6   Finn  degree 22 2.000000 1.661898   0   6        12</span></span>
+<span><span class="co">#&gt; 7   Gita  degree 22 1.727273 1.777688   0   7         6</span></span>
+<span><span class="co">#&gt; 8   Hugo  degree 22 2.318182 1.861550   0   6         6</span></span>
+<span><span class="co">#&gt; 9   Iris  degree 22 1.772727 1.066004   0   4        11</span></span>
+<span><span class="co">#&gt; 10 Jonas  degree 22 2.863636 2.076982   0   7        13</span></span>
+<span><span class="co">#&gt; 11  Kira  degree 22 2.636364 1.255292   1   6         6</span></span>
+<span><span class="co">#&gt; 12   Leo  degree 22 1.636364 1.432462   0   5         6</span></span>
+<span><span class="co">#&gt; 13  Mira  degree 22 2.272727 1.695423   0   6        13</span></span>
+<span><span class="co">#&gt; 14  Nils  degree 22 2.181818 2.174229   0   7        14</span></span></code></pre></div>
+<p>The measures above are computed on the network as it stands in each window. To compute a centrality on time-respecting paths across the whole period instead, we set <code>scope</code> to <code>"temporal"</code>. Temporal closeness is the inverse of the mean time a vertex needs to reach the others; it has one value per vertex, not one per window.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span></code></pre></div>
-<p>Setting them equal partitions the period into disjoint bins, which is the default. Setting <code>window = 0</code> samples the network at each point in time — the convention <code>tsna</code> uses with <code>aggregate.dur = 0</code>. Point sampling on the default grid runs through the last observed instant, as <code>tsna</code> does with an inclusive <code>end</code>. A positive window is the default because point sampling silently drops any edge that begins and ends between two sample points, a real loss on bursty data.</p>
-<p><code>start</code> and <code>end</code> default to the observed range, and a network built from dates may be addressed with dates:</p>
+<code class="sourceCode R"><span><span class="va">closeness</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"closeness"</span>, scope <span class="op">=</span> <span class="st">"temporal"</span><span class="op">)</span></span>
+<span><span class="va">closeness</span></span>
+<span><span class="co">#&gt; # Closeness (node-level)</span></span>
+<span><span class="co">#&gt; # 14 vertices | time in step</span></span>
+<span><span class="co">#&gt; # computed on time-respecting paths across the whole window</span></span>
+<span><span class="co">#&gt;   node   measure     value</span></span>
+<span><span class="co">#&gt;    Ana closeness 0.1313662</span></span>
+<span><span class="co">#&gt;    Ben closeness 0.1815896</span></span>
+<span><span class="co">#&gt;   Cara closeness 0.1931075</span></span>
+<span><span class="co">#&gt;    Dan closeness 0.2230994</span></span>
+<span><span class="co">#&gt;    Eve closeness 0.2616221</span></span>
+<span><span class="co">#&gt;   Finn closeness 0.1644945</span></span>
+<span><span class="co">#&gt;   Gita closeness 0.1404950</span></span>
+<span><span class="co">#&gt;   Hugo closeness 0.1878341</span></span>
+<span><span class="co">#&gt;   Iris closeness 0.2398082</span></span>
+<span><span class="co">#&gt;  Jonas closeness 0.3674392</span></span>
+<span><span class="co">#&gt;   Kira closeness 0.2107994</span></span>
+<span><span class="co">#&gt;    Leo closeness 0.3747478</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>On a directed network, <code>mode</code> selects whether incoming, outgoing or all ties are counted. The vertex-level catalogue includes degree, strength, closeness, betweenness, eigenvector centrality, PageRank, hub and authority scores, coreness, Burt’s constraint and several prestige indices, and is listed in <code><a href="reference/dyn_centrality.html">?dyn_centrality</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="time-respecting-paths">Time-respecting paths<a class="anchor" aria-label="anchor" href="#time-respecting-paths"></a>
+</h2>
+<p>To find the earliest time-respecting path from one vertex to every other, we call <code><a href="reference/paths.html">paths()</a></code> with the network and <code>from</code> for the source. The result has one row per vertex. <code>arrival_time</code> is the earliest moment the vertex can be reached, <code>latency</code> is that moment minus the time the source started, <code>n_hops</code> is the number of ties the earliest route uses, and <code>n_paths</code> is the number of distinct routes that arrive equally early.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">posts</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">posts</span>, measure <span class="op">=</span> <span class="st">"density"</span>,</span>
-<span>               start <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-09-02"</span><span class="op">)</span>, end <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-10-01"</span><span class="op">)</span>,</span>
-<span>               step <span class="op">=</span> <span class="fl">7</span>, window <span class="op">=</span> <span class="fl">28</span><span class="op">)</span></span></code></pre></div>
-<p>One convention to know: on the <strong>default</strong> grid the final window is closed on its right edge, so an event landing exactly on the last observed instant is counted rather than dropped. A grid whose <code>end</code> you supplied is taken literally, as <code>tsna</code> does — which is what makes a truncated range an exact subset of the full series.</p>
-</div>
-<div class="section level3">
-<h3 id="what-can-be-measured">What can be measured<a class="anchor" aria-label="anchor" href="#what-can-be-measured"></a>
-</h3>
-<p><code><a href="reference/metrics.html">metrics()</a></code> covers the graph level and <code><a href="reference/dyn_centrality.html">dyn_centrality()</a></code> the vertex level. Together they cover the core graph and vertex statistics exposed by <code><a href="https://rdrr.io/pkg/tsna/man/tSnaStats.html" class="external-link">tsna::tSnaStats()</a></code>, including directed binary indegree prestige before sender normalization, after sender-row normalization, and after full row-column balancing. The remaining prestige definitions are being added one calibrated definition at a time, and <code>load</code> follows Goh’s relay-only definition rather than <code><a href="https://rdrr.io/pkg/sna/man/loadcent.html" class="external-link">sna::loadcent()</a></code>, which also credits path endpoints.</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr>
-<th>graph level</th>
-<th></th>
-</tr></thead>
-<tbody>
-<tr>
-<td>structure</td>
-<td>
-<code>density</code>, <code>edges</code>, <code>active_nodes</code>, <code>isolates</code>, <code>components</code>, <code>components_strong</code>, <code>largest_component</code>
-</td>
-</tr>
-<tr>
-<td>temporal exposure</td>
-<td>
-<code>temporal_density</code>, <code>observed_pair_density</code>, <code>onset_intensity</code>, <code>observed_pair_onset_intensity</code>
-</td>
-</tr>
-<tr>
-<td>cohesion</td>
-<td>
-<code>transitivity</code>, <code>reciprocity</code>, <code>assortativity</code>, <code>mean_distance</code>, <code>diameter</code>
-</td>
-</tr>
-<tr>
-<td>censuses</td>
-<td>
-<code>mutual</code>, <code>asymmetric</code>, <code>null</code>, <code>triads</code>
-</td>
-</tr>
-<tr>
-<td>centralisation</td>
-<td>
-<code>centralization_degree</code>, <code>centralization_betweenness</code>, <code>centralization_closeness</code>
-</td>
-</tr>
-<tr>
-<td>Krackhardt</td>
-<td>
-<code>connectedness</code>, <code>efficiency</code>, <code>hierarchy</code>, <code>lubness</code>
-</td>
-</tr>
-</tbody>
-</table>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr>
-<th>vertex level</th>
-<th></th>
-</tr></thead>
-<tbody>
-<tr>
-<td>degree and prestige</td>
-<td>
-<code>degree</code>, <code>strength</code>, <code>coreness</code>, <code>prestige</code> (<code>indegree</code>, <code>indegree.rownorm</code>, <code>indegree.rowcolnorm</code>, <code>domain</code>, <code>domain.proximity</code>, <code>eigenvector</code>, <code>eigenvector.rownorm</code>, <code>eigenvector.colnorm</code>, <code>eigenvector.rowcolnorm</code>)</td>
-</tr>
-<tr>
-<td>distance family</td>
-<td>
-<code>closeness</code>, <code>betweenness</code>, <code>harary</code>, <code>load</code>
-</td>
-</tr>
-<tr>
-<td>spectral family</td>
-<td>
-<code>eigenvector</code>, <code>pagerank</code>, <code>hub</code>, <code>authority</code>, <code>power</code>
-</td>
-</tr>
-<tr>
-<td>flow and brokerage</td>
-<td>
-<code>flow_betweenness</code>, <code>information</code>, <code>constraint</code>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Two notes on cost and on well-posedness, because both bite in practice. <code>flow_betweenness</code> solves a maximum flow for every ordered pair with and without every vertex, so it is cubic in the vertex count times a flow solve – fine on a classroom, slow on a cohort. Eigenvector centrality is unique when the Perron eigenvalue has a one-dimensional eigenspace; strong connectivity is a sufficient condition. Disconnected snapshots with equally dominant components can admit more than one correct answer.</p>
-<p>Row-column-normalized indegree prestige is defined only when every active binary dyad belongs to a perfect matching of the full vertex matrix. Undefined blocks are reported as <code>NA</code> with a classed warning. Every feasible score is necessarily uniform (one raw, or <code>1/n</code> rescaled), so this option diagnoses a balancing transform rather than ranking vertices.</p>
-<p>Domain prestige counts the distinct other vertices that can reach each vertex by any directed path in the active snapshot. It is incoming static transitive reach, not chronology-aware temporal reach through the raw spells; loops never credit self. <code>rescale = TRUE</code> turns the counts into shares of all reachable ordered nonself pairs, with an all-zero block reported as <code>NaN</code>.</p>
-<p>Domain-proximity prestige multiplies that incoming domain fraction by the inverse mean directed hop distance of its members. Partial domains remain valid and positive; unreachable vertices are excluded before distances are summed. This follows the published Lin/Wasserman–Faust equation and deliberately differs from <code>sna</code> 2.8’s <code>0 * Inf</code> behaviour on disconnected graphs.</p>
-<p>Eigenvector prestige uses the incoming nonnegative Perron ray of the binary snapshot. Raw scores have Euclidean norm one; rescaled scores sum to one. Zero-radius or nonunique Perron blocks are <code>NA</code> with a classed warning instead of an arbitrary eigensolver basis. Periodic cycles remain valid because their real Perron ray is unique even when complex roots share its modulus.</p>
-<p>Row-normalized eigenvector prestige first gives every active sender one unit split equally across its distinct outgoing binary dyads, then solves the same certified incoming Perron equation. Zero sender rows remain zero, retained loops enter the row denominator, and session union occurs before normalization. Use <code>prestige = "eigenvector.rownorm"</code>.</p>
-<p>Column-normalized eigenvector prestige instead divides each nonzero binary receiver column by its incoming-dyad count before the certified solve; zero columns remain zero. When every vertex has positive indegree, every certified score is necessarily uniform. Nonuniform defined rankings arise only when a zero-indegree vertex is present. Use <code>prestige = "eigenvector.colnorm"</code>.</p>
-<p>Row-column-normalized eigenvector prestige first requires total support, then balances binary adjacency to doubly stochastic form, and only then certifies the incoming Perron ray. Infeasible support, nonconvergent balancing, and a nonunique balanced ray have distinct diagnostics. Every fully certified score is necessarily uniform, so this is a transform/irreducibility diagnostic rather than a ranking. Use <code>prestige = "eigenvector.rowcolnorm"</code>.</p>
-</div>
-<div class="section level3">
-<h3 id="which-edges-count-mode">Which edges count: <code>mode</code>
-<a class="anchor" aria-label="anchor" href="#which-edges-count-mode"></a>
-</h3>
-<p>On a directed network, <code>mode</code> selects the direction for <code>degree</code>, <code>strength</code>, <code>closeness</code>, <code>coreness</code>, <code>harary</code>, <code>eigenvector</code> and <code>diffusion</code>:</p>
+<code class="sourceCode R"><span><span class="va">from_ana</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
+<span><span class="va">from_ana</span></span>
+<span><span class="co">#&gt; # Time-respecting paths from 'Ana', from t = 0</span></span>
+<span><span class="co">#&gt; # reaches 13 of 13 other vertices | time in step</span></span>
+<span><span class="co">#&gt;   node reachable arrival_time attained latency n_hops n_paths</span></span>
+<span><span class="co">#&gt;    Ana      TRUE         0.00     TRUE    0.00      0       1</span></span>
+<span><span class="co">#&gt;    Ben      TRUE         9.59     TRUE    9.59      3       3</span></span>
+<span><span class="co">#&gt;   Cara      TRUE         6.67     TRUE    6.67      1       1</span></span>
+<span><span class="co">#&gt;    Dan      TRUE         7.98     TRUE    7.98      4       1</span></span>
+<span><span class="co">#&gt;    Eve      TRUE        11.66     TRUE   11.66      4       3</span></span>
+<span><span class="co">#&gt;   Finn      TRUE         6.96     TRUE    6.96      2       1</span></span>
+<span><span class="co">#&gt;   Gita      TRUE         6.36     TRUE    6.36      2       1</span></span>
+<span><span class="co">#&gt;   Hugo      TRUE         7.98     TRUE    7.98      3       1</span></span>
+<span><span class="co">#&gt;   Iris      TRUE        10.00     TRUE   10.00      3       1</span></span>
+<span><span class="co">#&gt;  Jonas      TRUE         2.12     TRUE    2.12      1       1</span></span>
+<span><span class="co">#&gt;   Kira      TRUE         6.12     TRUE    6.12      2       2</span></span>
+<span><span class="co">#&gt;    Leo      TRUE         9.65     TRUE    9.65      3       1</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws the tree.</span></span></code></pre></div>
+<p>To summarise the reachable set, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on the result.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"strength"</span>, mode <span class="op">=</span> <span class="st">"in"</span><span class="op">)</span>   <span class="co"># in-strength</span></span>
-<span><span class="fu"><a href="reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>, mode <span class="op">=</span> <span class="st">"out"</span><span class="op">)</span>    <span class="co"># out-degree</span></span></code></pre></div>
-<p>The former <code>measure = "indegree"</code> and <code>measure = "outdegree"</code> spellings remain available as deprecated aliases, so older scripts continue to run while moving to the common <code>degree</code> plus <code>mode</code> interface.</p>
-<p><code>mode</code> applies to <code>degree</code>, <code>strength</code>, <code>closeness</code>, <code>coreness</code>, <code>harary</code>, <code>eigenvector</code> and <code>diffusion</code>. <code>"all"</code> is the default and counts both directions, so a reciprocated pair counts twice — igraph’s and cograph’s convention. Measures with a single directional definition (prestige, betweenness, PageRank, hub, authority, constraint, load, information, flow betweenness) ignore it, as does an undirected network.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="drawing">Drawing<a class="anchor" aria-label="anchor" href="#drawing"></a>
-</h2>
-<p><strong>A <code>dynet</code> object is a cograph netobject.</strong> Its class is <code>c("dynet", "netobject", "cograph_network")</code> and it carries cograph’s canonical fields, so cograph renders it with no conversion:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          property   value</span></span>
+<span><span class="co">#&gt; 1          source     Ana</span></span>
+<span><span class="co">#&gt; 2       direction forward</span></span>
+<span><span class="co">#&gt; 3       reachable      13</span></span>
+<span><span class="co">#&gt; 4 reachable share       1</span></span>
+<span><span class="co">#&gt; 5  median latency    7.51</span></span>
+<span><span class="co">#&gt; 6     max latency   11.66</span></span>
+<span><span class="co">#&gt; 7     median hops       2</span></span>
+<span><span class="co">#&gt; 8        max hops       4</span></span></code></pre></div>
+<p>Ana reaches every other student within four hops. Three of them, Ben, Eve and Finn, never meet her directly and are joined to her only through intermediaries whose contacts happened in the right order. The same question asked from a later starting point has a different answer, because the contacts that carried the earlier routes have already passed. To start the search later, we set <code>start</code>.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://sonsoles.me/cograph/" class="external-link">cograph</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span>                       <span class="co"># works directly</span></span>
-<span><span class="fu"><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot</a></span><span class="op">(</span><span class="va">dn</span>, layout <span class="op">=</span> <span class="st">"oval"</span><span class="op">)</span>      <span class="co"># every cograph argument applies</span></span></code></pre></div>
-<p>All node-link drawing in this package is cograph’s. <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> adds the views that are about <em>time</em> rather than about topology, and routes the topological ones to <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot()</a></code>:</p>
+<code class="sourceCode R"><span><span class="va">from_ana_late</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, start <span class="op">=</span> <span class="fl">18</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">from_ana_late</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          property   value</span></span>
+<span><span class="co">#&gt; 1          source     Ana</span></span>
+<span><span class="co">#&gt; 2       direction forward</span></span>
+<span><span class="co">#&gt; 3       reachable       5</span></span>
+<span><span class="co">#&gt; 4 reachable share   0.385</span></span>
+<span><span class="co">#&gt; 5  median latency    2.43</span></span>
+<span><span class="co">#&gt; 6     max latency    2.68</span></span>
+<span><span class="co">#&gt; 7     median hops       2</span></span>
+<span><span class="co">#&gt; 8        max hops       3</span></span></code></pre></div>
+<p>To list the routes themselves, we call <code><a href="reference/pathways.html">pathways()</a></code> with the network and <code>from</code> for the source. Each row is one distinct sequence of vertices, with the number of earliest routes that follow it.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span>                          <span class="co"># edge spells over time          (ggplot)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"activity"</span><span class="op">)</span>       <span class="co"># formation and dissolution      (ggplot)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span><span class="op">)</span>      <span class="co"># composite, see below           (cograph)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span><span class="op">)</span>        <span class="co"># the flattened network          (cograph)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span>, at <span class="op">=</span> <span class="fl">13</span><span class="op">)</span>  <span class="co"># one time bin                (cograph)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"snapshots"</span><span class="op">)</span>      <span class="co"># small multiples, shared layout (cograph)</span></span>
-<span><span class="fu"><a href="reference/plot_path_trajectories.html">plot_path_trajectories</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span>, orientation <span class="op">=</span> <span class="st">"vertical"</span></span>
-<span><span class="op">)</span>                                  <span class="co"># counted temporal prefix tree   (ggplot)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="the-proximity-timeline">The proximity timeline<a class="anchor" aria-label="anchor" href="#the-proximity-timeline"></a>
-</h3>
-<p>One composite figure rather than a line chart. Each time bin is reduced to one dimension by classical scaling, so vertices that are interacting sit near one another; the lines are then joined through time, and clusters appear as bands travelling together.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="reference/pathways.html">pathways</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # Time-respecting pathways (5 distinct routes)</span></span>
+<span><span class="co">#&gt; # 7 optimal routes counted</span></span>
+<span><span class="co">#&gt;                               route endpoint count     share n_hops</span></span>
+<span><span class="co">#&gt;  Ana -&gt; Jonas -&gt; Kira -&gt; Ben -&gt; Eve      Eve     3 0.4285714      4</span></span>
+<span><span class="co">#&gt;                 Ana -&gt; Mira -&gt; Gita     Gita     1 0.1428571      2</span></span>
+<span><span class="co">#&gt;         Ana -&gt; Cara -&gt; Finn -&gt; Iris     Iris     1 0.1428571      3</span></span>
+<span><span class="co">#&gt;          Ana -&gt; Cara -&gt; Finn -&gt; Leo      Leo     1 0.1428571      3</span></span>
+<span><span class="co">#&gt;  Ana -&gt; Cara -&gt; Nils -&gt; Hugo -&gt; Dan      Dan     1 0.1428571      4</span></span>
+<span><span class="co">#&gt;  arrival_time</span></span>
+<span><span class="co">#&gt;         11.66</span></span>
+<span><span class="co">#&gt;          6.36</span></span>
+<span><span class="co">#&gt;         10.00</span></span>
+<span><span class="co">#&gt;          9.65</span></span>
+<span><span class="co">#&gt;          7.98</span></span></code></pre></div>
+<p>To draw the routes as a tree, we call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on the paths result. A vertex appears more than once when it is entered at different times, because each entry time leaves a different set of onward contacts available.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span>, phases <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span>, networks <span class="op">=</span> <span class="cn">FALSE</span>, highlight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Reading it:</p>
-<ul>
-<li>
-<strong>Line thickness</strong> follows a node-level measure — degree by default, any measure <code><a href="reference/dyn_centrality.html">dyn_centrality()</a></code> accepts. A vertex that is merely present looks different from one that is busy.</li>
-<li>
-<strong>Vertical marks</strong> are times at which edges formed, shaded by how many.</li>
-<li>
-<strong>Names sit at the right-hand end</strong> of each line instead of in a legend, so no distinction rests on colour alone even when the palette repeats.</li>
-<li>
-<strong>The strip beneath</strong> is the phase each network panel covers — the network’s own sessions when it has them, otherwise equal thirds.</li>
-<li>
-<strong>The panels beneath that</strong> are one <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code> per phase, sharing the line colours, so a band in the timeline can be traced to a group in the network.</li>
-</ul>
-<p><strong>The line never leaves the corridor its measurements define.</strong> The network is measured at 120 overlapping slices by default. Corners are rounded by <em>cutting</em> them — Chaikin’s algorithm, where every point produced is a convex combination of measured points — so the curve flows without ever overshooting a measurement.</p>
-<p>That is the difference from interpolating a spline through the same points. A spline is free to travel anywhere between two knots: on evenly spaced slices an <code>fmm</code> or <code>natural</code> spline overshoots the pair it is joining by around one standard deviation, and even a monotone Hermite spline by about half of one. It draws the network passing through places no slice ever put it. Corner-cutting provably cannot, and there is a test asserting so.</p>
-<p>Set <code>flow = 0</code> for sharp joints, or a larger number to round harder.</p>
-<p>Each slice is standardised before the lines are drawn, so a vertical distance means the same thing at one time as at another. Slice width defaults to a sixth of the observation window, because scaling is only meaningful on a slice whose network is connected — measured over one narrow bin most vertices are isolated and their placement is arbitrary. <code>slices</code> and <code>window</code> are both arguments: narrow the window to resolve more, at the cost of a noisier picture.</p>
-<p>The figure needs roughly nine by six inches; below that it declines to draw and says so.</p>
-<p>Colour comes from a <strong><code>"dynet"</code> theme registered in cograph’s theme registry</strong>, so it shows up in <code><a href="https://sonsoles.me/cograph/reference/list_themes.html" class="external-link">cograph::list_themes()</a></code> and can be asked for by name from any cograph call:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-paths-plot-1.png" alt="" width="100%"></p>
+<p>To obtain the share of the network each vertex can reach, or be reached from, we call <code><a href="reference/dyn_reachability.html">dyn_reachability()</a></code> with the network; <code>direction</code> selects forward, backward or both.</p>
+</div>
+<div class="section level2">
+<h2 id="tie-dynamics-and-timing">Tie dynamics and timing<a class="anchor" aria-label="anchor" href="#tie-dynamics-and-timing"></a>
+</h2>
+<p>To count the ties that form and dissolve in each window, we call <code><a href="reference/events.html">events()</a></code> with the network. The default measures are formation and dissolution.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">cograph</span><span class="fu">::</span><span class="fu"><a href="https://sonsoles.me/cograph/reference/list_themes.html" class="external-link">list_themes</a></span><span class="op">(</span><span class="op">)</span>          <span class="co"># ... "nature", "dynet"</span></span>
-<span><span class="fu"><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot</a></span><span class="op">(</span><span class="va">dn</span>, theme <span class="op">=</span> <span class="st">"dynet"</span><span class="op">)</span>      <span class="co"># from a bare cograph call</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span>, theme <span class="op">=</span> <span class="st">"dark"</span><span class="op">)</span>   <span class="co"># or ask for another</span></span></code></pre></div>
-<p>Anything passed through <code>...</code> reaches <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot()</a></code> and overrides Dynet’s defaults — the same delegation contract <code>lagdynamics::plot_transitions()</code> uses.</p>
-<p>Two things sit outside the theme and have to, which is worth knowing if you edit this:</p>
-<ul>
-<li>
-<code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot()</a></code> treats a directed netobject with no <code>$method</code> as a <em>transition</em> network and applies its TNA look — a per-state colour ramp and a number on every edge. Right for a transition matrix, wrong here where an edge weight is a count of meetings. The TNA block also runs <em>before</em> the theme block and fills <code>node_fill</code>, which the theme block then declines to overwrite, so a theme alone cannot undo it. Hence <code>tna_styling = FALSE</code>.</li>
-<li>A theme holds one <code>node_fill</code>. Colouring vertices by partition needs a vector, so that is passed separately — and only when a partition exists, so an unpartitioned network still takes its fill from whichever theme you ask for. The colours are Okabe–Ito; cograph’s own <code><a href="https://sonsoles.me/cograph/reference/palette_colorblind.html" class="external-link">palette_colorblind()</a></code> is an interpolated ramp, not the Okabe–Ito set.</li>
-</ul>
-<p>Set the vertex partition once at construction and cograph picks it up everywhere:</p>
+<code class="sourceCode R"><span><span class="va">turnover</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">turnover</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       measure  n     mean       sd min max peak_time</span></span>
+<span><span class="co">#&gt; 1 dissolution 22 10.90909 6.132731   3  27        14</span></span>
+<span><span class="co">#&gt; 2   formation 22 10.90909 6.689787   0  29        13</span></span></code></pre></div>
+<p>To measure how long ties last, we call <code><a href="reference/durations.html">durations()</a></code> with the network and <code>measure</code> for the statistic. With <code>measure = "mean"</code> the result is the mean spell length of each pair; <code>unit</code> moves the question from pairs to individual spells or to vertex activity.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">forum</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span>,</span>
-<span>               groups <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">splot</a></span><span class="op">(</span><span class="va">forum</span><span class="op">)</span>                      <span class="co"># coloured by role, no further argument</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="palettes">Palettes<a class="anchor" aria-label="anchor" href="#palettes"></a>
-</h3>
-<p><code>palette</code> is an argument on every plot, and you can override it with anything:</p>
+<code class="sourceCode R"><span><span class="va">lengths</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span></span>
+<span><span class="va">lengths</span></span>
+<span><span class="co">#&gt; # Relationship duration (edge-level)</span></span>
+<span><span class="co">#&gt; # time in step</span></span>
+<span><span class="co">#&gt; # durations in step</span></span>
+<span><span class="co">#&gt;  from    to measure     value</span></span>
+<span><span class="co">#&gt;   Ana  Cara    mean 0.1000000</span></span>
+<span><span class="co">#&gt;   Ana   Dan    mean 0.3400000</span></span>
+<span><span class="co">#&gt;   Ana  Gita    mean 0.4220000</span></span>
+<span><span class="co">#&gt;   Ana  Iris    mean 0.5000000</span></span>
+<span><span class="co">#&gt;   Ana Jonas    mean 0.5850000</span></span>
+<span><span class="co">#&gt;   Ana  Kira    mean 0.1100000</span></span>
+<span><span class="co">#&gt;   Ana   Leo    mean 1.1900000</span></span>
+<span><span class="co">#&gt;   Ana  Mira    mean 0.3466667</span></span>
+<span><span class="co">#&gt;   Ben   Eve    mean 0.6100000</span></span>
+<span><span class="co">#&gt;   Ben  Finn    mean 0.2300000</span></span>
+<span><span class="co">#&gt;   Ben  Gita    mean 0.3400000</span></span>
+<span><span class="co">#&gt;   Ben  Hugo    mean 0.1475000</span></span>
+<span><span class="co">#&gt; # 98 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>To measure whether a vertex’s contacts are regular or clustered in time, we call <code><a href="reference/burstiness.html">burstiness()</a></code> with the network. Burstiness compares the dispersion of the gaps between a vertex’s events with the exponential reference: 1 is the bursty limit, 0 the Poisson reference and -1 perfectly regular activity. Memory is the correlation between consecutive gaps.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span><span class="op">)</span>                          <span class="co"># "okabe", the default</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span>, palette <span class="op">=</span> <span class="st">"extended"</span><span class="op">)</span>  <span class="co"># ~12 distinct</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span>, palette <span class="op">=</span> <span class="st">"many"</span><span class="op">)</span>      <span class="co"># one per vertex, any n</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span>,  palette <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#D55E00"</span>, <span class="st">"#0072B2"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># your own</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span>,  palette <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/grDevices/hcl.html" class="external-link">hcl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">340</span>, length <span class="op">=</span> <span class="va">n</span><span class="op">)</span>, <span class="fl">80</span>, <span class="fl">60</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>All three built-ins begin with Okabe–Ito, so a small network looks the same whichever you pick, and they are deterministic — no <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample()</a></code>, no seed, the same network gets the same colours every run.</p>
-<p>The choice is a measurable trade, not a matter of taste. Minimum distance between any two colours in CIE Lab, where 2.3 is the just-noticeable difference and 10 a comfortable categorical gap:</p>
-<table class="table">
-<colgroup>
-<col width="25%">
-<col width="25%">
-<col width="25%">
-<col width="25%">
-</colgroup>
-<thead><tr>
-<th>palette</th>
-<th>n</th>
-<th>min ΔE</th>
-<th>under deuteranopia</th>
-</tr></thead>
-<tbody>
-<tr>
-<td><code>"okabe"</code></td>
-<td>9</td>
-<td>26.4</td>
-<td><strong>7.3</strong></td>
-</tr>
-<tr>
-<td><code>"extended"</code></td>
-<td>20</td>
-<td>13.5</td>
-<td>2.4</td>
-</tr>
-<tr>
-<td><code>"many"</code></td>
-<td>60</td>
-<td><strong>23.6</strong></td>
-<td>1.2</td>
-</tr>
-<tr>
-<td>evenly spaced hue ramp</td>
-<td>60</td>
-<td>4.7</td>
-<td>0.0</td>
-</tr>
-<tr>
-<td>every qualitative ColorBrewer palette concatenated</td>
-<td>60</td>
-<td><strong>0.4</strong></td>
-<td>0.4</td>
-</tr>
-</tbody>
-</table>
-<p>Two things worth knowing before reaching for <code>"many"</code>:</p>
-<ul>
-<li>
-<strong>Hue alone collapses under colour blindness.</strong> An evenly spaced hue ramp is already below the just-noticeable difference at eight colours. Okabe–Ito holds because it varies <em>lightness</em>, not only hue.</li>
-<li>
-<strong><code>"many"</code> is not colour-blind safe and cannot be.</strong> Sixty categories do not fit in the space dichromatic vision leaves. It is for grouping and decoration; the labels do the identifying. Beyond about twelve colours, identification is a matching-and-memory limit rather than a perceptual one, and no palette fixes it — use <code>highlight</code>, or set a partition with <code>dynet(groups = )</code> so colour is back to a handful of categories.</li>
-</ul>
-<p>Labels take their colour from the fill — black or white, whichever has the higher contrast ratio — so a vertex that lands on Okabe–Ito’s ninth colour (black) still has a readable name. Pass <code>label_color</code> to override.</p>
-<p>Nothing depends on colour alone: the network views pair colour with shape, the ggplot views with a line type, and the proximity timeline names every line at its right-hand end.</p>
-<p>Line type is deliberately <em>not</em> the second channel in the proximity view. Base graphics scales dash length by line width, so a dashed line disintegrates exactly where it is thinnest — and thin there means low activity, not missing data. Solid lines plus direct labels say the true thing.</p>
-</div>
+<code class="sourceCode R"><span><span class="va">rhythm</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/burstiness.html">burstiness</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">rhythm</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     node    measure n        mean sd         min         max</span></span>
+<span><span class="co">#&gt; 1    Ana burstiness 1  0.24575324 NA  0.24575324  0.24575324</span></span>
+<span><span class="co">#&gt; 2    Ana     events 1 36.00000000 NA 36.00000000 36.00000000</span></span>
+<span><span class="co">#&gt; 3    Ana     memory 1 -0.03128243 NA -0.03128243 -0.03128243</span></span>
+<span><span class="co">#&gt; 4    Ben burstiness 1  0.03288611 NA  0.03288611  0.03288611</span></span>
+<span><span class="co">#&gt; 5    Ben     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 6    Ben     memory 1 -0.19926343 NA -0.19926343 -0.19926343</span></span>
+<span><span class="co">#&gt; 7   Cara burstiness 1 -0.05610924 NA -0.05610924 -0.05610924</span></span>
+<span><span class="co">#&gt; 8   Cara     events 1 35.00000000 NA 35.00000000 35.00000000</span></span>
+<span><span class="co">#&gt; 9   Cara     memory 1  0.07458054 NA  0.07458054  0.07458054</span></span>
+<span><span class="co">#&gt; 10   Dan burstiness 1 -0.05061772 NA -0.05061772 -0.05061772</span></span>
+<span><span class="co">#&gt; 11   Dan     events 1 35.00000000 NA 35.00000000 35.00000000</span></span>
+<span><span class="co">#&gt; 12   Dan     memory 1  0.21654310 NA  0.21654310  0.21654310</span></span>
+<span><span class="co">#&gt; 13   Eve burstiness 1  0.09217906 NA  0.09217906  0.09217906</span></span>
+<span><span class="co">#&gt; 14   Eve     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 15   Eve     memory 1  0.25882509 NA  0.25882509  0.25882509</span></span>
+<span><span class="co">#&gt; 16  Finn burstiness 1  0.02938507 NA  0.02938507  0.02938507</span></span>
+<span><span class="co">#&gt; 17  Finn     events 1 29.00000000 NA 29.00000000 29.00000000</span></span>
+<span><span class="co">#&gt; 18  Finn     memory 1 -0.22653754 NA -0.22653754 -0.22653754</span></span>
+<span><span class="co">#&gt; 19  Gita burstiness 1  0.06104200 NA  0.06104200  0.06104200</span></span>
+<span><span class="co">#&gt; 20  Gita     events 1 31.00000000 NA 31.00000000 31.00000000</span></span>
+<span><span class="co">#&gt; 21  Gita     memory 1  0.21165690 NA  0.21165690  0.21165690</span></span>
+<span><span class="co">#&gt; 22  Hugo burstiness 1  0.09885443 NA  0.09885443  0.09885443</span></span>
+<span><span class="co">#&gt; 23  Hugo     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 24  Hugo     memory 1  0.11283700 NA  0.11283700  0.11283700</span></span>
+<span><span class="co">#&gt; 25  Iris burstiness 1 -0.05968068 NA -0.05968068 -0.05968068</span></span>
+<span><span class="co">#&gt; 26  Iris     events 1 30.00000000 NA 30.00000000 30.00000000</span></span>
+<span><span class="co">#&gt; 27  Iris     memory 1 -0.09356972 NA -0.09356972 -0.09356972</span></span>
+<span><span class="co">#&gt; 28 Jonas burstiness 1 -0.02750549 NA -0.02750549 -0.02750549</span></span>
+<span><span class="co">#&gt; 29 Jonas     events 1 46.00000000 NA 46.00000000 46.00000000</span></span>
+<span><span class="co">#&gt; 30 Jonas     memory 1  0.23391957 NA  0.23391957  0.23391957</span></span>
+<span><span class="co">#&gt; 31  Kira burstiness 1 -0.07048265 NA -0.07048265 -0.07048265</span></span>
+<span><span class="co">#&gt; 32  Kira     events 1 38.00000000 NA 38.00000000 38.00000000</span></span>
+<span><span class="co">#&gt; 33  Kira     memory 1 -0.14972726 NA -0.14972726 -0.14972726</span></span>
+<span><span class="co">#&gt; 34   Leo burstiness 1 -0.01020265 NA -0.01020265 -0.01020265</span></span>
+<span><span class="co">#&gt; 35   Leo     events 1 28.00000000 NA 28.00000000 28.00000000</span></span>
+<span><span class="co">#&gt; 36   Leo     memory 1  0.48001912 NA  0.48001912  0.48001912</span></span>
+<span><span class="co">#&gt; 37  Mira burstiness 1  0.09968547 NA  0.09968547  0.09968547</span></span>
+<span><span class="co">#&gt; 38  Mira     events 1 36.00000000 NA 36.00000000 36.00000000</span></span>
+<span><span class="co">#&gt; 39  Mira     memory 1  0.18691159 NA  0.18691159  0.18691159</span></span>
+<span><span class="co">#&gt; 40  Nils burstiness 1  0.08408761 NA  0.08408761  0.08408761</span></span>
+<span><span class="co">#&gt; 41  Nils     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 42  Nils     memory 1  0.22784733 NA  0.22784733  0.22784733</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="animating">Animating<a class="anchor" aria-label="anchor" href="#animating"></a>
+<h2 id="mixing-between-groups">Mixing between groups<a class="anchor" aria-label="anchor" href="#mixing-between-groups"></a>
 </h2>
-<p><code><a href="reference/animate.html">animate()</a></code> draws the measurement grid as a film. It takes the same four grid arguments as every measuring verb, so the animation shows exactly the bins <code><a href="reference/snapshots.html">snapshots()</a></code> tabulates, joined by motion.</p>
+<p>To count ties within and between groups of vertices, we call <code><a href="reference/mixing.html">mixing()</a></code> with the network and <code>attribute</code> for the vertex attribute that defines the groups. The forum network carries a <code>role</code> attribute from <code>forum_people</code>. A <code>step</code> wider than the observation period collapses the counts into one table; the default reports them per window.</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>                       <span class="co"># GIF, spring layout</span></span>
-<span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, file <span class="op">=</span> <span class="st">"forum.mp4"</span><span class="op">)</span>   <span class="co"># video, by extension</span></span>
-<span><span class="fu"><a href="reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,   <span class="co"># node size follows a measure</span></span>
-<span>        layout <span class="op">=</span> <span class="st">"relaxed"</span>, file <span class="op">=</span> <span class="st">"forum.webm"</span><span class="op">)</span></span></code></pre></div>
-<p>Each bin is drawn <code>tween</code> times (six by default). Between bins the vertices glide, a tie about to appear fades in dotted and green, one about to vanish fades out dashed and vermilion, and a vertex whose measure changes grows or shrinks; the motion follows the smoothstep curve, so each bin dwells before it changes. Tie width follows weight on one scale fixed across the whole animation, so the same weight has the same width in a quiet frame and a busy one. A strip under the network shows the grid, a marker at the current time, and the key.</p>
-<p><code>layout</code> is <code>"spring"</code> (the union of every bin, laid out once), <code>"circle"</code>, <code>"oval"</code>, <code>"groups"</code> (one ring per partition), <code>"relaxed"</code> (each bin laid out again, seeded from the last, held within <code>max_displacement</code> and smoothed along time), or a data frame of your own <code>name</code>, <code>x</code>, <code>y</code>. Under every layout but <code>"relaxed"</code> a vertex never moves. A vertex absent from a bin is faded, parked out of sight and glided in when it arrives (<code>absent = "away"</code>), or hidden; <code>set_vertex_spells(dn, "ties")</code> declares each vertex present from its first tie to its last when the log itself says nothing about arrivals.</p>
-<p>The extension of <code>file</code> picks the encoder: <code>.gif</code> needs <code>gifski</code>, <code>.mp4</code> and <code>.webm</code> need <code>av</code>. The verb returns a tidy table with one row per bin (<code>time</code>, <code>nodes</code>, <code>ties</code>, <code>forming</code>, <code>dissolving</code>, the first rendered <code>frame</code> of the bin) invisibly; <code>as.data.frame(x, what = "frames")</code> maps every rendered frame to its time.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">forum</span>, attribute <span class="op">=</span> <span class="st">"role"</span>, step <span class="op">=</span> <span class="fl">60</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # Mixing by role (graph-level)</span></span>
+<span><span class="co">#&gt; # 1 time points, 60 per bin | time in days</span></span>
+<span><span class="co">#&gt; # measures: Facilitator -&gt; Facilitator, Student -&gt; Facilitator, Teacher -&gt; Facilitator, Facilitator -&gt; Student, Student -&gt; Student, Teacher -&gt; Student, Facilitator -&gt; Teacher, Student -&gt; Teacher, Teacher -&gt; Teacher</span></span>
+<span><span class="co">#&gt; # active binary-dyad counts between vertex groups per time bin</span></span>
+<span><span class="co">#&gt;  time                    measure value  from_group    to_group</span></span>
+<span><span class="co">#&gt;     0 Facilitator -&gt; Facilitator     0 Facilitator Facilitator</span></span>
+<span><span class="co">#&gt;     0     Student -&gt; Facilitator     3     Student Facilitator</span></span>
+<span><span class="co">#&gt;     0     Teacher -&gt; Facilitator     0     Teacher Facilitator</span></span>
+<span><span class="co">#&gt;     0     Facilitator -&gt; Student     4 Facilitator     Student</span></span>
+<span><span class="co">#&gt;     0         Student -&gt; Student   136     Student     Student</span></span>
+<span><span class="co">#&gt;     0         Teacher -&gt; Student    12     Teacher     Student</span></span>
+<span><span class="co">#&gt;     0     Facilitator -&gt; Teacher     1 Facilitator     Teacher</span></span>
+<span><span class="co">#&gt;     0         Student -&gt; Teacher    16     Student     Teacher</span></span>
+<span><span class="co">#&gt;     0         Teacher -&gt; Teacher     0     Teacher     Teacher</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="what-it-depends-on">What it depends on<a class="anchor" aria-label="anchor" href="#what-it-depends-on"></a>
+<h2 id="static-views-of-a-temporal-network">Static views of a temporal network<a class="anchor" aria-label="anchor" href="#static-views-of-a-temporal-network"></a>
 </h2>
-<p><code>cograph</code> for rendering, <code>ggplot2</code> for the time-series views. Nothing else. Writing an animation needs <code>gifski</code> for a GIF or <code>av</code> for a video, both in <code>Suggests</code>.</p>
-<p>Every metric — geodesics, Brandes betweenness, PageRank, HITS, k-cores, Burt’s constraint, the dyad and triad censuses — is base R matrix algebra, so measurement works on a machine with no graph package installed. <code>igraph</code>, <code>sna</code>, <code>tsna</code> and <code>networkDynamic</code> appear only in <code>Suggests</code>, where the test suite uses them to check the numbers.</p>
+<p>To reduce a temporal network to a weighted static network, we call <code><a href="reference/collapse_network.html">collapse_network()</a></code> with the network and <code>weight</code> for the aggregation rule. The result is a <code>cograph</code> network and can be drawn and measured as one.</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">flat</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">dn</span>, weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span></span>
+<span><span class="va">flat</span></span>
+<span><span class="co">#&gt; # Collapsed temporal network | 14 vertices | 110 edges | weight: union_duration</span></span>
+<span><span class="co">#&gt; # 0 to 21.52 step</span></span>
+<span><span class="co">#&gt;  from    to binary union_duration total_duration duration_fraction spell_count</span></span>
+<span><span class="co">#&gt;   Ana  Cara      1           0.10           0.10       0.004646840           1</span></span>
+<span><span class="co">#&gt;   Ana   Dan      1           1.02           1.02       0.047397770           3</span></span>
+<span><span class="co">#&gt;   Ana  Gita      1           1.99           2.11       0.092472119           5</span></span>
+<span><span class="co">#&gt;   Ana  Iris      1           0.50           0.50       0.023234201           1</span></span>
+<span><span class="co">#&gt;   Ana Jonas      1           2.34           2.34       0.108736059           4</span></span>
+<span><span class="co">#&gt;   Ana  Kira      1           0.11           0.11       0.005111524           1</span></span>
+<span><span class="co">#&gt;  weight_sum weighted_duration latest_weight first  last activity.duration</span></span>
+<span><span class="co">#&gt;           1              0.10             1  6.67  6.77              0.10</span></span>
+<span><span class="co">#&gt;           3              1.02             1 12.04 20.10              1.02</span></span>
+<span><span class="co">#&gt;           5              2.11             1  6.57 14.16              1.99</span></span>
+<span><span class="co">#&gt;           1              0.50             1 13.80 14.30              0.50</span></span>
+<span><span class="co">#&gt;           4              2.34             1  2.12  9.13              2.34</span></span>
+<span><span class="co">#&gt;           1              0.11             1 11.60 11.71              0.11</span></span>
+<span><span class="co">#&gt;  activity.count</span></span>
+<span><span class="co">#&gt;               1</span></span>
+<span><span class="co">#&gt;               3</span></span>
+<span><span class="co">#&gt;               5</span></span>
+<span><span class="co">#&gt;               1</span></span>
+<span><span class="co">#&gt;               4</span></span>
+<span><span class="co">#&gt;               1</span></span></code></pre></div>
+<p>To restrict a network to some of its vertices, we call <code><a href="reference/induce_subgraph.html">induce_subgraph()</a></code> with the network and a condition on the vertex table in <code>nodes</code>. A centrality named in the condition is computed over the whole observed period.</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">core</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">dn</span>, <span class="va">degree</span> <span class="op">&gt;</span> <span class="fl">16</span><span class="op">)</span></span>
+<span><span class="va">core</span></span>
+<span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
+<span><span class="co">#&gt; # 5 vertices | 31 edge spells | 14 distinct pairs</span></span>
+<span><span class="co">#&gt; # observed from 0 to 20.46 step, binned every 1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   from    to start  end duration weight</span></span>
+<span><span class="co">#&gt;  Jonas   Dan  0.00 1.10     1.10      1</span></span>
+<span><span class="co">#&gt;    Eve  Kira  0.77 1.42     0.65      1</span></span>
+<span><span class="co">#&gt;   Kira   Eve  1.95 2.47     0.52      1</span></span>
+<span><span class="co">#&gt;  Jonas  Kira  2.05 2.09     0.04      1</span></span>
+<span><span class="co">#&gt;    Dan Jonas  3.14 3.49     0.35      1</span></span>
+<span><span class="co">#&gt;    Dan   Eve  3.20 3.33     0.13      1</span></span>
+<span><span class="co">#&gt; # 25 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
+<p>To list the ties active in one window, we call <code><a href="reference/snapshots.html">snapshots()</a></code> with the network and <code>at</code> for the time.</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">dn</span>, at <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # Snapshot edges | 1 bin | 12 tie rows | time in step</span></span>
+<span><span class="co">#&gt;    time from    to weight n_spells</span></span>
+<span><span class="co">#&gt; 1     3  Ana Jonas      1        1</span></span>
+<span><span class="co">#&gt; 2     3 Kira   Leo      1        1</span></span>
+<span><span class="co">#&gt; 3     3  Leo  Finn      1        1</span></span>
+<span><span class="co">#&gt; 4     3 Nils   Eve      1        1</span></span>
+<span><span class="co">#&gt; 5     3  Ben Jonas      1        1</span></span>
+<span><span class="co">#&gt; 6     3  Ben   Eve      1        1</span></span>
+<span><span class="co">#&gt; 7     3  Dan   Ana      1        1</span></span>
+<span><span class="co">#&gt; 8     3  Dan Jonas      1        1</span></span>
+<span><span class="co">#&gt; 9     3  Dan   Eve      1        1</span></span>
+<span><span class="co">#&gt; 10    3 Gita Jonas      1        1</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() counts them by bin.</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="how-the-numbers-were-checked">How the numbers were checked<a class="anchor" aria-label="anchor" href="#how-the-numbers-were-checked"></a>
+<h2 id="editing-a-network">Editing a network<a class="anchor" aria-label="anchor" href="#editing-a-network"></a>
 </h2>
-<p>All 78 kernel comparisons against <code>igraph</code> and <code>sna</code> agree, across directed and undirected graphs at three sizes. Earliest-arrival times agree with <code><a href="https://rdrr.io/pkg/tsna/man/paths.html" class="external-link">tsna::tPath</a></code> on twenty source-network combinations, forward and backward, including the vertex-activity boundary cases. Two conventions differ deliberately and are documented where they are implemented:</p>
+<p>Editing functions return a new network and leave the input unchanged. To add a vertex, we call <code><a href="reference/add_nodes.html">add_nodes()</a></code> with a table of names and attributes. To add a tie, we call <code><a href="reference/add_ties.html">add_ties()</a></code> with a table of spells. <code><a href="reference/remove_nodes.html">remove_nodes()</a></code>, <code><a href="reference/remove_ties.html">remove_ties()</a></code>, <code><a href="reference/update_nodes.html">update_nodes()</a></code>, <code><a href="reference/update_ties.html">update_ties()</a></code>, <code><a href="reference/rename_nodes.html">rename_nodes()</a></code>, <code><a href="reference/set_vertex_spells.html">set_vertex_spells()</a></code> and <code><a href="reference/set_observations.html">set_observations()</a></code> complete the set.</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/add_nodes.html">add_nodes</a></span><span class="op">(</span><span class="va">dn</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"Omar"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">dn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/add_ties.html">add_ties</a></span><span class="op">(</span><span class="va">dn2</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"Omar"</span>, start <span class="op">=</span> <span class="fl">4</span>, end <span class="op">=</span> <span class="fl">6</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">dn2</span></span>
+<span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
+<span><span class="co">#&gt; # 15 vertices | 241 edge spells | 111 distinct pairs</span></span>
+<span><span class="co">#&gt; # observed from 0 to 21.52 step, binned every 1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   from   to start  end duration weight</span></span>
+<span><span class="co">#&gt;  Jonas  Dan  0.00 1.10     1.10      1</span></span>
+<span><span class="co">#&gt;   Gita  Ana  0.14 0.98     0.84      1</span></span>
+<span><span class="co">#&gt;    Leo Mira  0.15 0.42     0.27      1</span></span>
+<span><span class="co">#&gt;    Leo Iris  0.15 0.96     0.81      1</span></span>
+<span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
+<span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
+<span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="drawing-and-animating">Drawing and animating<a class="anchor" aria-label="anchor" href="#drawing-and-animating"></a>
+</h2>
+<p>A Dynet network is a <code>cograph</code> network, so every <code>cograph</code> drawing function applies to it directly. <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> adds the views that concern time. To draw the network as it stands in one window, we set <code>type</code> to <code>"network"</code> and give the time in <code>at</code>. To draw a sequence of windows as small multiples with a shared layout, we set <code>type</code> to <code>"snapshots"</code>. To draw the proximity timeline, in which vertices that interact are placed near each other and their positions are followed through time, we set <code>type</code> to <code>"proximity"</code>. The proximity timeline is described in the article on drawing.</p>
+<p>To animate the measurement windows, we call <code><a href="reference/animate.html">animate()</a></code> with the same four grid arguments as the measuring functions and a file name whose extension selects the encoder; <code>.gif</code> needs the <code>gifski</code> package and <code>.mp4</code> or <code>.webm</code> the <code>av</code> package. The article on animating shows the result.</p>
+</div>
+<div class="section level2">
+<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
+</h2>
 <ul>
 <li>
-<strong>Closeness</strong> uses the reachable-set normalisation from <code>igraph</code>. <code><a href="https://rdrr.io/pkg/sna/man/closeness.html" class="external-link">sna::closeness()</a></code> sums distance over unreachable vertices too, so it returns zero for every vertex as soon as the graph is disconnected — and every snapshot of a temporal network is disconnected.</li>
+<code><a href="articles/dynet.html">vignette("dynet")</a></code> walks through one analysis from log to result.</li>
 <li>
-<strong>Isolates</strong> report a closeness of zero rather than <code>NaN</code>, so that averaging a series does not propagate a missing value.</li>
+<code><a href="articles/building-networks.html">vignette("building-networks")</a></code> covers the four log shapes, vertex attributes, observation windows, sessions and censoring.</li>
+<li>
+<code><a href="articles/ch17-temporal-networks.html">vignette("ch17-temporal-networks")</a></code> re-runs the temporal network chapter of <em>Learning Analytics Methods and Tutorials</em> on the bundled MOOC forum.</li>
+<li>The package website at <a href="https://pak.dynasite.org/Dynet/" class="uri">https://pak.dynasite.org/Dynet/</a> adds a function catalogue, tutorials on animation and on the MOOC data, and a full reproduction of the <em>Trees of Thought</em> study.</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Butts, C. T. (2008). A relational event framework for social action. <em>Sociological Methodology</em>, 38(1), 155–200.</p>
+<p>Goh, K.-I., &amp; Barabási, A.-L. (2008). Burstiness and memory in complex systems. <em>EPL (Europhysics Letters)</em>, 81(4), 48002.</p>
 <p>Holme, P., &amp; Saramäki, J. (2012). Temporal networks. <em>Physics Reports</em>, 519(3), 97–125.</p>
-<p>Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., &amp; Latora, V. (2013). Graph metrics for temporal networks. In <em>Temporal Networks</em> (pp. 15–40). Springer.</p>
-<p>Saqr, M., &amp; Nouri, J. (2020). High resolution temporal network analysis to understand and improve collaborative learning. <em>Proceedings of the Tenth International Conference on Learning Analytics &amp; Knowledge</em>, 314–319.</p>
-<p>Saqr, M. (2024). Temporal network analysis: Introduction, methods and analysis with R. In M. Saqr &amp; S. López-Pernas (Eds.), <em>Learning Analytics Methods and Tutorials</em>. Springer.</p>
+<p>Kempe, D., Kleinberg, J., &amp; Kumar, A. (2002). Connectivity and inference problems for temporal networks. <em>Journal of Computer and System Sciences</em>, 64(4), 820–842.</p>
+<p>Masuda, N., &amp; Lambiotte, R. (2016). <em>A guide to temporal networks</em>. World Scientific.</p>
+<p>Moody, J. (2002). The importance of relationship timing for diffusion. <em>Social Forces</em>, 81(1), 25–56.</p>
+<p>Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., &amp; Latora, V. (2013). Graph metrics for temporal networks. In P. Holme &amp; J. Saramäki (Eds.), <em>Temporal networks</em> (pp. 15–40). Springer.</p>
+<p>Pan, R. K., &amp; Saramäki, J. (2011). Path lengths, correlations, and centrality in temporal networks. <em>Physical Review E</em>, 84(1), 016105.</p>
+<p>Saqr, M. (2024). Temporal network analysis: Introduction, methods and analysis with R. In M. Saqr &amp; S. López-Pernas (Eds.), <em>Learning analytics methods and tutorials: A practical guide using R</em>. Springer.</p>
+<p>Saqr, M., &amp; Nouri, J. (2020). High resolution temporal network analysis to understand and improve collaborative learning. In <em>Proceedings of the Tenth International Conference on Learning Analytics &amp; Knowledge</em> (pp. 314–319). ACM.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

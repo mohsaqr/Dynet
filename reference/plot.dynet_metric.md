@@ -34,9 +34,14 @@ plot(
 
 - highlight:
 
-  Optional character vector of vertex names to draw in colour, with
-  everything else in grey. Useful when there are many vertices. Ignored
-  for a measure with no time axis.
+  Optional character vector naming the series to draw in colour, with
+  everything else in grey: vertex names for a node-level measure,
+  measure names for a graph-level one. For a
+  [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
+  result a group name selects every flow into or out of that group, so
+  `highlight = "Teacher"` colours the teacher rows and columns of the
+  mixing table. A name that matches nothing raises an error of class
+  `dynet_unknown_highlight`. Ignored for a measure with no time axis.
 
 - top:
 

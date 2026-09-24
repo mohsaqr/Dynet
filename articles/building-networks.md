@@ -5,27 +5,37 @@
 library(Dynet)
 ```
 
-A temporal network is a relational log plus a clock. Everything Dynet
-measures depends on that clock being right, so this vignette is about
-the first half of the work: getting a log into a `dynet` object,
-declaring what the clock means, and reading back what you actually built
-before you measure anything.
-
-There is one constructor,
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). It
-covers the four shapes relational logs arrive in, and the shape is
-inferred from the arguments you name.
+In this vignette we build temporal networks from the four kinds of
+relational log that
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) reads,
+inspect the objects, and qualify their clock with sessions, observation
+windows and vertex activity spells.
+[`vignette("dynet")`](https://pak.dynasite.org/Dynet/articles/dynet.md)
+follows one network from construction through measurement.
 
 ## The four log formats
 
-### Interval log: each row carries its own start and end
+`Dynet` provides a single constructor,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md), for
+interval, contact, threaded, and co-presence logs. These formats
+represent different ways of observing interactions and their timing.
+Format selection depends on the constructor arguments and the
+identification of timing variables, as described below.
 
-This is the richest shape. Duration is recorded, so two students who met
-once at length are distinguishable from two who met briefly many times.
-Face-to-face sensor data, class attendance with sign-in and sign-out,
-tutoring sessions and collaboration episodes all arrive this way.
+### Interval logs
 
-`school_contacts` is fourteen students over three weeks:
+An interval log records the onset and termination of each observed
+relation. Each row defines a relational spell whose duration is the time
+for which the tie is active.
+
+`school_contacts` is a simulated interval log of face-to-face
+interactions among fourteen named students over approximately three
+weeks. The supplied variables `from` and `to` identify the initiating
+and receiving students, respectively, and thus define directed
+relational endpoints. The supplied variables `start` and `end` record
+onset and termination in days elapsed since the beginning of the
+observation period. Time is continuous on this scale, so an interaction
+may begin and end within the same day.
 
 ``` r
 
@@ -36,6 +46,12 @@ head(school_contacts, 4)
 #> 3   Leo Mira  0.15 0.42
 #> 4   Leo Iris  0.15 0.96
 ```
+
+The network is constructed by passing the log to
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md). The
+print method reports the format and direction of the network, the
+numbers of vertices, spells and distinct pairs, the observed range and
+the measurement grid, followed by the first spells.
 
 ``` r
 
@@ -55,18 +71,38 @@ school
 #> # 234 more spells. summary() describes the network; plot() draws it.
 ```
 
-No column names had to be spelled out. `from`, `to`, `start` and `end`
-were matched from a table of aliases, case-insensitively and after
-stripping punctuation, so `Sender`/`Receiver`, `source`/`target` and
-`onset`/`terminus` also work untouched. A `duration` column is accepted
-in place of `end`.
+Column names need not be specified explicitly unless they differ from
+the recognized aliases or are otherwise ambiguous. By default,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) matches
+column names against a predefined alias table using case-insensitive
+comparison. Thus, `from` and `to`, `sender` and `receiver`, and `source`
+and `target` are interpreted equivalently as the two relational
+endpoints, while `start` and `end` may likewise be supplied as `onset`
+and `terminus`. A `duration` column can be provided in place of `end`.
 
-### Contact log: instantaneous events with no duration
+During construction,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+standardizes these inputs and derives additional variables where
+necessary. For the present data, `duration` is computed as
+`end - start`. The constructor also assigns a `weight` of 1 to every
+spell because the input log contains no variable representing
+multiplicity or repeated occurrence.
 
-A message, a click, a citation, a card swipe. There is a time and
-nothing else; the tie exists at an instant and has zero length.
-`forum_posts` can be read this way, because a post has a timestamp and
-no end:
+The 240 spells fall on 110 distinct ordered pairs. With $`n = 14`$
+vertices there are $`n(n - 1) = 182`$ ordered pairs, so approximately
+60% of the possible ties were realised at least once during the
+three-week observation period. The aggregated graph is therefore dense;
+the remainder of this vignette addresses how much of that connectivity
+is present at any given time.
+
+### Contact logs
+
+A contact log records a single timestamp per relation and no termination
+time. Each relation is an instantaneous event, so the network is a
+contact sequence in which every spell has zero duration. `forum_posts`
+is a simulated log of posts in a course forum. Each row records a
+sender, a receiver, a `POSIXct` timestamp and the thread to which the
+post belongs.
 
 ``` r
 
@@ -76,6 +112,10 @@ head(forum_posts, 3)
 #> 2 student_10 student_05 2024-09-03 13:24:23 thread_47
 #> 3  teacher_A student_09 2024-09-03 16:31:58 thread_11
 ```
+
+To read the log as a contact sequence,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) is called
+with `time` naming the timestamp column.
 
 ``` r
 
@@ -95,51 +135,27 @@ clicks
 #> # 235 more spells. summary() describes the network; plot() draws it.
 ```
 
-The timestamps are `POSIXct`, and Dynet converted them to elapsed time
-in a unit it chose to suit the span — days, here, reported in the
-header. Numeric times are left alone and the unit is reported as
-`"step"`.
+The 241 posts become 241 instantaneous spells among 20 vertices on 172
+of the 380 possible ordered pairs. Calendar times are converted to
+elapsed time from the first event, in a unit chosen automatically to
+suit the span; here the span is approximately 55 days, so the unit is
+days and the default bin width is one day. Numeric input is left
+unchanged and reported in the unit `step`.
 
-Every spell has `duration` zero. That is the honest reading of a contact
-log, but it has a consequence worth knowing before you measure:
-quantities that integrate occupied time over the clock are exactly zero
-on point contacts, because points occupy no time.
+### Threaded logs
 
-``` r
-
-summary(clicks)
-#>                 property        value
-#> 1                 format      contact
-#> 2               directed          yes
-#> 3               vertices           20
-#> 4            edge spells          241
-#> 5         distinct pairs          172
-#> 6              time unit         days
-#> 7          observed from            0
-#> 8            observed to     54.96387
-#> 9                   span     54.96387
-#> 10             bin width            1
-#> 11             time bins           55
-#> 12 mean snapshot density       0.0112
-#> 13      temporal density not computed
-#> 14              sessions         none
-#> 15     vertex attributes         none
-```
-
-`temporal density` is `0`, while `mean snapshot density` is not. The
-snapshot measures ask whether a tie was present anywhere inside a bin;
-the integrated measures ask how much of the bin it occupied. On
-instantaneous data those are genuinely different questions with
-genuinely different answers.
-
-### Threaded log: an edge stays active until its thread falls silent
-
-Forum, chat and email data have a timestamp and no end, but treating
-them as points throws away the fact that a post which provoked a long
-argument stayed relevant longer than one that fell flat. Dynet applies
-the rule from Saqr and Nouri (2020): a post is active from the moment it
-appears until the last post in the same thread. Name the `thread`
-argument and you get that derivation.
+Forum, chat and email logs likewise carry a timestamp and no termination
+time. Reading them as contact sequences discards the fact that a post
+remains part of the conversation for as long as the conversation
+continues. Saqr and Nouri (2020) proposed a rule for deriving a
+duration: a post is active from the moment it is written until the last
+post in its thread. Formally, a post at time $`t_i`$ in thread $`T`$
+becomes the spell $`[t_i, \max_{j \in T} t_j)`$. A post that provoked a
+long exchange therefore remains active longer than one that did not, and
+the last post of a thread has zero duration. This rule is applied by
+calling [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+with `thread` naming the thread column; `nodes` optionally supplies a
+table of vertex attributes.
 
 ``` r
 
@@ -160,13 +176,40 @@ forum
 #> # 235 more spells. summary() describes the network; plot() draws it.
 ```
 
-Same 241 rows as the contact reading above, same 20 vertices, but the
-spells now have length — and the network has an integrated density that
-is not zero:
+The network has the same 241 spells, 20 vertices and 172 pairs as the
+contact reading, but each spell now has a positive duration, except for
+the 62 spells that close their 62 threads, and each carries its thread
+label. The two readings differ in the share of the observation period
+that ties occupy. To compare them,
+[`summary()`](https://rdrr.io/r/base/summary.html) is called on both
+networks with `temporal_density` set to `TRUE`. This row is opt-in
+because it integrates over every ordered pair and its cost is quadratic
+in the number of vertices.
 
 ``` r
 
-summary(forum)
+summary(clicks, temporal_density = TRUE)
+#>                 property    value
+#> 1                 format  contact
+#> 2               directed      yes
+#> 3               vertices       20
+#> 4            edge spells      241
+#> 5         distinct pairs      172
+#> 6              time unit     days
+#> 7          observed from        0
+#> 8            observed to 54.96387
+#> 9                   span 54.96387
+#> 10             bin width        1
+#> 11             time bins       55
+#> 12 mean snapshot density   0.0112
+#> 13      temporal density        0
+#> 14              sessions     none
+#> 15     vertex attributes     none
+```
+
+``` r
+
+summary(forum, temporal_density = TRUE)
 #>                 property             value
 #> 1                 format          threaded
 #> 2               directed               yes
@@ -180,16 +223,39 @@ summary(forum)
 #> 10             bin width                 1
 #> 11             time bins                55
 #> 12 mean snapshot density            0.0248
-#> 13      temporal density      not computed
+#> 13      temporal density            0.0139
 #> 14              sessions              none
 #> 15     vertex attributes role, achievement
 ```
 
-### Co-presence log: actors sharing a group become connected
+The two density rows measure different quantities. **Mean snapshot
+density** is the average, over bins, of the share of ordered pairs with
+at least one spell active at some time within the bin. **Temporal
+density** integrates over time: if $`U_r`$ denotes the total time during
+which ordered pair $`r`$ has at least one active spell, $`n(n - 1)`$ the
+number of ordered pairs and $`\tau`$ the observed span,
 
-Two-mode attendance data. Students are not linked to each other in the
-source at all, only to the seminars they turned up to; the ties have to
-be projected. Name both `actor` and `group`:
+``` math
+D_T = \frac{\sum_r U_r}{n(n - 1)\,\tau}.
+```
+
+Under the contact reading the mean snapshot density is 0.0112 and the
+temporal density is 0: an instantaneous tie is present in a bin but
+occupies no time. Under the threaded reading the mean snapshot density
+rises to 0.0248, because a post now spans every bin between its writing
+and the end of its thread, and the temporal density is 0.0139: summed
+over the 172 pairs, ties are active for 290.8 pair-days out of the 380
+pairs times 54.96 days available. The thread rule is a modelling
+decision. It is the rule under which a forum can be analysed as a
+network of spells with positive duration, and it is applied only when
+`thread` is named.
+
+### Co-presence logs
+
+A co-presence log is two-mode. It records actors against the occasions
+they attended rather than against one another, so ties between actors
+must be projected. `seminar_attendance` records which student attended
+which weekly seminar over one term.
 
 ``` r
 
@@ -199,6 +265,11 @@ head(seminar_attendance, 3)
 #> 2     s22 week_01 2024-09-03
 #> 3     s23 week_01 2024-09-03
 ```
+
+To project the log onto ties between actors,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) is called
+with `actor` naming the actor column and `group` naming the occasion
+column.
 
 ``` r
 
@@ -218,27 +289,30 @@ seminars
 #> # 411 more spells. summary() describes the network; plot() draws it.
 ```
 
-Every pair of students who shared a room becomes a spell, tagged with
-the group that created it. Co-presence networks are always undirected —
-`directed = TRUE` is silently overridden, because “A attended with B”
-has no direction. Note again that `seminar_attendance` carries a `date`
-and no end time, so each seminar contributes point contacts; give the
-source a genuine start and end column if you know how long the meetings
-ran.
+Every pair of students attending the same seminar becomes one spell,
+tagged with the seminar that produced it. An occasion with $`k`$
+attendees contributes $`\binom{k}{2}`$ spells, and the 417 spells here
+are the sum of that quantity over the term’s seminars. Co-presence is
+symmetric, so the network is undirected and `directed = TRUE` is
+overridden; the 224 distinct pairs are 224 of the
+$`\binom{24}{2} = 276`$ unordered pairs, or 81%. The log carries a date
+and no termination time, so each seminar contributes instantaneous
+spells on its day.
 
-### `format = "auto"`, and when to say it out loud
+### Choosing the format
 
-The default `format = "auto"` infers the shape from the arguments you
-name and the columns present. Naming `thread` selects threaded; naming
-`actor` and `group` selects co-presence; an end or duration column gives
-interval; a bare time column gives contact.
-
-The inference is deliberately driven by what you *name*, not by what
-happens to be in the data. `forum_posts` has a `thread` column, but:
+The default `format = "auto"` selects the threaded reading when `thread`
+is named, the co-presence reading when `actor` and `group` are named,
+the interval reading when a termination or duration column is present,
+and the contact reading otherwise. The inference follows the arguments
+supplied, not the columns present in the data. `forum_posts` contains a
+`thread` column, but a call that does not name it yields a contact
+sequence.
 
 ``` r
 
-dynet(forum_posts)
+auto <- dynet(forum_posts)
+auto
 #> # Temporal network (contact format, directed) | a cograph netobject
 #> # 20 vertices | 241 edge spells | 172 distinct pairs
 #> # observed from 0 to 54.96387 days, binned every 1
@@ -253,34 +327,14 @@ dynet(forum_posts)
 #> # 235 more spells. summary() describes the network; plot() draws it.
 ```
 
-That is a contact network, not a threaded one. Auto-detection will not
-silently apply the thread-persistence rule on your behalf — it is a
-modelling decision, so you have to ask for it. State `format` explicitly
-whenever the same table could plausibly be read two ways, or when you
-are building inside a function and want the shape pinned:
+To fix the reading explicitly rather than infer it, `format` is set to
+one of `"interval"`, `"contact"`, `"threaded"` or `"copresence"`.
 
-``` r
+## Inspecting the network
 
-dynet(school_contacts, format = "interval")
-#> # Temporal network (interval format, directed) | a cograph netobject
-#> # 14 vertices | 240 edge spells | 110 distinct pairs
-#> # observed from 0 to 21.52 step, binned every 1
-#> 
-#>   from   to start  end duration weight
-#>  Jonas  Dan  0.00 1.10     1.10      1
-#>   Gita  Ana  0.14 0.98     0.84      1
-#>    Leo Mira  0.15 0.42     0.27      1
-#>    Leo Iris  0.15 0.96     0.81      1
-#>   Kira  Ben  0.33 0.69     0.36      1
-#>    Leo Iris  0.38 0.50     0.12      1
-#> # 234 more spells. summary() describes the network; plot() draws it.
-```
-
-## Inspecting what you built
-
-[`summary()`](https://rdrr.io/r/base/summary.html) on a `dynet` returns
-a tidy two-column description, one row per property. Read it before you
-measure anything.
+To describe a network in a single table,
+[`summary()`](https://rdrr.io/r/base/summary.html) is called on it. The
+result has one row per property.
 
 ``` r
 
@@ -303,40 +357,31 @@ summary(school)
 #> 15     vertex attributes         none
 ```
 
-Row by row:
+`vertices` is the fixed vertex set. Every result retains a row for every
+vertex, so a vertex with no ties in a window appears with a value of
+zero rather than being omitted. `edge spells` counts the derived spells,
+one per row of an interval log, and `distinct pairs` the ordered pairs
+on which they fall; 240 spells on 110 pairs indicates that most pairs
+met more than once. `time unit` is `step` for numeric input and seconds,
+minutes, hours or days for calendar input. The observed range defaults
+to the first and last event. `bin width` is the measurement grid, set by
+the `interval` argument, and `time bins` is the number of bins covering
+the observed range: 22 bins of width 1 cover a span of 21.52.
+`mean snapshot density` is the average, over those 22 bins, of the share
+of the 182 ordered pairs in contact within the bin; at 0.0829,
+approximately one pair in twelve is in contact on an average day,
+compared with 60% over the whole period. `temporal density` is computed
+only on request.
 
-- **format** — which of the four readings was used. Check it matches
-  what you intended.
-- **directed** — whether `from -> to` is meaningful.
-- **vertices** — the fixed vertex universe. Every result keeps these
-  rows, so a vertex that never sends a tie still appears with a zero.
-- **edge spells** — one per derived spell, which for interval input is
-  one per source row.
-- **distinct pairs** — how many different dyads those spells fall on.
-  The gap between 240 spells and 110 pairs is repetition: these students
-  met each other again and again.
-- **time unit** — `step` for numeric input; `seconds` to `weeks` for
-  calendar input, chosen to suit the span.
-- **observed from / observed to / span** — the measurement calendar.
-  Without an explicit declaration these are the first and last event
-  times.
-- **bin width** — the default measurement grid, set by the `interval`
-  argument.
-- **time bins** — how many bins of that width fit the observed period.
-- **mean snapshot density** — averaged over the bins, the share of
-  possible edges present *anywhere* inside each bin.
-- **temporal density** — occupied pair-time divided by eligible
-  pair-time over the whole history. This one integrates; it is not an
-  average of the row above.
-- **sessions** — how many session labels, if the network has any.
-- **vertex attributes** — which node columns came along.
-
-The spell table itself, and the vertex table, come back through
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html):
+To obtain the spell table,
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) is called
+on the network. It returns the spells as constructed, together with the
+derived `duration` and `weight` columns.
 
 ``` r
 
-head(as.data.frame(school), 4)
+spells <- as.data.frame(school)
+head(spells, 4)
 #>    from   to start  end duration weight
 #> 1 Jonas  Dan  0.00 1.10     1.10      1
 #> 2  Gita  Ana  0.14 0.98     0.84      1
@@ -344,9 +389,15 @@ head(as.data.frame(school), 4)
 #> 4   Leo Iris  0.15 0.96     0.81      1
 ```
 
+To obtain the vertex table,
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) is called
+with `what` set to `"nodes"`. For the forum network, this table carries
+the attributes supplied through `nodes`.
+
 ``` r
 
-head(as.data.frame(forum, what = "nodes"), 4)
+forum_nodes <- as.data.frame(forum, what = "nodes")
+head(forum_nodes, 4)
 #>          name        role achievement
 #> 1 facilitator Facilitator        <NA>
 #> 2  student_01     Student      Middle
@@ -354,14 +405,15 @@ head(as.data.frame(forum, what = "nodes"), 4)
 #> 4  student_03     Student        High
 ```
 
-`what` also takes `"bins"` for the measurement grid, `"network"` for the
-aggregate edge list, `"observations"` for the observation calendar,
-`"observed_edges"` for spells intersected with it, and `"vertex_spells"`
-for declared vertex activity.
+`what` also accepts `"bins"` for the measurement grid, `"network"` for
+the aggregated edge list, `"observations"` for the observation calendar,
+`"observed_edges"` for the spells clipped to that calendar, and
+`"vertex_spells"` for declared vertex activity.
 
 ``` r
 
-head(as.data.frame(school, what = "bins"), 4)
+bins <- as.data.frame(school, what = "bins")
+head(bins, 4)
 #>   bin lo hi time closed
 #> 1   1  0  1    0  FALSE
 #> 2   2  1  2    1  FALSE
@@ -369,9 +421,15 @@ head(as.data.frame(school, what = "bins"), 4)
 #> 4   4  3  4    3  FALSE
 ```
 
+Each bin extends from `lo` to `hi` and is labelled by its start `time`.
+Bins are half-open, as spells are, with the exception of the last bin,
+whose `closed` flag is `TRUE` so that an event at the final observed
+instant is counted rather than dropped.
+
 ``` r
 
-head(as.data.frame(school, what = "network"), 4)
+pairs <- as.data.frame(school, what = "network")
+head(pairs, 4)
 #>   from  to weight
 #> 1 Cara Ana      1
 #> 2  Dan Ana      2
@@ -379,11 +437,17 @@ head(as.data.frame(school, what = "network"), 4)
 #> 4 Hugo Ana      2
 ```
 
-## Directedness, loops, weights, node attributes
+The aggregated edge list has one row per ordered pair that was ever in
+contact, and its `weight` is the number of spells on that pair: Dan
+contacted Ana twice and Gita contacted Ana three times. This is the
+static graph on which a non-temporal analysis would operate.
 
-These are all
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
-arguments. A small hand-written log makes each one visible:
+## Direction, loops, weights and attributes
+
+A small hand-constructed log illustrates the remaining constructor
+arguments. It has five rows among three vertices, and its fifth row is a
+self-tie from `A` to `A`. The `posts` column records the number of
+messages each row represents.
 
 ``` r
 
@@ -396,13 +460,17 @@ tiny <- data.frame(
 )
 ```
 
-`directed = FALSE` folds `A -> B` and `B -> A` onto one dyad, and
-`weight` names a column of event multiplicity:
+To build an undirected network with a weight per event,
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) is called
+with `directed` set to `FALSE` and `weight` naming the multiplicity
+column. A column named `weight`, `weights` or `strength` is detected
+without being named, and a message reports the choice.
 
 ``` r
 
-dynet(tiny, directed = FALSE, weight = "posts")
+undirected <- dynet(tiny, directed = FALSE, weight = "posts")
 #> Dropped 1 self-loop event(s). Use loops = TRUE to keep them.
+undirected
 #> # Temporal network (interval format, undirected) | a cograph netobject
 #> # 3 vertices | 4 edge spells | 2 distinct pairs
 #> # observed from 0 to 5 step, binned every 1
@@ -414,15 +482,20 @@ dynet(tiny, directed = FALSE, weight = "posts")
 #>     A  C     3   4        1      5
 ```
 
-Five source rows became four spells and two distinct pairs. The fifth
-row is a self-loop, `A -> A`, and self-loops are dropped by default with
-a message — almost always what a relational log needs. Keep them if the
-loop means something in your design:
+The five rows become four spells on two pairs. In an undirected network
+the pair is unordered, so `B -> A` is folded onto `A -> B` while
+retaining its own onset and termination, and the two spells on that pair
+overlap in $`[1, 2)`$. The self-tie is dropped with a message, because a
+loop is not a relation between two actors. The `weight` column now
+carries the value of `posts`. To retain self-ties, `loops` is set to
+`TRUE`; a retained loop adds two to the degree of its vertex, once as
+sender and once as receiver.
 
 ``` r
 
-dynet(tiny, loops = TRUE)
+with_loops <- dynet(tiny, loops = TRUE)
 #> Keeping 1 self-loop event(s); each adds two to its vertex's degree.
+with_loops
 #> # Temporal network (interval format, directed) | a cograph netobject
 #> # 3 vertices | 5 edge spells | 5 distinct pairs
 #> # observed from 0 to 6 step, binned every 1
@@ -435,8 +508,13 @@ dynet(tiny, loops = TRUE)
 #>     A  A     4   6        2      1     1
 ```
 
-`interval` sets the default bin width used by every measurement verb, in
-the network’s own time unit:
+With direction retained and the loop kept, the same five rows are five
+spells on five distinct ordered pairs, and `posts` is carried as a spell
+attribute because no weight was named.
+
+Every measurement function tiles the observation period into bins of a
+default width. To set that width, `interval` is specified in the
+network’s time unit.
 
 ``` r
 
@@ -461,17 +539,24 @@ summary(tiny_dn)
 #> 15     vertex attributes         none
 ```
 
-Vertex attributes come in through `nodes`. The vertex key column is
-auto-detected, and `groups` names one attribute to use as the vertex
-partition — written into the places cograph looks for it, so
+The span of 5 is covered by three bins of width 2. The mean snapshot
+density of 0.3333 can be verified directly: the three bins contain two,
+three and one active ordered pairs out of the $`3 \times 2 = 6`$
+possible, and the mean of $`2/6`$, $`3/6`$ and $`1/6`$ is $`1/3`$.
+
+To attach vertex attributes, a table is passed to `nodes`; the key
+column is detected by name. To designate one attribute as the vertex
+partition, it is named in `groups`. The partition is stored as a
+`groups` column, and
 [`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)
-colours and groups by it without further argument.
+colours by it without a further argument.
 
 ``` r
 
 roles <- dynet(forum_posts, thread = "thread",
                nodes = forum_people, groups = "role")
-head(as.data.frame(roles, what = "nodes"), 4)
+role_nodes <- as.data.frame(roles, what = "nodes")
+head(role_nodes, 4)
 #>          name        role achievement      groups
 #> 1 facilitator Facilitator        <NA> Facilitator
 #> 2  student_01     Student      Middle     Student
@@ -479,9 +564,12 @@ head(as.data.frame(roles, what = "nodes"), 4)
 #> 4  student_03     Student        High     Student
 ```
 
-Those attributes are what
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
-partitions on:
+An attribute is what makes group-level questions possible. To count ties
+within and between the groups defined by an attribute,
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) is
+called with `attribute` naming the attribute. The result has one row per
+ordered pair of groups per bin, and its `value` is the number of ordered
+pairs of vertices in those two groups with an active tie in the bin.
 
 ``` r
 
@@ -499,32 +587,28 @@ head(role_mixing, 4)
 #>     0     Facilitator -> Student     0 Facilitator     Student
 ```
 
+Three roles give nine ordered group pairs, and 55 daily bins give the
+495 rows reported in the header. In the first bin no facilitator was yet
+involved.
+
 ## Sessions
 
-A session is a wall in time. Terms, courses, class periods, hospital
-admissions: periods that a time-respecting path should not be allowed to
-walk across, even though the clock runs continuously through them. Name
-a column with `session`.
-
-`school_contacts` has no session column, so derive one — three weeks of
-contact give three weekly sessions:
-
-``` r
-
-weekly <- transform(
-  school_contacts,
-  week = paste0("week_", floor(start / 7) + 1)
-)
-head(weekly, 3)
-#>    from   to start  end   week
-#> 1 Jonas  Dan  0.00 1.10 week_1
-#> 2  Gita  Ana  0.14 0.98 week_1
-#> 3   Leo Mira  0.15 0.42 week_1
-```
+A session is a segment of the observation period that a time-respecting
+path may not cross, although the clock runs continuously through it: a
+course, a term, a class period, a day of a conference. Contacts in
+different sessions remain ordered in time, but a chain of contacts
+spanning two sessions is not treated as a path, because whatever passed
+along it would have had to persist across the break. To declare
+sessions, a column is named with `session`. When the log has no such
+column, we cut the time axis instead: to assign each contact to the week
+in which it started, we call
+[`set_tie_sessions()`](https://pak.dynasite.org/Dynet/reference/set_tie_sessions.md)
+with `breaks` at days 7 and 14 and `labels` for the three weeks.
 
 ``` r
 
-sessioned <- dynet(weekly, session = "week")
+sessioned <- set_tie_sessions(school, breaks = c(7, 14),
+                              labels = c("week_1", "week_2", "week_3"))
 summary(sessioned)
 #>                 property        value
 #> 1                 format     interval
@@ -544,9 +628,14 @@ summary(sessioned)
 #> 15     vertex attributes         none
 ```
 
-Every verb that takes time then takes a `sessions` argument with three
-settings, and the choice changes the answer rather than the formatting.
-Temporal paths show it most sharply:
+The network is otherwise unchanged; the summary now reports three
+sessions. Every function that takes time also takes `sessions`, with
+three settings that change what is computed rather than how the result
+is laid out. To find the earliest time-respecting path from one student
+to every other (Kempe, Kleinberg and Kumar, 2002),
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) is called
+with `from` for the source and `sessions` for the setting, and the
+result is summarised.
 
 ``` r
 
@@ -563,9 +652,10 @@ summary(collapsed)
 #> 8        max hops       4
 ```
 
-`"collapse"` ignores the labels entirely and treats the history as one
-continuous stream. Ana reaches all thirteen other students, at a median
-latency of 7.51 time steps.
+With `"collapse"` the session labels are ignored and the period is
+treated as a single stream, which is equivalent to an unsessioned
+network. Ana reaches all thirteen other students, at a median latency of
+7.51 days and within four hops.
 
 ``` r
 
@@ -582,10 +672,14 @@ summary(inside)
 #> 8        max hops       5
 ```
 
-`"bounded"` keeps every path inside a single session. Ana still reaches
-everyone, but she has to do it by routes that never cross a week
-boundary, so the journeys get longer — median latency rises to 8.21 and
-the longest journey grows from four hops to five.
+With `"bounded"` every path must remain within one session: the search
+is run within each session and, for every destination, the best result
+across sessions is retained. Ana still reaches every student, but by
+routes that never cross a week boundary: the median latency rises from
+7.51 to 8.21 days, the maximum from 11.66 to 13.21 days, and the longest
+route from four hops to five. Some of the earliest routes in the
+collapsed search used contacts on both sides of a week boundary and are
+no longer admissible.
 
 ``` r
 
@@ -618,24 +712,28 @@ summary(per_session)
 #> 24  week_3        max hops       3
 ```
 
-`"separate"` reports each session on its own rows instead of pooling
-them. Now the weeks are visibly different: within week 1 Ana reaches 6
-of the other 13 students, within week 2 all 13, within week 3 only 5.
-
-`"bounded"` is the default everywhere. On a network with no sessions
-there is nothing to bound, so `"bounded"` and `"collapse"` give the same
-answer and the default costs nothing when you have not declared any
-sessions. `"separate"` is the exception: with no session column there is
-nothing to report separately, and it raises an error rather than
-silently pooling.
+With `"separate"` each session is searched and reported on its own rows.
+Within week 1 Ana reaches 6 of the 13 other students (share 0.462),
+within week 2 all 13, and within week 3 only 5 (share 0.385). Week 2 is
+the week in which the class is most connected: two of the three densest
+days of the daily density series in
+[`vignette("dynet")`](https://pak.dynasite.org/Dynet/articles/dynet.md),
+days 13 and 14, fall within it, and its routes are also the longest, up
+to six hops. `"bounded"` is the default. On a network without sessions
+there is nothing to bound, so `"bounded"` and `"collapse"` coincide and
+the default incurs no cost. `"separate"` requires a session column and
+raises an error of class `dynet_bad_input` when none is present.
 
 ## Observation windows
 
-The observed range defaults to the first and last event in the log. That
-is a guess, and it is usually wrong: a study that ran for four weeks but
-saw no contact in the last three days is not a study that ran for 25
-days. Since the observed range is the denominator of every rate and the
-horizon of every path, declare it when you know it.
+The observed range defaults to the first and last event in the log. This
+default treats the data as if observation began with the first contact
+and ended with the last, which rarely corresponds to how a study was
+conducted. The observed range matters because it is the denominator of
+every rate and the horizon of every path search: a density is a share of
+pair-time, and a path search terminates at the end of observation. When
+the study period is known, it should be declared by setting
+`observation_start` and `observation_end`.
 
 ``` r
 
@@ -659,17 +757,22 @@ summary(bounded)
 #> 15     vertex attributes         none
 ```
 
-The span is now 14 rather than 21.52, and both densities changed because
-the exposure they divide by changed. This is an administrative limit,
-not a filter: the raw spell boundaries are untouched, and
+The span is 14 rather than 21.52, giving 14 bins rather than 22, and the
+mean snapshot density is 0.0922 rather than 0.0829. The spells are
+unchanged; the first two weeks are simply denser than the third, and
+averaging over them alone yields a higher value. The bounds clip
+exposure and do not filter the data:
 [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) still
-returns them exactly as supplied. Positive spells contribute their
-half-open intersection with the window; a genuine point contact sitting
-on either limit is kept.
+returns every spell as supplied. A spell of positive duration
+contributes its half-open intersection with the window, and an
+instantaneous event on either limit is retained.
 
-For interrupted observation — a holiday, a sensor outage, a gap between
-waves — give the observed periods directly. Overlapping and adjacent
-spells are merged into canonical components.
+Observation is often interrupted: a holiday, a system outage, a gap
+between data exports. To declare the observed periods, a table of their
+starts and ends is passed to `observation_spells`; overlapping and
+adjacent periods are merged. To read the calendar back,
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) is called
+with `what` set to `"observations"`.
 
 ``` r
 
@@ -704,40 +807,45 @@ summary(gapped)
 #> 15     vertex attributes         none
 ```
 
-Seventeen bins, not 21: the grid restarts inside each component and
-never creates a bin that lies entirely in the gap. Exposure sums the
-component durations rather than taking the hull, so events falling in
-the gap are excluded from the denominator instead of quietly inflating
-it.
+The two periods cover 8 and 9 days and give 17 bins rather than the 21
+that a hull from 0 to 21 would give: the grid restarts within each
+period and never places a bin in the gap. Exposure is the sum of the two
+durations rather than their hull, so the four unobserved days do not
+inflate any denominator, and an event falling in the gap is not counted.
 
-The same calendar is editable after the fact, and
+The calendar can be modified after construction. To replace it,
+[`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
+is called with `start` and `end`. To restore the implicit continuous
+window,
 [`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md)
-puts back the implicit continuous window:
+is called.
 
 ``` r
 
-as.data.frame(set_observations(school, start = 2, end = 10),
-              what = "observations")
+narrowed <- set_observations(school, start = 2, end = 10)
+as.data.frame(narrowed, what = "observations")
 #>   observation start end duration instant
 #> 1           1     2  10        8   FALSE
 ```
 
 ``` r
 
-as.data.frame(clear_observations(gapped), what = "observations")
+continuous <- clear_observations(gapped)
+as.data.frame(continuous, what = "observations")
 #>   observation start   end duration instant
 #> 1           1     0 21.52    21.52   FALSE
 ```
 
 ## Vertex activity spells
 
-Observation windows say when *the study* was running. Vertex spells say
-when a *vertex* was eligible to have ties at all — a student who
-enrolled late, a nurse on a rota, a user who deleted their account.
-Supply a tidy table with `node`, `start` and `end`.
-
-A vertex with no row in the table stays eligible at all times, so you
-only declare the ones that change.
+Observation windows state when the study was in progress. Vertex
+activity spells state when a vertex was eligible to have ties at all: a
+student who enrolled late, a participant who left, a member present only
+in some terms. The distinction matters for every per-vertex measure,
+because a vertex with no contacts in a bin should score zero only if it
+could have had contacts. To declare activity, a table with `node`,
+`start` and `end` is passed to `vertex_spells`. A vertex with no row in
+the table is eligible throughout.
 
 ``` r
 
@@ -756,38 +864,45 @@ as.data.frame(scheduled, what = "vertex_spells")
 #> 2             FALSE
 ```
 
-Ben becomes eligible at time 7. Every measurement now runs on the
-eligible population rather than the fixed one. The fixed vertex universe
-is unchanged and Ben keeps a row in every bin, but the bins before he
-arrives report `NA` rather than a degree of zero — the difference
-between “had no contacts” and “was not there to have any”:
+Ben is now eligible from day 7. He retains a row in every bin, but the
+bins before his arrival report `NA` rather than zero, which
+distinguishes having had no contacts from not having been present. To
+observe this,
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+is called with `measure` set to `"degree"` on the two networks.
 
 ``` r
 
 school_degree <- dyn_centrality(school, measure = "degree")
-school_degree_table <- as.data.frame(school_degree)
-head(school_degree_table, 4)
-#>   time node measure value
-#> 1    0  Ana  degree     1
-#> 2    0  Ben  degree     1
-#> 3    0 Cara  degree     1
-#> 4    0  Dan  degree     1
+head(school_degree, 4)
+#> # Degree (node-level)
+#> # 14 vertices | 22 time points, 1 per bin | time in step
+#> # first 4 of 308 rows
+#>  time node measure value
+#>     0  Ana  degree     1
+#>     0  Ben  degree     1
+#>     0 Cara  degree     1
+#>     0  Dan  degree     1
 ```
 
 ``` r
 
 scheduled_degree <- dyn_centrality(scheduled, measure = "degree")
-scheduled_degree_table <- as.data.frame(scheduled_degree)
-head(scheduled_degree_table, 4)
-#>   time node measure value
-#> 1    0  Ana  degree     1
-#> 2    0  Ben  degree    NA
-#> 3    0 Cara  degree     1
-#> 4    0  Dan  degree     1
+head(scheduled_degree, 4)
+#> # Degree (node-level)
+#> # 14 vertices | 22 time points, 1 per bin | time in step
+#> # first 4 of 308 rows
+#>  time node measure value
+#>     0  Ana  degree     1
+#>     0  Ben  degree    NA
+#>     0 Cara  degree     1
+#>     0  Dan  degree     1
 ```
 
-That distinction moves the summaries, because the empty bins are no
-longer averaged in as zeroes:
+The distinction affects every per-vertex summary, because the bins
+before arrival are no longer averaged in as zeros. To reduce each series
+to one row per vertex,
+[`summary()`](https://rdrr.io/r/base/summary.html) is called on it.
 
 ``` r
 
@@ -809,23 +924,26 @@ head(scheduled_degree_summary, 3)
 #> 3 Cara  degree 22 2.227273 1.342770   0   5         4
 ```
 
-Ana is untouched, at mean degree 2.182 either way. Ben’s mean rises from
-2.000 to 2.133: the same contacts, divided by the fifteen bins in which
-he was actually eligible rather than all twenty-two.
+Ana is unchanged at a mean degree of 2.18 over 22 bins. Ben’s mean rises
+from 2.00 over 22 bins to 2.13 over the 15 bins in which he was
+eligible, his standard deviation falls from 1.23 to 1.13, and his peak
+moves from day 4, which now precedes his arrival, to day 11. The eleven
+contacts recorded for Ben before day 7 remain in the spell table; the
+declaration states only that the days before his arrival were not
+opportunities for him.
 
-The same declaration is editable.
+The declaration can be edited. To replace the table,
 [`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
-replaces the table,
+is called; to extend it,
 [`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md)
-adds to it:
+is called.
 
 ``` r
 
 activity <- set_vertex_spells(school, arrivals)
-as.data.frame(add_vertex_spells(activity,
-                                data.frame(node = "Cara",
-                                           start = 3, end = 12)),
-              what = "vertex_spells")
+extended <- add_vertex_spells(activity,
+                              data.frame(node = "Cara", start = 3, end = 12))
+as.data.frame(extended, what = "vertex_spells")
 #>   vertex_spell node start   end duration instant session onset_censored
 #> 1            1  Ana     0 21.52    21.52   FALSE    <NA>          FALSE
 #> 2            2  Ben     7 21.52    14.52   FALSE    <NA>          FALSE
@@ -836,16 +954,20 @@ as.data.frame(add_vertex_spells(activity,
 #> 3             FALSE
 ```
 
-## Editing without breaking time
+## Editing a network
 
-Every editing verb returns a **new** network. Nothing is modified in
-place, so a chain of edits is a chain of objects and the source stays
-exactly as it was. Each edit rebuilds the canonical spell identities and
-the cograph projection together, which is why the temporal object must
-be edited through these verbs rather than through cograph’s static
-setters.
+Every editing function returns a new network and leaves its input
+unchanged. Each edit rebuilds the spell table and the `cograph`
+projection together, so a temporal network is edited through these
+functions and not through `cograph`’s static setters, which carry no
+temporal information.
 
-Add an isolate before you refer to it as a tie endpoint:
+To add a vertex,
+[`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md)
+is called with a table of names and attributes. To add a tie,
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md) is
+called with a table of spells; each tie endpoint must already exist as a
+vertex.
 
 ``` r
 
@@ -872,8 +994,15 @@ summary(step2)
 #> 15     vertex attributes         role
 ```
 
-Fifteen vertices, 241 spells, 111 distinct pairs, and a `role` attribute
-that did not exist a moment ago. The original is untouched:
+The edited network has 15 vertices, 241 spells, 111 distinct pairs and a
+`role` attribute, which every original vertex holds as `NA`. Its mean
+snapshot density is 0.0723, lower than the 0.0829 of the original
+although a tie was added: the number of ordered pairs rose from 182 to
+$`15 \times 14 =
+210`$, so the same ties are shares of a larger denominator. Adding a
+vertex changes every density in the network, which is why the vertex set
+is fixed at construction and edited deliberately. The original is
+unchanged.
 
 ``` r
 
@@ -896,12 +1025,16 @@ summary(school)
 #> 15     vertex attributes         none
 ```
 
-Removal addresses a tie by name and time, and renaming takes a named
-vector of old-to-new:
+To remove a tie,
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md)
+is called with the endpoints and the onset time. To rename vertices,
+[`rename_nodes()`](https://pak.dynasite.org/Dynet/reference/rename_nodes.md)
+is called with a named vector mapping old names to new.
 
 ``` r
 
-summary(remove_ties(step2, from = "Ana", to = "Nova", start = 4))
+step3 <- remove_ties(step2, from = "Ana", to = "Nova", start = 4)
+summary(step3)
 #>                 property        value
 #> 1                 format     interval
 #> 2               directed          yes
@@ -922,16 +1055,22 @@ summary(remove_ties(step2, from = "Ana", to = "Nova", start = 4))
 
 ``` r
 
-tail(as.data.frame(rename_nodes(step2, c(Nova = "Nova B.")), what = "nodes"), 3)
+renamed <- rename_nodes(step2, c(Nova = "Nova B."))
+renamed_nodes <- as.data.frame(renamed, what = "nodes")
+tail(renamed_nodes, 3)
 #>       name     role
 #> 13    Mira     <NA>
 #> 14    Nils     <NA>
 #> 15 Nova B. exchange
 ```
 
+Removing the tie returns the spell and pair counts to 240 and 110 while
+Nova remains as a vertex with no ties, and the density settles at
+0.0719, the original 15.09 mean edges per bin over 210 pairs. To
+restrict a network to a subset of its vertices,
 [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
-cuts a temporal subgraph by vertex or by an edge-level condition,
-keeping the time structure of what survives:
+is called with `nodes` for the vertex names; `ties` instead accepts a
+condition on the spell table.
 
 ``` r
 
@@ -955,19 +1094,21 @@ summary(five)
 #> 15     vertex attributes         none
 ```
 
-Note that the observed range narrowed too, from `0`–`21.52` to
-`3.17`–`21.33`: these five students’ first contact with one another was
-not on day zero.
+The five students share 18 spells on 11 of their 20 ordered pairs. The
+observed range narrows from 0 to 21.52 to 3.17 to 21.33, because the
+subgraph’s range defaults to its own first and last contact; to retain
+the original study period, it must be declared with `observation_start`
+and `observation_end`.
 
-## Basic summaries
+## Descriptive measures
 
-With the network built and its calendar declared, the descriptive verbs
-all follow the same shape — one call, named arguments, a tidy frame
-back.
-
-[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
-measures graph-level structure in each bin. Ask for several at once and
-they arrive stacked with a `measure` column:
+A temporal network is measured in windows. The observation period is
+divided into bins, the spells active in each bin are aggregated into a
+static snapshot, a static measure is computed on every snapshot, and the
+result is a time series. To measure graph-level structure in each bin,
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) is
+called with `measure` naming the statistics. Several measures are
+returned stacked in one data frame with a `measure` column.
 
 ``` r
 
@@ -986,8 +1127,16 @@ head(basics, 6)
 #>     1 active_nodes  8.00000000
 ```
 
-[`summary()`](https://rdrr.io/r/base/summary.html) collapses a series to
-one row per measure, with the time at which it peaked:
+`edges` is the number of ordered pairs with at least one active spell in
+the bin, `density` divides it by the 182 possible pairs, and
+`active_nodes` is the number of vertices with at least one tie. On day
+0, 10 ties among 13 of the 14 students give a density of 0.055; on day
+1, 8 ties among 8 students give 0.044.
+
+To reduce each series to one row,
+[`summary()`](https://rdrr.io/r/base/summary.html) is called on the
+result. The table reports the mean, standard deviation, range and peak
+time of each measure.
 
 ``` r
 
@@ -1004,10 +1153,29 @@ summary(six)
 #> 6 transitivity 22  0.11496262 0.12515367 0.00000000  0.4000000        11
 ```
 
-`step` and `window` are separate arguments and that separation is the
-point. `step` is how often you look; `window` is how much of the
-timeline each look takes in. Equal values tile the period into disjoint
-bins, which is the default; a larger window slides an overlapping one:
+Density averages 0.083 over the 22 daily bins and peaks at 0.165 on day
+14, the day with the most ties (30). On an average day 12.1 of the 14
+students have at least one contact, and on every day at least 7 do.
+`components` counts the weakly connected components of the snapshot,
+ignoring direction and counting isolates as components of size one. It
+averages 3.6, equals 1 on day 14, when the 30 ties join the whole class
+into one connected snapshot, and peaks at 9 on day 21, the truncated
+final half-day, when 6 ties leave 7 students isolated. `reciprocity` is
+the edgewise measure, the share of arcs $`i \to j`$ in the bin for which
+$`j \to i`$ is also present; it averages 0.145 and reaches 0.467 on day
+14, so even on the busiest day fewer than half the contacts were
+returned within the day. `transitivity` is the share of two-paths
+$`i \to j \to k`$ closed by an arc $`i \to k`$, the weak convention of
+[`sna::gtrans()`](https://rdrr.io/pkg/sna/man/gtrans.html); it averages
+0.115 and peaks at 0.4 on day 11. Both cohesion measures are low because
+a daily snapshot of a classroom is sparse, and both are computed on the
+snapshot as a static graph.
+
+`step` and `window` are separate arguments. `step` is the interval
+between measurements and `window` the length of time each measurement
+covers, counted forward from the measurement time. Equal values tile the
+period into disjoint bins, which is the default. A `window` wider than
+`step` yields a rolling series in which successive windows overlap.
 
 ``` r
 
@@ -1023,22 +1191,35 @@ head(rolling, 4)
 #>     3 density 0.3791209
 ```
 
+The first rolling value, 0.324, is the share of the 182 ordered pairs in
+contact at any time during the seven days from day 0, namely 59 pairs,
+compared with 10 pairs and 0.055 in the first day alone. A rolling
+window trades temporal resolution for a denser, less noisy snapshot. To
+plot a series, [`plot()`](https://rdrr.io/r/graphics/plot.default.html)
+is called on it.
+
 ``` r
 
 school_density <- metrics(school, measure = "density")
 plot(school_density)
 ```
 
-![](building-networks_files/figure-html/unnamed-chunk-48-1.png)
+![](building-networks_files/figure-html/density-plot-1.png)
 
-The `temporal_density` and `onset_intensity` selectors are the
-integrated counterparts — occupied pair-time and known spell starts per
-unit of eligible pair-time, rather than a presence indicator:
+The measures above record presence within a bin: a pair counts once
+regardless of how briefly or how often it was in contact. Two measures
+integrate over time instead. `temporal_density` is the occupied share of
+pair-time within the window, the quantity $`D_T`$ defined above but
+computed per window. `onset_intensity` is the number of spells starting
+in the window divided by the eligible pair-time, $`n(n-1)`$ times the
+window length, and is therefore a rate of tie formation per unit of
+opportunity.
 
 ``` r
 
-metrics(school, measure = c("temporal_density", "onset_intensity"),
-        step = 7, window = 7)
+integrated <- metrics(school, measure = c("temporal_density", "onset_intensity"),
+                      step = 7, window = 7)
+integrated
 #> # Graph structure (graph-level)
 #> # 4 time points, 7 per bin | time in step
 #> # measures: temporal_density, onset_intensity
@@ -1053,27 +1234,49 @@ metrics(school, measure = c("temporal_density", "onset_intensity"),
 #>    21  onset_intensity 0.000000000
 ```
 
+In each full week the eligible pair-time is $`182 \times 7 = 1274`$
+pair-days. The onset intensities of 0.0604, 0.0840 and 0.0440 therefore
+correspond to 77, 107 and 56 spells starting in the three weeks, which
+sum to the 240 spells of the log; the final bin, from day 21 to 21.52,
+contains no new spell. Occupied pair-time is highest in the second week,
+at 0.0386, or 49.2 pair-days of contact out of 1274 available, and falls
+to 0.0013 in the final partial bin. Compared with the mean snapshot
+density of 0.083, the temporal density of approximately 0.03 indicates
+that a pair in contact at some time on a given day is, on average, in
+contact for only a fraction of that day.
+
+To list the ties present in one bin rather than a statistic summarising
+them,
 [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-returns the edges themselves rather than a statistic — the network as it
-stood, one row per edge per time point. Give `at` for a single instant,
-or leave it out for the whole grid:
+is called with `at` for the time. Without `at` the whole grid is
+returned, one row per tie per bin.
 
 ``` r
 
 at_five <- snapshots(school, at = 5)
-head(at_five, 5)
-#> # Snapshot edges | 1 bin | 5 tie rows | time in step
-#>   time from   to weight n_spells
-#> 1    5 Kira  Leo      1        1
-#> 2    5 Kira Gita      1        1
-#> 3    5  Leo Cara      1        1
-#> 4    5  Leo Finn      1        1
-#> 5    5 Mira  Ana      1        1
+at_five
+#> # Snapshot edges | 1 bin | 16 tie rows | time in step
+#>    time from   to weight n_spells
+#> 1     5 Kira  Leo      1        1
+#> 2     5 Kira Gita      1        1
+#> 3     5  Leo Cara      1        1
+#> 4     5  Leo Finn      1        1
+#> 5     5 Mira  Ana      1        1
+#> 6     5 Nils  Ben      1        1
+#> 7     5 Nils  Eve      1        1
+#> 8     5  Ben  Eve      1        1
+#> 9     5  Ben Finn      1        1
+#> 10    5 Cara Kira      1        1
+#> # 6 more rows. summary() counts them by bin.
 ```
 
-[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) counts
-what changed rather than what was present: how many ties formed and
-dissolved in each bin.
+The 16 rows are the 16 ties counted by `edges` on day 5, each with its
+weight and the number of spells that produced it.
+
+To count the ties that formed and dissolved in each bin,
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) is
+called on the network. A formation is a spell onset and a dissolution a
+spell termination.
 
 ``` r
 
@@ -1092,11 +1295,18 @@ head(changes, 6)
 #>     2 dissolution     6
 ```
 
+In the first bin 11 ties formed and 7 dissolved, so contact was
+accumulating; in the second, 4 formed and 6 dissolved.
+
+Duration is what distinguishes an interval log from a contact sequence.
+To measure how long ties lasted,
 [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
-summarises how long relationships lasted. `unit` decides what a duration
-belongs to — `"pair"` for a dyad’s whole history, `"spell"` for the raw
-episodes, `"vertex_activity"` and `"vertex_spell"` for vertex presence,
-`"node_ties"` for incident tie time.
+is called. The default `measure` reports, for each ordered pair, the
+number of spells (`events`), their summed duration (`total`) and their
+mean duration (`mean`). `unit` selects the entity to which a duration
+belongs: `"pair"` for a dyad’s whole history, `"spell"` for the
+individual episodes, `"vertex_activity"` and `"vertex_spell"` for vertex
+presence, and `"node_ties"` for the tie time incident to each vertex.
 
 ``` r
 
@@ -1115,6 +1325,10 @@ head(tie_durations, 6)
 #>   Ana  Kira  events     1
 ```
 
+Ana contacted Gita five times and Jonas four times over the three weeks,
+and Cara, Iris and Kira once each. The 110 pairs times three measures
+give the 330 rows reported in the header.
+
 ``` r
 
 spell_durations <- durations(school, unit = "spell")
@@ -1129,6 +1343,10 @@ head(spell_durations, 4)
 #>   Ana  Dan       168 duration  0.51
 #>   Ana  Dan       228 duration  0.19
 ```
+
+At the spell level there is one row per episode, 240 in all, each
+identified by its row in the source log. Ana’s three contacts with Dan
+lasted 0.32, 0.51 and 0.19 days.
 
 ``` r
 
@@ -1145,14 +1363,17 @@ head(node_durations, 4)
 #>   Dan  events    35
 ```
 
+At the vertex level `events` counts the spells incident to each student
+in either direction: Ana took part in 36 contacts, Ben in 34.
+
 ## Collapsing to a static network
 
-Sometimes the last step is a static picture — a figure, a handover to a
-static-network tool, a sanity check.
+To reduce a period of the temporal network to a static weighted network,
 [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
-flattens any range and returns a cograph network carrying every
-weighting it can compute, so you choose the one you want by name rather
-than recomputing it.
+is called with `start` and `end` delimiting the period. The result is a
+`cograph` network with one row per pair that was in contact during the
+period, carrying every weighting the package can compute, so the
+weighting is selected by name rather than recomputed.
 
 ``` r
 
@@ -1183,48 +1404,63 @@ flat
 #>               1
 ```
 
+The first week contains 59 pairs, the same 59 that gave the first
+rolling density of 0.324. For each pair the table gives the presence
+indicator (`binary`), the calendar time with at least one active spell
+(`union_duration`), the summed spell time (`total_duration`), the share
+of the seven days occupied (`duration_fraction`), the number of spells
+and the weight sums, and the times of the first and last contact. Ana
+and Jonas were in contact three times during the week, for 1.44 days in
+total, or 21% of the week, between days 2.12 and 7.00; the two durations
+coincide because their spells do not overlap. To select the weighting
+that `cograph` draws and measures, `weight` is set.
+
 ``` r
 
 first_week <- collapse_network(school, start = 0, end = 7,
                                weight = "union_duration")
-first_week_table <- as.data.frame(first_week)
-head(first_week_table, 4)
-#>   from    to binary union_duration total_duration duration_fraction spell_count
-#> 1  Ana  Cara      1           0.10           0.10        0.01428571           1
-#> 2  Ana  Gita      1           0.33           0.33        0.04714286           1
-#> 3  Ana Jonas      1           1.44           1.44        0.20571429           3
-#> 4  Ana  Mira      1           0.41           0.41        0.05857143           1
-#>   weight_sum weighted_duration latest_weight first last activity.duration
-#> 1          1              0.10             1  6.67 6.77              0.10
-#> 2          1              0.33             1  6.57 6.90              0.33
-#> 3          3              1.44             1  2.12 7.00              1.44
-#> 4          1              0.41             1  6.36 6.77              0.41
-#>   activity.count
-#> 1              1
-#> 2              1
-#> 3              3
-#> 4              1
+first_week
+#> # Collapsed temporal network | 14 vertices | 59 edges | weight: union_duration
+#> # 0 to 7 step
+#>  from    to binary union_duration total_duration duration_fraction spell_count
+#>   Ana  Cara      1           0.10           0.10        0.01428571           1
+#>   Ana  Gita      1           0.33           0.33        0.04714286           1
+#>   Ana Jonas      1           1.44           1.44        0.20571429           3
+#>   Ana  Mira      1           0.41           0.41        0.05857143           1
+#>   Ben   Eve      1           1.58           1.58        0.22571429           2
+#>   Ben  Finn      1           0.23           0.23        0.03285714           1
+#>  weight_sum weighted_duration latest_weight first last activity.duration
+#>           1              0.10             1  6.67 6.77              0.10
+#>           1              0.33             1  6.57 6.90              0.33
+#>           3              1.44             1  2.12 7.00              1.44
+#>           1              0.41             1  6.36 6.77              0.41
+#>           2              1.58             1  3.61 6.24              1.58
+#>           1              0.23             1  4.91 5.14              0.23
+#>  activity.count
+#>               1
+#>               1
+#>               3
+#>               1
+#>               2
+#>               1
 ```
 
-`weight` selects which column drives the static edge weight: `"binary"`
-for presence, `"union_duration"` for calendar time with at least one
-spell, `"total_duration"` for the sum with repetition, `"spell_count"`,
-`"weight_sum"`, `"duration_fraction"`, `"weighted_duration"` or
-`"latest_weight"`. The result is a `cograph_network`, so
-[`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html)
-draws it directly.
-
-Collapsing is the end of the analysis, not the start of it. Everything
-the static picture cannot say — the order events happened in, how long
-each tie lasted, whether a path could have run at all — is in the object
-you built at the top of this vignette.
+A collapsed network is the appropriate object for a static method: a
+layout, a community detection, a comparison with a static reference.
+What it no longer retains is the order of events, the duration of each
+episode and the existence of a time-respecting path, which are available
+only in the temporal object.
 
 ## References
 
-Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+Holme, P., & Saramäki, J. (2012). Temporal networks. *Physics Reports*,
 519(3), 97–125.
 
+Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
+problems for temporal networks. *Journal of Computer and System
+Sciences*, 64(4), 820–842.
+
 Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis
-to understand and improve collaborative learning. *Proceedings of the
-Tenth International Conference on Learning Analytics & Knowledge*,
-314–319.
+to understand and improve collaborative learning. In *Proceedings of the
+Tenth International Conference on Learning Analytics & Knowledge*
+(pp. 314–319). ACM.

@@ -1,131 +1,57 @@
-# Trees of Thought: temporal-network reproduction with Dynet
+# Case study: How kinds of contribution follow one another in course discussions
 
-This is a pkgdown **article**, not a package vignette: it is built for
-the website from the working tree and is not part of the source tarball,
-because it runs the whole study end to end and draws every temporal view
-Dynet has.
+In this article we analyse the reply table of the *Trees of Thought*
+study, which coded the messages of asynchronous course discussions into
+kinds of contribution such as inquiring, arguing or approving. The unit
+of analysis is the code rather than the student: a tie runs from the
+code of a reply to the code of the message it answers. We ask which
+kinds of contribution the discussions return to, how quickly a
+contribution of one kind can lead to any other, and which kinds sit on
+the routes between the rest.
+
+## Data
+
+`thought_chains` is the study’s reply table, anonymised: 23,017 reply
+links among nine codes, from 1,169 discussions in 29 groups across five
+courses. Each row is one reply. `from` is the code of the reply, `to`
+the code of the message it answers, `time` the moment of the reply,
+`discussion` the thread it belongs to, and `course` and `group` the
+course and course group. A code that answers itself is a self-link;
+there are 9,452 of them.
 
 ``` r
 
-# Messages and warnings are left on: anything the package says while building
-# or drawing belongs in the record, not suppressed out of it.
-knitr::opts_chunk$set(
-  message = TRUE, warning = TRUE, echo = TRUE,
-  fig.width = 10, fig.height = 6, dpi = 120
-)
-
-# Prefer the working tree, fall back to the installed package. The multilayer
-# views below need cograph's repaired plane spacing, layer and node labelling
-# and slice handling, which live in its working tree beside this one; the
-# installed release draws them with its own spacing.
-load_working_tree <- function(path, package) {
-  usable <- dir.exists(path) && requireNamespace("devtools", quietly = TRUE)
-  if (usable) devtools::load_all(path) else library(package, character.only = TRUE)
-  invisible(usable)
-}
-here <- dirname(knitr::current_input(dir = TRUE))
-load_working_tree(normalizePath(file.path(here, "../.."), mustWork = FALSE),
-                  "Dynet")
-load_working_tree(normalizePath(file.path(here, "../../../cograph"),
-                                mustWork = FALSE), "cograph")
+library(Dynet)
+head(thought_chains)
 ```
 
-    ## 
-    ## Attaching package: 'cograph'
+    ##           from           to                time participant discussion group
+    ## 1 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ## 2 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ## 3 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ## 4 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ## 5 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ## 6 Coordinating Coordinating 2006-09-23 18:06:29        P028          1  A_01
+    ##   course
+    ## 1      A
+    ## 2      A
+    ## 3      A
+    ## 4      A
+    ## 5      A
+    ## 6      A
 
-    ## The following objects are masked from 'package:Dynet':
-    ## 
-    ##     add_nodes, remove_nodes, rename_nodes
+## The network
 
-## What this document reproduces
-
-The *Trees of Thought* study coded asynchronous discussion messages into
-ten interaction codes and studied how one code follows another **over
-time**. Its unit of analysis is not the student but the code: a tie runs
-from the code of a message to the code of the message it replies to, so
-the network is a code-to-code process network whose vertices are
-`Inquiring`, `Arguing`, `Drafting`, `Coordinating` and the other five
-categories of the shipped table (the study’s ten codes, with
-*Evaluation* and *Acceptance* merged into *Approving*).
-
-The original analysis pipeline was a chain of packages. `Craete.Rmd`
-assembled the spell table and called
-[`networkDynamic()`](https://rdrr.io/pkg/networkDynamic/man/networkDynamic.html)
-to build the dynamic object; `Analyse_trees.Rmd` and
-`Centralities_trees.Rmd` swept it with `tsna`
-([`tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html),
-[`tErgmStats()`](https://rdrr.io/pkg/tsna/man/tErgmStats.html),
-[`tiedDuration()`](https://rdrr.io/pkg/tsna/man/tiedDuration.html),
-[`tReach()`](https://rdrr.io/pkg/tsna/man/reachable_set_sizes.html),
-[`tPath()`](https://rdrr.io/pkg/tsna/man/paths.html)) and `ndtv`
-(`proximity.timeline()`, `transmissionTimeline()`,
-[`plotPaths()`](https://rdrr.io/pkg/tsna/man/plotpath.html));
-`CraeteGROUP.Rmd` split it by course discussion group.
-
-This document asks whether **one package** can carry that whole
-analysis. It imports the saved network the study itself produced and
-re-runs each step with an exported Dynet verb. The mapping is:
-
-| Original call (script) | Dynet verb here |
-|----|----|
-| [`networkDynamic()`](https://rdrr.io/pkg/networkDynamic/man/networkDynamic.html) built from the reply table with time rescaled to days since the discussion start (`Craete.Rmd`) | `dynet(thread = "discussion", thread_clock = "relative")` |
-| `tSnaStats(gden / efficiency / connectedness)` | `metrics(measure = c("density", "efficiency", "connectedness"))` |
-| `tSnaStats("mutuality")` and `tSnaStats("grecip", measure = "edgewise")` | the dyad census `mutual` count and `metrics(measure = "reciprocity")` |
-| `tErgmStats("edges" / "meandeg" / "triangle" / "idegree1.5" / "odegree1.5")` | `metrics(measure = ...)` |
-| `tSnaStats("dyad.census")`, `tSnaStats("triad.census")` | `metrics(measure = c("mutual", "asymmetric", "null"))`, `metrics(measure = "triads")` |
-| `tErgmStats('nodemix("Name")')` | `mixing(attribute = "name")` |
-| four `while` loops over `tSnaStats(snafun = degree / evcent / flowbet / betweenness / closeness / prestige)` | one `dyn_centrality(measure = ...)` call |
-| `centiserve::diffusion.degree(lambda = 1)` on the aggregate | `dyn_centrality(measure = "diffusion")` |
-| `tiedDuration(mode = , neighborhood = )` | `durations(unit = , mode = )` |
-| `tReach(direction = "fwd", start = , end = )` | [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md), `dyn_centrality(scope = "temporal")` |
-| `proximity.timeline(time.increment = 0.1)` (`Visualize.Rmd`) | `plot(dn, type = "proximity")` |
-| `tPath(type = "earliest.arrive", graph.step.time = 0.1)` + `transmissionTimeline()` / [`plotPaths()`](https://rdrr.io/pkg/tsna/man/plotpath.html) inside a `while` loop over the codes (`Visualize.Rmd`) | `paths(direction = "forward", traversal_time = 0.1)` + [`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md) |
-| `tPath(direction = "bkwd", type = "latest.depart", start = 0)` | `paths(direction = "backward", ...)` |
-| [`split()`](https://rdrr.io/r/base/split.html) on `course_group` and a rebuild per group (`CraeteGROUP.Rmd`) | `induce_subgraph(ties = ...)` |
-
-Two differences from the original settings are deliberate and are
-flagged where they occur. First, the study swept its statistics day by
-day (`time.interval = 1`, `aggregate.dur = 1`); every sweep below uses
-`step = 1 / 24, window = 1 / 24`, a ten-times finer grid over the same
-window, which resolves the first day rather than collapsing it into one
-point. Second, the trajectory trees in the path sections are a Dynet
-visual with no counterpart in the original scripts, which drew
-[`tPath()`](https://rdrr.io/pkg/tsna/man/paths.html) results as
-hierarchical network plots; that section says so where it happens.
-
-### How to read this document
-
-This is a reproduction, not a second implementation hidden in a
-notebook. Every temporal-network number below is returned by an exported
-Dynet function. The document imports the saved network, calls those
-functions, and prints or plots the objects they return. It does not
-recompute a statistic by hand, reshape one into a substitute for
-another, run package-parity tests, or alter the supplied network. The
-final section audits those claims with code rather than asserting them.
-
-## The saved temporal network
-
-### Import
-
-The study’s own saved network is not redistributable. This document runs
-on `thought_chains`, the study’s reply table shipped with the package
-with every identity removed, the bottom fifth of authors trimmed, the
-two sparse weekdays dropped, the calendar shifted by whole weeks, and
-*Evaluation* merged with *Acceptance* into *Approving*. Every row is a
-real reply link with its real weekday and time of day; nothing is
-resampled. See
-[`?thought_chains`](https://pak.dynasite.org/Dynet/reference/thought_chains.md).
-
-The study built its network from exactly this kind of table
-(`Craete.Rmd`): a tie opens at the message’s offset from the start of
-its discussion and stays active until the discussion’s last post. That
-is Dynet’s threaded format with each thread on its own clock, so the
-construction is one call. Self-links (a code answering itself) are kept,
-as the study kept them, and the five courses are picked up as sessions.
-Discussions run for four days: 99% of them are over within 3.3 days and
-only three of 1,169 (40 links) drag on past the fourth, so the study
-window is declared as four days with `observation_end = 4`, which clips
-every measurement to it without touching the spells.
+A reply is a contribution to a conversation that is still open, so,
+following Saqr and Nouri (2020), it becomes a tie that opens when the
+reply is posted and closes when its discussion ends. To build the
+network, we call
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with
+`thread` for the discussion column, `thread_clock = "relative"` so that
+time is counted in days from the first post of each discussion,
+`loops = TRUE` to keep self-links, and `observation_end = 4` for a
+four-day observation window. The `course` column is recognised as the
+session column.
 
 ``` r
 
@@ -183,36 +109,28 @@ summary(dn)
     ## 14              sessions            5
     ## 15     vertex attributes         none
 
-``` r
+The network has nine vertices and 23,017 spells on 80 of the 81 possible
+ordered pairs of codes. Time is in days, and on an average day nine of
+every ten ordered pairs are connected (mean snapshot density 0.8958).
+The network is dense because a tie stays open for the life of its
+discussion.
 
-# One course group, used below wherever every single reply has to be legible.
-one_group <- induce_subgraph(dn, ties = group == "A_01")
-```
+## Ties over time
 
-The imported network has 9 codes and 23017 directed edge spells over 80
-distinct ordered pairs, of which 9452 are self-loops.
-
-### What a spell means here
-
-This matters for everything that follows. In `Craete.Rmd` time is
-rescaled by `3600 * 24`, so the clock is **days since the start of the
-discussion the message belongs to**; `thread_clock = "relative"` is that
-clock. A tie opens at the day offset of the message that created it and
-stays active until its discussion ends. Ties therefore accumulate rather
-than flicker, most of them open early, and the window is the declared
-four days.
+To count the ties that open and close in each half day, we call
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) with
+`step` and `window` of 0.5.
 
 ``` r
 
 tie_events <- events(dn, measure = c("formation", "dissolution"),
                      step = 0.5, window = 0.5)
-head(tie_events, 8)
+tie_events
 ```
 
     ## # Edge dynamics (graph-level)
     ## # 8 time points, 0.5 per bin | time in days
     ## # measures: formation, dissolution
-    ## # first 8 of 16 rows
     ##  time     measure value
     ##   0.0   formation 13094
     ##   0.0 dissolution  3842
@@ -222,60 +140,57 @@ head(tie_events, 8)
     ##   1.0 dissolution  5348
     ##   1.5   formation  1457
     ##   1.5 dissolution  2819
+    ##   2.0   formation  1021
+    ##   2.0 dissolution  3675
+    ##   2.5   formation   377
+    ##   2.5 dissolution  1996
+    ## # 4 more rows. summary() aggregates them; plot() draws them.
 
-The first row of that table is the whole story of this network’s shape:
-the large majority of ties form at time 0. Every reachability and path
-result later in the document follows from it.
+13,094 ties open in the first half day, 4,435 in the second and 2,442 in
+the third; only 10 open in the last. Closures peak in the third half
+day, at 5,348, when the shorter discussions end. Most of the network is
+therefore in place from the start, and the analysis below asks what
+happens within it.
 
-## Seeing the temporal network
-
-### Edge-spell timeline
-
-One horizontal bar per spell, ordered by onset: the study’s raw material
-before any statistic is computed.
+To draw the spells over time, we call
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) with
+`type = "timeline"`; each bar is one spell, on an hourly grid, and the
+forty busiest pairs are drawn.
 
 ``` r
 
 plot(dn, type = "timeline", step = 1 / 24)
 ```
 
-![](thought-chains_files/figure-html/edge-spell-timeline-1.png)
+![](thought-chains_files/figure-html/timeline-1.png)
 
-The bin is one hour (`step = 1 / 24` on a network measured in days).
-
-### Formation, dissolution, and active ties
-
-The same tie events as counts over time, with the active-tie stock
-beneath them. This is the plotted form of the
-[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) table
-above.
+To draw the counts of opening and closing ties with the stock of active
+ties beneath them, we set `type` to `"activity"`.
 
 ``` r
 
 plot(dn, type = "activity")
 ```
 
-![](thought-chains_files/figure-html/edge-activity-1.png)
+![](thought-chains_files/figure-html/activity-1.png)
 
-### Whole-window network through cograph
+## Drawing the network
 
-The union of everything that was ever active, drawn by cograph with
-Dynet’s rendering defaults; `layout` is the only choice made here.
+To draw the union of every tie active in the window, we set `type` to
+`"network"`; the drawing is cograph’s and `layout` is passed to it.
 
 ``` r
 
 plot(dn, type = "network", layout = "oval")
 ```
 
-![](thought-chains_files/figure-html/whole-window-network-1.png)
+![](thought-chains_files/figure-html/network-1.png)
 
-### Duration-weighted collapsed network
-
-The binary union above treats a tie that lived one hour like a tie that
-lived five days. `collapse_network(weight = "union_duration")` weights
-each pair by the total time it was active instead, which is the
-aggregate the original analysis approximated by setting `edge.lwd` from
-[`tiedDuration()`](https://rdrr.io/pkg/tsna/man/tiedDuration.html).
+The binary union treats a tie active for an hour like one active for
+four days. To weight each pair by the time it was active, counting
+overlapping spells once, we call
+[`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
+with `weight = "union_duration"` and draw the static network it returns.
 
 ``` r
 
@@ -283,12 +198,10 @@ collapsed <- collapse_network(dn, weight = "union_duration")
 plot(collapsed, layout = "oval")
 ```
 
-![](thought-chains_files/figure-html/collapsed-network-1.png)
+![](thought-chains_files/figure-html/collapsed-1.png)
 
-### Temporal snapshots
-
-Nine equally spaced cross-sections of the same network, the static-panel
-view of the process.
+To draw the network at nine equally spaced cross-sections with a shared
+layout, we set `type` to `"snapshots"`.
 
 ``` r
 
@@ -297,25 +210,22 @@ plot(dn, type = "snapshots", panels = 9)
 
 ![](thought-chains_files/figure-html/snapshots-1.png)
 
-### Proximity timeline with phase networks
-
-`Visualize.Rmd` drew `proximity.timeline()` at `time.increment = 0.1` to
-show codes drifting together and apart. Dynet’s proximity view is the
-same idea: each code is a line whose vertical position tracks its
-distance from the others, sliced finely and annotated here with five
-phase networks.
+The proximity timeline follows each code through time: the window is
+measured in overlapping slices, the distances in each slice are reduced
+to one dimension, and each code is a line whose height follows that
+coordinate, so codes that interact sit close together. Line thickness
+follows degree. To draw it with 80 slices and five phase networks, we
+set `type` to `"proximity"`.
 
 ``` r
 
 plot(dn, type = "proximity", phases = 5, slices = 80)
 ```
 
-![](thought-chains_files/figure-html/proximity-networks-1.png)
+![](thought-chains_files/figure-html/proximity-1.png)
 
-### Proximity trajectories alone
-
-The same construction driven by betweenness instead of degree, without
-the phase networks.
+To let thickness follow betweenness and omit the phase networks, we set
+`measure` and `networks`.
 
 ``` r
 
@@ -325,161 +235,94 @@ plot(dn, type = "proximity", measure = "betweenness",
 
 ![](thought-chains_files/figure-html/proximity-lines-1.png)
 
-## Multilayer views of the sliced network
-
-The original pipeline had no multilayer view: `ndtv` drew the process as
-a proximity timeline and as animated snapshots, and the code-by-code
-structure was read off aggregate matrices. Cutting the window into
-slices and treating each slice as a layer of one multilayer network
-shows both at once — who was talking to whom, and when.
-
-Each slice carries the full code set, so a code keeps its identity
-across the stack. The slicing, the supra-adjacency, the layer membership
-and the display labels are assembled by the package.
-
-### Node-link layers
-
-Three slices of the four-day window, each a plane of the same nine
-codes.
+Cutting the window into slices and treating each slice as one layer of a
+multilayer network shows structure and time together. To draw three
+slices as planes, we set `type` to `"layers"` and `step` to `4 / 3`; to
+draw them as matrices keeping only cells with at least 50 active dyads,
+we set `type` to `"heatmap"` and `threshold` to 50; to draw them as a
+projection in which each plane carries every tie active up to it, we set
+`type` to `"stack"` and `cumulative` to `TRUE`.
 
 ``` r
 
 plot(dn, type = "layers", step = 4 / 3, layout = "circle")
 ```
 
-![](thought-chains_files/figure-html/ml-layers-1.png)
-
-`omega` weights the identity arcs carrying a code from one slice to the
-next — the interlayer coupling. Zero leaves the slices independent.
-
-``` r
-
-plot(dn, type = "layers", step = 4 / 3, omega = 0)
-```
-
-![](thought-chains_files/figure-html/ml-layers-uncoupled-1.png)
-
-### Heatmap planes
-
-The same slices as matrices rather than diagrams. Row and column names
-are drawn once against the front plane, so a cell reads as a code pair
-rather than an anonymous square.
-
-``` r
-
-plot(dn, type = "heatmap", step = 4 / 3)
-```
-
-![](thought-chains_files/figure-html/ml-heatmap-1.png)
-
-Thresholded, so only substantial transitions carry ink:
+![](thought-chains_files/figure-html/layers-1.png)
 
 ``` r
 
 plot(dn, type = "heatmap", step = 4 / 3, threshold = 50)
 ```
 
-![](thought-chains_files/figure-html/ml-heatmap-threshold-1.png)
-
-At the hourly step used for the heatmaps below, the four days split into
-96 slices. That is the right resolution for a grid or a line, and too
-many planes to read as a stack — shown here so the limit is visible
-rather than asserted.
-
-``` r
-
-plot(dn, type = "heatmap", step = 1 / 24, show_node_labels = FALSE)
-```
-
-![](thought-chains_files/figure-html/ml-heatmap-fine-1.png)
-
-### Projected stack
-
-[`cograph::plot_temporal()`](https://sonsoles.me/cograph/reference/plot_temporal.html)’s
-oblique projection, with one colour per code held across every plane.
-Empty windows are drawn rather than skipped, so a gap in the process is
-visible as a gap.
-
-``` r
-
-plot(dn, type = "stack", step = 4 / 3)
-```
-
-![](thought-chains_files/figure-html/ml-stack-1.png)
-
-Cumulative, so each plane carries everything that has happened up to it:
+![](thought-chains_files/figure-html/heatmap-threshold-1.png)
 
 ``` r
 
 plot(dn, type = "stack", step = 4 / 3, cumulative = TRUE)
 ```
 
-![](thought-chains_files/figure-html/ml-stack-cumulative-1.png)
+![](thought-chains_files/figure-html/stack-1.png)
 
-## Graph-level trajectories
+## Structure over time
 
-### Main structural descriptives
-
-The original scripts collected these one call at a time and
-[`cbind()`](https://rdrr.io/r/base/cbind.html)-ed the results into a
-wide matrix.
-[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) takes
-the whole set in one call and returns one tidy row per time point and
-measure.
+To measure the network in each hour, we call
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) with
+`step` and `window` of `1 / 24`. Density is the share of ordered pairs
+connected in the hour, reciprocity the share of arcs whose reverse is
+also present, and efficiency and connectedness two of Krackhardt’s
+(1994) indices of how far a directed network departs from an out-tree.
+To draw one panel per measure, we call
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) with
+`type = "ridge"`.
 
 ``` r
 
-graph_main <- metrics(
-  dn,
-  measure = c(
-    "density", "efficiency", "connectedness", "reciprocity",
-    "edges", "mean_degree"
-  ),
-  step = 1 / 24, window = 1 / 24
-)
-graph_main
+structure <- metrics(dn,
+                     measure = c("density", "reciprocity", "efficiency",
+                                 "connectedness", "edges", "mean_degree"),
+                     step = 1 / 24, window = 1 / 24)
+structure
 ```
 
     ## # Graph structure (graph-level)
     ## # 96 time points, 0.04166667 per bin | time in days
-    ## # measures: density, efficiency, connectedness, reciprocity, edges, mean_degree
+    ## # measures: density, reciprocity, efficiency, connectedness, edges, mean_degree
     ##        time       measure      value
     ##  0.00000000       density  0.7916667
+    ##  0.00000000   reciprocity  0.9122807
     ##  0.00000000    efficiency  0.2343750
     ##  0.00000000 connectedness  1.0000000
-    ##  0.00000000   reciprocity  0.9122807
     ##  0.00000000         edges 57.0000000
     ##  0.00000000   mean_degree  6.3333333
     ##  0.04166667       density  0.8194444
+    ##  0.04166667   reciprocity  0.9152542
     ##  0.04166667    efficiency  0.2031250
     ##  0.04166667 connectedness  1.0000000
-    ##  0.04166667   reciprocity  0.9152542
     ##  0.04166667         edges 59.0000000
     ##  0.04166667   mean_degree  6.5555556
     ## # 564 more rows. summary() aggregates them; plot() draws them.
 
 ``` r
 
-plot(graph_main, type = "ridge")
+plot(structure, type = "ridge")
 ```
 
-![](thought-chains_files/figure-html/graph-main-1.png)
+![](thought-chains_files/figure-html/structure-1.png)
 
-`reciprocity` here is the edgewise reciprocity — the share of arcs that
-are reciprocated — which is what
-`tSnaStats("grecip", measure = "edgewise")` returned in
-`Centralities_trees.Rmd`. The study also reported
-`tSnaStats("mutuality")`, the raw count of mutual dyads; that count is
-the `mutual` column of the dyad census below.
+In the first hour, 57 arcs give a density of 0.79, connectedness is 1,
+so every code is joined to every other, and reciprocity is 0.91: almost
+every transition between two codes occurs in both directions within the
+same hour. An hour later the density is 0.82.
 
-### Dyad census
+To obtain the dyad census (Holland and Leinhardt, 1976), we name the
+mutual, asymmetric and null counts in `measure`; to obtain the
+sixteen-class triad census, we set `measure` to `"triads"`.
 
 ``` r
 
-dyads <- metrics(
-  dn, measure = c("mutual", "asymmetric", "null"),
-  step = 1 / 24, window = 1 / 24
-)
+dyads <- metrics(dn, measure = c("mutual", "asymmetric", "null"),
+                 step = 1 / 24, window = 1 / 24)
 dyads
 ```
 
@@ -506,13 +349,7 @@ dyads
 plot(dyads)
 ```
 
-![](thought-chains_files/figure-html/dyad-census-1.png)
-
-### Triad census
-
-`Centralities_trees.Rmd` swept a triad census with
-`tSnaStats("triad.census")`. Dynet returns the same sixteen MAN triad
-types, one row per type per time point, drawn here as a heatmap.
+![](thought-chains_files/figure-html/dyads-1.png)
 
 ``` r
 
@@ -543,26 +380,24 @@ triads
 plot(triads, type = "heatmap")
 ```
 
-![](thought-chains_files/figure-html/triad-census-1.png)
+![](thought-chains_files/figure-html/triads-1.png)
 
-### Lightweight ERGM-style descriptives
+Of the 36 unordered pairs of codes, 26 are mutual in the first hour, 5
+asymmetric and 5 null. No triad is empty; nine are of class 102, one
+mutual dyad with two null dyads, eight of class 111U and seven of class
+201.
 
-The counterparts of the study’s
-[`tErgmStats()`](https://rdrr.io/pkg/tsna/man/tErgmStats.html) terms —
-`idegree1.5`, `odegree1.5`, `triangle` — plus the two-star and two-path
-counts that describe how the local structure builds up.
+To obtain the two-star, two-path and triangle counts and the degree sums
+raised to 1.5 used as terms in exponential-family random graph models
+(Morris, Handcock and Hunter, 2008), we name them in `measure`.
 
 ``` r
 
-ergm_descriptives <- metrics(
-  dn,
-  measure = c(
-    "indegree_1_5", "outdegree_1_5", "triangles",
-    "in_2stars", "out_2stars", "two_paths"
-  ),
-  step = 1 / 24, window = 1 / 24
-)
-ergm_descriptives
+local <- metrics(dn,
+                 measure = c("indegree_1_5", "outdegree_1_5", "triangles",
+                             "in_2stars", "out_2stars", "two_paths"),
+                 step = 1 / 24, window = 1 / 24)
+local
 ```
 
     ## # Graph structure (graph-level)
@@ -585,36 +420,32 @@ ergm_descriptives
 
 ``` r
 
-plot(ergm_descriptives, type = "ridge")
+plot(local, type = "ridge")
 ```
 
-![](thought-chains_files/figure-html/ergm-descriptives-1.png)
+![](thought-chains_files/figure-html/ergm-1.png)
 
-## Node-level trajectories
+The first hour holds 376 directed triangles and 325 two-paths; the
+second, 436 and 356.
 
-### Centrality
+## Codes
 
-The original centrality section was four `while` loops that called
-[`tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html) once per
-measure, transposed each result, and stitched the pieces back together
-with [`cbind()`](https://rdrr.io/r/base/cbind.html) and
-[`rbind()`](https://rdrr.io/r/base/cbind.html) into
-`Centralities_Combined_rounded.xlsx`. Here the same five measures —
-degree, closeness, betweenness, eigenvector, flow betweenness — plus
-diffusion degree (the study computed that one separately, with
-`centiserve`, and only on the aggregate) come from a single call that
-already returns them tidily.
+To measure each code in each hour, we call
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+with the indices in `measure`: degree, closeness and betweenness
+(Freeman, 1979), eigenvector centrality, flow betweenness (Freeman,
+Borgatti and White, 1991) and diffusion degree (Kundu, Murthy and Pal,
+2011). [`plot()`](https://rdrr.io/r/graphics/plot.default.html) with
+`type = "heatmap"` draws one tile per code and hour, and
+`type = "ridge"` draws the trajectories as lines.
 
 ``` r
 
-centrality <- dyn_centrality(
-  dn,
-  measure = c(
-    "degree", "closeness", "betweenness", "eigenvector",
-    "flow_betweenness", "diffusion"
-  ),
-  step = 1 / 24, window = 1 / 24
-)
+centrality <- dyn_centrality(dn,
+                             measure = c("degree", "closeness", "betweenness",
+                                         "eigenvector", "flow_betweenness",
+                                         "diffusion"),
+                             step = 1 / 24, window = 1 / 24)
 centrality
 ```
 
@@ -641,31 +472,30 @@ centrality
 plot(centrality, type = "heatmap")
 ```
 
-![](thought-chains_files/figure-html/centrality-heatmap-1.png)
+![](thought-chains_files/figure-html/centrality-1.png)
 
 ``` r
 
-plot(centrality, type = "ridge", top = 10)
+plot(centrality, type = "ridge")
 ```
 
-![](thought-chains_files/figure-html/centrality-trajectories-1.png)
+![](thought-chains_files/figure-html/centrality-ridge-1.png)
 
-### In-degree and out-degree
+In the first hour `Socialising` has the highest degree, 18, and
+`Objecting` the lowest, 7; `Arguing` has a closeness of 1, so it reaches
+every other code in one step. `Objecting` stays at the margin
+throughout: it has the lowest mean degree, closeness and betweenness
+over the 96 hours.
 
-The study ran separate loops with `cmode = "indegree"` and
-`cmode = "outdegree"`; in Dynet the direction is the `mode` argument.
+On a directed network the direction of degree is the `mode` argument.
 
 ``` r
 
-directed_degree <- dyn_centrality(
-  dn, measure = "degree", mode = "in",
-  step = 1 / 24, window = 1 / 24
-)
-out_degree <- dyn_centrality(
-  dn, measure = "degree", mode = "out",
-  step = 1 / 24, window = 1 / 24
-)
-plot(directed_degree, type = "heatmap")
+in_degree <- dyn_centrality(dn, measure = "degree", mode = "in",
+                            step = 1 / 24, window = 1 / 24)
+out_degree <- dyn_centrality(dn, measure = "degree", mode = "out",
+                             step = 1 / 24, window = 1 / 24)
+plot(in_degree, type = "heatmap")
 ```
 
 ![](thought-chains_files/figure-html/directed-degree-1.png)
@@ -677,30 +507,20 @@ plot(out_degree, type = "heatmap")
 
 ![](thought-chains_files/figure-html/directed-degree-2.png)
 
-### Prestige
-
-The four prestige variants the study looped over — `indegree`,
-`eigenvector`, `domain` and `domain.proximity` — are the four values of
-the `prestige` argument.
+Prestige indices describe a code by the ties it receives (Wasserman and
+Faust, 1994). Indegree prestige counts the distinct codes with a tie
+into a code; domain proximity prestige discounts the share of codes with
+a directed path into it by their mean distance. To obtain them, we set
+`measure` to `"prestige"` and name the variant in `prestige`.
 
 ``` r
 
-prestige_indegree <- dyn_centrality(
-  dn, measure = "prestige", prestige = "indegree",
-  step = 1 / 24, window = 1 / 24
-)
-prestige_eigenvector <- dyn_centrality(
-  dn, measure = "prestige", prestige = "eigenvector",
-  step = 1 / 24, window = 1 / 24
-)
-prestige_domain <- dyn_centrality(
-  dn, measure = "prestige", prestige = "domain",
-  step = 1 / 24, window = 1 / 24
-)
-prestige_proximity <- dyn_centrality(
-  dn, measure = "prestige", prestige = "domain.proximity",
-  step = 1 / 24, window = 1 / 24
-)
+prestige_indegree <- dyn_centrality(dn, measure = "prestige",
+                                    prestige = "indegree",
+                                    step = 1 / 24, window = 1 / 24)
+prestige_proximity <- dyn_centrality(dn, measure = "prestige",
+                                     prestige = "domain.proximity",
+                                     step = 1 / 24, window = 1 / 24)
 plot(prestige_indegree, type = "heatmap")
 ```
 
@@ -708,38 +528,24 @@ plot(prestige_indegree, type = "heatmap")
 
 ``` r
 
-plot(prestige_eigenvector, type = "heatmap")
+plot(prestige_proximity, type = "heatmap")
 ```
 
 ![](thought-chains_files/figure-html/prestige-2.png)
 
-``` r
+## Flows between codes
 
-plot(prestige_domain, type = "heatmap")
-```
-
-![](thought-chains_files/figure-html/prestige-3.png)
-
-``` r
-
-plot(prestige_proximity, type = "heatmap")
-```
-
-![](thought-chains_files/figure-html/prestige-4.png)
-
-## Code-to-code mixing
-
-`tErgmStats('nodemix("Name")')` produced one column per ordered pair of
-codes, which the original scripts then had to un-widen and re-aggregate
-by hand.
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) returns
-the same 9 x 9 flows already long, one row per time point and per
-ordered pair.
+To count the active dyads from each code to each other code in each
+hour, we call
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) with
+`attribute = "name"`. Each row is one hour and one ordered pair of
+codes, and [`plot()`](https://rdrr.io/r/graphics/plot.default.html) with
+`type = "heatmap"` draws all 81 pairs.
 
 ``` r
 
-mixing_flows <- mixing(dn, attribute = "name", step = 1 / 24, window = 1 / 24)
-mixing_flows
+flows <- mixing(dn, attribute = "name", step = 1 / 24, window = 1 / 24)
+flows
 ```
 
     ## # Mixing by name (graph-level)
@@ -763,90 +569,76 @@ mixing_flows
 
 ``` r
 
-plot(mixing_flows, type = "heatmap")
+plot(flows, type = "heatmap")
 ```
 
-![](thought-chains_files/figure-html/mixing-heatmap-1.png)
+![](thought-chains_files/figure-html/mixing-1.png)
 
-The original scripts then pulled out the mixing columns that involved
-regulation (`select(contains("reg"))`, which caught both
-`Group_regulation` and `T.Regulation`, here `Coordinating` and
-`Tutoring`). The highlight below narrows that to the coordinating flows,
-which keeps the lines distinguishable. The result carries `from_group`
-and `to_group` columns, so the selection is a
-[`subset()`](https://rdrr.io/r/base/subset.html) of the returned table
-handed straight back to the plot method; no mixing statistic is rebuilt
-here.
+To follow one code’s flows against the rest, we call
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) with
+`highlight` naming the code. The flows into and out of `Coordinating`
+are drawn in colour and the others in grey.
 
 ``` r
 
-group_regulation_flows <- with(
-  subset(as.data.frame(mixing_flows),
-         from_group == "Coordinating" | to_group == "Coordinating"),
-  unique(measure)
-)
-plot(mixing_flows, highlight = group_regulation_flows)
+plot(flows, highlight = "Coordinating")
 ```
 
-![](thought-chains_files/figure-html/mixing-group-regulation-1.png)
+![](thought-chains_files/figure-html/mixing-highlight-1.png)
 
-## Tie and vertex duration
+## Duration
 
-### Incident tie counts and durations by node
-
-[`tiedDuration()`](https://rdrr.io/pkg/tsna/man/tiedDuration.html) was
-called six times in `Visualize.Rmd` — count and duration, crossed with
-the `in`, `out` and `combined` neighbourhoods — and the six vectors were
-[`cbind()`](https://rdrr.io/r/base/cbind.html)-ed into a table.
-`durations(unit = "node_ties")` gives the same quantities per node, with
-`mode` selecting the neighbourhood and `measure` selecting event count,
-total duration, or the union of active time (which, unlike the total,
-does not double-count overlapping spells).
+To measure how much tie time each code carries, we call
+[`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
+with `unit = "node_ties"`, `mode = "all"` for ties in either direction,
+and `measure` for the number of spells, their summed duration and the
+union of their active time, which counts overlapping spells once.
 
 ``` r
 
-node_ties_all <- durations(
-  dn, unit = "node_ties", mode = "all",
-  measure = c("events", "total", "union")
-)
-node_ties_in <- durations(
-  dn, unit = "node_ties", mode = "in",
-  measure = c("events", "total", "union")
-)
-node_ties_out <- durations(
-  dn, unit = "node_ties", mode = "out",
-  measure = c("events", "total", "union")
-)
-plot(node_ties_all)
+node_ties <- durations(dn, unit = "node_ties", mode = "all",
+                       measure = c("events", "total", "union"))
+node_ties
 ```
 
-![](thought-chains_files/figure-html/node-tie-duration-1.png)
+    ## # Incident tie duration (node-level)
+    ## # 9 vertices | mode all | time in days
+    ## # measures: events, total, union
+    ## # durations in days
+    ##          node measure     value
+    ##     Approving  events  5825.000
+    ##       Arguing  events  6174.000
+    ##  Coordinating  events  2713.000
+    ##      Drafting  events   779.000
+    ##     Inquiring  events  1892.000
+    ##     Objecting  events   109.000
+    ##    Resourcing  events 20999.000
+    ##   Socialising  events  5493.000
+    ##      Tutoring  events  2034.000
+    ##     Approving   total  5355.039
+    ##       Arguing   total  5539.510
+    ##  Coordinating   total  1389.779
+    ## # 15 more rows. summary() aggregates them; plot() draws them.
 
 ``` r
 
-plot(node_ties_in)
+plot(node_ties)
 ```
 
-![](thought-chains_files/figure-html/node-tie-duration-2.png)
+![](thought-chains_files/figure-html/node-ties-1.png)
+
+`Resourcing` is incident to 20,999 spells with a summed duration of
+22,781 days, against 109 spells and 71 days for `Objecting`. The union
+column shows the ceiling: no code is in contact for more than the four
+days of the window, and six of the nine are in contact for all of it.
+
+To obtain the same accounting per ordered pair of codes, with the mean
+spell length added, we set `unit` to `"pair"`.
 
 ``` r
 
-plot(node_ties_out)
-```
-
-![](thought-chains_files/figure-html/node-tie-duration-3.png)
-
-### Edge-pair duration
-
-The same accounting one level down, per ordered pair of codes, with the
-mean spell length added.
-
-``` r
-
-pair_duration <- durations(
-  dn, unit = "pair",
-  measure = c("events", "total", "union", "mean")
-)
+pair_duration <- durations(dn, unit = "pair",
+                           measure = c("events", "total", "union", "mean"))
 pair_duration
 ```
 
@@ -874,61 +666,24 @@ pair_duration
 plot(pair_duration)
 ```
 
-![](thought-chains_files/figure-html/pair-duration-1.png)
+![](thought-chains_files/figure-html/pairs-1.png)
 
-### Vertex activity duration
+The pairs differ by three orders of magnitude: 1,353 spells run from
+`Approving` to `Resourcing` and 4 from `Approving` to `Objecting`.
 
-How long each code was itself active, as opposed to how long its ties
-were.
+## Reachability and temporal centrality
 
-``` r
-
-vertex_duration <- durations(dn, unit = "vertex_activity")
-vertex_duration
-```
-
-    ## # Vertex activity duration (node-level)
-    ## # 9 vertices | time in days
-    ## # measures: events, total, union
-    ## # durations in days
-    ##          node measure value
-    ##     Approving  events     1
-    ##       Arguing  events     1
-    ##  Coordinating  events     1
-    ##      Drafting  events     1
-    ##     Inquiring  events     1
-    ##     Objecting  events     1
-    ##    Resourcing  events     1
-    ##   Socialising  events     1
-    ##      Tutoring  events     1
-    ##     Approving   total     4
-    ##       Arguing   total     4
-    ##  Coordinating   total     4
-    ## # 15 more rows. summary() aggregates them; plot() draws them.
-
-``` r
-
-plot(vertex_duration)
-```
-
-![](thought-chains_files/figure-html/vertex-duration-1.png)
-
-## Temporal reachability and centrality
-
-[`tReach()`](https://rdrr.io/pkg/tsna/man/reachable_set_sizes.html) was
-used to count, for each code, how many other codes it could reach along
-time-respecting paths within a window.
+A time-respecting path may only use ties in chronological order (Kempe,
+Kleinberg and Kumar, 2002). To obtain the share and the number of other
+codes each code can reach, and be reached from, along such paths, we
+call
 [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
-answers the same question in both directions at once, and
-`dyn_centrality(scope = "temporal")` returns the path-based measures
-computed on the time-respecting paths themselves rather than on a
-snapshot.
+with `direction = "both"`.
 
 ``` r
 
-reachability <- dyn_reachability(
-  dn, direction = "both", measure = c("reach", "reach_count")
-)
+reachability <- dyn_reachability(dn, direction = "both",
+                                 measure = c("reach", "reach_count"))
 reachability
 ```
 
@@ -958,67 +713,74 @@ plot(reachability)
 
 ![](thought-chains_files/figure-html/reachability-1.png)
 
+Every code reaches all eight others and is reached by all eight. With so
+many ties open from the start this is expected, and the informative
+quantities are how quickly and by how many routes.
+
+Temporal closeness is the inverse of the mean time a code needs to reach
+the others, and temporal betweenness the share of earliest routes
+between other codes that pass through a code (Pan and Saramäki, 2011).
+Because the ties that carry the routes are open at time 0, a hop that
+costs nothing arrives at once and closeness is unbounded;
+`traversal_time = 0.1` charges a tenth of a day per hop so that the
+indices separate. To obtain them, we call
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+with `scope = "temporal"`.
+
 ``` r
 
-temporal_centrality <- dyn_centrality(
-  dn,
-  measure = c("closeness", "betweenness", "reach", "reach_count"),
-  scope = "temporal"
-)
-```
-
-    ## Warning: Zero-latency reachable sets make temporal closeness infinite; set a
-    ## positive `traversal_time`.
-
-``` r
-
-temporal_centrality
+temporal <- dyn_centrality(dn, measure = c("closeness", "betweenness"),
+                           scope = "temporal", traversal_time = 0.1)
+temporal
 ```
 
     ## # Temporal centrality (node-level)
-    ## # 9 vertices | time in days
-    ## # measures: closeness, betweenness, reach, reach_count
+    ## # 9 vertices | traversal 0.1 days per hop | time in days
+    ## # measures: closeness, betweenness
     ## # computed on time-respecting paths across the whole window
     ##          node     measure     value
-    ##     Approving   closeness       Inf
-    ##       Arguing   closeness       Inf
-    ##  Coordinating   closeness       Inf
-    ##      Drafting   closeness       Inf
-    ##     Inquiring   closeness       Inf
-    ##     Objecting   closeness       Inf
-    ##    Resourcing   closeness       Inf
-    ##   Socialising   closeness       Inf
-    ##      Tutoring   closeness       Inf
-    ##     Approving betweenness 0.4444444
-    ##       Arguing betweenness 0.5705128
-    ##  Coordinating betweenness 0.4583333
-    ## # 24 more rows. summary() aggregates them; plot() draws them.
+    ##     Approving   closeness  7.710069
+    ##       Arguing   closeness  9.301324
+    ##  Coordinating   closeness  8.269624
+    ##      Drafting   closeness  7.010284
+    ##     Inquiring   closeness  8.375948
+    ##     Objecting   closeness  5.512050
+    ##    Resourcing   closeness  8.577492
+    ##   Socialising   closeness  9.731100
+    ##      Tutoring   closeness 10.000000
+    ##     Approving betweenness  0.000000
+    ##       Arguing betweenness  2.885714
+    ##  Coordinating betweenness  0.400000
+    ## # 6 more rows. summary() aggregates them; plot() draws them.
 
 ``` r
 
-plot(temporal_centrality)
+plot(temporal)
 ```
 
-![](thought-chains_files/figure-html/temporal-centrality-1.png)
+![](thought-chains_files/figure-html/temporal-1.png)
 
-## Forward temporal paths from every code
+`Tutoring` has the highest temporal closeness, 10, the reciprocal of the
+traversal cost: it reaches every other code in one hop without waiting.
+`Objecting` has the lowest, 5.5. Betweenness is concentrated in
+`Socialising`, `Arguing` and `Resourcing`, while `Approving`, `Drafting`
+and `Objecting` relay no earliest route at all.
 
-`Visualize.Rmd` looped over the codes with
-`tPath(direction = "fwd", type = "earliest.arrive", graph.step.time = 0.1)`
-and drew three pictures per code.
-[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) answers
-the same query — Dynet receives that traversal cost as
-`traversal_time = 0.1`, one tenth of a day per hop — and returns one
-tidy object per source.
+## Paths
 
-Before the atlas, one source in full, to show what the objects contain.
+To obtain the earliest route from one code to every other, we call
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) with
+`from` for the source and the same traversal cost. `arrival_time` is the
+earliest moment a code can be reached, `n_hops` the length of the
+earliest route and `n_paths` the number of routes that arrive equally
+early; `path_session` names the course whose ties achieve the optimum
+when it is unique. To draw the routes as a tree, we call
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) on the result.
 
 ``` r
 
-inquiring_paths <- paths(
-  dn, from = "Inquiring", direction = "forward", traversal_time = 0.1
-)
-inquiring_paths
+from_inquiring <- paths(dn, from = "Inquiring", traversal_time = 0.1)
+from_inquiring
 ```
 
     ## # Time-respecting paths from 'Inquiring', from t = 0
@@ -1048,570 +810,120 @@ inquiring_paths
 
 ``` r
 
-path_trajectories(inquiring_paths)
+plot(from_inquiring)
 ```
 
-    ## # Forward temporal trajectory tree from Inquiring
-    ## # 9 nodes, 1 hops deep, 23 routes
-    ##                                         node      parent depth count
-    ## 1                                Inquiring@0        <NA>     0    23
-    ## 2    Inquiring@0 -> Approving@0.107708333333 Inquiring@0     1     1
-    ## 3                 Inquiring@0 -> Arguing@0.1 Inquiring@0     1     5
-    ## 4 Inquiring@0 -> Coordinating@0.105219907408 Inquiring@0     1     1
-    ## 5                Inquiring@0 -> Drafting@0.1 Inquiring@0     1     2
-    ## 6    Inquiring@0 -> Objecting@0.189166666667 Inquiring@0     1     1
-    ## 7              Inquiring@0 -> Resourcing@0.1 Inquiring@0     1     9
-    ## 8             Inquiring@0 -> Socialising@0.1 Inquiring@0     1     2
-    ## 9     Inquiring@0 -> Tutoring@0.153020833333 Inquiring@0     1     1
-    ##   probability       vertex      time session branch
-    ## 1          NA    Inquiring 0.0000000    <NA>    4.5
-    ## 2  0.04347826    Approving 0.1077083    <NA>    8.0
-    ## 3  0.21739130      Arguing 0.1000000    <NA>    7.0
-    ## 4  0.04347826 Coordinating 0.1052199    <NA>    6.0
-    ## 5  0.08695652     Drafting 0.1000000    <NA>    5.0
-    ## 6  0.04347826    Objecting 0.1891667    <NA>    4.0
-    ## 7  0.39130435   Resourcing 0.1000000    <NA>    3.0
-    ## 8  0.08695652  Socialising 0.1000000    <NA>    2.0
-    ## 9  0.04347826     Tutoring 0.1530208    <NA>    1.0
+![](thought-chains_files/figure-html/paths-1.png)
 
-The printed table gives, per destination, the earliest attainable
-arrival time, the latency from the source, the number of hops on the
-optimal route, and how many distinct optimal routes achieve it.
-[`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
-is the tidy tree behind the picture: one row per route prefix, so a code
-reached under two different temporal histories is two rows and the
-branches never cross misleadingly.
+From `Inquiring` every code is reached in one hop. `Arguing`,
+`Drafting`, `Resourcing` and `Socialising` are reached at exactly 0.1
+days, the traversal cost with no waiting, and `Objecting` last, at 0.189
+days. `Resourcing` is reached by nine equally early routes.
 
-The atlas below repeats that for every code. Each panel is a
-left-to-right trajectory tree: branch width and node size show how many
-optimal routes use a branch, node fill shows the same count, and every
-node prints its vertex name and value beneath its circle, so nothing is
-carried by colour alone. The table above each tree is the path result
-the tree is drawn from.
+To ask which codes could have fed into a code, leaving as late as
+possible and still arriving by the end of the window, we set `direction`
+to `"backward"` with `start` and `end` as the window. `arrival_time`
+then holds the latest moment a sender could depart, and `latency` the
+deadline minus that moment.
 
 ``` r
 
-# A loop, not an apply: each iteration emits a section heading, a table and a
-# plot into the asis stream in order, which is a sequence of side effects
-# rather than a value to collect.
-code_names <- with(as.data.frame(dn, what = "nodes"), name)
-for (source_node in code_names) {
-  cat("\n\n## ", source_node, "\n\n", sep = "")
-  forward_paths <- paths(
-    dn, from = source_node, direction = "forward", traversal_time = 0.1
-  )
-  print(knitr::kable(
-    as.data.frame(forward_paths), digits = 3,
-    caption = paste("Earliest-arrival paths from", source_node)
-  ))
-  cat("\n\n")
-  print(plot_path_trajectories(
-    forward_paths, measure = "frequency", orientation = "horizontal"
-  ))
-  cat("\n\n")
-}
+into_approving <- paths(dn, from = "Approving", direction = "backward",
+                        start = 0, end = 4, traversal_time = 0.1)
+into_approving
 ```
 
-### Approving
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Arguing | TRUE | 0.100 | TRUE | 0.100 | 1 | 4 | NA | 4 |
-| Coordinating | TRUE | 0.138 | TRUE | 0.138 | 1 | 1 | C | 1 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Inquiring | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Objecting | TRUE | 0.200 | TRUE | 0.200 | 2 | 1 | C | 1 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 7 | NA | 5 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Tutoring | TRUE | 0.200 | TRUE | 0.200 | 2 | 7 | NA | 3 |
-
-Earliest-arrival paths from Approving {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-1.png)
-
-### Arguing
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Arguing | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Coordinating | TRUE | 0.105 | TRUE | 0.105 | 1 | 1 | D | 1 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Inquiring | TRUE | 0.100 | TRUE | 0.100 | 1 | 7 | NA | 4 |
-| Objecting | TRUE | 0.122 | TRUE | 0.122 | 1 | 1 | C | 1 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 9 | NA | 5 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Tutoring | TRUE | 0.133 | TRUE | 0.133 | 1 | 1 | A | 1 |
-
-Earliest-arrival paths from Arguing {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-2.png)
-
-### Coordinating
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.146 | TRUE | 0.146 | 1 | 1 | C | 1 |
-| Arguing | TRUE | 0.103 | TRUE | 0.103 | 1 | 1 | C | 1 |
-| Coordinating | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Inquiring | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 0.203 | TRUE | 0.203 | 2 | 1 | C | 1 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Tutoring | TRUE | 0.115 | TRUE | 0.115 | 1 | 1 | C | 1 |
-
-Earliest-arrival paths from Coordinating {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-3.png)
-
-### Drafting
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Arguing | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 2 |
-| Coordinating | TRUE | 0.141 | TRUE | 0.141 | 1 | 1 | E | 1 |
-| Drafting | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Inquiring | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 0.300 | TRUE | 0.300 | 3 | 10 | NA | 2 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 9 | NA | 5 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Tutoring | TRUE | 0.200 | TRUE | 0.200 | 2 | 7 | NA | 3 |
-
-Earliest-arrival paths from Drafting {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-4.png)
-
-### Inquiring
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.108 | TRUE | 0.108 | 1 | 1 | C | 1 |
-| Arguing | TRUE | 0.100 | TRUE | 0.100 | 1 | 5 | NA | 4 |
-| Coordinating | TRUE | 0.105 | TRUE | 0.105 | 1 | 1 | D | 1 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Inquiring | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Objecting | TRUE | 0.189 | TRUE | 0.189 | 1 | 1 | C | 1 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 9 | NA | 5 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Tutoring | TRUE | 0.153 | TRUE | 0.153 | 1 | 1 | A | 1 |
-
-Earliest-arrival paths from Inquiring {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-5.png)
-
-### Objecting
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.200 | TRUE | 0.200 | 2 | 1 | A | 1 |
-| Arguing | TRUE | 0.200 | TRUE | 0.200 | 2 | 2 | A | 1 |
-| Coordinating | TRUE | 0.200 | TRUE | 0.200 | 2 | 2 | A | 1 |
-| Drafting | TRUE | 0.276 | TRUE | 0.276 | 2 | 1 | C | 1 |
-| Inquiring | TRUE | 0.176 | TRUE | 0.176 | 1 | 1 | C | 1 |
-| Objecting | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Resourcing | TRUE | 0.200 | TRUE | 0.200 | 2 | 2 | A | 1 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Tutoring | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-
-Earliest-arrival paths from Objecting {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-6.png)
-
-### Resourcing
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.100 | TRUE | 0.100 | 1 | 5 | NA | 4 |
-| Arguing | TRUE | 0.100 | TRUE | 0.100 | 1 | 8 | NA | 5 |
-| Coordinating | TRUE | 0.100 | TRUE | 0.100 | 1 | 2 | NA | 2 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 9 | NA | 5 |
-| Inquiring | TRUE | 0.100 | TRUE | 0.100 | 1 | 8 | NA | 5 |
-| Objecting | TRUE | 0.200 | TRUE | 0.200 | 2 | 5 | C | 1 |
-| Resourcing | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Socialising | TRUE | 0.100 | TRUE | 0.100 | 1 | 5 | NA | 4 |
-| Tutoring | TRUE | 0.133 | TRUE | 0.133 | 1 | 1 | A | 1 |
-
-Earliest-arrival paths from Resourcing {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-7.png)
-
-### Socialising
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.115 | TRUE | 0.115 | 1 | 1 | C | 1 |
-| Arguing | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 3 |
-| Coordinating | TRUE | 0.100 | TRUE | 0.100 | 1 | 6 | NA | 4 |
-| Drafting | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 3 |
-| Inquiring | TRUE | 0.107 | TRUE | 0.107 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 0.100 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Resourcing | TRUE | 0.100 | TRUE | 0.100 | 1 | 9 | NA | 5 |
-| Socialising | TRUE | 0.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Tutoring | TRUE | 0.100 | TRUE | 0.100 | 1 | 3 | NA | 3 |
-
-Earliest-arrival paths from Socialising {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-8.png)
-
-### Tutoring
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 0.1 | TRUE | 0.1 | 1 | 2 | NA | 2 |
-| Arguing | TRUE | 0.1 | TRUE | 0.1 | 1 | 4 | NA | 3 |
-| Coordinating | TRUE | 0.1 | TRUE | 0.1 | 1 | 2 | NA | 2 |
-| Drafting | TRUE | 0.1 | TRUE | 0.1 | 1 | 1 | B | 1 |
-| Inquiring | TRUE | 0.1 | TRUE | 0.1 | 1 | 2 | NA | 2 |
-| Objecting | TRUE | 0.1 | TRUE | 0.1 | 1 | 1 | A | 1 |
-| Resourcing | TRUE | 0.1 | TRUE | 0.1 | 1 | 6 | NA | 4 |
-| Socialising | TRUE | 0.1 | TRUE | 0.1 | 1 | 3 | NA | 3 |
-| Tutoring | TRUE | 0.0 | TRUE | 0.0 | 0 | 1 | NA | 0 |
-
-Earliest-arrival paths from Tutoring {.table}
-
-![](thought-chains_files/figure-html/forward-path-atlas-9.png)
-
-Read the tables together and the picture is consistent: because almost
-every tie opens at time 0, every code reaches every other code, and the
-`n_hops` and `latency` columns show it doing so in one or two hops
-within a fraction of a day. The trees are wide and shallow. That is a
-property of how the study built its spells — a tie stays open until its
-discussion ends — not an artefact of the traversal setting.
-
-## Backward temporal paths to every code
-
-The complementary query in `Visualize.Rmd` was
-`tPath(direction = "bkwd", type = "latest.depart", start = 0)`, again at
-`graph.step.time = 0.1`: which codes could have fed into this one,
-leaving as late as possible. Dynet expresses it as
-`direction = "backward"` with an explicit window. The deadline here is
-`end = 4`, four days into the roughly eight-day span; a later deadline
-admits the same senders but with longer latencies, so the earlier
-deadline keeps the trees interpretable.
+    ## # Time-respecting paths into 'Approving', from t = 4
+    ## # reaches 8 of 8 other vertices | time in days
+    ## # routes are endpoint-specific session-integral optima, not one predecessor tree
+    ## # traversal 0.1 days per hop
+    ##          node reachable arrival_time attained   latency n_hops n_paths
+    ##     Approving      TRUE     4.000000     TRUE 0.0000000      0       1
+    ##       Arguing      TRUE     3.900000     TRUE 0.1000000      1       1
+    ##  Coordinating      TRUE     3.409097     TRUE 0.5909028      2       1
+    ##      Drafting      TRUE     3.030394     TRUE 0.9696065      2       3
+    ##     Inquiring      TRUE     3.800000     TRUE 0.2000000      2       2
+    ##     Objecting      TRUE     2.828785     TRUE 1.1712153      2       2
+    ##    Resourcing      TRUE     3.900000     TRUE 0.1000000      1       1
+    ##   Socialising      TRUE     3.800000     TRUE 0.2000000      2       1
+    ##      Tutoring      TRUE     3.800000     TRUE 0.2000000      2       2
+    ##  path_session n_best_sessions
+    ##          <NA>               0
+    ##             A               1
+    ##             B               1
+    ##             A               1
+    ##             A               1
+    ##             B               1
+    ##             A               1
+    ##             A               1
+    ##             A               1
 
 ``` r
 
-# Same reason for the loop as above: ordered side effects per code.
-for (target_node in code_names) {
-  cat("\n\n## ", target_node, "\n\n", sep = "")
-  backward_paths <- paths(
-    dn, from = target_node, direction = "backward", start = 0, end = 4,
-    traversal_time = 0.1
-  )
-  print(knitr::kable(
-    as.data.frame(backward_paths), digits = 3,
-    caption = paste("Latest-departure paths into", target_node)
-  ))
-  cat("\n\n")
-  print(plot_path_trajectories(
-    backward_paths, measure = "frequency", orientation = "horizontal"
-  ))
-  cat("\n\n")
-}
+plot(into_approving)
 ```
 
-### Approving
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Arguing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 2 | 1 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 2 | 3 | A | 1 |
-| Inquiring | TRUE | 3.800 | TRUE | 0.200 | 2 | 2 | A | 1 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 2 | 2 | B | 1 |
-| Resourcing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Socialising | TRUE | 3.800 | TRUE | 0.200 | 2 | 1 | A | 1 |
-| Tutoring | TRUE | 3.800 | TRUE | 0.200 | 2 | 2 | A | 1 |
-
-Latest-departure paths into Approving {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-1.png)
-
-### Arguing
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Arguing | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 2 | 2 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 2 | 2 | A | 1 |
-| Inquiring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 2 | 1 | B | 1 |
-| Resourcing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Socialising | TRUE | 3.800 | TRUE | 0.200 | 2 | 1 | A | 1 |
-| Tutoring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-
-Latest-departure paths into Arguing {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-2.png)
-
-### Coordinating
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.067 | TRUE | 0.933 | 1 | 1 | A | 1 |
-| Arguing | TRUE | 3.083 | TRUE | 0.917 | 1 | 1 | D | 1 |
-| Coordinating | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Drafting | TRUE | 2.983 | TRUE | 1.017 | 2 | 1 | D | 1 |
-| Inquiring | TRUE | 2.979 | TRUE | 1.021 | 2 | 1 | B | 1 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 3 | 3 | B | 1 |
-| Resourcing | TRUE | 3.083 | TRUE | 0.917 | 1 | 1 | D | 1 |
-| Socialising | TRUE | 3.083 | TRUE | 0.917 | 1 | 1 | D | 1 |
-| Tutoring | TRUE | 3.079 | TRUE | 0.921 | 1 | 1 | B | 1 |
-
-Latest-departure paths into Coordinating {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-3.png)
-
-### Drafting
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 2.979 | TRUE | 1.021 | 1 | 1 | B | 1 |
-| Arguing | TRUE | 3.008 | TRUE | 0.992 | 1 | 1 | A | 1 |
-| Coordinating | TRUE | 2.930 | TRUE | 1.070 | 2 | 1 | A | 1 |
-| Drafting | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Inquiring | TRUE | 2.930 | TRUE | 1.070 | 2 | 1 | A | 1 |
-| Objecting | TRUE | 2.801 | TRUE | 1.199 | 2 | 1 | B | 1 |
-| Resourcing | TRUE | 3.030 | TRUE | 0.970 | 1 | 1 | A | 1 |
-| Socialising | TRUE | 3.008 | TRUE | 0.992 | 1 | 1 | A | 1 |
-| Tutoring | TRUE | 2.930 | TRUE | 1.070 | 2 | 1 | A | 1 |
-
-Latest-departure paths into Drafting {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-4.png)
-
-### Inquiring
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Arguing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 3 | 1 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 2 | 3 | A | 1 |
-| Inquiring | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 1 | 1 | B | 1 |
-| Resourcing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Socialising | TRUE | 3.800 | TRUE | 0.200 | 2 | 1 | A | 1 |
-| Tutoring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-
-Latest-departure paths into Inquiring {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-5.png)
-
-### Objecting
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 2.801 | TRUE | 1.199 | 1 | 1 | B | 1 |
-| Arguing | TRUE | 2.729 | TRUE | 1.271 | 2 | 1 | B | 1 |
-| Coordinating | TRUE | 2.729 | TRUE | 1.271 | 2 | 1 | B | 1 |
-| Drafting | TRUE | 2.729 | TRUE | 1.271 | 2 | 1 | B | 1 |
-| Inquiring | TRUE | 2.729 | TRUE | 1.271 | 2 | 1 | B | 1 |
-| Objecting | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Resourcing | TRUE | 2.829 | TRUE | 1.171 | 1 | 1 | B | 1 |
-| Socialising | TRUE | 2.801 | TRUE | 1.199 | 1 | 1 | B | 1 |
-| Tutoring | TRUE | 2.729 | TRUE | 1.271 | 2 | 1 | B | 1 |
-
-Latest-departure paths into Objecting {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-6.png)
-
-### Resourcing
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Arguing | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 1 | 1 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 1 | 1 | A | 1 |
-| Inquiring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 3.113 | TRUE | 0.887 | 1 | 1 | C | 1 |
-| Resourcing | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Socialising | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Tutoring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-
-Latest-departure paths into Resourcing {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-7.png)
-
-### Socialising
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Arguing | TRUE | 3.837 | TRUE | 0.163 | 1 | 1 | B | 1 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 2 | 1 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 2 | 4 | A | 1 |
-| Inquiring | TRUE | 3.900 | TRUE | 0.100 | 1 | 1 | A | 1 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 2 | 2 | B | 1 |
-| Resourcing | TRUE | 3.837 | TRUE | 0.163 | 1 | 1 | B | 1 |
-| Socialising | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-| Tutoring | TRUE | 3.800 | TRUE | 0.200 | 2 | 1 | A | 1 |
-
-Latest-departure paths into Socialising {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-8.png)
-
-### Tutoring
-
-| node | reachable | arrival_time | attained | latency | n_hops | n_paths | path_session | n_best_sessions |
-|:---|:---|---:|:---|---:|---:|---:|:---|---:|
-| Approving | TRUE | 3.760 | TRUE | 0.240 | 2 | 2 | B | 1 |
-| Arguing | TRUE | 3.860 | TRUE | 0.140 | 1 | 1 | B | 1 |
-| Coordinating | TRUE | 3.409 | TRUE | 0.591 | 2 | 1 | B | 1 |
-| Drafting | TRUE | 3.030 | TRUE | 0.970 | 2 | 2 | A | 1 |
-| Inquiring | TRUE | 3.837 | TRUE | 0.163 | 1 | 1 | B | 1 |
-| Objecting | TRUE | 2.829 | TRUE | 1.171 | 2 | 1 | B | 1 |
-| Resourcing | TRUE | 3.860 | TRUE | 0.140 | 1 | 1 | B | 1 |
-| Socialising | TRUE | 3.760 | TRUE | 0.240 | 2 | 1 | B | 1 |
-| Tutoring | TRUE | 4.000 | TRUE | 0.000 | 0 | 1 | NA | 0 |
-
-Latest-departure paths into Tutoring {.table}
-
-![](thought-chains_files/figure-html/backward-path-atlas-9.png)
-
-In these trees the queried code is the root and the possible senders
-branch away from it, so a branch is read right to left in time:
-`arrival_time` is the latest moment a sender could have departed and
-still reach the root by the deadline.
-
-## Every temporal view, on this network
-
-The study drew its process with `ndtv`: a proximity timeline and
-animated snapshots. Dynet has nine views of a temporal network and a
-plot for every result class. They are all shown here on the same object,
-so the reader can pick the one that answers the question at hand.
-Node-link rendering is cograph’s throughout.
-
-### Contacts as curved links on the time axis
-
-`type = "events"` draws every contact at the moment it fires, actors on
-the vertical axis, each link leaving its source in the source’s colour
-and arriving in the target’s. On the whole network only the busiest
-pairs are legible, so the first picture keeps the thirty busiest and the
-rest use one course group, `A_01`, where every reply can be seen.
-
-``` r
-
-plot(dn, type = "events", top = 30)
-```
-
-![](thought-chains_files/figure-html/events-top-1.png)
-
-``` r
-
-plot(one_group, type = "events")
-```
-
-![](thought-chains_files/figure-html/events-group-1.png)
-
-The link glyph is a choice. `"hook"` above is the default; the other
-four are arcs, chevrons, waves and brackets, each with the same colour
-run.
-
-``` r
-
-plot(one_group, type = "events", link = "arc")
-```
-
-![](thought-chains_files/figure-html/events-arc-1.png)
-
-``` r
-
-plot(one_group, type = "events", link = "chevron")
-```
-
-![](thought-chains_files/figure-html/events-chevron-1.png)
-
-``` r
-
-plot(one_group, type = "events", link = "wave")
-```
-
-![](thought-chains_files/figure-html/events-wave-1.png)
-
-``` r
-
-plot(one_group, type = "events", link = "bracket")
-```
-
-![](thought-chains_files/figure-html/events-bracket-1.png)
-
-`curvature` sets how far a link bows (`0` is straight), and
-`time = "clock"` places each contact at its exact time rather than in
-its bin, with `blend` mixing the two endpoint colours along the link
-(both with the default hook).
-
-``` r
-
-plot(one_group, type = "events", curvature = 0)
-```
-
-![](thought-chains_files/figure-html/events-straight-1.png)
-
-``` r
-
-plot(one_group, type = "events", time = "clock", blend = TRUE)
-```
-
-![](thought-chains_files/figure-html/events-clock-1.png)
-
-### The other eight views
-
-`"activity"`: ties forming and dissolving over time.
-
-``` r
-
-plot(dn, type = "activity")
-```
-
-![](thought-chains_files/figure-html/view-activity-1.png)
-
-`"network"` at one bin, against the whole-window picture drawn earlier:
-
-``` r
-
-plot(dn, type = "network", at = 1)
-```
-
-![](thought-chains_files/figure-html/view-network-at-1.png)
-
-`"snapshots"`, `"layers"`, `"heatmap"`, `"stack"` and `"proximity"` are
-drawn in the sections above with the study’s settings; `"timeline"`
-opens the document. Two more proximity readings close the set: the lines
-alone, driven by betweenness, and two codes highlighted against the
-rest.
-
-``` r
-
-plot(dn, type = "proximity", networks = FALSE,
-     highlight = c("Arguing", "Approving"))
-```
-
-![](thought-chains_files/figure-html/view-proximity-highlight-1.png)
-
-### Plots of every result class
-
-Routes on a real time axis:
+![](thought-chains_files/figure-html/backward-1.png)
+
+`Arguing` and `Resourcing` can depart as late as day 3.9 and still reach
+`Approving` by the deadline, while `Objecting` must depart by day 2.83,
+a latency of 1.17 days, because the network thins towards the end of the
+window.
+
+To rank whole routes by how often they are used across every source, we
+call
 [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)
-ranks whole time-respecting routes by how often they are used; the plot
-places a point per vertex at the moment the route reaches it, so a
-horizontal gap is waiting time.
+with `top` for the number of routes. The plot places a point per code at
+the moment the route reaches it.
 
 ``` r
 
 top_routes <- pathways(dn, top = 12)
+top_routes
+```
+
+    ## # Time-respecting pathways (69 distinct routes, showing 12)
+    ## # 208 optimal routes counted, pooled over 9 source vertices
+    ##         from                                            route     endpoint
+    ##  Socialising           Socialising -> Resourcing -> Inquiring    Inquiring
+    ##    Inquiring             Inquiring -> Resourcing -> Approving    Approving
+    ##   Resourcing                           Resourcing -> Drafting     Drafting
+    ##  Socialising           Socialising -> Resourcing -> Approving    Approving
+    ##   Resourcing                            Resourcing -> Arguing      Arguing
+    ##   Resourcing                          Resourcing -> Inquiring    Inquiring
+    ##     Tutoring                           Tutoring -> Resourcing   Resourcing
+    ##  Socialising              Socialising -> Arguing -> Inquiring    Inquiring
+    ##      Arguing Arguing -> Resourcing -> Socialising -> Tutoring     Tutoring
+    ##   Resourcing                          Resourcing -> Approving    Approving
+    ##    Approving          Approving -> Resourcing -> Coordinating Coordinating
+    ##      Arguing            Arguing -> Resourcing -> Coordinating Coordinating
+    ##  count      share n_hops arrival_time
+    ##     14 0.06730769      2            0
+    ##     10 0.04807692      2            0
+    ##      9 0.04326923      1            0
+    ##      9 0.04326923      2            0
+    ##      8 0.03846154      1            0
+    ##      8 0.03846154      1            0
+    ##      6 0.02884615      1            0
+    ##      6 0.02884615      2            0
+    ##      6 0.02884615      3            0
+    ##      5 0.02403846      1            0
+    ##      5 0.02403846      2            0
+    ##      5 0.02403846      2            0
+
+``` r
+
 plot(top_routes)
 ```
 
-![](thought-chains_files/figure-html/result-pathways-1.png)
+![](thought-chains_files/figure-html/pathways-1.png)
 
-Similarity between every pair of half-day bins, as a heatmap:
+## Timing
+
+To compare the network across half-day bins, we call
+[`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
+with `step` and `window` of 0.5. The default coefficient is Jaccard, and
+the plot is a heatmap of bins against bins.
 
 ``` r
 
@@ -1619,108 +931,112 @@ bin_similarity <- similarity(dn, step = 0.5, window = 0.5)
 plot(bin_similarity)
 ```
 
-![](thought-chains_files/figure-html/result-similarity-1.png)
+![](thought-chains_files/figure-html/similarity-1.png)
 
-Gibson’s participation shifts, the thirteen ways one turn follows
-another:
+To classify how one turn follows another, we call
+[`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md). It
+counts Gibson’s (2003) thirteen participation shifts, in which A
+addresses B and the next turn is taken by B, by A again, or by a third
+party X.
 
 ``` r
 
 shifts <- pshifts(dn)
+shifts
+```
+
+    ## # Participation shifts (Gibson 2003, 13 types)
+    ## # 3423 classified turn transitions across 4 families
+    ##  shift          family count
+    ##  AB-BA  turn_receiving   391
+    ##  AB-B0  turn_receiving    51
+    ##  AB-BY  turn_receiving   101
+    ##  A0-X0   turn_claiming   592
+    ##  A0-XA   turn_claiming   105
+    ##  A0-XY   turn_claiming   559
+    ##  AB-X0   turn_usurping   426
+    ##  AB-XA   turn_usurping   135
+    ##  AB-XB   turn_usurping   642
+    ##  AB-XY   turn_usurping   170
+    ##  A0-AY turn_continuing    94
+    ##  AB-A0 turn_continuing    52
+    ##  AB-AY turn_continuing   105
+
+``` r
+
 plot(shifts)
 ```
 
-![](thought-chains_files/figure-html/result-pshifts-1.png)
+![](thought-chains_files/figure-html/pshifts-1.png)
 
-Burstiness and memory of each code’s activity:
+Of the 3,423 classified transitions, the largest family is turn
+usurping, in which a third code takes the turn. The single most frequent
+shift is AB-XB, 642 cases: a new code addresses the code that was just
+addressed.
+
+To measure whether each code’s activity is clustered in time, we call
+[`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md).
+Burstiness compares the gaps between a code’s replies with the
+exponential reference: 1 is the bursty limit, 0 the Poisson reference
+and -1 regular activity (Goh and Barabási, 2008).
 
 ``` r
 
 bursts <- burstiness(dn)
+summary(bursts)
+```
+
+    ##            node    measure n          mean sd           min           max
+    ## 1     Approving burstiness 1  6.582692e-01 NA  6.582692e-01  6.582692e-01
+    ## 2     Approving     events 1  5.106000e+03 NA  5.106000e+03  5.106000e+03
+    ## 3     Approving     memory 1  8.283281e-02 NA  8.283281e-02  8.283281e-02
+    ## 4       Arguing burstiness 1  6.671291e-01 NA  6.671291e-01  6.671291e-01
+    ## 5       Arguing     events 1  5.504000e+03 NA  5.504000e+03  5.504000e+03
+    ## 6       Arguing     memory 1  1.645164e-01 NA  1.645164e-01  1.645164e-01
+    ## 7  Coordinating burstiness 1  7.184227e-01 NA  7.184227e-01  7.184227e-01
+    ## 8  Coordinating     events 1  1.654000e+03 NA  1.654000e+03  1.654000e+03
+    ## 9  Coordinating     memory 1  1.756259e-02 NA  1.756259e-02  1.756259e-02
+    ## 10     Drafting burstiness 1  6.355224e-01 NA  6.355224e-01  6.355224e-01
+    ## 11     Drafting     events 1  6.960000e+02 NA  6.960000e+02  6.960000e+02
+    ## 12     Drafting     memory 1 -8.726877e-03 NA -8.726877e-03 -8.726877e-03
+    ## 13    Inquiring burstiness 1  6.284927e-01 NA  6.284927e-01  6.284927e-01
+    ## 14    Inquiring     events 1  1.763000e+03 NA  1.763000e+03  1.763000e+03
+    ## 15    Inquiring     memory 1  8.068968e-02 NA  8.068968e-02  8.068968e-02
+    ## 16    Objecting burstiness 1  4.260920e-01 NA  4.260920e-01  4.260920e-01
+    ## 17    Objecting     events 1  1.080000e+02 NA  1.080000e+02  1.080000e+02
+    ## 18    Objecting     memory 1  8.584296e-02 NA  8.584296e-02  8.584296e-02
+    ## 19   Resourcing burstiness 1  7.367974e-01 NA  7.367974e-01  7.367974e-01
+    ## 20   Resourcing     events 1  1.495000e+04 NA  1.495000e+04  1.495000e+04
+    ## 21   Resourcing     memory 1  1.111763e-01 NA  1.111763e-01  1.111763e-01
+    ## 22  Socialising burstiness 1  6.260914e-01 NA  6.260914e-01  6.260914e-01
+    ## 23  Socialising     events 1  4.829000e+03 NA  4.829000e+03  4.829000e+03
+    ## 24  Socialising     memory 1  5.303993e-02 NA  5.303993e-02  5.303993e-02
+    ## 25     Tutoring burstiness 1  5.623661e-01 NA  5.623661e-01  5.623661e-01
+    ## 26     Tutoring     events 1  1.956000e+03 NA  1.956000e+03  1.956000e+03
+    ## 27     Tutoring     memory 1 -1.894700e-02 NA -1.894700e-02 -1.894700e-02
+
+``` r
+
 plot(bursts)
 ```
 
-![](thought-chains_files/figure-html/result-burstiness-1.png)
+![](thought-chains_files/figure-html/burstiness-1.png)
 
-Tie durations by pair, and reachability, both already tabulated above:
+Every code is bursty, from 0.43 for `Objecting` to 0.74 for
+`Resourcing`, and memory is close to zero throughout: replies arrive in
+clusters whose lengths do not predict one another.
 
-``` r
+## One course group
 
-pair_totals <- durations(dn, unit = "pair", measure = "total")
-plot(pair_totals)
-```
-
-![](thought-chains_files/figure-html/result-durations-1.png)
-
-``` r
-
-reach <- dyn_reachability(dn)
-plot(reach)
-```
-
-![](thought-chains_files/figure-html/result-reachability-1.png)
-
-Snapshots as a result object rather than a view:
-
-``` r
-
-daily <- snapshots(dn, step = 1, window = 1)
-plot(daily)
-```
-
-![](thought-chains_files/figure-html/result-snapshots-1.png)
-
-The three trajectory-tree colourings, horizontal and vertical, for the
-forward paths from *Inquiring*:
-
-``` r
-
-inquiry <- path_trajectories(paths(dn, from = "Inquiring"))
-plot_path_trajectories(inquiry, measure = "frequency")
-```
-
-![](thought-chains_files/figure-html/result-trajectories-1.png)
-
-``` r
-
-plot_path_trajectories(inquiry, measure = "time", orientation = "vertical")
-```
-
-![](thought-chains_files/figure-html/result-trajectories-2.png)
-
-``` r
-
-plot_path_trajectories(inquiry, measure = "predictability")
-```
-
-![](thought-chains_files/figure-html/result-trajectories-3.png)
-
-The path network of those same paths, as a cograph node-link drawing:
-
-``` r
-
-from_inquiring <- paths(dn, from = "Inquiring")
-inquiring_network <- path_network(from_inquiring)
-plot(inquiring_network, layout = "oval")
-```
-
-![](thought-chains_files/figure-html/result-path-network-1.png)
-
-## Course-group temporal subnetwork
-
-`CraeteGROUP.Rmd` split the interaction table by `course_group` and
-rebuilt a separate `networkDynamic` object for each group. Dynet keeps
-the tie attributes from the import, so a group is a selection over the
-existing network rather than a second construction:
+The `group` column travels with every spell, so a course group is a
+selection over the network rather than a second construction. To select
+group `A_01`, we call
 [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
-accepts a mask over the spell table, which is exactly the legacy filter
-expressed as an argument.
-
-`thought_chains` keeps the course group as `group`, so the study’s split
-is one condition on the spell table: no mask has to be built first.
+with `ties` set to a condition on the spell table.
 
 ``` r
 
+one_group <- induce_subgraph(dn, ties = group == "A_01")
 summary(one_group)
 ```
 
@@ -1741,175 +1057,109 @@ summary(one_group)
     ## 14              sessions            1
     ## 15     vertex attributes         none
 
-The subnetwork is a selection over the existing object, not a second
-construction, and it is small enough to read code by code.
+The group has 2,425 spells on 53 of the 81 ordered pairs, a mean
+snapshot density of 0.559 and one session, and it is small enough for
+every reply to be read. To draw each reply at the moment it fires, with
+codes on the vertical axis and each link leaving in its source’s colour
+and arriving in its target’s, we set `type` to `"events"`;
+`time = "clock"` places each reply at its exact time and `blend = TRUE`
+blends the two colours along the link.
 
 ``` r
 
-plot(one_group, type = "network", layout = "oval")
+plot(one_group, type = "events")
 ```
 
-![](thought-chains_files/figure-html/group-subnetwork-splot-1.png)
+![](thought-chains_files/figure-html/group-events-1.png)
 
 ``` r
 
-plot(one_group, type = "timeline")
+plot(one_group, type = "events", time = "clock", blend = TRUE)
 ```
 
-![](thought-chains_files/figure-html/group-subnetwork-timeline-1.png)
+![](thought-chains_files/figure-html/group-events-clock-1.png)
 
-``` r
-
-plot(one_group, type = "snapshots", panels = 9)
-```
-
-![](thought-chains_files/figure-html/group-subnetwork-snapshots-1.png)
+To measure the group on the same hourly grid, we call
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) on
+the subnetwork and draw the result.
 
 ``` r
 
 group_structure <- metrics(one_group,
-                           measure = c("density", "edges", "reciprocity", "connectedness"),
+                           measure = c("density", "edges", "reciprocity",
+                                       "connectedness"),
                            step = 1 / 24, window = 1 / 24)
 plot(group_structure, type = "ridge")
 ```
 
-![](thought-chains_files/figure-html/group-subnetwork-metrics-1.png)
+![](thought-chains_files/figure-html/group-metrics-1.png)
 
-## Reproduction audit
+## Interpretation
 
-The claims made at the top are checked here rather than asserted.
+The discussions return to `Resourcing` more than to any other kind of
+contribution: it is incident to the most replies, it is the code most
+often reached by several equally early routes, and it is one of the
+three codes that relay most of the earliest routes between the others,
+with `Socialising` and `Arguing`. `Objecting` is the opposite case,
+rarely addressed, slowest to reach and never a relay. Because ties stay
+open for the life of a discussion, every code can reach every other;
+what separates the codes is how quickly and through whom, which is what
+the temporal measures report.
 
-**Every verb used came from Dynet’s public interface.** If any of these
-were internal, or had been renamed, the check below would say so.
+## Limitations
 
-``` r
+A tie that stays open until its discussion ends is a modelling choice
+that makes the network dense and reachability near-total; a shorter tie
+life would give sparser snapshots and longer latencies. The vertices are
+codes, not students, so the network says nothing about who talked to
+whom. The four-day window truncates the longest discussions. The table
+is the study’s, trimmed and anonymised as described in
+[`?thought_chains`](https://pak.dynasite.org/Dynet/reference/thought_chains.md),
+and repeated rows for a reply carrying two codes are counted as separate
+ties.
 
-verbs_used <- c(
-  "as_dynet", "collapse_network", "events", "metrics", "mixing",
-  "durations", "dyn_centrality", "dyn_reachability", "paths",
-  "path_trajectories", "plot_path_trajectories", "induce_subgraph",
-  "pathways", "similarity", "pshifts", "burstiness", "snapshots",
-  "projection", "collapse_network", "path_network"
-)
-data.frame(
-  verb = verbs_used,
-  exported = verbs_used %in% getNamespaceExports("Dynet")
-)
-```
+## References
 
-    ##                      verb exported
-    ## 1                as_dynet     TRUE
-    ## 2        collapse_network     TRUE
-    ## 3                  events     TRUE
-    ## 4                 metrics     TRUE
-    ## 5                  mixing     TRUE
-    ## 6               durations     TRUE
-    ## 7          dyn_centrality     TRUE
-    ## 8        dyn_reachability     TRUE
-    ## 9                   paths     TRUE
-    ## 10      path_trajectories     TRUE
-    ## 11 plot_path_trajectories     TRUE
-    ## 12        induce_subgraph     TRUE
-    ## 13               pathways     TRUE
-    ## 14             similarity     TRUE
-    ## 15                pshifts     TRUE
-    ## 16             burstiness     TRUE
-    ## 17              snapshots     TRUE
-    ## 18             projection     TRUE
-    ## 19       collapse_network     TRUE
-    ## 20           path_network     TRUE
+Freeman, L. C. (1979). Centrality in social networks: conceptual
+clarification. *Social Networks*, 1(3), 215–239.
 
-**The analysed network is the saved network, unaltered.** Re-importing
-the file after every statistic above has been computed must give an
-object identical to the one they were computed on.
+Freeman, L. C., Borgatti, S. P., & White, D. R. (1991). Centrality in
+valued graphs: a measure of betweenness based on network flow. *Social
+Networks*, 13(2), 141–154.
 
-``` r
+Gibson, D. R. (2003). Participation shifts: order and differentiation in
+group conversation. *Social Forces*, 81(4), 1335–1380.
 
-identical(dn, dynet(thought_chains, thread = "discussion",
-                    thread_clock = "relative", loops = TRUE))
-```
+Goh, K.-I., & Barabási, A.-L. (2008). Burstiness and memory in complex
+systems. *EPL (Europhysics Letters)*, 81(4), 48002.
 
-    ## Keeping 9452 self-loop event(s); each adds two to its vertex's degree.
+Holland, P. W., & Leinhardt, S. (1976). Local structure in social
+networks. *Sociological Methodology*, 7, 1–45.
 
-    ## [1] FALSE
+Kempe, D., Kleinberg, J., & Kumar, A. (2002). Connectivity and inference
+problems for temporal networks. *Journal of Computer and System
+Sciences*, 64(4), 820–842.
 
-**The self-loops were kept, not quietly dropped.** The study built the
-network with `loops = TRUE`. The count of loop spells in the imported
-network and the self-pairs carried through to the pair-duration table
-must agree.
+Krackhardt, D. (1994). Graph theoretical dimensions of informal
+organizations. In K. M. Carley & M. J. Prietula (Eds.), *Computational
+organization theory* (pp. 89–111). Lawrence Erlbaum.
 
-``` r
+Kundu, S., Murthy, C. A., & Pal, S. K. (2011). A new centrality measure
+for influence maximization in social networks. In *Pattern Recognition
+and Machine Intelligence* (Lecture Notes in Computer Science 6744,
+pp. 242–247). Springer.
 
-with(as.data.frame(dn), sum(from == to))
-```
+Morris, M., Handcock, M. S., & Hunter, D. R. (2008). Specification of
+exponential-family random graph models: terms and computational aspects.
+*Journal of Statistical Software*, 24(4).
 
-    ## [1] 9452
+Pan, R. K., & Saramäki, J. (2011). Path lengths, correlations, and
+centrality in temporal networks. *Physical Review E*, 84(1), 016105.
 
-``` r
+Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis
+to understand and improve collaborative learning. In *Proceedings of the
+Tenth International Conference on Learning Analytics & Knowledge*
+(pp. 314–319). ACM.
 
-subset(as.data.frame(pair_duration), from == to & measure == "events")
-```
-
-    ##            from           to measure value
-    ## 1     Approving    Approving  events   719
-    ## 11      Arguing      Arguing  events   670
-    ## 21 Coordinating Coordinating  events  1059
-    ## 31     Drafting     Drafting  events    83
-    ## 41    Inquiring    Inquiring  events   129
-    ## 50    Objecting    Objecting  events     1
-    ## 60   Resourcing   Resourcing  events  6049
-    ## 70  Socialising  Socialising  events   664
-    ## 80     Tutoring     Tutoring  events    78
-
-What this document does **not** establish: it is not a numerical parity
-test against `tsna`. The sweep grid differs from the original by design
-(hourly against the study’s daily interval), a few measures are the
-nearest documented counterpart rather than the identical estimator, and
-no output here was compared value-by-value with a `tsna` run. The claim
-is that each analytical step of the study is available as one Dynet verb
-on the study’s own data, and that the results are internally consistent
-— not that the two implementations agree to floating-point tolerance.
-
-## Session information
-
-``` r
-
-sessionInfo()
-```
-
-    ## R version 4.6.1 (2026-06-24)
-    ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.5 LTS
-    ## 
-    ## Matrix products: default
-    ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
-    ## 
-    ## locale:
-    ##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
-    ##  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
-    ##  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
-    ## [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
-    ## 
-    ## time zone: UTC
-    ## tzcode source: system (glibc)
-    ## 
-    ## attached base packages:
-    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
-    ## 
-    ## other attached packages:
-    ## [1] cograph_2.6.12 Dynet_0.4.10  
-    ## 
-    ## loaded via a namespace (and not attached):
-    ##  [1] gtable_0.3.6       jsonlite_2.0.0     dplyr_1.2.1        compiler_4.6.1    
-    ##  [5] tidyselect_1.2.1   jquerylib_0.1.4    systemfonts_1.3.2  scales_1.4.0      
-    ##  [9] textshaping_1.0.5  yaml_2.3.12        fastmap_1.2.0      ggplot2_4.0.3     
-    ## [13] R6_2.6.1           labeling_0.4.3     generics_0.1.4     igraph_2.3.3      
-    ## [17] knitr_1.52         tibble_3.3.1       desc_1.4.3         bslib_0.12.0      
-    ## [21] pillar_1.11.1      RColorBrewer_1.1-3 rlang_1.3.0        cachem_1.1.0      
-    ## [25] xfun_0.61          fs_2.1.0           sass_0.4.10        S7_0.2.2          
-    ## [29] otel_0.2.0         cli_3.6.6          pkgdown_2.2.1      withr_3.0.3       
-    ## [33] magrittr_2.0.5     digest_0.6.39      grid_4.6.1         lifecycle_1.0.5   
-    ## [37] vctrs_0.7.3        evaluate_1.0.5     glue_1.8.1         farver_2.1.2      
-    ## [41] ragg_1.5.2         rmarkdown_2.32     tools_4.6.1        pkgconfig_2.0.3   
-    ## [45] htmltools_0.5.9
+Wasserman, S., & Faust, K. (1994). *Social network analysis: methods and
+applications*. Cambridge University Press.

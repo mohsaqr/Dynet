@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,24 +69,23 @@
 
     
     
-<p>A temporal network is measured on a grid of time bins.
-<code><a href="../reference/snapshots.html">snapshots()</a></code> tabulates the bins and
-<code>plot(dn, type = "snapshots")</code> draws them side by side;
-<code><a href="../reference/animate.html">animate()</a></code> joins them with motion. This article builds the
-film step by step on the two datasets that ship with the package: a day
-of contacts in a classroom (<code>school_contacts</code>, 14 pupils) and
-ten weeks of a MOOC discussion forum (<code>mooc_posts</code> and
-<code>mooc_people</code>, the chapter 17 data). Writing a GIF needs the
-gifski package and writing a video needs av; both are in Suggests.</p>
+<p>In this article we animate two temporal networks with
+<code><a href="../reference/animate.html">animate()</a></code>: a classroom of fourteen students whose contacts
+are brief, and a course forum whose participants arrive and leave over
+ten weeks. <code><a href="../reference/animate.html">animate()</a></code> takes the same grid as every measuring
+function, <code>start</code>, <code>end</code>, <code>step</code> and
+<code>window</code>, and writes a GIF or a video; a GIF needs the
+<code>gifski</code> package and a video needs <code>av</code>.</p>
 <div class="section level2">
-<h2 id="what-the-film-is-made-of">What the film is made of<a class="anchor" aria-label="anchor" href="#what-the-film-is-made-of"></a>
+<h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
 </h2>
-<p>Which bins does the film show? The same four grid arguments every
-measuring verb takes: <code>start</code>, <code>end</code>,
-<code>step</code> and <code>window</code>. The classroom network runs
-from 0 to 21.5 steps.</p>
+<p><code>school_contacts</code> is a simulated interval log of 240
+face-to-face contacts among fourteen students, with a start and an end
+for each contact. To build the network, we call <code><a href="../reference/dynet.html">dynet()</a></code>
+with the log.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
+<span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
 <span><span class="va">dn</span></span>
 <span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
 <span><span class="co">#&gt; # 14 vertices | 240 edge spells | 110 distinct pairs</span></span>
@@ -100,8 +99,14 @@ from 0 to 21.5 steps.</p>
 <span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
 <span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
 <span><span class="co">#&gt; # 234 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>A window of four steps moved two steps at a time gives eleven
-overlapping bins.</p>
+</div>
+<div class="section level2">
+<h2 id="the-bins">The bins<a class="anchor" aria-label="anchor" href="#the-bins"></a>
+</h2>
+<p>To see the bins an animation will show, we call
+<code><a href="../reference/snapshots.html">snapshots()</a></code> with <code>step</code> for the interval between
+bins and <code>window</code> for the length of time each bin covers, and
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on the result.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bins</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">bins</span><span class="op">)</span></span>
@@ -117,9 +122,19 @@ overlapping bins.</p>
 <span><span class="co">#&gt; 9    16   24    14     25</span></span>
 <span><span class="co">#&gt; 10   18   25    14     25</span></span>
 <span><span class="co">#&gt; 11   20   17    14     17</span></span></code></pre></div>
-<p><code><a href="../reference/animate.html">animate()</a></code> takes the same grid and writes one file. The
-extension chooses the encoder: <code>.gif</code> here, <code>.mp4</code>
-or <code>.webm</code> for a video.</p>
+<p>A window of four units moved two units at a time gives eleven
+overlapping bins. The number of active ties rises from 29 in the first
+bin to 54 in the bins that begin at 6 and at 10, and falls to 17 in the
+last.</p>
+</div>
+<div class="section level2">
+<h2 id="the-animation">The animation<a class="anchor" aria-label="anchor" href="#the-animation"></a>
+</h2>
+<p>To write the animation, we call <code><a href="../reference/animate.html">animate()</a></code> with the same
+grid and <code>file</code> for the output path; the extension selects
+the encoder, <code>.gif</code> here and <code>.mp4</code> or
+<code>.webm</code> for a video. The result is a table with one row per
+bin.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">film</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, file <span class="op">=</span> <span class="st">"animating_files/classroom.gif"</span><span class="op">)</span></span>
 <span><span class="va">film</span></span>
@@ -138,59 +153,39 @@ or <code>.webm</code> for a video.</p>
 <span><span class="co">#&gt;   10    55   18           18         22    14    0   25      10          8</span></span>
 <span><span class="co">#&gt;   11    61   20           20         24    14    0   17       0         NA</span></span></code></pre></div>
 <p><img src="animating_files/classroom.gif"></p>
-<p>The table is one row per bin, and its <code>time</code> and
-<code>ties</code> columns are the snapshot table’s: the eleven bins hold
-29, 33, 50, 54, 45, 54, 51, 40, 24, 25 and 17 ties in both. Two columns
-are the film’s own. <code>forming</code> counts the ties of a bin that
-were not active in the bin before, and <code>dissolving</code> those
-that are not active in the bin after; the first bin has no
-<code>forming</code> and the last no <code>dissolving</code>, so they
-are <code>NA</code> there rather than zero. The third bin, at step 4,
-holds 50 ties of which 26 are new, and 9 of them will be gone by the
-next bin. The classroom is busiest in the middle of the day and quiet at
-the end, where the last bin holds 17 ties and nothing is forming.</p>
-<p>Four things are drawn in every frame.</p>
-<ul>
-<li>
-<strong>Tie width follows weight on one scale for the whole
-film.</strong> A tie of weight 3 is the same width in the quiet last bin
-as in the busy fourth. The scale is fixed across frames on purpose: a
-per-frame scale would draw the same tie wide in a quiet frame and narrow
-in a busy one, a change the viewer would read as data.</li>
-<li>
-<strong>Ties are styled by what they are doing.</strong> A tie
-forming during the transition to the next bin is dotted and green, one
-persisting is solid and grey, one dissolving is dashed and vermilion.
-Line type carries the distinction, so it survives without colour.</li>
-<li>
-<strong>Between bins the picture moves.</strong> Each bin is drawn
-<code>tween</code> times, six by default. A forming tie fades in and a
-dissolving one fades out along the transition, and under the default
-easing each bin holds still before it starts to change, so it can be
-read.</li>
-<li>
-<strong>A timeline under the network</strong> shows the grid with
-each bin’s start as a tick, filled up to the current time, with a marker
-that glides during a transition. The key to the drawing sits above and
-below it.</li>
-</ul>
+<p>The <code>ties</code> column agrees with the snapshot table.
+<code>forming</code> counts the ties of a bin that were not active in
+the bin before and <code>dissolving</code> the ties that are not active
+in the bin after; the first bin has no predecessor and the last no
+successor, so those cells are <code>NA</code>. The third bin, which
+begins at 4, holds 50 ties, 26 of them new and 9 gone by the next
+bin.</p>
+<p>In every frame a forming tie is dotted and green, a persisting tie
+solid and grey, and a dissolving tie dashed and vermilion, so the state
+is carried by line type as well as colour. Tie width follows weight on
+one scale across the whole animation. Each bin is drawn
+<code>tween</code> times, six by default, forming ties fade in and
+dissolving ties fade out over the transition, and a timeline under the
+network marks the current bin.</p>
+<p>To describe the animation in one row, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>
+on the result.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">film</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   bins frames fps seconds tween  ease layout format measure first_time</span></span>
 <span><span class="co">#&gt; 1   11     66  12     5.5     6 dwell spring    gif    &lt;NA&gt;          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties  turnover                          file</span></span>
 <span><span class="co">#&gt; 1        20       17       54 0.3074074 animating_files/classroom.gif</span></span></code></pre></div>
-<p>Eleven bins at six frames each is 66 frames, five and a half seconds
-at 12 frames per second.</p>
+<p>Eleven bins at six frames each give 66 frames, 5.5 seconds at 12
+frames per second. <code>turnover</code> is the median share of a bin’s
+ties that were not active in the bin before; it is 0.31 here.</p>
 </div>
 <div class="section level2">
-<h2 id="node-size-follows-a-measure">Node size follows a measure<a class="anchor" aria-label="anchor" href="#node-size-follows-a-measure"></a>
+<h2 id="vertex-size">Vertex size<a class="anchor" aria-label="anchor" href="#vertex-size"></a>
 </h2>
-<p>Which pupils matter in each bin? <code>measure</code> takes the name
-of any snapshot measure from <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> and computes
-it on the film’s own grid, so a vertex grows and shrinks bin by bin. The
-area of the circle, not its radius, follows the measure, on one scale
-across every frame.</p>
+<p>To let vertex size follow a centrality computed in each bin, we set
+<code>measure</code> to the name of any snapshot measure of
+<code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code>. The area of the circle is proportional to
+the measure, on one scale across every frame.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">per_bin</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
 <span>                   file <span class="op">=</span> <span class="st">"animating_files/classroom-degree.gif"</span><span class="op">)</span></span>
@@ -200,12 +195,11 @@ across every frame.</p>
 <span><span class="co">#&gt;   last_time min_ties max_ties  turnover                                 file</span></span>
 <span><span class="co">#&gt; 1        20       17       54 0.3074074 animating_files/classroom-degree.gif</span></span></code></pre></div>
 <p><img src="animating_files/classroom-degree.gif"></p>
-<p>A size that changes every bin shows who is active now. A size that
-never changes shows who matters over the whole day, and the eye can then
-follow the ties alone. <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> with
-<code>window = "all"</code> measures the whole period as one window, and
-<code>measure</code> accepts that result: a result with a single time
-point gives every vertex one size for the whole film.</p>
+<p>A size that changes from bin to bin shows who is active; a constant
+size shows who is central over the whole period and leaves the ties as
+the only moving element. To obtain whole-period degree, we call
+<code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> with <code>window = "all"</code>, and pass
+the result to <code>measure</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">whole</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>, window <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">whole</span>, n <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span>
@@ -237,22 +231,20 @@ point gives every vertex one size for the whole film.</p>
 <span><span class="co">#&gt;                                  file</span></span>
 <span><span class="co">#&gt; 1 animating_files/classroom-whole.gif</span></span></code></pre></div>
 <p><img src="animating_files/classroom-whole.gif"></p>
-<p>Over the day Dan and Jonas have 18 distinct contacts each and Leo 12,
+<p>Dan and Jonas have 18 distinct contacts over the period and Leo 12,
 so Dan and Jonas are the largest circles in every frame and Leo the
-smallest, whatever each is doing in the bin on screen. The
-<code>measure</code> column of the summary says which reading was
-used.</p>
+smallest.</p>
 </div>
 <div class="section level2">
-<h2 id="still-vertices-or-drifting-vertices">Still vertices, or drifting vertices<a class="anchor" aria-label="anchor" href="#still-vertices-or-drifting-vertices"></a>
+<h2 id="layout">Layout<a class="anchor" aria-label="anchor" href="#layout"></a>
 </h2>
-<p>Should the vertices move? Under <code>layout = "spring"</code>, the
-default, the union of every bin is laid out once and every frame reuses
-those positions; the only thing that moves is the ties, and a pupil is
-always in the same place, which is what makes one frame comparable with
-the next. Under <code>layout = "relaxed"</code> each bin is laid out
-again, seeded from the bin before it and held near it, so the groups
-that exist in a bin gather and the groups that dissolve drift apart.</p>
+<p>Under <code>layout = "spring"</code>, the default, the union of every
+bin is laid out once and every frame reuses those positions, so only the
+ties move and frames are comparable. Under
+<code>layout = "relaxed"</code>, each bin is laid out again, seeded from
+the bin before and pulled back towards it, so groups gather and drift
+apart. No vertex moves further than <code>max_displacement</code>
+between bins, 0.08 layout units by default.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">drift</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">4</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
 <span>                 layout <span class="op">=</span> <span class="st">"relaxed"</span>,</span>
@@ -262,36 +254,26 @@ that exist in a bin gather and the groups that dissolve drift apart.</p>
 <span><span class="co">#&gt; 1   11     66  12     5.5     6 dwell relaxed    mp4  degree          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties  turnover                                  file</span></span>
 <span><span class="co">#&gt; 1        20       17       54 0.3074074 animating_files/classroom-relaxed.mp4</span></span></code></pre></div>
-<video src="animating_files/classroom-relaxed.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>Two guarantees keep a relaxed film readable. No vertex moves further
-than <code>max_displacement</code>, 0.08 layout units by default,
-between consecutive bins, and every vertex’s path is smoothed over its
-neighbouring bins. The relaxed layout is the one for a network whose
-structure changes, the fixed one for a network whose structure holds
-while its activity changes. The classroom is the second kind: the same
-pupils sit near each other all day, and the fixed film says so.</p>
+<video src="animating_files/classroom-relaxed.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>The relaxed layout suits a network whose structure changes; the fixed
+layout suits one whose structure holds while its activity changes, which
+is the case of the classroom.</p>
 </div>
 <div class="section level2">
-<h2 id="the-forum-who-is-there-and-when">The forum: who is there, and when<a class="anchor" aria-label="anchor" href="#the-forum-who-is-there-and-when"></a>
+<h2 id="presence">Presence<a class="anchor" aria-label="anchor" href="#presence"></a>
 </h2>
-<p>The forum is a different kind of network. It is threaded, so a tie is
-live from a reply until its discussion falls silent, and its
-participants arrive over ten weeks rather than all being present from
-the first minute. The construction is the chapter’s: self-replies carry
-no tie, a thread with a single post never became an exchange, and the
-experience level is the partition.</p>
+<p>The forum of <code>mooc_posts</code> is threaded: a reply stays
+active until its discussion falls silent, and participants join and
+leave over ten weeks. To build it, we call <code><a href="../reference/dynet.html">dynet()</a></code> with
+<code>min_thread_posts = 2</code> to drop threads that never became an
+exchange, <code>nodes</code> for the participant table and
+<code>groups</code> for the experience level that colours the vertices,
+and restrict it to the participants with more than 20 distinct contacts
+with <code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code>.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">replies</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">mooc_posts</span>, <span class="va">sender</span> <span class="op">!=</span> <span class="va">receiver</span><span class="op">)</span></span>
-<span><span class="va">busy_threads</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span><span class="va">replies</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">discussion</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">exchanges</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">replies</span>, <span class="va">discussion</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">busy_threads</span><span class="op">)</span></span>
-<span><span class="va">people</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span></span>
-<span>  <span class="va">mooc_people</span>,</span>
-<span>  expert_level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">experience</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span>, <span class="fl">3L</span><span class="op">)</span>,</span>
-<span>                                     labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Expert"</span>, <span class="st">"Student"</span>, <span class="st">"Teacher"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">dn_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">exchanges</span>, from <span class="op">=</span> <span class="st">"sender"</span>, to <span class="op">=</span> <span class="st">"receiver"</span>,</span>
+<code class="sourceCode R"><span><span class="va">dn_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">mooc_posts</span>, from <span class="op">=</span> <span class="st">"sender"</span>, to <span class="op">=</span> <span class="st">"receiver"</span>,</span>
 <span>                 time <span class="op">=</span> <span class="st">"timestamp"</span>, thread <span class="op">=</span> <span class="st">"discussion"</span>,</span>
-<span>                 nodes <span class="op">=</span> <span class="va">people</span>, time_unit <span class="op">=</span> <span class="st">"days"</span>,</span>
-<span>                 directed <span class="op">=</span> <span class="cn">TRUE</span>, loops <span class="op">=</span> <span class="cn">FALSE</span>, groups <span class="op">=</span> <span class="st">"expert_level"</span><span class="op">)</span></span>
+<span>                 nodes <span class="op">=</span> <span class="va">mooc_people</span>, time_unit <span class="op">=</span> <span class="st">"days"</span>,</span>
+<span>                 groups <span class="op">=</span> <span class="st">"expert_level"</span>, min_thread_posts <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">forum</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">dn_full</span>, <span class="va">degree</span> <span class="op">&gt;</span> <span class="fl">20</span><span class="op">)</span></span>
 <span><span class="va">forum</span></span>
 <span><span class="co">#&gt; # Temporal network (threaded format, directed) | a cograph netobject</span></span>
@@ -314,12 +296,14 @@ experience level is the partition.</p>
 <span><span class="co">#&gt;                         Most important change for your school or district?</span></span>
 <span><span class="co">#&gt;                                  Submitting Questions for the Expert Panel</span></span>
 <span><span class="co">#&gt; # 680 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>Who is there in a given week? The log says when each participant
-posted, but nothing about when they joined or left, so
-<code><a href="../reference/dynet.html">dynet()</a></code> treats every one of the 45 as present from day 0 to
-day 72. <code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> with <code>"ties"</code>
-declares each participant present from their first tie to their
-last.</p>
+<p>The network has 45 vertices and 686 spells on 428 pairs, observed
+from day 0.11 to day 72.01. The log records when each participant posted
+but not when they joined or left, so all 45 are treated as present
+throughout. To declare each participant present from their first tie to
+their last, we call <code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> with
+<code>"ties"</code>, and read the spells back with
+<code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> and
+<code>what = "vertex_spells"</code>.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">forum</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/set_vertex_spells.html">set_vertex_spells</a></span><span class="op">(</span><span class="va">forum</span>, <span class="st">"ties"</span><span class="op">)</span></span>
 <span><span class="va">spans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">forum</span>, what <span class="op">=</span> <span class="st">"vertex_spells"</span><span class="op">)</span></span>
@@ -338,16 +322,17 @@ last.</p>
 <span><span class="co">#&gt; 4             FALSE</span></span>
 <span><span class="co">#&gt; 5             FALSE</span></span>
 <span><span class="co">#&gt; 6             FALSE</span></span></code></pre></div>
-<p>Participant 1 is present from day 4.1 to day 71.4, participant 13
-only from day 18.1. Of the 45, 29 are present in the first week, 16
-arrive after day 7, and one leaves before day 65.</p>
-<p>With presence declared, <code>absent</code> says how a participant
-who is not there is drawn. <code>"fade"</code>, the default, keeps them
-in place at a quarter opacity; <code>"away"</code> parks them out of
-sight at the edge of the layout and glides them in when they arrive and
-out when they leave, with a green ring on the way in and a vermilion one
-on the way out. The palette is three colours from the Okabe-Ito set that
-leave green and vermilion to the tie states.</p>
+<p>Participant 1 is present from day 4.12 to day 71.41, participant 13
+from day 18.15 to day 72.01.</p>
+<p><code>absent</code> decides how a participant is drawn in a bin where
+they are not present: <code>"fade"</code>, the default, keeps them in
+place at a quarter opacity; <code>"away"</code> parks them out of sight
+and moves them in over the transition in which they arrive and out over
+the one in which they leave. To write the animation with a seven-day
+window moved two days at a time, we call <code><a href="../reference/animate.html">animate()</a></code> with
+<code>absent = "away"</code>, <code>labels = FALSE</code> to omit the
+identifiers, and three Okabe-Ito colours for the three levels in
+<code>palette</code>.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">arrivals</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">forum</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">70</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">7</span>,</span>
 <span>                    measure <span class="op">=</span> <span class="st">"degree"</span>, absent <span class="op">=</span> <span class="st">"away"</span>, labels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -394,36 +379,31 @@ leave green and vermilion to the tie states.</p>
 <span><span class="co">#&gt;   34   199   66           66         73    44    0  164       5          7</span></span>
 <span><span class="co">#&gt;   35   205   68           68         75    44    0  157       0         87</span></span>
 <span><span class="co">#&gt;   36   211   70           70         77    34    0   70       0         NA</span></span></code></pre></div>
-<video src="animating_files/forum.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>The <code>nodes</code> column is now the number present, not the
-number of vertices: 29 in the first bin, 45 by day 22. The
-<code>idle</code> column counts those present with no tie in the bin; it
-stays at 0 to 3 here, because a threaded tie lives for as long as its
-discussion and a participant is seldom present without one. Ties climb
-from 53 in the first bin to 276 around day 46 and fall to 70 in the
-last, when the course is ending.</p>
+<video src="animating_files/forum.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>With presence declared, <code>nodes</code> counts the participants
+present in each bin: 29 in the first, 45 from the bin that begins on day
+22, and 44 from the bin that begins on day 34, when one participant’s
+last tie has passed. <code>idle</code> counts the participants present
+without an active tie and stays between 0 and 3. Active ties rise from
+53 in the first bin to 276 in the bins that begin on days 46 and 48 and
+fall to 70 in the last.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">arrivals</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   bins frames fps seconds tween  ease layout format measure first_time</span></span>
 <span><span class="co">#&gt; 1   36    216  12      18     6 dwell spring    mp4  degree          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties   turnover                      file</span></span>
 <span><span class="co">#&gt; 1        70       53      276 0.06735751 animating_files/forum.mp4</span></span></code></pre></div>
-<p>Thirty-six bins at six frames each is 216 frames, eighteen seconds.
-The <code>turnover</code> column is the median share of a bin’s ties
-that were not active in the bin before, over the bins after the first:
-0.07 here.</p>
+<p>Thirty-six bins at six frames each give 216 frames, 18 seconds, with
+a turnover of 0.07.</p>
 </div>
 <div class="section level2">
 <h2 id="smoothing">Smoothing<a class="anchor" aria-label="anchor" href="#smoothing"></a>
 </h2>
-<p>A film can feel episodic for two separate reasons, and they have
-separate remedies.</p>
-<p>The first is the grid. With <code>window</code> equal to
-<code>step</code> the bins tile the period and a tie that lasts one bin
-appears and vanishes; with <code>window</code> larger than
-<code>step</code> the bins overlap, a tie persists across several of
-them, and each frame carries some of the past. The forum film above
-already slides a seven-day window two days at a time. The same grid with
-a two-day window tiles instead.</p>
+<p>An animation reads as separate pictures for two reasons, each with
+its own remedy. The first is the grid. With <code>window</code> equal to
+<code>step</code> the bins tile the period and a short tie appears and
+vanishes; with <code>window</code> larger than <code>step</code> the
+bins overlap and each frame carries part of the previous one. To
+compare, we write the forum with a two-day window that tiles.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">forum</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">70</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>                 measure <span class="op">=</span> <span class="st">"degree"</span>, absent <span class="op">=</span> <span class="st">"away"</span>, labels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -446,20 +426,16 @@ a two-day window tiles instead.</p>
 <span><span class="co">#&gt; 1   36    216  12      18     6 dwell spring    mp4  degree          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties   turnover                            file</span></span>
 <span><span class="co">#&gt; 1        70       10      242 0.09504132 animating_files/forum-tiled.mp4</span></span></code></pre></div>
-<p>The tiled film opens with 7 participants and 10 ties where the
+<p>The tiled animation opens with 7 participants and 10 ties where the
 sliding one opens with 29 and 53, and its turnover is 0.10 against 0.07.
-On this forum both are small, because a threaded tie lives for as long
-as its discussion; on a contact network the same choice matters more.
-The classroom film in the first section, four-step windows moved two
-steps at a time, has a turnover of 0.31, and with tiled two-step windows
-it would be higher still. That number is what decides whether a film
-reads as a story or a slideshow.</p>
+Both are low because a threaded tie lasts for the life of its
+discussion; the classroom, a contact network, has a turnover of 0.31 on
+a comparable grid.</p>
 <p>The second reason is the easing. Under <code>ease = "dwell"</code>,
-the default, each bin holds still before it changes, which is what lets
-it be read. Under <code>ease = "continuous"</code> nothing holds still:
-positions follow a Catmull-Rom spline through the bins (Catmull and Rom,
-1974), so a vertex moving across several bins traces one smooth path,
-and fades are linear.</p>
+the default, each bin holds still before it changes. Under
+<code>ease = "continuous"</code> nothing holds still: positions follow a
+spline through the bins (Catmull and Rom, 1974) and fades are
+linear.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">flowing</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/animate.html">animate</a></span><span class="op">(</span><span class="va">forum</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">70</span>, step <span class="op">=</span> <span class="fl">2</span>, window <span class="op">=</span> <span class="fl">7</span>,</span>
 <span>                   measure <span class="op">=</span> <span class="st">"degree"</span>, absent <span class="op">=</span> <span class="st">"away"</span>, labels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -471,12 +447,12 @@ and fades are linear.</p>
 <span><span class="co">#&gt; 1   36    216  12      18     6 continuous relaxed    mp4  degree          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties   turnover                                 file</span></span>
 <span><span class="co">#&gt; 1        70       53      276 0.06735751 animating_files/forum-continuous.mp4</span></span></code></pre></div>
-<video src="animating_files/forum-continuous.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>A relaxed layout under continuous easing is the film that looks least
-like a sequence of pictures. It is also the one in which no single bin
-can be read off a frame, which is the trade.</p>
+<video src="animating_files/forum-continuous.mp4" controls loop muted playsinline style="max-width: 100%"></video><p>A relaxed layout under continuous easing gives the most continuous
+motion, and the animation in which no single bin can be read from a
+frame.</p>
 </div>
 <div class="section level2">
-<h2 id="when-to-use-which">When to use which<a class="anchor" aria-label="anchor" href="#when-to-use-which"></a>
+<h2 id="choosing-the-arguments">Choosing the arguments<a class="anchor" aria-label="anchor" href="#choosing-the-arguments"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -485,80 +461,74 @@ can be read off a frame, which is the trade.</p>
 <col width="33%">
 </colgroup>
 <thead><tr class="header">
-<th>Choice</th>
-<th>Take this</th>
-<th>When</th>
+<th>Argument</th>
+<th>Value</th>
+<th>Use when</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td><code>layout</code></td>
 <td><code>"spring"</code></td>
-<td>the structure holds and the activity changes; frames must be
-comparable</td>
+<td>the structure holds and the activity changes</td>
 </tr>
 <tr class="even">
 <td></td>
 <td><code>"relaxed"</code></td>
-<td>groups form and dissolve; the structure of each moment matters more
-than comparability</td>
+<td>groups form and dissolve</td>
 </tr>
 <tr class="odd">
 <td><code>measure</code></td>
-<td>a name</td>
-<td>who is active now</td>
+<td>a measure name</td>
+<td>vertex size should show who is active in each bin</td>
 </tr>
 <tr class="even">
 <td></td>
-<td>a whole-window result</td>
-<td>who matters over the period; the eye follows the ties</td>
+<td>a whole-period result</td>
+<td>vertex size should show who is central over the period</td>
 </tr>
 <tr class="odd">
-<td></td>
-<td>a vertex attribute</td>
-<td>a fixed size of your own, such as two tiers</td>
-</tr>
-<tr class="even">
 <td><code>absent</code></td>
 <td><code>"fade"</code></td>
-<td>presence is declared and the viewer should see where the absent
-sit</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td><code>"away"</code></td>
-<td>arrivals and departures are the story</td>
+<td>the position of absent vertices should stay visible</td>
 </tr>
 <tr class="even">
+<td></td>
+<td><code>"away"</code></td>
+<td>arrivals and departures are the subject</td>
+</tr>
+<tr class="odd">
 <td><code>window</code></td>
 <td>equal to <code>step</code>
 </td>
-<td>each frame is one bin, nothing carried over</td>
+<td>each frame should show one bin</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td></td>
 <td>larger than <code>step</code>
 </td>
-<td>ties persist across frames; the film flows</td>
+<td>ties should persist across frames</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>ease</code></td>
 <td><code>"dwell"</code></td>
 <td>bins are to be read one by one</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td></td>
 <td><code>"continuous"</code></td>
-<td>motion is to be read; bins are not</td>
-</tr>
-<tr class="even">
-<td><code>file</code></td>
-<td><code>.gif</code></td>
-<td>it must play anywhere, and the film is short</td>
+<td>motion is to be read</td>
 </tr>
 <tr class="odd">
+<td><code>file</code></td>
+<td><code>.gif</code></td>
+<td>a short animation that must play without a video player</td>
+</tr>
+<tr class="even">
 <td></td>
-<td><code>.mp4</code></td>
-<td>it is long, large, or relaxed; a fifth of the size or less</td>
+<td>
+<code>.mp4</code> or <code>.webm</code>
+</td>
+<td>a long animation</td>
 </tr>
 </tbody>
 </table>
@@ -566,18 +536,9 @@ sit</td>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>Bender-deMoll, S. and McFarland, D. A. (2006). The art and science of
-dynamic network visualization. <em>Journal of Social Structure</em>,
-7(2).</p>
-<p>Catmull, E. and Rom, R. (1974). A class of local interpolating
-splines. In R. E. Barnhill and R. F. Riesenfeld (eds), <em>Computer
-Aided Geometric Design</em>, Academic Press, 317-326.</p>
-<p>Moody, J., McFarland, D. and Bender-deMoll, S. (2005). Dynamic
-network visualization. <em>American Journal of Sociology</em>, 110(4),
-1206-1241.</p>
-<p>Saqr, M. (2024). Temporal network analysis: Introduction, methods and
-analysis with R. In M. Saqr and S. López-Pernas (eds), <em>Learning
-Analytics Methods and Tutorials</em>, Springer.</p>
+<p>Catmull, E., &amp; Rom, R. (1974). A class of local interpolating
+splines. In R. E. Barnhill &amp; R. F. Riesenfeld (Eds.), <em>Computer
+aided geometric design</em> (pp. 317–326). Academic Press.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

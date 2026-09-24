@@ -115,7 +115,7 @@ observation limits or used to alter eligibility."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -230,6 +230,7 @@ observation limits or used to alter eligibility.</p>
 <span>  observation_end <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  observation_spells <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  loops <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  min_thread_posts <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  onset_censored <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  terminus_censored <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  vertex_spells <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -357,7 +358,17 @@ This is mutually exclusive with <code>observation_start</code> and
 with a message, which is almost always what relational logs need; <code>TRUE</code>
 keeps them and reports how many. A kept loop <strong>is</strong> counted by degree, and
 contributes two to it, since both of its endpoint stubs are incident to
-the same vertex.</p></dd>
+the same vertex. In a threaded log a dropped self-reply is dropped
+before the thread's lifetime is computed, so it neither opens a tie nor
+keeps its thread alive.</p></dd>
+
+
+<dt id="arg-min-thread-posts">min_thread_posts<a class="anchor" aria-label="anchor" href="#arg-min-thread-posts"></a></dt>
+<dd><p>For a threaded log, the smallest number of posts a
+thread must hold, after self-loops have been dropped, for its posts to
+enter the network. The default <code>1</code> keeps every thread; <code>2</code> drops threads
+that never became an exchange, the rule of Saqr (2024). Dropped threads
+are reported with a message. Requires <code>thread</code>.</p></dd>
 
 
 <dt id="arg-onset-censored-terminus-censored">onset_censored, terminus_censored<a class="anchor" aria-label="anchor" href="#arg-onset-censored-terminus-censored"></a></dt>

@@ -1,24 +1,25 @@
 # Animating a temporal network
 
-A temporal network is measured on a grid of time bins.
-[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-tabulates the bins and `plot(dn, type = "snapshots")` draws them side by
-side; [`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
-joins them with motion. This article builds the film step by step on the
-two datasets that ship with the package: a day of contacts in a
-classroom (`school_contacts`, 14 pupils) and ten weeks of a MOOC
-discussion forum (`mooc_posts` and `mooc_people`, the chapter 17 data).
-Writing a GIF needs the gifski package and writing a video needs av;
-both are in Suggests.
+In this article we animate two temporal networks with
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md): a
+classroom of fourteen students whose contacts are brief, and a course
+forum whose participants arrive and leave over ten weeks.
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) takes
+the same grid as every measuring function, `start`, `end`, `step` and
+`window`, and writes a GIF or a video; a GIF needs the `gifski` package
+and a video needs `av`.
 
-## What the film is made of
+## Data
 
-Which bins does the film show? The same four grid arguments every
-measuring verb takes: `start`, `end`, `step` and `window`. The classroom
-network runs from 0 to 21.5 steps.
+`school_contacts` is a simulated interval log of 240 face-to-face
+contacts among fourteen students, with a start and an end for each
+contact. To build the network, we call
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with the
+log.
 
 ``` r
 
+library(Dynet)
 dn <- dynet(school_contacts)
 dn
 #> # Temporal network (interval format, directed) | a cograph netobject
@@ -35,8 +36,13 @@ dn
 #> # 234 more spells. summary() describes the network; plot() draws it.
 ```
 
-A window of four steps moved two steps at a time gives eleven
-overlapping bins.
+## The bins
+
+To see the bins an animation will show, we call
+[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
+with `step` for the interval between bins and `window` for the length of
+time each bin covers, and
+[`summary()`](https://rdrr.io/r/base/summary.html) on the result.
 
 ``` r
 
@@ -56,9 +62,18 @@ summary(bins)
 #> 11   20   17    14     17
 ```
 
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) takes
-the same grid and writes one file. The extension chooses the encoder:
-`.gif` here, `.mp4` or `.webm` for a video.
+A window of four units moved two units at a time gives eleven
+overlapping bins. The number of active ties rises from 29 in the first
+bin to 54 in the bins that begin at 6 and at 10, and falls to 17 in the
+last.
+
+## The animation
+
+To write the animation, we call
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) with
+the same grid and `file` for the output path; the extension selects the
+encoder, `.gif` here and `.mp4` or `.webm` for a video. The result is a
+table with one row per bin.
 
 ``` r
 
@@ -82,35 +97,22 @@ film
 
 ![](animating_files/classroom.gif)
 
-The table is one row per bin, and its `time` and `ties` columns are the
-snapshot table’s: the eleven bins hold 29, 33, 50, 54, 45, 54, 51, 40,
-24, 25 and 17 ties in both. Two columns are the film’s own. `forming`
-counts the ties of a bin that were not active in the bin before, and
-`dissolving` those that are not active in the bin after; the first bin
-has no `forming` and the last no `dissolving`, so they are `NA` there
-rather than zero. The third bin, at step 4, holds 50 ties of which 26
-are new, and 9 of them will be gone by the next bin. The classroom is
-busiest in the middle of the day and quiet at the end, where the last
-bin holds 17 ties and nothing is forming.
+The `ties` column agrees with the snapshot table. `forming` counts the
+ties of a bin that were not active in the bin before and `dissolving`
+the ties that are not active in the bin after; the first bin has no
+predecessor and the last no successor, so those cells are `NA`. The
+third bin, which begins at 4, holds 50 ties, 26 of them new and 9 gone
+by the next bin.
 
-Four things are drawn in every frame.
+In every frame a forming tie is dotted and green, a persisting tie solid
+and grey, and a dissolving tie dashed and vermilion, so the state is
+carried by line type as well as colour. Tie width follows weight on one
+scale across the whole animation. Each bin is drawn `tween` times, six
+by default, forming ties fade in and dissolving ties fade out over the
+transition, and a timeline under the network marks the current bin.
 
-- **Tie width follows weight on one scale for the whole film.** A tie of
-  weight 3 is the same width in the quiet last bin as in the busy
-  fourth. The scale is fixed across frames on purpose: a per-frame scale
-  would draw the same tie wide in a quiet frame and narrow in a busy
-  one, a change the viewer would read as data.
-- **Ties are styled by what they are doing.** A tie forming during the
-  transition to the next bin is dotted and green, one persisting is
-  solid and grey, one dissolving is dashed and vermilion. Line type
-  carries the distinction, so it survives without colour.
-- **Between bins the picture moves.** Each bin is drawn `tween` times,
-  six by default. A forming tie fades in and a dissolving one fades out
-  along the transition, and under the default easing each bin holds
-  still before it starts to change, so it can be read.
-- **A timeline under the network** shows the grid with each bin’s start
-  as a tick, filled up to the current time, with a marker that glides
-  during a transition. The key to the drawing sits above and below it.
+To describe the animation in one row, we call
+[`summary()`](https://rdrr.io/r/base/summary.html) on the result.
 
 ``` r
 
@@ -121,17 +123,17 @@ summary(film)
 #> 1        20       17       54 0.3074074 animating_files/classroom.gif
 ```
 
-Eleven bins at six frames each is 66 frames, five and a half seconds at
-12 frames per second.
+Eleven bins at six frames each give 66 frames, 5.5 seconds at 12 frames
+per second. `turnover` is the median share of a bin’s ties that were not
+active in the bin before; it is 0.31 here.
 
-## Node size follows a measure
+## Vertex size
 
-Which pupils matter in each bin? `measure` takes the name of any
-snapshot measure from
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-and computes it on the film’s own grid, so a vertex grows and shrinks
-bin by bin. The area of the circle, not its radius, follows the measure,
-on one scale across every frame.
+To let vertex size follow a centrality computed in each bin, we set
+`measure` to the name of any snapshot measure of
+[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
+The area of the circle is proportional to the measure, on one scale
+across every frame.
 
 ``` r
 
@@ -146,13 +148,11 @@ summary(per_bin)
 
 ![](animating_files/classroom-degree.gif)
 
-A size that changes every bin shows who is active now. A size that never
-changes shows who matters over the whole day, and the eye can then
-follow the ties alone.
+A size that changes from bin to bin shows who is active; a constant size
+shows who is central over the whole period and leaves the ties as the
+only moving element. To obtain whole-period degree, we call
 [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-with `window = "all"` measures the whole period as one window, and
-`measure` accepts that result: a result with a single time point gives
-every vertex one size for the whole film.
+with `window = "all"`, and pass the result to `measure`.
 
 ``` r
 
@@ -192,20 +192,18 @@ summary(fixed)
 
 ![](animating_files/classroom-whole.gif)
 
-Over the day Dan and Jonas have 18 distinct contacts each and Leo 12, so
+Dan and Jonas have 18 distinct contacts over the period and Leo 12, so
 Dan and Jonas are the largest circles in every frame and Leo the
-smallest, whatever each is doing in the bin on screen. The `measure`
-column of the summary says which reading was used.
+smallest.
 
-## Still vertices, or drifting vertices
+## Layout
 
-Should the vertices move? Under `layout = "spring"`, the default, the
-union of every bin is laid out once and every frame reuses those
-positions; the only thing that moves is the ties, and a pupil is always
-in the same place, which is what makes one frame comparable with the
-next. Under `layout = "relaxed"` each bin is laid out again, seeded from
-the bin before it and held near it, so the groups that exist in a bin
-gather and the groups that dissolve drift apart.
+Under `layout = "spring"`, the default, the union of every bin is laid
+out once and every frame reuses those positions, so only the ties move
+and frames are comparable. Under `layout = "relaxed"`, each bin is laid
+out again, seeded from the bin before and pulled back towards it, so
+groups gather and drift apart. No vertex moves further than
+`max_displacement` between bins, 0.08 layout units by default.
 
 ``` r
 
@@ -219,37 +217,28 @@ summary(drift)
 #> 1        20       17       54 0.3074074 animating_files/classroom-relaxed.mp4
 ```
 
-Two guarantees keep a relaxed film readable. No vertex moves further
-than `max_displacement`, 0.08 layout units by default, between
-consecutive bins, and every vertex’s path is smoothed over its
-neighbouring bins. The relaxed layout is the one for a network whose
-structure changes, the fixed one for a network whose structure holds
-while its activity changes. The classroom is the second kind: the same
-pupils sit near each other all day, and the fixed film says so.
+The relaxed layout suits a network whose structure changes; the fixed
+layout suits one whose structure holds while its activity changes, which
+is the case of the classroom.
 
-## The forum: who is there, and when
+## Presence
 
-The forum is a different kind of network. It is threaded, so a tie is
-live from a reply until its discussion falls silent, and its
-participants arrive over ten weeks rather than all being present from
-the first minute. The construction is the chapter’s: self-replies carry
-no tie, a thread with a single post never became an exchange, and the
-experience level is the partition.
+The forum of `mooc_posts` is threaded: a reply stays active until its
+discussion falls silent, and participants join and leave over ten weeks.
+To build it, we call
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with
+`min_thread_posts = 2` to drop threads that never became an exchange,
+`nodes` for the participant table and `groups` for the experience level
+that colours the vertices, and restrict it to the participants with more
+than 20 distinct contacts with
+[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md).
 
 ``` r
 
-replies <- subset(mooc_posts, sender != receiver)
-busy_threads <- with(replies, names(which(table(discussion) > 1)))
-exchanges <- subset(replies, discussion %in% busy_threads)
-people <- transform(
-  mooc_people,
-  expert_level = as.character(factor(experience, levels = c(1L, 2L, 3L),
-                                     labels = c("Expert", "Student", "Teacher")))
-)
-dn_full <- dynet(exchanges, from = "sender", to = "receiver",
+dn_full <- dynet(mooc_posts, from = "sender", to = "receiver",
                  time = "timestamp", thread = "discussion",
-                 nodes = people, time_unit = "days",
-                 directed = TRUE, loops = FALSE, groups = "expert_level")
+                 nodes = mooc_people, time_unit = "days",
+                 groups = "expert_level", min_thread_posts = 2)
 forum <- induce_subgraph(dn_full, degree > 20)
 forum
 #> # Temporal network (threaded format, directed) | a cograph netobject
@@ -274,13 +263,15 @@ forum
 #> # 680 more spells. summary() describes the network; plot() draws it.
 ```
 
-Who is there in a given week? The log says when each participant posted,
-but nothing about when they joined or left, so
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) treats
-every one of the 45 as present from day 0 to day 72.
+The network has 45 vertices and 686 spells on 428 pairs, observed from
+day 0.11 to day 72.01. The log records when each participant posted but
+not when they joined or left, so all 45 are treated as present
+throughout. To declare each participant present from their first tie to
+their last, we call
 [`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
-with `"ties"` declares each participant present from their first tie to
-their last.
+with `"ties"`, and read the spells back with
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) and
+`what = "vertex_spells"`.
 
 ``` r
 
@@ -303,17 +294,18 @@ head(spans)
 #> 6             FALSE
 ```
 
-Participant 1 is present from day 4.1 to day 71.4, participant 13 only
-from day 18.1. Of the 45, 29 are present in the first week, 16 arrive
-after day 7, and one leaves before day 65.
+Participant 1 is present from day 4.12 to day 71.41, participant 13 from
+day 18.15 to day 72.01.
 
-With presence declared, `absent` says how a participant who is not there
-is drawn. `"fade"`, the default, keeps them in place at a quarter
-opacity; `"away"` parks them out of sight at the edge of the layout and
-glides them in when they arrive and out when they leave, with a green
-ring on the way in and a vermilion one on the way out. The palette is
-three colours from the Okabe-Ito set that leave green and vermilion to
-the tie states.
+`absent` decides how a participant is drawn in a bin where they are not
+present: `"fade"`, the default, keeps them in place at a quarter
+opacity; `"away"` parks them out of sight and moves them in over the
+transition in which they arrive and out over the one in which they
+leave. To write the animation with a seven-day window moved two days at
+a time, we call
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) with
+`absent = "away"`, `labels = FALSE` to omit the identifiers, and three
+Okabe-Ito colours for the three levels in `palette`.
 
 ``` r
 
@@ -364,12 +356,12 @@ print(arrivals, n = 36)
 #>   36   211   70           70         77    34    0   70       0         NA
 ```
 
-The `nodes` column is now the number present, not the number of
-vertices: 29 in the first bin, 45 by day 22. The `idle` column counts
-those present with no tie in the bin; it stays at 0 to 3 here, because a
-threaded tie lives for as long as its discussion and a participant is
-seldom present without one. Ties climb from 53 in the first bin to 276
-around day 46 and fall to 70 in the last, when the course is ending.
+With presence declared, `nodes` counts the participants present in each
+bin: 29 in the first, 45 from the bin that begins on day 22, and 44 from
+the bin that begins on day 34, when one participant’s last tie has
+passed. `idle` counts the participants present without an active tie and
+stays between 0 and 3. Active ties rise from 53 in the first bin to 276
+in the bins that begin on days 46 and 48 and fall to 70 in the last.
 
 ``` r
 
@@ -380,21 +372,17 @@ summary(arrivals)
 #> 1        70       53      276 0.06735751 animating_files/forum.mp4
 ```
 
-Thirty-six bins at six frames each is 216 frames, eighteen seconds. The
-`turnover` column is the median share of a bin’s ties that were not
-active in the bin before, over the bins after the first: 0.07 here.
+Thirty-six bins at six frames each give 216 frames, 18 seconds, with a
+turnover of 0.07.
 
 ## Smoothing
 
-A film can feel episodic for two separate reasons, and they have
-separate remedies.
-
-The first is the grid. With `window` equal to `step` the bins tile the
-period and a tie that lasts one bin appears and vanishes; with `window`
-larger than `step` the bins overlap, a tie persists across several of
-them, and each frame carries some of the past. The forum film above
-already slides a seven-day window two days at a time. The same grid with
-a two-day window tiles instead.
+An animation reads as separate pictures for two reasons, each with its
+own remedy. The first is the grid. With `window` equal to `step` the
+bins tile the period and a short tie appears and vanishes; with `window`
+larger than `step` the bins overlap and each frame carries part of the
+previous one. To compare, we write the forum with a two-day window that
+tiles.
 
 ``` r
 
@@ -421,20 +409,16 @@ summary(tiled)
 #> 1        70       10      242 0.09504132 animating_files/forum-tiled.mp4
 ```
 
-The tiled film opens with 7 participants and 10 ties where the sliding
-one opens with 29 and 53, and its turnover is 0.10 against 0.07. On this
-forum both are small, because a threaded tie lives for as long as its
-discussion; on a contact network the same choice matters more. The
-classroom film in the first section, four-step windows moved two steps
-at a time, has a turnover of 0.31, and with tiled two-step windows it
-would be higher still. That number is what decides whether a film reads
-as a story or a slideshow.
+The tiled animation opens with 7 participants and 10 ties where the
+sliding one opens with 29 and 53, and its turnover is 0.10 against 0.07.
+Both are low because a threaded tie lasts for the life of its
+discussion; the classroom, a contact network, has a turnover of 0.31 on
+a comparable grid.
 
 The second reason is the easing. Under `ease = "dwell"`, the default,
-each bin holds still before it changes, which is what lets it be read.
-Under `ease = "continuous"` nothing holds still: positions follow a
-Catmull-Rom spline through the bins (Catmull and Rom, 1974), so a vertex
-moving across several bins traces one smooth path, and fades are linear.
+each bin holds still before it changes. Under `ease = "continuous"`
+nothing holds still: positions follow a spline through the bins (Catmull
+and Rom, 1974) and fades are linear.
 
 ``` r
 
@@ -450,40 +434,29 @@ summary(flowing)
 #> 1        70       53      276 0.06735751 animating_files/forum-continuous.mp4
 ```
 
-A relaxed layout under continuous easing is the film that looks least
-like a sequence of pictures. It is also the one in which no single bin
-can be read off a frame, which is the trade.
+A relaxed layout under continuous easing gives the most continuous
+motion, and the animation in which no single bin can be read from a
+frame.
 
-## When to use which
+## Choosing the arguments
 
-| Choice | Take this | When |
+| Argument | Value | Use when |
 |----|----|----|
-| `layout` | `"spring"` | the structure holds and the activity changes; frames must be comparable |
-|  | `"relaxed"` | groups form and dissolve; the structure of each moment matters more than comparability |
-| `measure` | a name | who is active now |
-|  | a whole-window result | who matters over the period; the eye follows the ties |
-|  | a vertex attribute | a fixed size of your own, such as two tiers |
-| `absent` | `"fade"` | presence is declared and the viewer should see where the absent sit |
-|  | `"away"` | arrivals and departures are the story |
-| `window` | equal to `step` | each frame is one bin, nothing carried over |
-|  | larger than `step` | ties persist across frames; the film flows |
+| `layout` | `"spring"` | the structure holds and the activity changes |
+|  | `"relaxed"` | groups form and dissolve |
+| `measure` | a measure name | vertex size should show who is active in each bin |
+|  | a whole-period result | vertex size should show who is central over the period |
+| `absent` | `"fade"` | the position of absent vertices should stay visible |
+|  | `"away"` | arrivals and departures are the subject |
+| `window` | equal to `step` | each frame should show one bin |
+|  | larger than `step` | ties should persist across frames |
 | `ease` | `"dwell"` | bins are to be read one by one |
-|  | `"continuous"` | motion is to be read; bins are not |
-| `file` | `.gif` | it must play anywhere, and the film is short |
-|  | `.mp4` | it is long, large, or relaxed; a fifth of the size or less |
+|  | `"continuous"` | motion is to be read |
+| `file` | `.gif` | a short animation that must play without a video player |
+|  | `.mp4` or `.webm` | a long animation |
 
 ## References
 
-Bender-deMoll, S. and McFarland, D. A. (2006). The art and science of
-dynamic network visualization. *Journal of Social Structure*, 7(2).
-
-Catmull, E. and Rom, R. (1974). A class of local interpolating splines.
-In R. E. Barnhill and R. F. Riesenfeld (eds), *Computer Aided Geometric
-Design*, Academic Press, 317-326.
-
-Moody, J., McFarland, D. and Bender-deMoll, S. (2005). Dynamic network
-visualization. *American Journal of Sociology*, 110(4), 1206-1241.
-
-Saqr, M. (2024). Temporal network analysis: Introduction, methods and
-analysis with R. In M. Saqr and S. López-Pernas (eds), *Learning
-Analytics Methods and Tutorials*, Springer.
+Catmull, E., & Rom, R. (1974). A class of local interpolating splines.
+In R. E. Barnhill & R. F. Riesenfeld (Eds.), *Computer aided geometric
+design* (pp. 317–326). Academic Press.

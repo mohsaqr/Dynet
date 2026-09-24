@@ -1,20 +1,20 @@
 # The MOOC forum data
 
-`mooc_posts` records 2,529 posts to the discussion forum of a massive
-open online course, and `mooc_people` records the 445 participants who
-wrote or received them. The two tables are the data behind chapter 17 of
-*Learning Analytics Methods and Tutorials*, and they are the package’s
-worked example of a **threaded** log: a forum post is not an interval
-with a stated end, and it is not an instantaneous contact either. A post
-stays relevant until its thread falls silent.
-
-This article builds the network from those posts and reports what it
-holds.
+In this article we describe the bundled MOOC forum data, `mooc_posts`
+and `mooc_people`, build the threaded network from them, and read its
+size, its activity over time, the degree of its participants and the
+mixing between experience levels. The same data carry the case study in
+[`vignette("ch17-temporal-networks")`](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md).
 
 ## The log
 
+Each row of `mooc_posts` is one post: the participant who wrote it, the
+participant it answers, the time it was written and the discussion it
+belongs to.
+
 ``` r
 
+library(Dynet)
 head(mooc_posts)
 #>   sender receiver           timestamp
 #> 1    360      444 2013-04-04 16:32:00
@@ -30,32 +30,43 @@ head(mooc_posts)
 #> 4 Most important change for your school or district?
 #> 5 Most important change for your school or district?
 #> 6 Most important change for your school or district?
+nrow(mooc_posts)
+#> [1] 2529
 ```
 
-Each row is one post: who wrote it, who it replied to, when, and which
-discussion it belongs to. There are 338 distinct discussions.
+The log holds 2,529 posts. The timestamps are date-times and the
+discussion titles are the thread identifiers.
+
+`mooc_people` has one row per participant with the self-reported
+experience level, coded 1 for expert, 2 for student and 3 for teacher,
+and its label in `expert_level`, which serves as the mixing attribute.
 
 ``` r
 
 head(mooc_people)
-#>   name experience
-#> 1    1          1
-#> 2    2          1
-#> 3    3          2
-#> 4    4          2
-#> 5    5          3
-#> 6    6          1
+#>   name experience expert_level
+#> 1    1          1       Expert
+#> 2    2          1       Expert
+#> 3    3          2      Student
+#> 4    4          2      Student
+#> 5    5          3      Teacher
+#> 6    6          1       Expert
+nrow(mooc_people)
+#> [1] 445
 ```
 
-`experience` is the self-reported level the chapter recodes into expert,
-student and teacher.
+There are 445 participants.
 
 ## Building the network
 
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) reads the
-log as threaded because `thread =` is named. An edge from a post stays
-active until the last post in the same discussion, so a reply late in a
-thread extends every earlier tie in it.
+To build the network, we call
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with the
+log, `from` and `to` for the endpoint columns, `time` for the timestamp
+and `thread` for the discussion. Naming `thread` selects the threaded
+format: each tie starts at its post and ends at the last post of the
+same discussion, so a late reply extends every earlier tie in its
+thread. Printing the network gives its format, its size and the first
+spells.
 
 ``` r
 
@@ -64,7 +75,7 @@ dn <- dynet(mooc_posts, from = "sender", to = "receiver",
 dn
 #> # Temporal network (threaded format, directed) | a cograph netobject
 #> # 442 vertices | 2443 edge spells | 1936 distinct pairs
-#> # observed from 0 to 73.02778 days, binned every 1
+#> # observed from 0 to 72.01111 days, binned every 1
 #> 
 #>  from  to      start      end duration weight
 #>   360 444 0.00000000 69.47778 69.47778      1
@@ -83,30 +94,45 @@ dn
 #> # 2437 more spells. summary() describes the network; plot() draws it.
 ```
 
-The network has 442 vertices and 2,443 spells. Three of the 445
-participants in `mooc_people` never appear as a sender or a receiver, so
-they are absent from the network the log implies.
+The network has 442 vertices, 2,443 spells and 1,936 distinct ordered
+pairs, observed over 73.03 days. Two differences from the log are worth
+noting. The spell count is lower than the post count because a post that
+answers its own author is a self-loop, and
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) drops
+self-loops unless `loops = TRUE` is set. The vertex count is lower than
+the participant count because three of the 445 participants in
+`mooc_people` are never a sender or a receiver of a kept post, so they
+are not part of the network the log implies. Times are read as
+date-times and converted to days since the first post; the unit is
+stated in the header of every result.
 
-Times are read as dates and converted to an offset in days from the
-first post, which is what `time_unit` reports.
+## Activity over time
 
-## What the forum looked like over time
-
-[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
-measures graph-level structure on the grid. Over the whole observed
-period the network’s density is:
+Graph-level measures are computed on the grid shared by every measuring
+function: `start` and `end` bound the period, `step` is the interval
+between measurements and `window` the length of time each one covers. To
+measure the network over the whole observed period as a single window,
+we call
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) with
+`measure` set to `"density"` and `window` set to `"all"`.
 
 ``` r
 
 density <- metrics(dn, measure = "density", window = "all")
 density
 #> # Density (graph-level)
-#> # 1 time points, 73.02778 per bin | time in days
+#> # 1 time points, 72.01111 per bin | time in days
 #>  time measure       value
 #>     0 density 0.009932178
 ```
 
-Measured day by day instead, activity is concentrated rather than even:
+The density over the whole period is 0.0099: about one ordered pair in a
+hundred was connected at some point during the course.
+
+To count the ties active in each week, we call
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) with
+`measure` set to `"edges"`, and `step` and `window` both set to seven
+days, so that the bins tile the period.
 
 ``` r
 
@@ -118,31 +144,37 @@ per_day
 #>     0   edges   451
 #>     7   edges   702
 #>    14   edges   913
-#>    21   edges   945
+#>    21   edges   943
 #>    28   edges  1013
 #>    35   edges   924
 #>    42   edges   981
 #>    49   edges  1007
 #>    56   edges   831
-#>    63   edges   715
-#>    70   edges   231
+#>    63   edges   704
+#>    70   edges   219
 ```
 
-Each row is one week of the course. The counts show where the forum was
-busy and where it went quiet.
+Each row is one week of the course. The first week holds 451 active
+ties. The count rises to 1,013 in the week that begins on day 28, stays
+above 900 until the week that begins on day 49, and falls to 231 in the
+last bin, which begins on day 70 and covers only the final three days of
+observation.
 
-## Who was central
+## Degree
 
+To obtain the number of distinct contacts of every participant over the
+whole period, we call
 [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-measures each vertex on the same grid. Over the whole period, the ten
-participants with the highest degree are:
+with `measure` set to `"degree"` and `window` set to `"all"`. The result
+has one row per vertex. [`head()`](https://rdrr.io/r/utils/head.html)
+prints the first ten rows, in the order of the vertex table.
 
 ``` r
 
 degree <- dyn_centrality(dn, measure = "degree", window = "all")
 head(degree, 10)
 #> # Degree (node-level)
-#> # 442 vertices | 1 time points, 73.02778 per bin | time in days
+#> # 442 vertices | 1 time points, 72.01111 per bin | time in days
 #> # first 10 of 442 rows
 #>  time node measure value
 #>     0    1  degree    40
@@ -157,12 +189,18 @@ head(degree, 10)
 #>     0   10  degree    16
 ```
 
+Among the first ten participants, participant 7 has the highest degree
+with 48 distinct contacts and participant 1 the next with 40;
+participant 3 has 6.
+
 ## Mixing between experience levels
 
-`mooc_people` supplies the attribute the chapter mixes on. The network
-is built with that table attached, and
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) then
-reports how much tie activity ran within and between levels.
+To count the ties within and between experience levels, the network must
+carry the level as a vertex attribute. We build it again with `nodes`
+set to `mooc_people`, so that the attribute travels with the network,
+and call
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) with
+`attribute` set to `"experience"` and `window` set to `"all"`.
 
 ``` r
 
@@ -172,7 +210,7 @@ labelled <- dynet(mooc_posts, from = "sender", to = "receiver",
 role_mixing <- mixing(labelled, attribute = "experience", window = "all")
 role_mixing
 #> # Mixing by experience (graph-level)
-#> # 1 time points, 73.02778 per bin | time in days
+#> # 1 time points, 72.01111 per bin | time in days
 #> # measures: 1 -> 1, 2 -> 1, 3 -> 1, 1 -> 2, 2 -> 2, 3 -> 2, 1 -> 3, 2 -> 3, 3 -> 3
 #> # active binary-dyad counts between vertex groups per time bin
 #>  time measure value from_group to_group
@@ -187,27 +225,42 @@ role_mixing
 #>     0  3 -> 3   425          3        3
 ```
 
-Each row is an ordered pair of levels. `value` is the share of tie
-activity running from the first group to the second, so the rows where
-`from_group` equals `to_group` measure how much the forum kept
-conversation inside an experience level.
+Each row is one ordered pair of levels, named by `from_group` and
+`to_group`, and `value` is the number of ordered pairs of participants
+with at least one active tie from the first level to the second.
+Within-level counts are 73 for level 1, 184 for level 2 and 425 for
+level 3. The three largest counts are the ties directed into level 3,
+the teachers: 257 from level 1, 383 from level 2 and 425 from level 3
+itself.
 
 ## Cost
 
-[`summary()`](https://rdrr.io/r/base/summary.html) on this network takes
-about 28 seconds, because it measures every graph-level statistic on all
-74 daily bins. [`print()`](https://rdrr.io/r/base/print.html) is
-immediate, and a single measure on a stated grid — as used throughout
-this article — costs a few hundredths of a second. Reach for
+[`summary()`](https://rdrr.io/r/base/summary.html) on a network
+describes it in one table and computes every graph-level statistic in
+every daily bin of the observed period. On a network of this size that
+is the one slow call; the single-measure calls used in this article,
+each on a stated grid, are not. When only one quantity is wanted,
 [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) with
-the measure you want rather than
-[`summary()`](https://rdrr.io/r/base/summary.html) when the network is
-this size.
+that measure is the call to make.
 
 ## Source
 
-Kaliisa, R., Gudmundsdottir, G. B., & Jahn, T. (2022). The MOOC forum
-data used in chapter 17 of *Learning Analytics Methods and Tutorials*.
-The bundled tables are the anonymised sender, receiver, timestamp and
-discussion columns of that log, with participant identifiers replaced by
-integers.
+The log is the chapter 17 data of *Learning Analytics Methods and
+Tutorials* (Saqr, 2024), taken from the `6_snaMOOC` directory of the
+book’s data repository at <https://github.com/lamethods/data>. The
+bundled table keeps the four columns the chapter reads, `sender`,
+`receiver`, `timestamp` and `discussion`, and drops the category
+hierarchy and comment identifiers of the published file.
+[`?mooc_posts`](https://pak.dynasite.org/Dynet/reference/mooc_posts.md)
+documents the preparation.
+
+## References
+
+Saqr, M. (2024). Temporal network analysis: Introduction, methods and
+analysis with R. In M. Saqr & S. López-Pernas (Eds.), *Learning
+analytics methods and tutorials: A practical guide using R*. Springer.
+
+Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis
+to understand and improve collaborative learning. In *Proceedings of the
+Tenth International Conference on Learning Analytics & Knowledge*
+(pp. 314–319). ACM.

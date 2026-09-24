@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,34 +69,96 @@
 
     
     
+<p>Temporal network analysis studies relations together with the times
+at which they occur. A face-to-face conversation has a beginning and an
+end, a message has a timestamp, and a reply in a discussion thread
+follows the post it answers. Such data come in two types: <em>contact
+sequences</em>, in which each relation is an instantaneous event, and
+<em>interval graphs</em>, in which each relation is active over a period
+of time. Dynet stores both as <strong>spells</strong>. A spell is an
+ordered pair of vertices together with the interval over which the tie
+between them is active, and a temporal network is the set of all spells
+over an observation period.</p>
+<p>Aggregating the spells into one static graph discards three
+properties of the data: how often a pair interacted, how long each
+interaction lasted, and the order in which the interactions occurred.
+Order has the largest consequences, because it constrains what can flow
+through the network. A sequence of ties from A through B to C can carry
+information from A to C only if the tie between B and C is active at or
+after the time the tie between A and B is used. Such a sequence is a
+<strong>time-respecting path</strong>. Every time-respecting path is a
+path of the aggregated graph, but the converse does not hold, and
+reachability along time-respecting paths is not transitive: A may reach
+B and B may reach C while A cannot reach C. The timing of relationships
+can therefore leave far fewer vertices reachable than the aggregated
+graph suggests, and uneven timing of contacts slows spreading compared
+with the same contacts shuffled in time.</p>
+<p>Collaborative learning is a natural case for these methods. The order
+in which students contribute is part of what is being studied, so a
+model of who interacted with whom that ignores when they interacted
+discards the object of study.</p>
+<p>This vignette applies these ideas to one log of classroom contacts.
+The analysis moves from the network as a whole, to individual vertices,
+to paths between vertices, and finally to the spells themselves:</p>
+<ol style="list-style-type: decimal">
+<li>Construct the temporal network and describe its size and time
+span.</li>
+<li>Measure density in successive windows, which gives a graph-level
+time series.</li>
+<li>Measure the degree of every vertex in every window, which gives one
+trajectory per vertex.</li>
+<li>Compute temporal closeness and temporal betweenness on
+time-respecting paths.</li>
+<li>Trace the time-respecting paths from one source, forward and
+backward in time, and represent them as routes and as a tree.</li>
+<li>Describe tie dynamics: formation and dissolution, duration and
+burstiness.</li>
+</ol>
 <div class="section level2">
-<h2 id="a-network-that-knows-what-time-it-is">A network that knows what time it is<a class="anchor" aria-label="anchor" href="#a-network-that-knows-what-time-it-is"></a>
+<h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
 </h2>
-<p>A static network says that two people are connected. A temporal
-network says <em>when</em> they were connected, <em>for how long</em>,
-and — the part that matters most — <em>in which order</em>.</p>
-<p>That ordering is not decoration. If Ana talks to Jonas on Tuesday and
-Jonas talks to Eve on Wednesday, something can travel Ana → Jonas → Eve.
-If the same two conversations happen in the opposite order, nothing can.
-A flattened network scores both situations identically: two edges, one
-path of length two. Only one of them is real.</p>
-<p>The usual workaround is to cut time into slices and analyse each
-slice as a static network. That helps, but it throws away exactly the
-thing that makes the data temporal: a snapshot cannot contain a chain
-that spans snapshots. In the classroom data below, Ana and Eve never
-once make contact, so no slice will ever link them — yet a
-time-respecting path carries Ana to Eve in four hops. Aggregate instead
-and you make the opposite mistake: every ordering becomes legal, and
-connectivity is inflated.</p>
-<p>Dynet keeps time in the object and in every result. This vignette is
-the tour.</p>
+<p><code>school_contacts</code> is a simulated interval log of
+face-to-face contacts among fourteen students over about three weeks.
+Each row is one contact. <code>from</code> names the student who
+initiated the contact and <code>to</code> the student who was addressed,
+so every contact has a direction. <code>start</code> and
+<code>end</code> give the times at which the contact began and ended, in
+days since the start of observation. Times are decimal, so a contact can
+begin and end within one day.</p>
+<p>To inspect the log, we call <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code>, which prints its
+first six rows.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    from   to start  end</span></span>
+<span><span class="co">#&gt; 1 Jonas  Dan  0.00 1.10</span></span>
+<span><span class="co">#&gt; 2  Gita  Ana  0.14 0.98</span></span>
+<span><span class="co">#&gt; 3   Leo Mira  0.15 0.42</span></span>
+<span><span class="co">#&gt; 4   Leo Iris  0.15 0.96</span></span>
+<span><span class="co">#&gt; 5  Kira  Ben  0.33 0.69</span></span>
+<span><span class="co">#&gt; 6   Leo Iris  0.38 0.50</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="building-a-network-in-one-line">Building a network in one line<a class="anchor" aria-label="anchor" href="#building-a-network-in-one-line"></a>
+<h2 id="building-the-network">Building the network<a class="anchor" aria-label="anchor" href="#building-the-network"></a>
 </h2>
-<p>The bundled <code>school_contacts</code> is an <em>interval log</em>:
-each row is one contact, with its own start and end time.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<p><code><a href="../reference/dynet.html">dynet()</a></code> constructs a temporal network from a relational
+log. It recognises four log formats (interval, contact, threaded and
+co-presence) from the columns and arguments it receives. A log with both
+a <code>start</code> and an <code>end</code> column is read as an
+interval log, which gives an interval graph. Each spell is active on the
+half-open interval
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">start</mtext><mo>,</mo><mtext mathvariant="normal">end</mtext><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[\text{start}, \text{end})</annotation></semantics></math>:
+it includes its start time and excludes its end time, so a spell that
+ends at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+and a spell that begins at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+are never active together.</p>
+<p>To construct the network, we call <code><a href="../reference/dynet.html">dynet()</a></code> on the log.
+The print method reports the format, the direction, the size and the
+observed time span, followed by the first spells. <code><a href="../reference/dynet.html">dynet()</a></code>
+adds a <code>duration</code> column, equal to <code>end</code> minus
+<code>start</code>, and a <code>weight</code> column.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
 <span><span class="va">dn</span></span>
 <span><span class="co">#&gt; # Temporal network (interval format, directed) | a cograph netobject</span></span>
@@ -111,9 +173,26 @@ each row is one contact, with its own start and end time.</p>
 <span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
 <span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
 <span><span class="co">#&gt; # 234 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p><code><a href="../reference/dynet.html">dynet()</a></code> inferred the format from the column names it
-found. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> describes what it built.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>The network has 14 vertices, 240 spells and 110 distinct ordered
+pairs, and is observed from time 0 to 21.52. Times are stored as plain
+numbers with the unit <code>step</code>; in this log one step is one
+day. The bin width of 1 sets the default resolution of every windowed
+measure below to one day. Every spell has weight 1.</p>
+<p>Because the network is directed, the pair (Ana, Cara) is distinct
+from (Cara, Ana), and a time-respecting path traverses a spell only from
+its <code>from</code> vertex to its <code>to</code> vertex. With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>14</mn></mrow><annotation encoding="application/x-tex">n = 14</annotation></semantics></math>
+vertices there are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>182</mn></mrow><annotation encoding="application/x-tex">n(n - 1) = 182</annotation></semantics></math>
+possible ordered pairs, so 110 of 182 pairs, about 60%, were in contact
+at least once. The aggregated graph is therefore dense. The rest of the
+vignette asks how much of that connectivity is present at any one time,
+and how much is available along time-respecting paths.</p>
+<p>To obtain the same description as a table with one row per property,
+we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>. It adds the number of time bins and the
+mean snapshot density, the average of the daily densities computed in
+the next section.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property        value</span></span>
 <span><span class="co">#&gt; 1                 format     interval</span></span>
@@ -131,272 +210,172 @@ found. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link"
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>Fourteen pupils, 240 contact spells over 110 distinct pairs, observed
-across about 21.5 time steps. Note the last two rows of that table: the
-<em>mean snapshot density</em> and the <em>temporal density</em> are not
-the same number, and the gap between them is the subject of this
-vignette.</p>
-<p>One constructor covers the four shapes relational logs actually
-arrive in — interval logs, contact logs of instantaneous events,
-threaded logs such as forum data, and co-presence logs where sharing a
-group creates a tie. The companion vignette on building networks works
-through all four; here we stay with the one line above.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<p>The observation period spans 22 daily bins, and the mean snapshot
+density is 0.0829. On an average day about one ordered pair in twelve is
+in contact, against 60% over the whole period. The gap between the two
+figures is a first sign that the aggregated graph overstates the
+connectivity present at any given time.</p>
+<p>To see when spells form and dissolve over the observation period, we
+call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> with <code>type = "activity"</code>. The
+activity plot places spell formation and dissolution on a common time
+axis, which shows periods of high and low turnover before any measure is
+computed.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"activity"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="dynet_files/figure-html/activity-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level2">
-<h2 id="two-commitments">Two commitments<a class="anchor" aria-label="anchor" href="#two-commitments"></a>
+<h2 id="measuring-in-windows">Measuring in windows<a class="anchor" aria-label="anchor" href="#measuring-in-windows"></a>
 </h2>
-<p>Everything below rests on two promises the package makes.</p>
-<p><strong>Vertices are named, never numbered.</strong> You ask for
-<code>"Ana"</code>, not for vertex 1. There is no index to look up
-first, and no result that hands you an integer where you expected a
-person.</p>
-<p><strong>Every verb returns a tidy data frame.</strong> One row per
-observation, with the columns you would expect. No matrices, no nested
-lists, nothing that asks you to reach into an object with <code>$</code>
-or to subset a result before it is readable.</p>
-<p>Both are visible in a single call:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">degree</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Degree (node-level)</span></span>
-<span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 308 rows</span></span>
-<span><span class="co">#&gt;  time node measure value</span></span>
-<span><span class="co">#&gt;     0  Ana  degree     1</span></span>
-<span><span class="co">#&gt;     0  Ben  degree     1</span></span>
-<span><span class="co">#&gt;     0 Cara  degree     1</span></span>
-<span><span class="co">#&gt;     0  Dan  degree     1</span></span>
-<span><span class="co">#&gt;     0  Eve  degree     2</span></span>
-<span><span class="co">#&gt;     0 Finn  degree     1</span></span></code></pre></div>
-<p>One row per node per time point, vertices named, a <code>value</code>
-column you can plot directly. The printed header is a courtesy; the
-object underneath is an ordinary data frame.</p>
+<p>A temporal network can be measured in two ways. The first divides the
+observation period into windows, aggregates the spells in each window
+into a static snapshot, and computes a static measure on every snapshot,
+which gives a time series. The second computes measures directly on
+time-respecting paths and is introduced in the section on temporal
+centrality. This section and the next use the first.</p>
+<p>Every Dynet function that returns a time series takes the same four
+timing arguments. <code>start</code> and <code>end</code> set the first
+and last measurement times and default to the observed range.
+<code>step</code> is the interval between successive measurements and
+defaults to the bin width of the network. <code>window</code> is the
+length of time each measurement covers, counted forward from the
+measurement time, so the measurement at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+uses the spells active in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>t</mi><mo>,</mo><mi>t</mi><mo>+</mo><mtext mathvariant="normal">window</mtext><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[t, t + \text{window})</annotation></semantics></math>.
+It defaults to <code>step</code>, which divides the observation period
+into non-overlapping bins. The window length is an analytic choice: a
+short window resolves change finely but gives sparse snapshots, and a
+long window gives denser snapshots at the cost of temporal
+resolution.</p>
+<p><strong>Density</strong> is the proportion of possible ties that are
+present. In a directed network with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+vertices, the density of window
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>w</mi><annotation encoding="application/x-tex">w</annotation></semantics></math>
+is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>w</mi></msub><mo>=</mo><mfrac><msub><mi>m</mi><mi>w</mi></msub><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">D_w = \frac{m_w}{n(n-1)},</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mi>w</mi></msub><annotation encoding="application/x-tex">m_w</annotation></semantics></math>
+is the number of ordered pairs with at least one spell active at some
+time in the window. A pair counts once however many spells it has in the
+window, so
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>D</mi><mi>w</mi></msub><annotation encoding="application/x-tex">D_w</annotation></semantics></math>
+lies between 0 and 1.</p>
+<p>To obtain daily density, we call <code><a href="../reference/metrics.html">metrics()</a></code> with
+<code>measure = "density"</code>. The result has one row per window,
+with the columns <code>time</code> (the start of the window),
+<code>measure</code> and <code>value</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span><span class="op">)</span></span>
-<span><span class="va">density_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">density_table</span><span class="op">)</span></span>
-<span><span class="co">#&gt; 'data.frame':    22 obs. of  3 variables:</span></span>
-<span><span class="co">#&gt;  $ time   : num  0 1 2 3 4 5 6 7 8 9 ...</span></span>
-<span><span class="co">#&gt;  $ measure: chr  "density" "density" "density" "density" ...</span></span>
-<span><span class="co">#&gt;  $ value  : num  0.0549 0.044 0.0549 0.0659 0.0714 ...</span></span></code></pre></div>
-<p>Because results are already tidy, the tidying rituals you would
-normally write by hand are arguments instead. <code>start</code>,
-<code>end</code>, <code>step</code>, <code>window</code>,
-<code>sessions</code>, <code>measure</code>, <code>mode</code> — you
-narrow a result by asking the verb for it, not by slicing what it
-returned.</p>
-</div>
-<div class="section level2">
-<h2 id="what-a-snapshot-cannot-see">What a snapshot cannot see<a class="anchor" aria-label="anchor" href="#what-a-snapshot-cannot-see"></a>
-</h2>
-<p>Start with the graph-level view. <code><a href="../reference/metrics.html">metrics()</a></code> computes a
-structural measure once per time bin.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span>
+<span><span class="va">density</span></span>
 <span><span class="co">#&gt; # Density (graph-level)</span></span>
 <span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 22 rows</span></span>
 <span><span class="co">#&gt;  time measure      value</span></span>
 <span><span class="co">#&gt;     0 density 0.05494505</span></span>
 <span><span class="co">#&gt;     1 density 0.04395604</span></span>
 <span><span class="co">#&gt;     2 density 0.05494505</span></span>
 <span><span class="co">#&gt;     3 density 0.06593407</span></span>
 <span><span class="co">#&gt;     4 density 0.07142857</span></span>
-<span><span class="co">#&gt;     5 density 0.08791209</span></span></code></pre></div>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt;     5 density 0.08791209</span></span>
+<span><span class="co">#&gt;     6 density 0.15934066</span></span>
+<span><span class="co">#&gt;     7 density 0.10439560</span></span>
+<span><span class="co">#&gt;     8 density 0.09890110</span></span>
+<span><span class="co">#&gt;     9 density 0.08791209</span></span>
+<span><span class="co">#&gt;    10 density 0.10439560</span></span>
+<span><span class="co">#&gt;    11 density 0.09890110</span></span>
+<span><span class="co">#&gt; # 10 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>On day 0 the density is 0.055: 10 of the 182 ordered pairs were in
+contact at some time that day. On day 6 it rises to 0.159, or 29 pairs.
+The final bin begins at day 21 and ends with the observation at day
+21.52, so it covers about half a day, and its density is not comparable
+with that of a full day.</p>
+<p>To reduce the series to one row, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>. The
+columns are the number of windows <code>n</code>, the <code>mean</code>,
+standard deviation <code>sd</code>, <code>min</code> and
+<code>max</code> of the values, and <code>peak_time</code>, the start of
+the window with the largest value.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   measure  n       mean         sd        min       max peak_time</span></span>
 <span><span class="co">#&gt; 1 density 22 0.08291708 0.03929021 0.03296703 0.1648352        14</span></span></code></pre></div>
-<p>The busiest single instant links about one pair in six; on average it
-is closer to one in twelve. Plotted, the classroom breathes.</p>
+<p>Across the 22 bins the mean daily density is 0.083 (SD 0.039). The
+maximum, 0.165, falls on day 14, when 30 of the 182 ordered pairs were
+in contact. The minimum, 0.033, belongs to the truncated final bin;
+among full days the lowest value is 0.038, on day 18.</p>
+<p>Daily snapshots vary from one day to the next, partly because a
+contact near a bin boundary falls on one side or the other of it. A
+rolling window reduces this variation. Setting <code>window</code>
+larger than <code>step</code> makes successive windows overlap: with
+<code>step = 1</code> and <code>window = 7</code>, a measurement is
+taken every day and each covers the seven days
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>t</mi><mo>,</mo><mi>t</mi><mo>+</mo><mn>7</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[t, t + 7)</annotation></semantics></math>.
+A pair is present if it was in contact at any time in those seven days,
+so the weekly density starting at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+is never lower than the daily density starting at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>.
+Windows that start after day 14.52 extend past the end of observation
+and cover fewer than seven days, so the final values of the series rest
+on progressively shorter windows.</p>
+<p>To obtain the rolling weekly series and draw it, we call
+<code><a href="../reference/metrics.html">metrics()</a></code> with <code>step = 1</code> and
+<code>window = 7</code>, and then <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">density_weekly</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">density_weekly</span><span class="op">)</span></span></code></pre></div>
+<p><img src="dynet_files/figure-html/density-rolling-1.png" class="r-plt" alt="" width="672"></p>
+</div>
+<div class="section level2">
+<h2 id="vertex-trajectories">Vertex trajectories<a class="anchor" aria-label="anchor" href="#vertex-trajectories"></a>
+</h2>
+<p>Density describes the network as a whole. A
+<strong>centrality</strong> index describes the position of one vertex.
+<code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> computes a centrality index for every
+vertex in every window and returns one row per vertex per window, so
+each vertex has a trajectory over time. <code>measure</code> selects the
+index, and <code>start</code>, <code>end</code>, <code>step</code> and
+<code>window</code> work as in <code><a href="../reference/metrics.html">metrics()</a></code>.</p>
+<p><strong>Degree</strong> counts the distinct partners of a vertex
+within a window. In a directed network the default,
+<code>mode = "all"</code>, adds in-degree, the number of distinct
+vertices with a spell to the vertex, and out-degree, the number of
+distinct vertices the vertex has a spell to. Several spells between the
+same ordered pair in one window count once.</p>
+<p>To obtain daily degree, we call <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> with
+<code>measure = "degree"</code>. The result has the columns
+<code>time</code>, <code>node</code>, <code>measure</code> and
+<code>value</code>.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">density</span>, palette <span class="op">=</span> <span class="st">"okabe"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="dynet_files/figure-html/density-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>If those snapshots were all you had, you would conclude that this
-classroom is sparse and fragmented. Now ask the temporal question
-instead.</p>
-</div>
-<div class="section level2">
-<h2 id="time-respecting-paths">Time-respecting paths<a class="anchor" aria-label="anchor" href="#time-respecting-paths"></a>
-</h2>
-<p>A time-respecting path may only use edges whose timing runs forward.
-It can wait at a vertex, but it can never travel back in time.
-<code><a href="../reference/paths.html">paths()</a></code> follows every such path out of one named
-vertex.</p>
+<code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<span><span class="va">degree</span></span>
+<span><span class="co">#&gt; # Degree (node-level)</span></span>
+<span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
+<span><span class="co">#&gt;  time  node measure value</span></span>
+<span><span class="co">#&gt;     0   Ana  degree     1</span></span>
+<span><span class="co">#&gt;     0   Ben  degree     1</span></span>
+<span><span class="co">#&gt;     0  Cara  degree     1</span></span>
+<span><span class="co">#&gt;     0   Dan  degree     1</span></span>
+<span><span class="co">#&gt;     0   Eve  degree     2</span></span>
+<span><span class="co">#&gt;     0  Finn  degree     1</span></span>
+<span><span class="co">#&gt;     0  Gita  degree     1</span></span>
+<span><span class="co">#&gt;     0  Hugo  degree     1</span></span>
+<span><span class="co">#&gt;     0  Iris  degree     2</span></span>
+<span><span class="co">#&gt;     0 Jonas  degree     2</span></span>
+<span><span class="co">#&gt;     0  Kira  degree     2</span></span>
+<span><span class="co">#&gt;     0   Leo  degree     2</span></span>
+<span><span class="co">#&gt; # 296 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>Each row is one vertex in one window, so 14 students over 22 days
+give 308 rows. In the twelve rows shown for day 0, five students have
+two partners and the other seven one. The first day’s network is a
+scatter of isolated contacts, not a connected structure.</p>
+<p>To reduce each trajectory to one row per vertex, we call
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>. It reports the number of windows <code>n</code>,
+the <code>mean</code>, <code>sd</code>, <code>min</code> and
+<code>max</code> of the vertex’s daily degree, and
+<code>peak_time</code>, the start of the window in which that degree was
+highest.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Time-respecting paths from 'Ana', from t = 0</span></span>
-<span><span class="co">#&gt; # reaches 13 of 13 other vertices | time in step</span></span>
-<span><span class="co">#&gt;   node reachable arrival_time attained latency n_hops n_paths</span></span>
-<span><span class="co">#&gt;    Ana      TRUE         0.00     TRUE    0.00      0       1</span></span>
-<span><span class="co">#&gt;    Ben      TRUE         9.59     TRUE    9.59      3       3</span></span>
-<span><span class="co">#&gt;   Cara      TRUE         6.67     TRUE    6.67      1       1</span></span>
-<span><span class="co">#&gt;    Dan      TRUE         7.98     TRUE    7.98      4       1</span></span>
-<span><span class="co">#&gt;    Eve      TRUE        11.66     TRUE   11.66      4       3</span></span>
-<span><span class="co">#&gt;   Finn      TRUE         6.96     TRUE    6.96      2       1</span></span>
-<span><span class="co">#&gt;   Gita      TRUE         6.36     TRUE    6.36      2       1</span></span>
-<span><span class="co">#&gt;   Hugo      TRUE         7.98     TRUE    7.98      3       1</span></span>
-<span><span class="co">#&gt;   Iris      TRUE        10.00     TRUE   10.00      3       1</span></span>
-<span><span class="co">#&gt;  Jonas      TRUE         2.12     TRUE    2.12      1       1</span></span>
-<span><span class="co">#&gt;   Kira      TRUE         6.12     TRUE    6.12      2       2</span></span>
-<span><span class="co">#&gt;    Leo      TRUE         9.65     TRUE    9.65      3       1</span></span>
-<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws the tree.</span></span></code></pre></div>
-<p>Four columns carry the temporal content:</p>
-<ul>
-<li>
-<strong><code>arrival_time</code></strong> — the earliest clock time
-at which the journey can get there. It is a point on the network’s
-timeline, not a count of steps.</li>
-<li>
-<strong><code>latency</code></strong> — how long the journey took:
-<code>arrival_time</code> minus the time the source became available.
-Ana starts at 0 here, so the two coincide; start later and they part
-company.</li>
-<li>
-<strong><code>n_hops</code></strong> — how many edges the journey
-used. Dynet optimises <em>shortest foremost</em>: it minimises arrival
-time first, then hop count among the journeys that achieve it.</li>
-<li>
-<strong><code>n_paths</code></strong> — how many distinct optimal
-journeys there are. Two vertices can share an arrival time and hop count
-and still differ in how many ways the network gets you there.</li>
-</ul>
-<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> aggregates the whole reachable set.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">from_ana</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span>
-<span><span class="co">#&gt;          property   value</span></span>
-<span><span class="co">#&gt; 1          source     Ana</span></span>
-<span><span class="co">#&gt; 2       direction forward</span></span>
-<span><span class="co">#&gt; 3       reachable      13</span></span>
-<span><span class="co">#&gt; 4 reachable share       1</span></span>
-<span><span class="co">#&gt; 5  median latency    7.51</span></span>
-<span><span class="co">#&gt; 6     max latency   11.66</span></span>
-<span><span class="co">#&gt; 7     median hops       2</span></span>
-<span><span class="co">#&gt; 8        max hops       4</span></span></code></pre></div>
-<p>So Ana reaches every one of the other thirteen pupils, in at most
-four hops — in a network where no single snapshot ever connected more
-than a sixth of the pairs. That is the information a
-snapshot-by-snapshot analysis destroys.</p>
-<p>The result is not a property of the network alone; it is a property
-of the network <em>and when you start</em>. Ask the same question from
-late in the window and most of those journeys no longer exist, because
-the contacts that carried them have already happened.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, start <span class="op">=</span> <span class="fl">18</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Time-respecting paths from 'Ana', from t = 18</span></span>
-<span><span class="co">#&gt; # reaches 5 of 13 other vertices | time in step</span></span>
-<span><span class="co">#&gt;   node reachable arrival_time attained latency n_hops n_paths</span></span>
-<span><span class="co">#&gt;    Ana      TRUE        18.00     TRUE    0.00      0       1</span></span>
-<span><span class="co">#&gt;    Ben     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Cara      TRUE        20.68     TRUE    2.68      3       1</span></span>
-<span><span class="co">#&gt;    Dan      TRUE        19.91     TRUE    1.91      1       1</span></span>
-<span><span class="co">#&gt;    Eve     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Finn     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Gita     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Hugo     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Iris     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;  Jonas     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;   Kira     FALSE           NA    FALSE      NA     NA       0</span></span>
-<span><span class="co">#&gt;    Leo      TRUE        20.33     TRUE    2.33      1       1</span></span>
-<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws the tree.</span></span></code></pre></div>
-<p>Reach also has a direction. <code>direction = "backward"</code>
-traces who could have reached Ana rather than whom Ana can reach — the
-question you want when you are tracing an exposure backwards rather than
-forwards.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">into_ana</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, direction <span class="op">=</span> <span class="st">"backward"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">into_ana</span><span class="op">)</span></span>
-<span><span class="co">#&gt;          property    value</span></span>
-<span><span class="co">#&gt; 1          source      Ana</span></span>
-<span><span class="co">#&gt; 2       direction backward</span></span>
-<span><span class="co">#&gt; 3       reachable       13</span></span>
-<span><span class="co">#&gt; 4 reachable share        1</span></span>
-<span><span class="co">#&gt; 5  median latency     4.27</span></span>
-<span><span class="co">#&gt; 6     max latency      8.9</span></span>
-<span><span class="co">#&gt; 7     median hops        2</span></span>
-<span><span class="co">#&gt; 8        max hops        3</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="seeing-the-journeys">Seeing the journeys<a class="anchor" aria-label="anchor" href="#seeing-the-journeys"></a>
-</h2>
-<p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on a paths result draws the whole family of
-optimal journeys as a trajectory tree.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">journeys</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">journeys</span><span class="op">)</span></span></code></pre></div>
-<p><img src="dynet_files/figure-html/trajectory-1.png" class="r-plt" alt="" width="672"></p>
-<p>Read it outward from the root. The source sits at hop 0 on the left;
-each step to the right is one more hop, so a vertex’s horizontal
-position is the number of edges its journey used. Node size and branch
-width both encode the number of optimal routes running through that
-point, and each node is labelled with the vertex name and the time the
-hop fires, so nothing is carried by size or colour alone.</p>
-<p>The feature that has no static counterpart is this: <strong>a vertex
-appears more than once when it was reached under a different temporal
-history.</strong> <code>Jonas</code> shows up three times in this tree.
-Those are not three different pupils and not three different places in
-the graph — they are the same vertex entered at 2.12, at 3.43 and at
-6.68. Each entry time leaves a different set of onward contacts still in
-the future, so each one is genuinely a different starting point for the
-rest of the journey. That is why <code><a href="../reference/paths.html">paths()</a></code> reported
-<code>n_paths = 3</code> for Ben earlier: the three optimal routes to
-Ben share the vertex sequence Ana → Jonas → Kira → Ben and differ only
-in when the hops fire. A flattened network would collapse all three into
-one path and call the matter settled.</p>
-<p><code>measure</code> re-encodes the same tree. <code>"time"</code>
-weights it by arrival time rather than route count, which turns the
-picture into a schedule of when the reachable set fills up.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">journeys</span>, measure <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="dynet_files/figure-html/trajectory-time-1.png" class="r-plt" alt="" width="672"></p>
-<p><code>orientation = "vertical"</code> turns the tree on its side for
-a tall, narrow layout, <code>min_count</code> prunes branches carrying
-fewer than that many routes, and <code>measure = "predictability"</code>
-shades each branch by how strongly its parent commits to it.</p>
-<p>The tree is data as well as a picture.
-<code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> returns it tidily, one row per tree
-node, with the route as a readable string, its <code>parent</code>,
-<code>depth</code>, the <code>count</code> of routes through it, the
-branching <code>probability</code> given its parent, and the bare
-<code>vertex</code> and <code>time</code>.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">trajectories</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/path_trajectories.html">path_trajectories</a></span><span class="op">(</span><span class="va">journeys</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">trajectories</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Forward temporal trajectory tree from Ana</span></span>
-<span><span class="co">#&gt; # 6 nodes, 3 hops deep, 19 routes</span></span>
-<span><span class="co">#&gt;                                          node                          parent</span></span>
-<span><span class="co">#&gt; 1                                       Ana@0                            &lt;NA&gt;</span></span>
-<span><span class="co">#&gt; 2                          Ana@0 -&gt; Cara@6.67                           Ana@0</span></span>
-<span><span class="co">#&gt; 3             Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96              Ana@0 -&gt; Cara@6.67</span></span>
-<span><span class="co">#&gt; 4  Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96 -&gt; Iris@10 Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96</span></span>
-<span><span class="co">#&gt; 5 Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96 -&gt; Leo@9.65 Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96</span></span>
-<span><span class="co">#&gt; 6             Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51              Ana@0 -&gt; Cara@6.67</span></span>
-<span><span class="co">#&gt;   depth count probability vertex  time session branch</span></span>
-<span><span class="co">#&gt; 1     0    19          NA    Ana  0.00    &lt;NA&gt;   3.15</span></span>
-<span><span class="co">#&gt; 2     1     7   0.3684211   Cara  6.67    &lt;NA&gt;   5.75</span></span>
-<span><span class="co">#&gt; 3     2     3   0.4285714   Finn  6.96    &lt;NA&gt;   6.50</span></span>
-<span><span class="co">#&gt; 4     3     1   0.3333333   Iris 10.00    &lt;NA&gt;   7.00</span></span>
-<span><span class="co">#&gt; 5     3     1   0.3333333    Leo  9.65    &lt;NA&gt;   6.00</span></span>
-<span><span class="co">#&gt; 6     2     3   0.4285714   Nils  7.51    &lt;NA&gt;   5.00</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="a-tour-of-the-measurement-verbs">A tour of the measurement verbs<a class="anchor" aria-label="anchor" href="#a-tour-of-the-measurement-verbs"></a>
-</h2>
-<p>Every verb takes the network first and a <code>measure</code> (or an
-attribute) by name. Every one returns a tidy frame keyed by time, by
-vertex, or by both.</p>
-<div class="section level3">
-<h3 id="dyn_centrality-who-matters-and-when">
-<code>dyn_centrality()</code> — who matters, and when<a class="anchor" aria-label="anchor" href="#dyn_centrality-who-matters-and-when"></a>
-</h3>
-<p>At <code>scope = "snapshot"</code> a centrality is recomputed in
-every bin, so <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> gives you each pupil’s trajectory
-in one table, including when they peaked.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">degree</span><span class="op">)</span></span>
 <span><span class="co">#&gt;     node measure  n     mean       sd min max peak_time</span></span>
 <span><span class="co">#&gt; 1    Ana  degree 22 2.181818 2.015095   0   7         6</span></span>
@@ -413,207 +392,666 @@ in one table, including when they peaked.</p>
 <span><span class="co">#&gt; 12   Leo  degree 22 1.636364 1.432462   0   5         6</span></span>
 <span><span class="co">#&gt; 13  Mira  degree 22 2.272727 1.695423   0   6        13</span></span>
 <span><span class="co">#&gt; 14  Nils  degree 22 2.181818 2.174229   0   7        14</span></span></code></pre></div>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">degree</span>, type <span class="op">=</span> <span class="st">"heatmap"</span>, palette <span class="op">=</span> <span class="st">"okabe"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="dynet_files/figure-html/centrality-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>At <code>scope = "temporal"</code> the measure is computed on
-time-respecting paths across the whole window instead — one value per
-vertex, not one per bin. Temporal closeness is the <em>inverse</em> of
-mean forward latency over the vertices a person reaches, so a high score
-means “gets to the rest of the class quickly” rather than “has many
-neighbours right now”.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">closeness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"closeness"</span>, scope <span class="op">=</span> <span class="st">"temporal"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">closeness</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Closeness (node-level)</span></span>
-<span><span class="co">#&gt; # 14 vertices | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 14 rows</span></span>
-<span><span class="co">#&gt; # computed on time-respecting paths across the whole window</span></span>
-<span><span class="co">#&gt;  node   measure     value</span></span>
-<span><span class="co">#&gt;   Ana closeness 0.1313662</span></span>
-<span><span class="co">#&gt;   Ben closeness 0.1815896</span></span>
-<span><span class="co">#&gt;  Cara closeness 0.1931075</span></span>
-<span><span class="co">#&gt;   Dan closeness 0.2230994</span></span>
-<span><span class="co">#&gt;   Eve closeness 0.2616221</span></span>
-<span><span class="co">#&gt;  Finn closeness 0.1644945</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="metrics-graph-level-structure-over-time">
-<code>metrics()</code> — graph-level structure over time<a class="anchor" aria-label="anchor" href="#metrics-graph-level-structure-over-time"></a>
-</h3>
-<p>Density is one of forty available measures.
-<code>temporal_density</code> is a useful contrast: it discounts pairs
-that are adjacent in a snapshot but never in a time-respecting
-order.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">temporal_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"temporal_density"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">temporal_density</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Temporal density (graph-level)</span></span>
-<span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 22 rows</span></span>
-<span><span class="co">#&gt;  time          measure      value</span></span>
-<span><span class="co">#&gt;     0 temporal_density 0.02379121</span></span>
-<span><span class="co">#&gt;     1 temporal_density 0.01307692</span></span>
-<span><span class="co">#&gt;     2 temporal_density 0.01664835</span></span>
-<span><span class="co">#&gt;     3 temporal_density 0.02785714</span></span>
-<span><span class="co">#&gt;     4 temporal_density 0.01697802</span></span>
-<span><span class="co">#&gt;     5 temporal_density 0.02357143</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="events-ties-appearing-and-disappearing">
-<code>events()</code> — ties appearing and disappearing<a class="anchor" aria-label="anchor" href="#events-ties-appearing-and-disappearing"></a>
-</h3>
-<p>Structure is a stock; formation and dissolution are the flows that
-produce it.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">formation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"formation"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">formation</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Edges formed (graph-level)</span></span>
-<span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 22 rows</span></span>
-<span><span class="co">#&gt;  time   measure value</span></span>
-<span><span class="co">#&gt;     0 formation    11</span></span>
-<span><span class="co">#&gt;     1 formation     4</span></span>
-<span><span class="co">#&gt;     2 formation     8</span></span>
-<span><span class="co">#&gt;     3 formation     8</span></span>
-<span><span class="co">#&gt;     4 formation    12</span></span>
-<span><span class="co">#&gt;     5 formation     9</span></span></code></pre></div>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dissolution</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"dissolution"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dissolution</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Edges dissolved (graph-level)</span></span>
-<span><span class="co">#&gt; # 22 time points, 1 per bin | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 22 rows</span></span>
-<span><span class="co">#&gt;  time     measure value</span></span>
-<span><span class="co">#&gt;     0 dissolution     7</span></span>
-<span><span class="co">#&gt;     1 dissolution     6</span></span>
-<span><span class="co">#&gt;     2 dissolution     6</span></span>
-<span><span class="co">#&gt;     3 dissolution     9</span></span>
-<span><span class="co">#&gt;     4 dissolution     8</span></span>
-<span><span class="co">#&gt;     5 dissolution     9</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="burstiness-is-contact-regular-or-clumped">
-<code>burstiness()</code> — is contact regular or clumped?<a class="anchor" aria-label="anchor" href="#burstiness-is-contact-regular-or-clumped"></a>
-</h3>
-<p>Human contact is rarely Poisson. Burstiness compares the variability
-of the gaps between a vertex’s events against the exponential reference:
-<code>1</code> is the bursty limit, <code>0</code> is Poisson,
-<code>-1</code> is perfectly regular.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bursts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/burstiness.html">burstiness</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">bursts</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Burstiness (node-level)</span></span>
-<span><span class="co">#&gt; # 14 vertices | time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 42 rows</span></span>
-<span><span class="co">#&gt; # 1 is the bursty limit, 0 is the Poisson reference, -1 is regular</span></span>
-<span><span class="co">#&gt;  node    measure       value</span></span>
-<span><span class="co">#&gt;   Ana burstiness  0.24575324</span></span>
-<span><span class="co">#&gt;   Ben burstiness  0.03288611</span></span>
-<span><span class="co">#&gt;  Cara burstiness -0.05610924</span></span>
-<span><span class="co">#&gt;   Dan burstiness -0.05061772</span></span>
-<span><span class="co">#&gt;   Eve burstiness  0.09217906</span></span>
-<span><span class="co">#&gt;  Finn burstiness  0.02938507</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="durations-how-long-ties-actually-last">
-<code>durations()</code> — how long ties actually last<a class="anchor" aria-label="anchor" href="#durations-how-long-ties-actually-last"></a>
-</h3>
-<p>By default <code><a href="../reference/durations.html">durations()</a></code> counts events per pair;
-<code>measure = "mean"</code> gives the average length of a spell, and
-<code>unit</code> moves the question from pairs to spells or to vertex
-activity.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mean_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mean_durations</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Relationship duration (edge-level)</span></span>
-<span><span class="co">#&gt; # time in step</span></span>
-<span><span class="co">#&gt; # first 6 of 110 rows</span></span>
-<span><span class="co">#&gt; # durations in step</span></span>
-<span><span class="co">#&gt;  from    to measure value</span></span>
-<span><span class="co">#&gt;   Ana  Cara    mean 0.100</span></span>
-<span><span class="co">#&gt;   Ana   Dan    mean 0.340</span></span>
-<span><span class="co">#&gt;   Ana  Gita    mean 0.422</span></span>
-<span><span class="co">#&gt;   Ana  Iris    mean 0.500</span></span>
-<span><span class="co">#&gt;   Ana Jonas    mean 0.585</span></span>
-<span><span class="co">#&gt;   Ana  Kira    mean 0.110</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="mixing-who-connects-across-which-groups">
-<code>mixing()</code> — who connects across which groups<a class="anchor" aria-label="anchor" href="#mixing-who-connects-across-which-groups"></a>
-</h3>
-<p>Mixing needs vertex attributes, so this one uses the forum data,
-where <code>forum_people</code> supplies a <code>role</code> for each
-participant. <code>forum_posts</code> is a <em>threaded</em> log: a post
-keeps its tie alive until the thread falls silent.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
-<span><span class="va">fn</span></span>
-<span><span class="co">#&gt; # Temporal network (threaded format, directed) | a cograph netobject</span></span>
-<span><span class="co">#&gt; # 20 vertices | 241 edge spells | 172 distinct pairs</span></span>
-<span><span class="co">#&gt; # observed from 0 to 54.96387 days, binned every 1</span></span>
-<span><span class="co">#&gt; # vertex attributes: role, achievement</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;        from         to     start      end duration weight    thread</span></span>
-<span><span class="co">#&gt;  student_14 student_05 0.0000000 2.296969 2.296969      1 thread_47</span></span>
-<span><span class="co">#&gt;  student_10 student_05 0.7257216 2.296969 1.571247      1 thread_47</span></span>
-<span><span class="co">#&gt;   teacher_A student_09 0.8559934 3.235993 2.380000      1 thread_11</span></span>
-<span><span class="co">#&gt;  student_04 student_05 1.1715344 2.296969 1.125435      1 thread_47</span></span>
-<span><span class="co">#&gt;  student_02 student_09 1.2382611 3.235993 1.997732      1 thread_11</span></span>
-<span><span class="co">#&gt;  student_06  teacher_A 1.9797595 3.235993 1.256234      1 thread_11</span></span>
-<span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">fn</span>, attribute <span class="op">=</span> <span class="st">"role"</span>, step <span class="op">=</span> <span class="fl">60</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # Mixing by role (graph-level)</span></span>
-<span><span class="co">#&gt; # 1 time points, 60 per bin | time in days</span></span>
-<span><span class="co">#&gt; # measures: Facilitator -&gt; Facilitator, Student -&gt; Facilitator, Teacher -&gt; Facilitator, Facilitator -&gt; Student, Student -&gt; Student, Teacher -&gt; Student, Facilitator -&gt; Teacher, Student -&gt; Teacher, Teacher -&gt; Teacher</span></span>
-<span><span class="co">#&gt; # active binary-dyad counts between vertex groups per time bin</span></span>
-<span><span class="co">#&gt;  time                    measure value  from_group    to_group</span></span>
-<span><span class="co">#&gt;     0 Facilitator -&gt; Facilitator     0 Facilitator Facilitator</span></span>
-<span><span class="co">#&gt;     0     Student -&gt; Facilitator     3     Student Facilitator</span></span>
-<span><span class="co">#&gt;     0     Teacher -&gt; Facilitator     0     Teacher Facilitator</span></span>
-<span><span class="co">#&gt;     0     Facilitator -&gt; Student     4 Facilitator     Student</span></span>
-<span><span class="co">#&gt;     0         Student -&gt; Student   136     Student     Student</span></span>
-<span><span class="co">#&gt;     0         Teacher -&gt; Student    12     Teacher     Student</span></span>
-<span><span class="co">#&gt;     0     Facilitator -&gt; Teacher     1 Facilitator     Teacher</span></span>
-<span><span class="co">#&gt;     0         Student -&gt; Teacher    16     Student     Teacher</span></span>
-<span><span class="co">#&gt;     0         Teacher -&gt; Teacher     0     Teacher     Teacher</span></span></code></pre></div>
-<p>A <code>step</code> wider than the observation window collapses the
-counts into a single bin; leave it out and you get the same table once
-per bin, which is what you want when you are asking whether cross-role
-contact changes over the term.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
-</h2>
+<p>Mean daily degree varies little across the class, from 1.64 to 2.86
+partners per day. Students differ more in how their contacts are
+distributed over days than in how many contacts they have. The summary
+shows two contrasting patterns of contact.</p>
 <ul>
 <li>
-<code><a href="../articles/building-networks.html">vignette("building-networks", package = "Dynet")</a></code> — the
-four log formats in detail, node attributes, observation windows,
-sessions, and the editing verbs (<code><a href="../reference/add_ties.html">add_ties()</a></code>,
-<code><a href="../reference/set_observations.html">set_observations()</a></code>, <code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> and
-friends).</li>
+<strong>Steady contact.</strong> The student has a partner on most
+days and never many at once. Two students have at least one partner on
+every day (<code>min</code> of 1), and the three smallest standard
+deviations, 1.07 to 1.26, belong to students whose maximum is 4 to
+6.</li>
 <li>
-<strong><code><a href="../reference/paths.html">?paths</a></code></strong> and
-<strong><code><a href="../reference/plot_path_trajectories.html">?plot_path_trajectories</a></code></strong> — the full
-traversal semantics: <code>traversal_time</code> for a cost charged per
-hop, session-bounded search,
-<code>as.data.frame(x, what = "steps")</code> for the reconstructed
-routes themselves, and the remaining trajectory-tree controls.</li>
-<li>
-<strong><code><a href="../reference/dyn_centrality.html">?dyn_centrality</a></code></strong> and
-<strong><code><a href="../reference/metrics.html">?metrics</a></code></strong> — the complete measure
-catalogues. Passing a measure that does not exist prints the list of
-ones that do.</li>
-<li>
-<code><a href="../reference/projection.html">projection()</a></code>, <code><a href="../reference/pshifts.html">pshifts()</a></code>,
-<code><a href="../reference/snapshots.html">snapshots()</a></code> and <code><a href="../reference/collapse_network.html">collapse_network()</a></code> cover
-two-mode projection, participation shifts, per-bin edge lists and static
-aggregation.</li>
+<strong>Episodic contact.</strong> Days without any partner
+alternate with days of many partners. Five students reach a maximum of 7
+or 8, and their standard deviations lie between 1.78 and 2.17. Their
+peaks fall on days 6, 13 and 14, the three densest days of the
+observation period.</li>
 </ul>
-<p><code>browseVignettes("Dynet")</code> lists everything installed
-alongside this one.</p>
+<p>Mean degree does not separate the two patterns, because the means of
+both fall within the same narrow range. The patterns are the two ends of
+a continuum, not discrete groups. They matter for anything that spreads
+through contact: a steadily connected student can pass something on at
+almost any time, while an episodically connected student can do so
+mainly when the whole class is active.</p>
+<p>To display all fourteen trajectories together, we call
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> with <code>type = "heatmap"</code>. It draws one
+tile per vertex and window, shaded by degree.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">degree</span>, type <span class="op">=</span> <span class="st">"heatmap"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="dynet_files/figure-html/degree-heatmap-1.png" class="r-plt" alt="" width="672"></p>
+</div>
+<div class="section level2">
+<h2 id="temporal-centrality">Temporal centrality<a class="anchor" aria-label="anchor" href="#temporal-centrality"></a>
+</h2>
+<p>Windowed degree treats each day as a separate static network. A
+contact on one day and a contact on the next are never combined, so a
+windowed measure cannot show whether something could pass from one
+student to another through a third over several days. Temporal
+centrality indices address this by computing distances along
+time-respecting paths over the whole observation period. Setting
+<code>scope = "temporal"</code> in <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> selects
+this approach and returns one value per vertex.</p>
+<p>A time-respecting path can be optimal in three different senses. A
+<strong>foremost</strong> path reaches its endpoint at the earliest
+possible time, a <strong>shortest</strong> path uses the fewest hops,
+and a <strong>fastest</strong> path has the smallest difference between
+arrival and departure. Dynet uses <strong>shortest foremost</strong>
+paths: among the paths that arrive earliest, it keeps those with the
+fewest hops. A path may wait at a vertex for any length of time, and its
+hop times must not decrease, so two spells active at the same instant
+can be chained.</p>
+<p>The <strong>latency</strong> from a source
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+to a vertex
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>z</mi><annotation encoding="application/x-tex">z</annotation></semantics></math>
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>a</mi><mi>z</mi></msub><mo>−</mo><msub><mi>o</mi><mi>s</mi></msub></mrow><annotation encoding="application/x-tex">a_z - o_s</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>a</mi><mi>z</mi></msub><annotation encoding="application/x-tex">a_z</annotation></semantics></math>
+is the earliest arrival time at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>z</mi><annotation encoding="application/x-tex">z</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>o</mi><mi>s</mi></msub><annotation encoding="application/x-tex">o_s</annotation></semantics></math>
+is the time at which the search leaves
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>,
+here the start of observation. Temporal closeness is built from these
+latencies. With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>R</mi><mi>s</mi></msub><annotation encoding="application/x-tex">R_s</annotation></semantics></math>
+the set of vertices other than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+that are reachable from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>,
+Dynet computes</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mfrac><mrow><mo stretchy="false" form="prefix">|</mo><msub><mi>R</mi><mi>s</mi></msub><mo stretchy="false" form="prefix">|</mo></mrow><mrow><munder><mo>∑</mo><mrow><mi>z</mi><mo>∈</mo><msub><mi>R</mi><mi>s</mi></msub></mrow></munder><mo stretchy="false" form="prefix">(</mo><msub><mi>a</mi><mi>z</mi></msub><mo>−</mo><msub><mi>o</mi><mi>s</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">C(s) = \frac{|R_s|}{\sum_{z \in R_s} (a_z - o_s)},</annotation></semantics></math></p>
+<p>the reciprocal of the mean latency to the reachable vertices, in
+inverse days. A student whose contacts connect early to the rest of the
+class has high temporal closeness, whatever that student’s degree on any
+single day.</p>
+<p>To obtain temporal closeness, we call <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code>
+with <code>measure = "closeness"</code> and
+<code>scope = "temporal"</code>.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">closeness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"closeness"</span>, scope <span class="op">=</span> <span class="st">"temporal"</span><span class="op">)</span></span>
+<span><span class="va">closeness</span></span>
+<span><span class="co">#&gt; # Closeness (node-level)</span></span>
+<span><span class="co">#&gt; # 14 vertices | time in step</span></span>
+<span><span class="co">#&gt; # computed on time-respecting paths across the whole window</span></span>
+<span><span class="co">#&gt;   node   measure     value</span></span>
+<span><span class="co">#&gt;    Ana closeness 0.1313662</span></span>
+<span><span class="co">#&gt;    Ben closeness 0.1815896</span></span>
+<span><span class="co">#&gt;   Cara closeness 0.1931075</span></span>
+<span><span class="co">#&gt;    Dan closeness 0.2230994</span></span>
+<span><span class="co">#&gt;    Eve closeness 0.2616221</span></span>
+<span><span class="co">#&gt;   Finn closeness 0.1644945</span></span>
+<span><span class="co">#&gt;   Gita closeness 0.1404950</span></span>
+<span><span class="co">#&gt;   Hugo closeness 0.1878341</span></span>
+<span><span class="co">#&gt;   Iris closeness 0.2398082</span></span>
+<span><span class="co">#&gt;  Jonas closeness 0.3674392</span></span>
+<span><span class="co">#&gt;   Kira closeness 0.2107994</span></span>
+<span><span class="co">#&gt;    Leo closeness 0.3747478</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>Temporal closeness ranges from 0.131 to 0.375, a mean latency of 7.6
+days at the low end and 2.7 days at the high end. The time a student
+needs to reach the rest of the class therefore varies almost threefold,
+while mean daily degree varies less than twofold. The ordering does not
+follow contact volume. The two highest values, 0.375 and 0.367, belong
+to the students with the lowest (1.64) and the highest (2.86) mean daily
+degree. Closeness is set by timing. A student reaches the class quickly
+when that student’s early contacts are with partners who are about to
+meet others, however many contacts the student has.</p>
+<p><strong>Temporal betweenness</strong> measures how often a vertex
+lies on the optimal paths between other vertices. For each ordered pair
+of a source
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+and a target
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+reachable from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>,
+one unit of credit is divided equally among the shortest foremost paths
+from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>.
+Each intermediate vertex receives the share of those paths that pass
+through it, and the source and target receive nothing. Summing over all
+ordered pairs gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><munder><mo>∑</mo><mrow><mi>s</mi><mo>≠</mo><mi>v</mi><mo>≠</mo><mi>t</mi></mrow></munder><mfrac><mrow><msub><mi>σ</mi><mrow><mi>s</mi><mi>t</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><msub><mi>σ</mi><mrow><mi>s</mi><mi>t</mi></mrow></msub></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">B(v) = \sum_{s \neq v \neq t} \frac{\sigma_{st}(v)}{\sigma_{st}},</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>σ</mi><mrow><mi>s</mi><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">\sigma_{st}</annotation></semantics></math>
+is the number of shortest foremost paths from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
+to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mrow><mi>s</mi><mi>t</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>v</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\sigma_{st}(v)</annotation></semantics></math>
+is the number of those paths that pass through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>v</mi><annotation encoding="application/x-tex">v</annotation></semantics></math>.
+Dynet does not normalise the sum; with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>14</mn></mrow><annotation encoding="application/x-tex">n = 14</annotation></semantics></math>
+vertices it lies between 0 and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>156</mn></mrow><annotation encoding="application/x-tex">(n - 1)(n - 2) = 156</annotation></semantics></math>.</p>
+<p>To obtain temporal betweenness, we call <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code>
+with <code>measure = "betweenness"</code> and the same scope.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">betweenness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span>, scope <span class="op">=</span> <span class="st">"temporal"</span><span class="op">)</span></span>
+<span><span class="va">betweenness</span></span>
+<span><span class="co">#&gt; # Betweenness (node-level)</span></span>
+<span><span class="co">#&gt; # 14 vertices | time in step</span></span>
+<span><span class="co">#&gt; # computed on time-respecting paths across the whole window</span></span>
+<span><span class="co">#&gt;   node     measure     value</span></span>
+<span><span class="co">#&gt;    Ana betweenness 11.000000</span></span>
+<span><span class="co">#&gt;    Ben betweenness 15.416667</span></span>
+<span><span class="co">#&gt;   Cara betweenness 41.916667</span></span>
+<span><span class="co">#&gt;    Dan betweenness  4.333333</span></span>
+<span><span class="co">#&gt;    Eve betweenness 16.416667</span></span>
+<span><span class="co">#&gt;   Finn betweenness 25.583333</span></span>
+<span><span class="co">#&gt;   Gita betweenness 22.000000</span></span>
+<span><span class="co">#&gt;   Hugo betweenness 12.333333</span></span>
+<span><span class="co">#&gt;   Iris betweenness 16.833333</span></span>
+<span><span class="co">#&gt;  Jonas betweenness  7.000000</span></span>
+<span><span class="co">#&gt;   Kira betweenness 41.750000</span></span>
+<span><span class="co">#&gt;    Leo betweenness 32.583333</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>Temporal betweenness ranges from 4.3 to 41.9, almost tenfold, so it
+separates the students far more than degree does. It measures a
+different role from closeness:</p>
+<ul>
+<li>
+<strong>Reach</strong> (closeness): how soon a student’s own
+contacts connect that student to everyone else.</li>
+<li>
+<strong>Relay</strong> (betweenness): how often a student’s contacts
+fall after a path from one student has arrived and before it continues
+to another.</li>
+</ul>
+<p>In these data the two roles are held mostly by different students.
+The two highest betweenness values, 41.9 and 41.8, belong to students
+ranked seventh and eighth of fourteen in closeness. The student with the
+second-highest closeness, who also has the highest mean daily degree,
+has the second-lowest betweenness, 7.0. Only one student holds both
+roles, with the highest closeness and the third-highest betweenness
+(32.6). Neither a large number of contacts nor fast reach makes a
+student a relay. A student relays only when the timing of that student’s
+contacts bridges the timing of other students’ contacts.</p>
+</div>
+<div class="section level2">
+<h2 id="time-respecting-paths">Time-respecting paths<a class="anchor" aria-label="anchor" href="#time-respecting-paths"></a>
+</h2>
+<p>Temporal centralities summarise every source at once.
+<code><a href="../reference/paths.html">paths()</a></code> examines one source: it returns the shortest
+foremost paths from the vertex named in <code>from</code> to every other
+vertex. The search begins at the start of observation unless
+<code>start</code> is set. The result has one row per vertex.
+<code>reachable</code> records whether any time-respecting path from the
+source reaches the vertex, and <code>arrival_time</code> the earliest
+time a path reaches it. <code>attained</code> records whether a path
+arrives at exactly that time, which matters for backward searches.
+<code>latency</code> is <code>arrival_time</code> minus the search
+start, <code>n_hops</code> the number of spells on a shortest foremost
+path, and <code>n_paths</code> the number of distinct shortest foremost
+paths.</p>
+<p>To obtain the paths leaving Ana, we call <code><a href="../reference/paths.html">paths()</a></code> with
+<code>from = "Ana"</code>.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">from_ana</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
+<span><span class="va">from_ana</span></span>
+<span><span class="co">#&gt; # Time-respecting paths from 'Ana', from t = 0</span></span>
+<span><span class="co">#&gt; # reaches 13 of 13 other vertices | time in step</span></span>
+<span><span class="co">#&gt;   node reachable arrival_time attained latency n_hops n_paths</span></span>
+<span><span class="co">#&gt;    Ana      TRUE         0.00     TRUE    0.00      0       1</span></span>
+<span><span class="co">#&gt;    Ben      TRUE         9.59     TRUE    9.59      3       3</span></span>
+<span><span class="co">#&gt;   Cara      TRUE         6.67     TRUE    6.67      1       1</span></span>
+<span><span class="co">#&gt;    Dan      TRUE         7.98     TRUE    7.98      4       1</span></span>
+<span><span class="co">#&gt;    Eve      TRUE        11.66     TRUE   11.66      4       3</span></span>
+<span><span class="co">#&gt;   Finn      TRUE         6.96     TRUE    6.96      2       1</span></span>
+<span><span class="co">#&gt;   Gita      TRUE         6.36     TRUE    6.36      2       1</span></span>
+<span><span class="co">#&gt;   Hugo      TRUE         7.98     TRUE    7.98      3       1</span></span>
+<span><span class="co">#&gt;   Iris      TRUE        10.00     TRUE   10.00      3       1</span></span>
+<span><span class="co">#&gt;  Jonas      TRUE         2.12     TRUE    2.12      1       1</span></span>
+<span><span class="co">#&gt;   Kira      TRUE         6.12     TRUE    6.12      2       2</span></span>
+<span><span class="co">#&gt;    Leo      TRUE         9.65     TRUE    9.65      3       1</span></span>
+<span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws the tree.</span></span></code></pre></div>
+<p>The search starts at day 0. The source reaches three students in one
+hop, four in two, four in three and two in four. Hop count and arrival
+time are only loosely related. A two-hop path arrives on day 6.12,
+before two of the one-hop paths (days 6.36 and 6.67), and a four-hop
+path arrives on day 7.98, two days before a three-hop path (day 10.00).
+In a static graph the vertex fewer hops away is the nearer one. Along
+time-respecting paths the nearer vertex is the one whose connecting
+contacts happen sooner. Three destinations are reached by more than one
+shortest foremost path, which the tree below shows as parallel branches.
+The source’s temporal closeness of 0.131 can be recovered from this
+table: 13 students reached, divided by the sum of their latencies, 98.96
+days.</p>
+<p>To summarise the reachable set, we call <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>. It
+reports the number and share of vertices reached, and the median and
+maximum of latency and of hops.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          property   value</span></span>
+<span><span class="co">#&gt; 1          source     Ana</span></span>
+<span><span class="co">#&gt; 2       direction forward</span></span>
+<span><span class="co">#&gt; 3       reachable      13</span></span>
+<span><span class="co">#&gt; 4 reachable share       1</span></span>
+<span><span class="co">#&gt; 5  median latency    7.51</span></span>
+<span><span class="co">#&gt; 6     max latency   11.66</span></span>
+<span><span class="co">#&gt; 7     median hops       2</span></span>
+<span><span class="co">#&gt; 8        max hops       4</span></span></code></pre></div>
+<p>Ana reaches all 13 other students (reachable share 1). The median
+latency is 7.51 days and the maximum 11.66 days; the median path uses 2
+hops and the longest 4. On no single day are more than 16.5% of the
+ordered pairs in contact (maximum daily density 0.165), yet contacts
+chained across days connect Ana to every other student within twelve
+days.</p>
+<p>Reachability depends on when the search begins. A spell can extend a
+path only if it is active at or after the time the path reaches its
+<code>from</code> vertex, so spells that ended before the search start
+cannot be used. To begin the search on day 18, we call
+<code><a href="../reference/paths.html">paths()</a></code> with <code>start = 18</code>; only spells active
+during the last 3.52 days of observation are then available.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">from_ana_late</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, start <span class="op">=</span> <span class="fl">18</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">from_ana_late</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          property   value</span></span>
+<span><span class="co">#&gt; 1          source     Ana</span></span>
+<span><span class="co">#&gt; 2       direction forward</span></span>
+<span><span class="co">#&gt; 3       reachable       5</span></span>
+<span><span class="co">#&gt; 4 reachable share   0.385</span></span>
+<span><span class="co">#&gt; 5  median latency    2.43</span></span>
+<span><span class="co">#&gt; 6     max latency    2.68</span></span>
+<span><span class="co">#&gt; 7     median hops       2</span></span>
+<span><span class="co">#&gt; 8        max hops       3</span></span></code></pre></div>
+<p>From day 18, Ana reaches 5 of the 13 other students (reachable share
+0.385), with a maximum latency of 2.68 days and at most 3 hops. From day
+0 the same source reaches every student. In a temporal network
+reachability is a property of a vertex at a given time, not of the
+vertex alone.</p>
+<p><code><a href="../reference/paths.html">paths()</a></code> can also search backward in time. With
+<code>direction = "backward"</code>, the search starts at the end of
+observation, day 21.52, and finds for every other vertex the latest time
+at which it could begin a time-respecting path that still reaches Ana by
+the end. <code>arrival_time</code> then holds this latest departure
+time, and <code>latency</code> is the end time minus it. The vertices
+reached this way form the <strong>source set</strong> of Ana, the
+vertices from which information could have reached Ana. A spell excludes
+its end time, so when the latest departure time equals the end of a
+spell, no path can depart at exactly that instant; the vertex is still
+reachable, and <code>attained</code> is <code>FALSE</code>.</p>
+<p>To obtain the backward search into Ana, we call <code><a href="../reference/paths.html">paths()</a></code>
+with <code>direction = "backward"</code>.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">into_ana</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, direction <span class="op">=</span> <span class="st">"backward"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">into_ana</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          property    value</span></span>
+<span><span class="co">#&gt; 1          source      Ana</span></span>
+<span><span class="co">#&gt; 2       direction backward</span></span>
+<span><span class="co">#&gt; 3       reachable       13</span></span>
+<span><span class="co">#&gt; 4 reachable share        1</span></span>
+<span><span class="co">#&gt; 5  median latency     4.27</span></span>
+<span><span class="co">#&gt; 6     max latency      8.9</span></span>
+<span><span class="co">#&gt; 7     median hops        2</span></span>
+<span><span class="co">#&gt; 8        max hops        3</span></span></code></pre></div>
+<p>All 13 other students could have reached Ana by the end of
+observation. The median backward latency is 4.27 days and the maximum
+8.9 days.</p>
+</div>
+<div class="section level2">
+<h2 id="routes">Routes<a class="anchor" aria-label="anchor" href="#routes"></a>
+</h2>
+<p><code><a href="../reference/paths.html">paths()</a></code> returns one row per destination.
+<code><a href="../reference/pathways.html">pathways()</a></code> returns one row per distinct
+<strong>route</strong>, the sequence of vertices that a shortest
+foremost path visits. Routes are identified by their vertex sequence
+alone, so paths that visit the same students through different spells
+are combined into one row and their counts are added. The columns are
+<code>route</code>, <code>endpoint</code>, <code>count</code> (the
+number of shortest foremost paths that follow the route),
+<code>share</code> (the route’s fraction of all counted paths),
+<code>n_hops</code> and <code>arrival_time</code>, with the most
+frequent route first.</p>
+<p>To obtain the routes leaving Ana, we call <code><a href="../reference/pathways.html">pathways()</a></code>
+with <code>from = "Ana"</code>.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pathways.html">pathways</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # Time-respecting pathways (5 distinct routes)</span></span>
+<span><span class="co">#&gt; # 7 optimal routes counted</span></span>
+<span><span class="co">#&gt;                               route endpoint count     share n_hops</span></span>
+<span><span class="co">#&gt;  Ana -&gt; Jonas -&gt; Kira -&gt; Ben -&gt; Eve      Eve     3 0.4285714      4</span></span>
+<span><span class="co">#&gt;                 Ana -&gt; Mira -&gt; Gita     Gita     1 0.1428571      2</span></span>
+<span><span class="co">#&gt;         Ana -&gt; Cara -&gt; Finn -&gt; Iris     Iris     1 0.1428571      3</span></span>
+<span><span class="co">#&gt;          Ana -&gt; Cara -&gt; Finn -&gt; Leo      Leo     1 0.1428571      3</span></span>
+<span><span class="co">#&gt;  Ana -&gt; Cara -&gt; Nils -&gt; Hugo -&gt; Dan      Dan     1 0.1428571      4</span></span>
+<span><span class="co">#&gt;  arrival_time</span></span>
+<span><span class="co">#&gt;         11.66</span></span>
+<span><span class="co">#&gt;          6.36</span></span>
+<span><span class="co">#&gt;         10.00</span></span>
+<span><span class="co">#&gt;          9.65</span></span>
+<span><span class="co">#&gt;          7.98</span></span></code></pre></div>
+<p>Route use is concentrated. One route carries 3 of the 7 counted paths
+(share 0.429) and ends at the last student reached, on day 11.66. The
+other four routes carry one path each. The dominant route is a single
+sequence of students used at three different times. It is a channel the
+network reproduces, not a single chance chain of contacts. The seven
+counted paths are the ones that end at a leaf of the tree drawn below. A
+path that stops at an intermediate vertex is the beginning of a longer
+route and is not listed on its own.</p>
+<p>To draw the shortest foremost paths as a tree, we call
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on the <code><a href="../reference/paths.html">paths()</a></code> result. The source is
+the root, and each level to the right adds one hop. Node size and branch
+width show how many shortest foremost paths use the branch, and each
+node is labelled with its vertex and path count. A tree node is a vertex
+together with the time at which the path reached it, so a vertex appears
+more than once when paths reach it at different times. The arrival time
+matters because it determines which later spells the path can still
+use.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span></code></pre></div>
+<p><img src="dynet_files/figure-html/tree-1.png" class="r-plt" alt="" width="672"></p>
+<p>To obtain the tree as a table, we call
+<code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> on the <code><a href="../reference/paths.html">paths()</a></code> result.
+Each row is one node of the tree. <code>node</code> identifies the node
+by its route, written as <code>vertex@time</code> steps joined by
+arrows. <code>parent</code> is the node one hop shorter,
+<code>depth</code> the number of hops from the source, and
+<code>count</code> the number of shortest foremost paths that pass
+through or end at the node. <code>probability</code> is the node’s
+<code>count</code> divided by its parent’s <code>count</code>, the
+proportion of the parent’s paths that continue along this branch.
+<code>vertex</code> and <code>time</code> give the vertex and its
+arrival time separately.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/path_trajectories.html">path_trajectories</a></span><span class="op">(</span><span class="va">from_ana</span><span class="op">)</span></span>
+<span><span class="va">tree</span></span>
+<span><span class="co">#&gt; # Forward temporal trajectory tree from Ana</span></span>
+<span><span class="co">#&gt; # 22 nodes, 4 hops deep, 19 routes</span></span>
+<span><span class="co">#&gt;                                                         node</span></span>
+<span><span class="co">#&gt; 1                                                      Ana@0</span></span>
+<span><span class="co">#&gt; 2                                         Ana@0 -&gt; Cara@6.67</span></span>
+<span><span class="co">#&gt; 3                            Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96</span></span>
+<span><span class="co">#&gt; 4                 Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96 -&gt; Iris@10</span></span>
+<span><span class="co">#&gt; 5                Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96 -&gt; Leo@9.65</span></span>
+<span><span class="co">#&gt; 6                            Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51</span></span>
+<span><span class="co">#&gt; 7               Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51 -&gt; Hugo@7.98</span></span>
+<span><span class="co">#&gt; 8   Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51 -&gt; Hugo@7.98 -&gt; Dan@7.98</span></span>
+<span><span class="co">#&gt; 9                                        Ana@0 -&gt; Jonas@2.12</span></span>
+<span><span class="co">#&gt; 10                          Ana@0 -&gt; Jonas@2.12 -&gt; Kira@6.12</span></span>
+<span><span class="co">#&gt; 11              Ana@0 -&gt; Jonas@2.12 -&gt; Kira@6.12 -&gt; Ben@9.59</span></span>
+<span><span class="co">#&gt; 12 Ana@0 -&gt; Jonas@2.12 -&gt; Kira@6.12 -&gt; Ben@9.59 -&gt; Eve@11.66</span></span>
+<span><span class="co">#&gt; 13                                       Ana@0 -&gt; Jonas@3.43</span></span>
+<span><span class="co">#&gt; 14                          Ana@0 -&gt; Jonas@3.43 -&gt; Kira@6.12</span></span>
+<span><span class="co">#&gt; 15              Ana@0 -&gt; Jonas@3.43 -&gt; Kira@6.12 -&gt; Ben@9.59</span></span>
+<span><span class="co">#&gt; 16 Ana@0 -&gt; Jonas@3.43 -&gt; Kira@6.12 -&gt; Ben@9.59 -&gt; Eve@11.66</span></span>
+<span><span class="co">#&gt; 17                                       Ana@0 -&gt; Jonas@6.68</span></span>
+<span><span class="co">#&gt; 18                          Ana@0 -&gt; Jonas@6.68 -&gt; Kira@6.68</span></span>
+<span><span class="co">#&gt; 19              Ana@0 -&gt; Jonas@6.68 -&gt; Kira@6.68 -&gt; Ben@9.59</span></span>
+<span><span class="co">#&gt; 20 Ana@0 -&gt; Jonas@6.68 -&gt; Kira@6.68 -&gt; Ben@9.59 -&gt; Eve@11.66</span></span>
+<span><span class="co">#&gt; 21                                        Ana@0 -&gt; Mira@6.36</span></span>
+<span><span class="co">#&gt; 22                           Ana@0 -&gt; Mira@6.36 -&gt; Gita@6.36</span></span>
+<span><span class="co">#&gt;                                          parent depth count probability vertex</span></span>
+<span><span class="co">#&gt; 1                                          &lt;NA&gt;     0    19          NA    Ana</span></span>
+<span><span class="co">#&gt; 2                                         Ana@0     1     7   0.3684211   Cara</span></span>
+<span><span class="co">#&gt; 3                            Ana@0 -&gt; Cara@6.67     2     3   0.4285714   Finn</span></span>
+<span><span class="co">#&gt; 4               Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96     3     1   0.3333333   Iris</span></span>
+<span><span class="co">#&gt; 5               Ana@0 -&gt; Cara@6.67 -&gt; Finn@6.96     3     1   0.3333333    Leo</span></span>
+<span><span class="co">#&gt; 6                            Ana@0 -&gt; Cara@6.67     2     3   0.4285714   Nils</span></span>
+<span><span class="co">#&gt; 7               Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51     3     2   0.6666667   Hugo</span></span>
+<span><span class="co">#&gt; 8  Ana@0 -&gt; Cara@6.67 -&gt; Nils@7.51 -&gt; Hugo@7.98     4     1   0.5000000    Dan</span></span>
+<span><span class="co">#&gt; 9                                         Ana@0     1     4   0.2105263  Jonas</span></span>
+<span><span class="co">#&gt; 10                          Ana@0 -&gt; Jonas@2.12     2     3   0.7500000   Kira</span></span>
+<span><span class="co">#&gt; 11             Ana@0 -&gt; Jonas@2.12 -&gt; Kira@6.12     3     2   0.6666667    Ben</span></span>
+<span><span class="co">#&gt; 12 Ana@0 -&gt; Jonas@2.12 -&gt; Kira@6.12 -&gt; Ben@9.59     4     1   0.5000000    Eve</span></span>
+<span><span class="co">#&gt; 13                                        Ana@0     1     3   0.1578947  Jonas</span></span>
+<span><span class="co">#&gt; 14                          Ana@0 -&gt; Jonas@3.43     2     3   1.0000000   Kira</span></span>
+<span><span class="co">#&gt; 15             Ana@0 -&gt; Jonas@3.43 -&gt; Kira@6.12     3     2   0.6666667    Ben</span></span>
+<span><span class="co">#&gt; 16 Ana@0 -&gt; Jonas@3.43 -&gt; Kira@6.12 -&gt; Ben@9.59     4     1   0.5000000    Eve</span></span>
+<span><span class="co">#&gt; 17                                        Ana@0     1     2   0.1052632  Jonas</span></span>
+<span><span class="co">#&gt; 18                          Ana@0 -&gt; Jonas@6.68     2     2   1.0000000   Kira</span></span>
+<span><span class="co">#&gt; 19             Ana@0 -&gt; Jonas@6.68 -&gt; Kira@6.68     3     2   1.0000000    Ben</span></span>
+<span><span class="co">#&gt; 20 Ana@0 -&gt; Jonas@6.68 -&gt; Kira@6.68 -&gt; Ben@9.59     4     1   0.5000000    Eve</span></span>
+<span><span class="co">#&gt; 21                                        Ana@0     1     2   0.1052632   Mira</span></span>
+<span><span class="co">#&gt; 22                           Ana@0 -&gt; Mira@6.36     2     1   0.5000000   Gita</span></span>
+<span><span class="co">#&gt;     time session branch</span></span>
+<span><span class="co">#&gt; 1   0.00    &lt;NA&gt;   3.15</span></span>
+<span><span class="co">#&gt; 2   6.67    &lt;NA&gt;   5.75</span></span>
+<span><span class="co">#&gt; 3   6.96    &lt;NA&gt;   6.50</span></span>
+<span><span class="co">#&gt; 4  10.00    &lt;NA&gt;   7.00</span></span>
+<span><span class="co">#&gt; 5   9.65    &lt;NA&gt;   6.00</span></span>
+<span><span class="co">#&gt; 6   7.51    &lt;NA&gt;   5.00</span></span>
+<span><span class="co">#&gt; 7   7.98    &lt;NA&gt;   5.00</span></span>
+<span><span class="co">#&gt; 8   7.98    &lt;NA&gt;   5.00</span></span>
+<span><span class="co">#&gt; 9   2.12    &lt;NA&gt;   4.00</span></span>
+<span><span class="co">#&gt; 10  6.12    &lt;NA&gt;   4.00</span></span>
+<span><span class="co">#&gt; 11  9.59    &lt;NA&gt;   4.00</span></span>
+<span><span class="co">#&gt; 12 11.66    &lt;NA&gt;   4.00</span></span>
+<span><span class="co">#&gt; 13  3.43    &lt;NA&gt;   3.00</span></span>
+<span><span class="co">#&gt; 14  6.12    &lt;NA&gt;   3.00</span></span>
+<span><span class="co">#&gt; 15  9.59    &lt;NA&gt;   3.00</span></span>
+<span><span class="co">#&gt; 16 11.66    &lt;NA&gt;   3.00</span></span>
+<span><span class="co">#&gt; 17  6.68    &lt;NA&gt;   2.00</span></span>
+<span><span class="co">#&gt; 18  6.68    &lt;NA&gt;   2.00</span></span>
+<span><span class="co">#&gt; 19  9.59    &lt;NA&gt;   2.00</span></span>
+<span><span class="co">#&gt; 20 11.66    &lt;NA&gt;   2.00</span></span>
+<span><span class="co">#&gt; 21  6.36    &lt;NA&gt;   1.00</span></span>
+<span><span class="co">#&gt; 22  6.36    &lt;NA&gt;   1.00</span></span></code></pre></div>
+<p>The tree has 22 nodes. The root, <code>Ana@0</code>, has a count of
+19, one for each shortest foremost path in the <code><a href="../reference/paths.html">paths()</a></code>
+result, including the zero-hop path at the source. The first-hop
+branches take two different forms.</p>
+<ul>
+<li>
+<strong>Broad branch.</strong> One contact of the source fans out. A
+single first-hop branch carries 7 of the 19 paths (probability 0.368)
+and spreads them over six further students along two sub-branches.</li>
+<li>
+<strong>Repeated branch.</strong> One chain is used again and again.
+The same first-hop student appears on three branches, reached on days
+2.12, 3.43 and 6.68. Together these branches carry 9 paths, and every
+one continues through the same three students. This is why two
+destinations have three shortest foremost paths each.</li>
+</ul>
+<p>A broad branch spreads the source’s reach across the class. A
+repeated branch gives several chances to reach the same few students, so
+reach along it does not depend on any single contact.</p>
+<p>The third repeated branch also shows a property with no static
+counterpart. It reaches its second-hop vertex on day 6.68, later than
+that vertex’s earliest arrival on day 6.12, yet still reaches the next
+vertex on day 9.59, that vertex’s earliest arrival. In a static graph
+every part of a shortest path is itself a shortest path. A shortest
+foremost path does not have this property: it need not reach each
+intermediate vertex at the earliest possible time.</p>
+</div>
+<div class="section level2">
+<h2 id="tie-dynamics">Tie dynamics<a class="anchor" aria-label="anchor" href="#tie-dynamics"></a>
+</h2>
+<p>The analyses so far concern who can reach whom. A temporal network is
+also described by the dynamics of its ties: when they begin and end, how
+long they last, and how their occurrences are spaced in time.</p>
+<p><code><a href="../reference/events.html">events()</a></code> counts, for each window, the spells that begin
+in it (<strong>formation</strong>) and the spells that end in it
+(<strong>dissolution</strong>). With the default <code>window</code>
+equal to <code>step</code>, the windows do not overlap, so each spell’s
+formation and dissolution are each counted once. To obtain both series
+and reduce each to one row, we call <code><a href="../reference/events.html">events()</a></code> and then
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">turnover</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">turnover</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       measure  n     mean       sd min max peak_time</span></span>
+<span><span class="co">#&gt; 1 dissolution 22 10.90909 6.132731   3  27        14</span></span>
+<span><span class="co">#&gt; 2   formation 22 10.90909 6.689787   0  29        13</span></span></code></pre></div>
+<p>Both series average 10.91 spells per day, which is 240 spells divided
+by 22 bins: every spell begins and ends inside the observation period.
+Formation peaks at 29 spells on day 13 and dissolution at 27 on day 14,
+the day of highest density. At least one day has no new spell (minimum
+formation 0), while at least 3 spells end on every day (minimum
+dissolution 3).</p>
+<p>Duration is what separates an interval graph from a contact sequence.
+Two pairs with the same number of spells can differ in how long their
+contacts last, and an aggregated graph weighted by spell counts gives
+them the same weight. <code><a href="../reference/durations.html">durations()</a></code> summarises the spell
+durations of each ordered pair, where the duration of a spell is
+<code>end</code> minus <code>start</code>. <code>measure = "mean"</code>
+gives the mean duration of the pair’s spells; <code>"events"</code>
+gives their number, <code>"total"</code> their summed duration and
+<code>"median"</code> their median. The result has one row per ordered
+pair that was ever in contact, with the columns <code>from</code>,
+<code>to</code>, <code>measure</code> and <code>value</code>.</p>
+<p>To obtain the mean spell duration of every pair, we call
+<code><a href="../reference/durations.html">durations()</a></code> with <code>measure = "mean"</code>.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">lengths</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span></span>
+<span><span class="va">lengths</span></span>
+<span><span class="co">#&gt; # Relationship duration (edge-level)</span></span>
+<span><span class="co">#&gt; # time in step</span></span>
+<span><span class="co">#&gt; # durations in step</span></span>
+<span><span class="co">#&gt;  from    to measure     value</span></span>
+<span><span class="co">#&gt;   Ana  Cara    mean 0.1000000</span></span>
+<span><span class="co">#&gt;   Ana   Dan    mean 0.3400000</span></span>
+<span><span class="co">#&gt;   Ana  Gita    mean 0.4220000</span></span>
+<span><span class="co">#&gt;   Ana  Iris    mean 0.5000000</span></span>
+<span><span class="co">#&gt;   Ana Jonas    mean 0.5850000</span></span>
+<span><span class="co">#&gt;   Ana  Kira    mean 0.1100000</span></span>
+<span><span class="co">#&gt;   Ana   Leo    mean 1.1900000</span></span>
+<span><span class="co">#&gt;   Ana  Mira    mean 0.3466667</span></span>
+<span><span class="co">#&gt;   Ben   Eve    mean 0.6100000</span></span>
+<span><span class="co">#&gt;   Ben  Finn    mean 0.2300000</span></span>
+<span><span class="co">#&gt;   Ben  Gita    mean 0.3400000</span></span>
+<span><span class="co">#&gt;   Ben  Hugo    mean 0.1475000</span></span>
+<span><span class="co">#&gt; # 98 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
+<p>The first rows are the pairs with Ana as the <code>from</code>
+student. They show that durations vary widely even within one student’s
+ties. Mean spell length runs from 0.10 to 1.19 days, a twelvefold
+difference that a graph weighted by spell counts cannot show.</p>
+<p>The same rows show a second distinction, between an
+<strong>aggregated tie</strong> and a <strong>usable tie</strong>. The
+source has direct spells to eight students, but only three of those ties
+are used by the shortest foremost paths in the <code><a href="../reference/paths.html">paths()</a></code>
+table. The other five students are reached by relayed paths of two to
+four hops, because every direct spell to them begins after the relayed
+path has already arrived. A tie in the aggregated graph says nothing
+about when that tie can be used.</p>
+<p><strong>Burstiness</strong> describes how the events of a vertex are
+distributed in time. Here an event of a vertex is the start of a spell
+that involves it, as the <code>from</code> or the <code>to</code>
+student. With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>τ</mi><mn>1</mn></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>τ</mi><mi>k</mi></msub></mrow><annotation encoding="application/x-tex">\tau_1, \ldots, \tau_k</annotation></semantics></math>
+the gaps between consecutive events,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>μ</mi><annotation encoding="application/x-tex">\mu</annotation></semantics></math>
+their mean and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
+their population standard deviation,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mfrac><mrow><mi>σ</mi><mo>−</mo><mi>μ</mi></mrow><mrow><mi>σ</mi><mo>+</mo><mi>μ</mi></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">B = \frac{\sigma - \mu}{\sigma + \mu}.</annotation></semantics></math></p>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+equals 0 when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>σ</mi><mo>=</mo><mi>μ</mi></mrow><annotation encoding="application/x-tex">\sigma = \mu</annotation></semantics></math>,
+which holds for the exponentially distributed gaps of a Poisson process.
+It approaches 1 when a few long gaps separate clusters of short gaps,
+and it equals −1 when all gaps are equal. The <strong>memory</strong>
+coefficient
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>M</mi><annotation encoding="application/x-tex">M</annotation></semantics></math>
+is the Pearson correlation between consecutive gaps,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mi>i</mi></msub><annotation encoding="application/x-tex">\tau_i</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>τ</mi><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><annotation encoding="application/x-tex">\tau_{i+1}</annotation></semantics></math>.
+A positive
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>M</mi><annotation encoding="application/x-tex">M</annotation></semantics></math>
+means that short gaps tend to follow short gaps and long gaps tend to
+follow long gaps. Burstiness matters for processes on the network:
+bursty contact timing slows spreading compared with the same contacts
+shuffled in time.</p>
+<p>To obtain
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>M</mi><annotation encoding="application/x-tex">M</annotation></semantics></math>
+and the event count of every vertex, we call <code><a href="../reference/burstiness.html">burstiness()</a></code>
+and then <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, which lists one row per vertex and
+measure. Each row summarises a single value, so <code>mean</code>,
+<code>min</code> and <code>max</code> coincide and <code>sd</code> is
+<code>NA</code>.</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rhythm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/burstiness.html">burstiness</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">rhythm</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     node    measure n        mean sd         min         max</span></span>
+<span><span class="co">#&gt; 1    Ana burstiness 1  0.24575324 NA  0.24575324  0.24575324</span></span>
+<span><span class="co">#&gt; 2    Ana     events 1 36.00000000 NA 36.00000000 36.00000000</span></span>
+<span><span class="co">#&gt; 3    Ana     memory 1 -0.03128243 NA -0.03128243 -0.03128243</span></span>
+<span><span class="co">#&gt; 4    Ben burstiness 1  0.03288611 NA  0.03288611  0.03288611</span></span>
+<span><span class="co">#&gt; 5    Ben     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 6    Ben     memory 1 -0.19926343 NA -0.19926343 -0.19926343</span></span>
+<span><span class="co">#&gt; 7   Cara burstiness 1 -0.05610924 NA -0.05610924 -0.05610924</span></span>
+<span><span class="co">#&gt; 8   Cara     events 1 35.00000000 NA 35.00000000 35.00000000</span></span>
+<span><span class="co">#&gt; 9   Cara     memory 1  0.07458054 NA  0.07458054  0.07458054</span></span>
+<span><span class="co">#&gt; 10   Dan burstiness 1 -0.05061772 NA -0.05061772 -0.05061772</span></span>
+<span><span class="co">#&gt; 11   Dan     events 1 35.00000000 NA 35.00000000 35.00000000</span></span>
+<span><span class="co">#&gt; 12   Dan     memory 1  0.21654310 NA  0.21654310  0.21654310</span></span>
+<span><span class="co">#&gt; 13   Eve burstiness 1  0.09217906 NA  0.09217906  0.09217906</span></span>
+<span><span class="co">#&gt; 14   Eve     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 15   Eve     memory 1  0.25882509 NA  0.25882509  0.25882509</span></span>
+<span><span class="co">#&gt; 16  Finn burstiness 1  0.02938507 NA  0.02938507  0.02938507</span></span>
+<span><span class="co">#&gt; 17  Finn     events 1 29.00000000 NA 29.00000000 29.00000000</span></span>
+<span><span class="co">#&gt; 18  Finn     memory 1 -0.22653754 NA -0.22653754 -0.22653754</span></span>
+<span><span class="co">#&gt; 19  Gita burstiness 1  0.06104200 NA  0.06104200  0.06104200</span></span>
+<span><span class="co">#&gt; 20  Gita     events 1 31.00000000 NA 31.00000000 31.00000000</span></span>
+<span><span class="co">#&gt; 21  Gita     memory 1  0.21165690 NA  0.21165690  0.21165690</span></span>
+<span><span class="co">#&gt; 22  Hugo burstiness 1  0.09885443 NA  0.09885443  0.09885443</span></span>
+<span><span class="co">#&gt; 23  Hugo     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 24  Hugo     memory 1  0.11283700 NA  0.11283700  0.11283700</span></span>
+<span><span class="co">#&gt; 25  Iris burstiness 1 -0.05968068 NA -0.05968068 -0.05968068</span></span>
+<span><span class="co">#&gt; 26  Iris     events 1 30.00000000 NA 30.00000000 30.00000000</span></span>
+<span><span class="co">#&gt; 27  Iris     memory 1 -0.09356972 NA -0.09356972 -0.09356972</span></span>
+<span><span class="co">#&gt; 28 Jonas burstiness 1 -0.02750549 NA -0.02750549 -0.02750549</span></span>
+<span><span class="co">#&gt; 29 Jonas     events 1 46.00000000 NA 46.00000000 46.00000000</span></span>
+<span><span class="co">#&gt; 30 Jonas     memory 1  0.23391957 NA  0.23391957  0.23391957</span></span>
+<span><span class="co">#&gt; 31  Kira burstiness 1 -0.07048265 NA -0.07048265 -0.07048265</span></span>
+<span><span class="co">#&gt; 32  Kira     events 1 38.00000000 NA 38.00000000 38.00000000</span></span>
+<span><span class="co">#&gt; 33  Kira     memory 1 -0.14972726 NA -0.14972726 -0.14972726</span></span>
+<span><span class="co">#&gt; 34   Leo burstiness 1 -0.01020265 NA -0.01020265 -0.01020265</span></span>
+<span><span class="co">#&gt; 35   Leo     events 1 28.00000000 NA 28.00000000 28.00000000</span></span>
+<span><span class="co">#&gt; 36   Leo     memory 1  0.48001912 NA  0.48001912  0.48001912</span></span>
+<span><span class="co">#&gt; 37  Mira burstiness 1  0.09968547 NA  0.09968547  0.09968547</span></span>
+<span><span class="co">#&gt; 38  Mira     events 1 36.00000000 NA 36.00000000 36.00000000</span></span>
+<span><span class="co">#&gt; 39  Mira     memory 1  0.18691159 NA  0.18691159  0.18691159</span></span>
+<span><span class="co">#&gt; 40  Nils burstiness 1  0.08408761 NA  0.08408761  0.08408761</span></span>
+<span><span class="co">#&gt; 41  Nils     events 1 34.00000000 NA 34.00000000 34.00000000</span></span>
+<span><span class="co">#&gt; 42  Nils     memory 1  0.22784733 NA  0.22784733  0.22784733</span></span></code></pre></div>
+<p>Burstiness lies between −0.070 and 0.246, so every student is within
+0.25 of the Poisson reference of 0. Eight students have slightly
+positive values, meaning mildly clustered contact, and six have slightly
+negative values, meaning mildly regular contact. No student departs far
+from random timing, so burstiness does not divide the class into bursty
+and regular students. Memory varies more, from −0.227 to 0.480, and is
+positive for nine of the fourteen students: for most students a short
+gap between contacts tends to be followed by another short gap. Event
+counts range from 28 to 46.</p>
+<p>Two kinds of measure have described the students in this vignette.
+<strong>Volume</strong> measures, the event count and mean daily degree,
+record how much a student interacts. <strong>Timing</strong> measures,
+temporal closeness and temporal betweenness, record where those
+interactions fall relative to everyone else’s. In these data the two
+kinds disagree. The student with the fewest events (28) and the lowest
+mean degree has the highest closeness and the third-highest betweenness.
+The student with the most events (46) and the highest mean degree has
+the second-lowest betweenness. Volume also varies within a narrow band
+(mean degree 1.64 to 2.86), while betweenness varies almost tenfold (4.3
+to 41.9). A student’s temporal position is set by when that student’s
+contacts occur, not by how many there are. This is the premise of
+temporal network analysis.</p>
+</div>
+<div class="section level2">
+<h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
+</h2>
+<p><code><a href="../articles/building-networks.html">vignette("building-networks")</a></code> covers the other three log
+formats (contact, threaded and co-presence), direction, loops, weights
+and vertex attributes, sessions, observation windows and vertex activity
+spells. <code><a href="../articles/ch17-temporal-networks.html">vignette("ch17-temporal-networks")</a></code> reproduces the
+analysis of a MOOC discussion forum with Dynet. <code><a href="../reference/metrics.html">?metrics</a></code>
+and <code><a href="../reference/dyn_centrality.html">?dyn_centrality</a></code> list every available measure.
+<code><a href="../reference/paths.html">?paths</a></code> documents the traversal rules, including
+<code>traversal_time</code> for a fixed duration per hop and
+<code>as.data.frame(x, what = "steps")</code> for the step-by-step
+reconstruction of each path.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

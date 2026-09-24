@@ -70,7 +70,7 @@ dn <- dynet(mooc_posts, from = "sender", to = "receiver",
 dn
 #> # Temporal network (threaded format, directed) | a cograph netobject
 #> # 442 vertices | 2443 edge spells | 1936 distinct pairs
-#> # observed from 0 to 73.02778 days, binned every 1
+#> # observed from 0 to 72.01111 days, binned every 1
 #> 
 #>  from  to      start      end duration weight
 #>   360 444 0.00000000 69.47778 69.47778      1

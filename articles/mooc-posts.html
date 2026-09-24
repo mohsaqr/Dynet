@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,21 +69,21 @@
 
     
     
-<p><code>mooc_posts</code> records 2,529 posts to the discussion forum
-of a massive open online course, and <code>mooc_people</code> records
-the 445 participants who wrote or received them. The two tables are the
-data behind chapter 17 of <em>Learning Analytics Methods and
-Tutorials</em>, and they are the package’s worked example of a
-<strong>threaded</strong> log: a forum post is not an interval with a
-stated end, and it is not an instantaneous contact either. A post stays
-relevant until its thread falls silent.</p>
-<p>This article builds the network from those posts and reports what it
-holds.</p>
+<p>In this article we describe the bundled MOOC forum data,
+<code>mooc_posts</code> and <code>mooc_people</code>, build the threaded
+network from them, and read its size, its activity over time, the degree
+of its participants and the mixing between experience levels. The same
+data carry the case study in
+<code><a href="../articles/ch17-temporal-networks.html">vignette("ch17-temporal-networks")</a></code>.</p>
 <div class="section level2">
 <h2 id="the-log">The log<a class="anchor" aria-label="anchor" href="#the-log"></a>
 </h2>
+<p>Each row of <code>mooc_posts</code> is one post: the participant who
+wrote it, the participant it answers, the time it was written and the
+discussion it belongs to.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mooc_posts</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mooc_posts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   sender receiver           timestamp</span></span>
 <span><span class="co">#&gt; 1    360      444 2013-04-04 16:32:00</span></span>
 <span><span class="co">#&gt; 2    356      444 2013-04-04 18:45:00</span></span>
@@ -97,35 +97,45 @@ holds.</p>
 <span><span class="co">#&gt; 3             DLT Resources—Comments and Suggestions</span></span>
 <span><span class="co">#&gt; 4 Most important change for your school or district?</span></span>
 <span><span class="co">#&gt; 5 Most important change for your school or district?</span></span>
-<span><span class="co">#&gt; 6 Most important change for your school or district?</span></span></code></pre></div>
-<p>Each row is one post: who wrote it, who it replied to, when, and
-which discussion it belongs to. There are 338 distinct discussions.</p>
+<span><span class="co">#&gt; 6 Most important change for your school or district?</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">mooc_posts</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 2529</span></span></code></pre></div>
+<p>The log holds 2,529 posts. The timestamps are date-times and the
+discussion titles are the thread identifiers.</p>
+<p><code>mooc_people</code> has one row per participant with the
+self-reported experience level, coded 1 for expert, 2 for student and 3
+for teacher, and its label in <code>expert_level</code>, which serves as
+the mixing attribute.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mooc_people</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   name experience</span></span>
-<span><span class="co">#&gt; 1    1          1</span></span>
-<span><span class="co">#&gt; 2    2          1</span></span>
-<span><span class="co">#&gt; 3    3          2</span></span>
-<span><span class="co">#&gt; 4    4          2</span></span>
-<span><span class="co">#&gt; 5    5          3</span></span>
-<span><span class="co">#&gt; 6    6          1</span></span></code></pre></div>
-<p><code>experience</code> is the self-reported level the chapter
-recodes into expert, student and teacher.</p>
+<span><span class="co">#&gt;   name experience expert_level</span></span>
+<span><span class="co">#&gt; 1    1          1       Expert</span></span>
+<span><span class="co">#&gt; 2    2          1       Expert</span></span>
+<span><span class="co">#&gt; 3    3          2      Student</span></span>
+<span><span class="co">#&gt; 4    4          2      Student</span></span>
+<span><span class="co">#&gt; 5    5          3      Teacher</span></span>
+<span><span class="co">#&gt; 6    6          1       Expert</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">mooc_people</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 445</span></span></code></pre></div>
+<p>There are 445 participants.</p>
 </div>
 <div class="section level2">
 <h2 id="building-the-network">Building the network<a class="anchor" aria-label="anchor" href="#building-the-network"></a>
 </h2>
-<p><code><a href="../reference/dynet.html">dynet()</a></code> reads the log as threaded because
-<code>thread =</code> is named. An edge from a post stays active until
-the last post in the same discussion, so a reply late in a thread
-extends every earlier tie in it.</p>
+<p>To build the network, we call <code><a href="../reference/dynet.html">dynet()</a></code> with the log,
+<code>from</code> and <code>to</code> for the endpoint columns,
+<code>time</code> for the timestamp and <code>thread</code> for the
+discussion. Naming <code>thread</code> selects the threaded format: each
+tie starts at its post and ends at the last post of the same discussion,
+so a late reply extends every earlier tie in its thread. Printing the
+network gives its format, its size and the first spells.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">mooc_posts</span>, from <span class="op">=</span> <span class="st">"sender"</span>, to <span class="op">=</span> <span class="st">"receiver"</span>,</span>
 <span>            time <span class="op">=</span> <span class="st">"timestamp"</span>, thread <span class="op">=</span> <span class="st">"discussion"</span><span class="op">)</span></span>
 <span><span class="va">dn</span></span>
 <span><span class="co">#&gt; # Temporal network (threaded format, directed) | a cograph netobject</span></span>
 <span><span class="co">#&gt; # 442 vertices | 2443 edge spells | 1936 distinct pairs</span></span>
-<span><span class="co">#&gt; # observed from 0 to 73.02778 days, binned every 1</span></span>
+<span><span class="co">#&gt; # observed from 0 to 72.01111 days, binned every 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  from  to      start      end duration weight</span></span>
 <span><span class="co">#&gt;   360 444 0.00000000 69.47778 69.47778      1</span></span>
@@ -142,26 +152,41 @@ extends every earlier tie in it.</p>
 <span><span class="co">#&gt;  Most important change for your school or district?</span></span>
 <span><span class="co">#&gt;  Most important change for your school or district?</span></span>
 <span><span class="co">#&gt; # 2437 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>The network has 442 vertices and 2,443 spells. Three of the 445
-participants in <code>mooc_people</code> never appear as a sender or a
-receiver, so they are absent from the network the log implies.</p>
-<p>Times are read as dates and converted to an offset in days from the
-first post, which is what <code>time_unit</code> reports.</p>
+<p>The network has 442 vertices, 2,443 spells and 1,936 distinct ordered
+pairs, observed over 73.03 days. Two differences from the log are worth
+noting. The spell count is lower than the post count because a post that
+answers its own author is a self-loop, and <code><a href="../reference/dynet.html">dynet()</a></code> drops
+self-loops unless <code>loops = TRUE</code> is set. The vertex count is
+lower than the participant count because three of the 445 participants
+in <code>mooc_people</code> are never a sender or a receiver of a kept
+post, so they are not part of the network the log implies. Times are
+read as date-times and converted to days since the first post; the unit
+is stated in the header of every result.</p>
 </div>
 <div class="section level2">
-<h2 id="what-the-forum-looked-like-over-time">What the forum looked like over time<a class="anchor" aria-label="anchor" href="#what-the-forum-looked-like-over-time"></a>
+<h2 id="activity-over-time">Activity over time<a class="anchor" aria-label="anchor" href="#activity-over-time"></a>
 </h2>
-<p><code><a href="../reference/metrics.html">metrics()</a></code> measures graph-level structure on the grid.
-Over the whole observed period the network’s density is:</p>
+<p>Graph-level measures are computed on the grid shared by every
+measuring function: <code>start</code> and <code>end</code> bound the
+period, <code>step</code> is the interval between measurements and
+<code>window</code> the length of time each one covers. To measure the
+network over the whole observed period as a single window, we call
+<code><a href="../reference/metrics.html">metrics()</a></code> with <code>measure</code> set to
+<code>"density"</code> and <code>window</code> set to
+<code>"all"</code>.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>, window <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="va">density</span></span>
 <span><span class="co">#&gt; # Density (graph-level)</span></span>
-<span><span class="co">#&gt; # 1 time points, 73.02778 per bin | time in days</span></span>
+<span><span class="co">#&gt; # 1 time points, 72.01111 per bin | time in days</span></span>
 <span><span class="co">#&gt;  time measure       value</span></span>
 <span><span class="co">#&gt;     0 density 0.009932178</span></span></code></pre></div>
-<p>Measured day by day instead, activity is concentrated rather than
-even:</p>
+<p>The density over the whole period is 0.0099: about one ordered pair
+in a hundred was connected at some point during the course.</p>
+<p>To count the ties active in each week, we call <code><a href="../reference/metrics.html">metrics()</a></code>
+with <code>measure</code> set to <code>"edges"</code>, and
+<code>step</code> and <code>window</code> both set to seven days, so
+that the bins tile the period.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">per_day</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"edges"</span>, step <span class="op">=</span> <span class="fl">7</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
 <span><span class="va">per_day</span></span>
@@ -171,28 +196,34 @@ even:</p>
 <span><span class="co">#&gt;     0   edges   451</span></span>
 <span><span class="co">#&gt;     7   edges   702</span></span>
 <span><span class="co">#&gt;    14   edges   913</span></span>
-<span><span class="co">#&gt;    21   edges   945</span></span>
+<span><span class="co">#&gt;    21   edges   943</span></span>
 <span><span class="co">#&gt;    28   edges  1013</span></span>
 <span><span class="co">#&gt;    35   edges   924</span></span>
 <span><span class="co">#&gt;    42   edges   981</span></span>
 <span><span class="co">#&gt;    49   edges  1007</span></span>
 <span><span class="co">#&gt;    56   edges   831</span></span>
-<span><span class="co">#&gt;    63   edges   715</span></span>
-<span><span class="co">#&gt;    70   edges   231</span></span></code></pre></div>
-<p>Each row is one week of the course. The counts show where the forum
-was busy and where it went quiet.</p>
+<span><span class="co">#&gt;    63   edges   704</span></span>
+<span><span class="co">#&gt;    70   edges   219</span></span></code></pre></div>
+<p>Each row is one week of the course. The first week holds 451 active
+ties. The count rises to 1,013 in the week that begins on day 28, stays
+above 900 until the week that begins on day 49, and falls to 231 in the
+last bin, which begins on day 70 and covers only the final three days of
+observation.</p>
 </div>
 <div class="section level2">
-<h2 id="who-was-central">Who was central<a class="anchor" aria-label="anchor" href="#who-was-central"></a>
+<h2 id="degree">Degree<a class="anchor" aria-label="anchor" href="#degree"></a>
 </h2>
-<p><code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> measures each vertex on the same grid.
-Over the whole period, the ten participants with the highest degree
-are:</p>
+<p>To obtain the number of distinct contacts of every participant over
+the whole period, we call <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> with
+<code>measure</code> set to <code>"degree"</code> and
+<code>window</code> set to <code>"all"</code>. The result has one row
+per vertex. <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> prints the first ten rows, in the order
+of the vertex table.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>, window <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">degree</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Degree (node-level)</span></span>
-<span><span class="co">#&gt; # 442 vertices | 1 time points, 73.02778 per bin | time in days</span></span>
+<span><span class="co">#&gt; # 442 vertices | 1 time points, 72.01111 per bin | time in days</span></span>
 <span><span class="co">#&gt; # first 10 of 442 rows</span></span>
 <span><span class="co">#&gt;  time node measure value</span></span>
 <span><span class="co">#&gt;     0    1  degree    40</span></span>
@@ -205,13 +236,19 @@ are:</p>
 <span><span class="co">#&gt;     0    8  degree    19</span></span>
 <span><span class="co">#&gt;     0    9  degree    10</span></span>
 <span><span class="co">#&gt;     0   10  degree    16</span></span></code></pre></div>
+<p>Among the first ten participants, participant 7 has the highest
+degree with 48 distinct contacts and participant 1 the next with 40;
+participant 3 has 6.</p>
 </div>
 <div class="section level2">
 <h2 id="mixing-between-experience-levels">Mixing between experience levels<a class="anchor" aria-label="anchor" href="#mixing-between-experience-levels"></a>
 </h2>
-<p><code>mooc_people</code> supplies the attribute the chapter mixes on.
-The network is built with that table attached, and <code><a href="../reference/mixing.html">mixing()</a></code>
-then reports how much tie activity ran within and between levels.</p>
+<p>To count the ties within and between experience levels, the network
+must carry the level as a vertex attribute. We build it again with
+<code>nodes</code> set to <code>mooc_people</code>, so that the
+attribute travels with the network, and call <code><a href="../reference/mixing.html">mixing()</a></code> with
+<code>attribute</code> set to <code>"experience"</code> and
+<code>window</code> set to <code>"all"</code>.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">labelled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">mooc_posts</span>, from <span class="op">=</span> <span class="st">"sender"</span>, to <span class="op">=</span> <span class="st">"receiver"</span>,</span>
 <span>                  time <span class="op">=</span> <span class="st">"timestamp"</span>, thread <span class="op">=</span> <span class="st">"discussion"</span>,</span>
@@ -219,7 +256,7 @@ then reports how much tie activity ran within and between levels.</p>
 <span><span class="va">role_mixing</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">labelled</span>, attribute <span class="op">=</span> <span class="st">"experience"</span>, window <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="va">role_mixing</span></span>
 <span><span class="co">#&gt; # Mixing by experience (graph-level)</span></span>
-<span><span class="co">#&gt; # 1 time points, 73.02778 per bin | time in days</span></span>
+<span><span class="co">#&gt; # 1 time points, 72.01111 per bin | time in days</span></span>
 <span><span class="co">#&gt; # measures: 1 -&gt; 1, 2 -&gt; 1, 3 -&gt; 1, 1 -&gt; 2, 2 -&gt; 2, 3 -&gt; 2, 1 -&gt; 3, 2 -&gt; 3, 3 -&gt; 3</span></span>
 <span><span class="co">#&gt; # active binary-dyad counts between vertex groups per time bin</span></span>
 <span><span class="co">#&gt;  time measure value from_group to_group</span></span>
@@ -232,29 +269,47 @@ then reports how much tie activity ran within and between levels.</p>
 <span><span class="co">#&gt;     0  1 -&gt; 3   257          1        3</span></span>
 <span><span class="co">#&gt;     0  2 -&gt; 3   383          2        3</span></span>
 <span><span class="co">#&gt;     0  3 -&gt; 3   425          3        3</span></span></code></pre></div>
-<p>Each row is an ordered pair of levels. <code>value</code> is the
-share of tie activity running from the first group to the second, so the
-rows where <code>from_group</code> equals <code>to_group</code> measure
-how much the forum kept conversation inside an experience level.</p>
+<p>Each row is one ordered pair of levels, named by
+<code>from_group</code> and <code>to_group</code>, and
+<code>value</code> is the number of ordered pairs of participants with
+at least one active tie from the first level to the second. Within-level
+counts are 73 for level 1, 184 for level 2 and 425 for level 3. The
+three largest counts are the ties directed into level 3, the teachers:
+257 from level 1, 383 from level 2 and 425 from level 3 itself.</p>
 </div>
 <div class="section level2">
 <h2 id="cost">Cost<a class="anchor" aria-label="anchor" href="#cost"></a>
 </h2>
-<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on this network takes about 28 seconds,
-because it measures every graph-level statistic on all 74 daily bins.
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> is immediate, and a single measure on a stated grid
-— as used throughout this article — costs a few hundredths of a second.
-Reach for <code><a href="../reference/metrics.html">metrics()</a></code> with the measure you want rather than
-<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> when the network is this size.</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on a network describes it in one table and
+computes every graph-level statistic in every daily bin of the observed
+period. On a network of this size that is the one slow call; the
+single-measure calls used in this article, each on a stated grid, are
+not. When only one quantity is wanted, <code><a href="../reference/metrics.html">metrics()</a></code> with that
+measure is the call to make.</p>
 </div>
 <div class="section level2">
 <h2 id="source">Source<a class="anchor" aria-label="anchor" href="#source"></a>
 </h2>
-<p>Kaliisa, R., Gudmundsdottir, G. B., &amp; Jahn, T. (2022). The MOOC
-forum data used in chapter 17 of <em>Learning Analytics Methods and
-Tutorials</em>. The bundled tables are the anonymised sender, receiver,
-timestamp and discussion columns of that log, with participant
-identifiers replaced by integers.</p>
+<p>The log is the chapter 17 data of <em>Learning Analytics Methods and
+Tutorials</em> (Saqr, 2024), taken from the <code>6_snaMOOC</code>
+directory of the book’s data repository at <a href="https://github.com/lamethods/data" class="external-link uri">https://github.com/lamethods/data</a>. The bundled table
+keeps the four columns the chapter reads, <code>sender</code>,
+<code>receiver</code>, <code>timestamp</code> and
+<code>discussion</code>, and drops the category hierarchy and comment
+identifiers of the published file. <code><a href="../reference/mooc_posts.html">?mooc_posts</a></code> documents
+the preparation.</p>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<p>Saqr, M. (2024). Temporal network analysis: Introduction, methods and
+analysis with R. In M. Saqr &amp; S. López-Pernas (Eds.), <em>Learning
+analytics methods and tutorials: A practical guide using R</em>.
+Springer.</p>
+<p>Saqr, M., &amp; Nouri, J. (2020). High resolution temporal network
+analysis to understand and improve collaborative learning. In
+<em>Proceedings of the Tenth International Conference on Learning
+Analytics &amp; Knowledge</em> (pp. 314–319). ACM.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
