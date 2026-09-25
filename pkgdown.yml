@@ -4,13 +4,12 @@ pkgdown_sha: ~
 articles:
   articles/animating: animating.html
   building-networks: building-networks.html
-  articles/ch17-published-data: ch17-published-data.html
   ch17-temporal-networks: ch17-temporal-networks.html
   dynet: dynet.html
   articles/function-catalogue: function-catalogue.html
   articles/mooc-posts: mooc-posts.html
   articles/thought-chains: thought-chains.html
-last_built: 2026-09-24T20:17Z
+last_built: 2026-09-25T05:49Z
 urls:
   reference: https://pak.dynasite.org/Dynet/reference
   article: https://pak.dynasite.org/Dynet/articles
