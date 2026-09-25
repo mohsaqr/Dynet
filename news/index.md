@@ -60,6 +60,11 @@
 
 ### Bug fixes
 
+- A `nodes =` or `ties =` condition that cannot be evaluated, such as
+  one naming a column the table does not have, now raises
+  `dynet_bad_selection` (also `dynet_bad_input`) instead of base R’s raw
+  error, whose class changed in R-devel and failed the devel CI check.
+
 - [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)’
   `"temporal_density"`, `"observed_pair_density"`, `"onset_intensity"`
   and `"observed_pair_onset_intensity"` no longer count time after the

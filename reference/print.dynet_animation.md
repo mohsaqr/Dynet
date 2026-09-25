@@ -38,7 +38,7 @@ if (requireNamespace("gifski", quietly = TRUE) &&
   print(frames, n = 3)
 }
 #> # Animation of 4 bins in 8 frames at 12 fps | spring layout | gif | time in step
-#> # /tmp/RtmpnxMZ4i/file1c5e72c02d49.gif
+#> # /tmp/Rtmpf2gjfs/file1d3b74936d92.gif
 #>  bin frame time window_start window_end nodes idle ties forming dissolving
 #>    1     1    0            0          6    14    0   43      NA         19
 #>    2     3    6            6         12    14    0   65      41         33
