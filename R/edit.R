@@ -307,7 +307,7 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   if (length(wanted) > 0L) {
     table <- as.data.frame(dn, what = "nodes", measure = wanted)
   }
-  value <- eval(expr, table, env)
+  value <- .eval_selection(expr, table, env, "nodes")
   if (is.null(value)) return(NULL)
   if (is.logical(value)) {
     if (length(value) != nrow(table)) {
@@ -340,7 +340,29 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #' @noRd
 .select_ties <- function(dn, expr, env) {
   if (is.null(expr)) return(NULL)
-  eval(expr, as.data.frame(dn), env)
+  .eval_selection(expr, as.data.frame(dn), env, "ties")
+}
+
+#' Evaluate a selection condition, classing any failure
+#'
+#' A condition that cannot be evaluated -- most often one naming a column the
+#' table does not have -- is a broken selection, so it is re-raised as
+#' `dynet_bad_selection` (also `dynet_bad_input`) with base R's error as its
+#' parent. Base R's own class for that error differs between R versions.
+#'
+#' @param expr The unevaluated selection.
+#' @param table The table evaluated first, as in [subset()].
+#' @param env The caller's frame.
+#' @param arg The argument name, for the message.
+#' @return Whatever `expr` evaluates to.
+#' @noRd
+.eval_selection <- function(expr, table, env, arg) {
+  tryCatch(eval(expr, table, env), error = function(e) {
+    stop(errorCondition(
+      sprintf("`%s` could not be evaluated: %s", arg, conditionMessage(e)),
+      class = c("dynet_bad_selection", "dynet_bad_input"), call = NULL,
+      parent = e))
+  })
 }
 
 #' Read vertex names out of whatever the caller had to hand

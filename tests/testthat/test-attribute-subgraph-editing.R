@@ -110,7 +110,9 @@ test_that("`ties` accepts a condition on the spell table, as `nodes` does", {
   )
 
   expect_error(induce_subgraph(dn, ties = no_such_column == 1),
-               class = "simpleError")
+               class = "dynet_bad_selection")
+  expect_error(induce_subgraph(dn, nodes = no_such_column > 1),
+               class = "dynet_bad_input")
   expect_error(induce_subgraph(dn, ties = c(TRUE, FALSE)),
                class = "dynet_bad_input")
   expect_error(induce_subgraph(dn), class = "dynet_bad_input")
