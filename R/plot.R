@@ -51,6 +51,11 @@
 #' @param edge_color,edge_alpha,edge_width,edge_width_range,edge_style Link
 #'   aesthetics, named as in `cograph::splot()`. An `edge_color` overrides the
 #'   source-to-target colour run with one colour.
+#' @param edge_start_style,edge_start_length How the origin of each link is
+#'   marked, named as in `cograph::splot()`. For `"events"` the defaults follow
+#'   cograph's TNA styling: the first `0.2` of every link, from its source, is
+#'   `"dotted"`; `"dashed"` is also accepted and `"solid"` turns the mark off.
+#'   `edge_start_length` is a share between 0 and 0.5.
 #' @param curvature,curve_pivot Bow geometry, as in `cograph::splot()`.
 #'   `curvature` is the base bow as a fraction of the column gap and `0` draws
 #'   straight links; `curve_pivot` slides where the bow peaks.
@@ -102,7 +107,7 @@
 #'   default. Bins are sampled evenly across the window and the choice is
 #'   reported.
 #' @param measure For the proximity view, the node-level measure that line
-#'   thickness follows, `"degree"` by default. Any measure [dyn_centrality()]
+#'   thickness follows, `"degree"` by default. Any measure [centrality_series()]
 #'   accepts at snapshot scope; the temporal-scope-only measures `"reach"` and
 #'   `"reach_count"` are not available here, because the view redraws the
 #'   measure over many short slices.
@@ -204,7 +209,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
                        node_border_color = NULL, node_border_width = NULL,
                        node_alpha = NULL, edge_color = NULL, edge_alpha = NULL,
                        edge_width = NULL, edge_width_range = NULL,
-                       edge_style = NULL, curvature = NULL, curve_pivot = NULL,
+                       edge_style = NULL, edge_start_style = NULL,
+                       edge_start_length = NULL,
+                       curvature = NULL, curve_pivot = NULL,
                        label_size = NULL, label_color = NULL,
                        label_fontface = NULL,
                        panels = 9L,
@@ -232,6 +239,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     node_border_width = node_border_width, node_alpha = node_alpha,
     edge_color = edge_color, edge_alpha = edge_alpha, edge_width = edge_width,
     edge_width_range = edge_width_range, edge_style = edge_style,
+    edge_start_style = edge_start_style, edge_start_length = edge_start_length,
     curvature = curvature, curve_pivot = curve_pivot,
     label_size = label_size, label_color = label_color,
     label_fontface = label_fontface))
@@ -712,6 +720,16 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     curvature + (k - 1L) / pmax(kmax - 1L, 1L) * 0.62
   }
 
+  start_style <- aes$edge_start_style %||% "dotted"
+  start_length <- aes$edge_start_length %||% 0.2
+  .check(
+    "`edge_start_style` must be \"dotted\", \"dashed\" or \"solid\"." =
+      length(start_style) == 1L &&
+        start_style %in% c("dotted", "dashed", "solid"),
+    "`edge_start_length` must be one number between 0 and 0.5." =
+      length(start_length) == 1L && is.numeric(start_length) &&
+        is.finite(start_length) && start_length >= 0 && start_length <= 0.5
+  )
   width_range <- aes$edge_width_range %||% c(0.35, 1.4)
   style <- aes$edge_style %||% 1
   solid <- isTRUE(all.equal(style, 1)) || identical(style, "solid")
@@ -737,8 +755,34 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     } else {
       .link_cols(pal[[r$to]], pal[[r$from]], m, 1 - split, blend)
     }
-    data.frame(id = i, freq = r$freq, x = pth$x, y = pth$y, col = cl,
-               stringsAsFactors = FALSE)
+    link_df <- data.frame(id = i, freq = r$freq, x = pth$x, y = pth$y,
+                          col = cl, stringsAsFactors = FALSE)
+    if (!solid) {
+      link_df$part <- paste(i, "whole")
+      link_df$lt <- style
+      return(link_df)
+    }
+    # As in cograph's TNA styling, only the start of a solid link is dotted,
+    # so its origin reads from the line itself as well as from its colours.
+    # A dotted stretch must keep one colour, so it takes the source's; the two
+    # pieces share their boundary vertex and join without a gap.
+    if (identical(start_style, "solid") || start_length == 0) {
+      link_df$part <- paste(i, "whole")
+      link_df$lt <- style
+      return(link_df)
+    }
+    cut <- max(2L, round(start_length * m))
+    origin <- if (r$yf >= r$yt) seq_len(cut) else seq(m - cut + 1L, m)
+    insertion <- if (r$yf >= r$yt) seq(cut, m) else seq_len(m - cut + 1L)
+    start <- link_df[origin, , drop = FALSE]
+    start$col <- aes$edge_color[[1L]] %||% pal[[r$from]]
+    start$part <- paste(i, "origin")
+    start$lt <- "start"
+    end <- link_df[insertion, , drop = FALSE]
+    end$part <- paste(i, "insertion")
+    end$lt <- "solid"
+    pieces <- list(start, end)
+    do.call(rbind, pieces[vapply(pieces, nrow, integer(1L)) >= 2L])
   }))
 
   grid <- expand.grid(ev = cols, y = seq_along(lev))
@@ -746,18 +790,27 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     ggplot2::geom_vline(data = data.frame(ev = cols),
                         ggplot2::aes(xintercept = ev), colour = "grey93",
                         linewidth = 0.2)
-  plot <- plot + if (isTRUE(weight) && is.null(aes$edge_width)) {
-    ggplot2::geom_path(
-      data = paths,
-      ggplot2::aes(x = x, y = y, group = id, colour = col, alpha = freq,
-                   linewidth = freq), lineend = "butt", linetype = style)
-  } else {
-    ggplot2::geom_path(
-      data = paths, ggplot2::aes(x = x, y = y, group = id, colour = col),
-      linewidth = aes$edge_width %||% 0.7,
-      alpha = aes$edge_alpha %||% 1, lineend = "butt", linetype = style)
+  # ggplot will not draw a dotted line and a colour-changing line in one
+  # layer, so the solid insertions and the dotted origins are two layers.
+  link_layer <- function(data, linetype) {
+    if (isTRUE(weight) && is.null(aes$edge_width)) {
+      ggplot2::geom_path(
+        data = data,
+        ggplot2::aes(x = x, y = y, group = part, colour = col, alpha = freq,
+                     linewidth = freq), lineend = "butt", linetype = linetype)
+    } else {
+      ggplot2::geom_path(
+        data = data, ggplot2::aes(x = x, y = y, group = part, colour = col),
+        linewidth = aes$edge_width %||% 0.7,
+        alpha = aes$edge_alpha %||% 1, lineend = "butt", linetype = linetype)
+    }
   }
+  # cograph's dotted start uses the dense "12" pattern, one on and two off.
+  origin <- paths$lt == "start"
   plot <- plot +
+    link_layer(paths[!origin, , drop = FALSE], style) +
+    link_layer(paths[origin, , drop = FALSE],
+               switch(start_style, dotted = "12", dashed = "42", solid = style)) +
     ggplot2::geom_point(
       data = grid, ggplot2::aes(x = ev, y = y),
       colour = aes$node_border_color %||% unname(pal)[grid$y],
@@ -765,12 +818,27 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
       shape = .node_shape(aes$node_shape %||% "circle"),
       stroke = aes$node_border_width %||% 0.5,
       alpha = aes$node_alpha %||% 1,
-      size = aes$node_size %||% 2.2)
+      size = aes$node_size %||% 3.6)
   if (nrow(loops)) {
     plot <- plot + ggplot2::geom_point(
-      data = loops, ggplot2::aes(x = ev, y = yf), shape = 21, size = 3.1,
+      data = loops, ggplot2::aes(x = ev, y = yf), shape = 21,
+      size = (aes$node_size %||% 3.6) + 1.4,
       stroke = 0.5, colour = "grey20", fill = NA)
   }
+  # Each row label is the key to its actor's colour, so there is no separate
+  # legend. ggplot cannot colour axis labels one by one, so the labels are a
+  # text layer just outside the panel's left edge.
+  label_size <- aes$label_size %||% ggplot2::rel(1)
+  label_pt <- if (inherits(label_size, "rel")) {
+    0.8 * base_size * unclass(label_size)
+  } else label_size
+  label_width <- 0.6 * label_pt * max(nchar(lev))
+  plot <- plot + ggplot2::geom_text(
+    data = data.frame(y = seq_along(lev), label = paste0(lev, "  ")),
+    ggplot2::aes(x = -Inf, y = y, label = label), hjust = 1,
+    colour = aes$label_color %||% unname(pal[lev]),
+    fontface = aes$label_fontface %||% "bold",
+    size = label_pt / ggplot2::.pt)
   breaks <- cols[unique(round(seq(1, length(cols),
                                   length.out = min(length(cols), 10L))))]
   plot +
@@ -783,6 +851,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     ggplot2::scale_x_continuous(
       breaks = breaks,
       expand = ggplot2::expansion(add = c(1.05 * gap, 0.35 * gap))) +
+    ggplot2::coord_cartesian(clip = "off") +
     ggplot2::labs(
       x = switch(time, event = "Time (event)",
                  clock = sprintf("Time (%s)", x$meta$time_unit),
@@ -798,10 +867,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
       panel.grid = ggplot2::element_blank(),
       plot.title = ggplot2::element_text(face = "bold"),
       plot.subtitle = ggplot2::element_text(colour = "grey45", size = 9),
-      axis.text.y = ggplot2::element_text(
-        size = aes$label_size %||% ggplot2::rel(1),
-        colour = aes$label_color %||% "grey20",
-        face = aes$label_fontface %||% "plain"))
+      axis.text.y = ggplot2::element_blank(),
+      plot.margin = ggplot2::margin(5.5, 5.5, 5.5, 6 + label_width))
 }
 
 #' Translate a splot shape name to a ggplot shape code

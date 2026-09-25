@@ -1,6 +1,6 @@
 closeness_values <- function(dn, ...) {
-  result <- as.data.frame(dyn_centrality(
-    dn, measure = "closeness", scope = "temporal", ...
+  result <- as.data.frame(path_centrality(
+    dn, measure = "closeness", ...
   ))
   stats::setNames(result$value, result$node)
 }
@@ -106,8 +106,8 @@ test_that("closeness inherits collapse, bounded, and separate session walls", {
   bounded <- closeness_values(
     dn, sessions = "bounded", start = 0, end = 2
   )
-  separate <- as.data.frame(dyn_centrality(
-    dn, measure = "closeness", scope = "temporal",
+  separate <- as.data.frame(path_centrality(
+    dn, measure = "closeness",
     sessions = "separate", start = 0, end = 2
   ))
   expect_equal(unname(collapsed[c("S", "A", "T")]), c(2 / 3, 1 / 2, 0))
@@ -170,9 +170,9 @@ test_that("closeness translates and rescales with inverse-time units", {
 })
 
 test_that("temporal closeness publishes its mathematical metadata", {
-  result <- dyn_centrality(
+  result <- path_centrality(
     quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
-    measure = "closeness", scope = "temporal", start = 0, end = 1
+    measure = "closeness", start = 0, end = 1
   )
   expect_identical(attr(result, "criterion"), "foremost_then_shortest")
   expect_identical(attr(result, "distance"), "forward_latency")
@@ -180,7 +180,7 @@ test_that("temporal closeness publishes its mathematical metadata", {
                    "reachable_inverse_mean")
 
   expect_warning(
-    mixed <- dyn_centrality(
+    mixed <- legacy_centrality(
       quiet_dynet(data.frame(from = "A", to = "B", time = 1)),
       measure = c("closeness", "reach"), scope = "temporal"
     ),
@@ -201,7 +201,7 @@ test_that("a zero-latency reachable set is reported, not returned in silence", {
     format = "contact", directed = TRUE
   )
   expect_warning(
-    out <- dyn_centrality(inst, measure = "closeness", scope = "temporal"),
+    out <- path_centrality(inst, measure = "closeness"),
     class = "dynet_zero_latency"
   )
   expect_true(any(is.infinite(as.data.frame(out)$value)))
@@ -209,6 +209,5 @@ test_that("a zero-latency reachable set is reported, not returned in silence", {
 
 test_that("an ordinary network raises no zero-latency condition", {
   dn <- quiet_dynet(school_contacts, format = "contact")
-  expect_no_warning(dyn_centrality(dn, measure = "closeness",
-                                   scope = "temporal"))
+  expect_no_warning(path_centrality(dn, measure = "closeness"))
 })

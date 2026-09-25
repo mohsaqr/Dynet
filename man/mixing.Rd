@@ -23,7 +23,7 @@ mixing(
 does not carry raises an error of class \code{dynet_unknown_attribute} that
 lists the attributes it does have.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\item{sessions}{How to treat sessions, as in \code{\link[=centrality_series]{centrality_series()}}:
 \code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}. \code{"separate"}
 needs a network built with a session column and raises
 \code{dynet_no_sessions} otherwise.}

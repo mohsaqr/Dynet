@@ -185,11 +185,11 @@ test_that("V03 paths reachability and temporal centrality share activity gates",
                     observation_start = 0, observation_end = 3)
   paths <- as.data.frame(paths(dn, "S", start = 0, end = 3))
   expected <- sum(paths$reachable[paths$node != "S"])
-  reach <- as.data.frame(dyn_reachability(
+  reach <- as.data.frame(reachability(
     dn, direction = "forward", start = 0, end = 3,
     measure = "reach_count"
   ))
-  central <- as.data.frame(dyn_centrality(
+  central <- as.data.frame(legacy_centrality(
     dn, c("reach_count", "closeness", "betweenness"),
     scope = "temporal", start = 0, end = 3
   ))

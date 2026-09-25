@@ -1,5 +1,5 @@
 eigen_prestige_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "eigenvector",
     rescale = rescale, ...
   ))
@@ -136,7 +136,7 @@ test_that("public binary prestige is isolated from values and strength", {
   )
   dn <- quiet_dynet(spells, weight = "weight")
   alone <- eigen_prestige_vector(dn, start = 0, end = 0, window = 0)
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"), prestige = "eigenvector",
     start = 0, end = 0, window = 0
   ))
@@ -167,7 +167,7 @@ test_that("session union precedes the spectrum", {
     ),
     c(A = 1 / 2, B = 1 / 2), tolerance = 1e-14
   )
-  expect_warning(separate <- dyn_centrality(
+  expect_warning(separate <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector",
     sessions = "separate", start = 0, end = 0, window = 0
   ), class = "dynet_prestige_eigen_undefined")
@@ -206,7 +206,7 @@ test_that("snapshot activity boundaries are resolved before eigensolving", {
     eigen_prestige_vector(dn, start = 2, end = 2, window = 0),
     c(A = 1, B = 0), tolerance = 1e-14
   )
-  expect_warning(half_open <- dyn_centrality(
+  expect_warning(half_open <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector",
     start = 1, end = 1, window = 1
   ), class = "dynet_prestige_eigen_undefined")
@@ -222,7 +222,7 @@ test_that("snapshot activity boundaries are resolved before eigensolving", {
 
 test_that("public undefined blocks warn once and carry diagnostics", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
-  expect_warning(result <- dyn_centrality(
+  expect_warning(result <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector",
     start = 0, end = 1, step = 1, window = 0
   ), class = "dynet_prestige_eigen_undefined")
@@ -237,7 +237,7 @@ test_that("eigenvector prestige publishes its solver and scale", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B"), to = c("B", "A"), time = 0
   ))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector"
   )
   expect_identical(attr(raw, "definition"), "eigenvector")
@@ -257,7 +257,7 @@ test_that("eigenvector prestige publishes its solver and scale", {
   expect_identical(attr(raw, "undefined"), "NA")
   expect_identical(attr(raw, "loops"), "retained_once_before_eigensolve")
 
-  scaled <- dyn_centrality(
+  scaled <- centrality_series(
     dn, measure = c("degree", "prestige"), prestige = "eigenvector",
     rescale = TRUE
   )
@@ -292,10 +292,10 @@ test_that("eigenvector prestige obeys coordinates and rejects wrong scope", {
 
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
-  expect_error(dyn_centrality(
+  expect_error(centrality_series(
     undirected, measure = "prestige", prestige = "eigenvector"
   ), class = "dynet_needs_directed")
-  expect_error(dyn_centrality(
+  expect_error(legacy_centrality(
     quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
     measure = "prestige", prestige = "eigenvector", scope = "temporal"
   ), class = "dynet_unknown_measure")
@@ -303,7 +303,7 @@ test_that("eigenvector prestige obeys coordinates and rejects wrong scope", {
 
 test_that("prestige diagnostics are reachable through the accessor", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
-  suppressWarnings(undefined <- dyn_centrality(
+  suppressWarnings(undefined <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector",
     start = 0, end = 1, step = 1, window = 0
   ))
@@ -323,7 +323,7 @@ test_that("prestige diagnostics are reachable through the accessor", {
   # the hardcoded empty schema against the real builder: if a column is added
   # to one and not the other, this fails.
   empty <- as.data.frame(
-    dyn_centrality(dn, measure = "degree", scope = "snapshot"),
+    centrality_series(dn, measure = "degree"),
     what = "diagnostics"
   )
   expect_identical(nrow(empty), 0L)

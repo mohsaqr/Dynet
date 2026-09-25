@@ -1,5 +1,5 @@
 colnorm_eigen_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.colnorm",
     rescale = rescale, ...
   ))
@@ -118,7 +118,7 @@ test_that("loops enter the binary column denominator before the solve", {
     c(A = 0, B = 1), tolerance = 1e-14
   )
   expect_warning(
-    dropped_value <- dyn_centrality(
+    dropped_value <- centrality_series(
       dropped, measure = "prestige", prestige = "eigenvector.colnorm",
       start = 0, end = 0, window = 0
     ), class = "dynet_prestige_eigen_undefined"
@@ -195,7 +195,7 @@ test_that("public column-normalized eigen prestige is binary and mode invariant"
       dn, mode = "out", start = 0, end = 0, window = 0
     ), expected, tolerance = 1e-14
   )
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"),
     prestige = "eigenvector.colnorm", start = 0, end = 0, window = 0
   ))
@@ -222,7 +222,7 @@ test_that("session union precedes column normalization", {
   )
 
   expect_warning(
-    separate <- dyn_centrality(
+    separate <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.colnorm",
       sessions = "separate", start = 0, end = 0, window = 0
     ), class = "dynet_prestige_eigen_undefined"
@@ -238,7 +238,7 @@ test_that("session union precedes column normalization", {
   expect_identical(diagnostics$session, "s2")
 
   expect_warning(
-    separate_scaled <- dyn_centrality(
+    separate_scaled <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.colnorm",
       rescale = TRUE, sessions = "separate",
       start = 0, end = 0, window = 0
@@ -293,7 +293,7 @@ test_that("snapshot boundaries precede column normalization", {
     c(A = 1, B = 0, C = 0), tolerance = 1e-14
   )
   expect_warning(
-    half_open <- dyn_centrality(
+    half_open <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.colnorm",
       start = 1, end = 1, window = 1
     ), class = "dynet_prestige_eigen_undefined"
@@ -305,7 +305,7 @@ test_that("snapshot boundaries precede column normalization", {
   )
 
   expect_warning(
-    several <- dyn_centrality(
+    several <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.colnorm",
       start = 1, end = 2, step = 1, window = 1
     ), class = "dynet_prestige_eigen_undefined"
@@ -325,7 +325,7 @@ test_that("column-normalized eigen prestige publishes transform and solver", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B"), to = c("B", "A"), time = 0
   ))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.colnorm"
   )
   expect_identical(attr(raw, "definition"), "eigenvector.colnorm")
@@ -343,7 +343,7 @@ test_that("column-normalized eigen prestige publishes transform and solver", {
                    "retained_once_before_column_normalization")
   expect_identical(attr(raw, "undefined"), "NA")
 
-  scaled <- dyn_centrality(
+  scaled <- centrality_series(
     dn, measure = c("degree", "prestige"),
     prestige = "eigenvector.colnorm", rescale = TRUE
   )
@@ -379,10 +379,10 @@ test_that("column-normalized eigen prestige obeys coordinates and scope", {
 
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
-  expect_error(dyn_centrality(
+  expect_error(centrality_series(
     undirected, measure = "prestige", prestige = "eigenvector.colnorm"
   ), class = "dynet_needs_directed")
-  expect_error(dyn_centrality(
+  expect_error(legacy_centrality(
     quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
     measure = "prestige", prestige = "eigenvector.colnorm",
     scope = "temporal"

@@ -1,5 +1,5 @@
 prestige_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree",
     rescale = rescale, ...
   ))
@@ -42,7 +42,7 @@ test_that("rescaled prestige is a within-block sum share", {
 test_that("public prestige matches directed degree mode in exactly", {
   dn <- quiet_dynet(random_edges(seed = 61L), interval = 2)
   prestige <- prestige_frame(dn)
-  degree <- as.data.frame(dyn_centrality(
+  degree <- as.data.frame(centrality_series(
     dn, measure = "degree", mode = "in"
   ))
   key <- function(df) paste(df$time, df$node, sep = "\r")
@@ -133,7 +133,7 @@ test_that("prestige remains binary in valued and mixed queries", {
   )
   dn <- quiet_dynet(spells, weight = "weight")
   alone <- prestige_frame(dn, start = 0, end = 0, window = 0)
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "degree", "prestige"),
     prestige = "indegree", start = 0, end = 0, window = 0
   ))
@@ -142,7 +142,7 @@ test_that("prestige remains binary in valued and mixed queries", {
   expect_identical(
     stats::setNames(alone$value, alone$node), c(A = 0, B = 2, C = 0)
   )
-  degree_alone <- as.data.frame(dyn_centrality(
+  degree_alone <- as.data.frame(centrality_series(
     dn, measure = "degree", start = 0, end = 0, window = 0
   ))
   expect_identical(subset(mixed, measure == "degree")$value,
@@ -214,13 +214,13 @@ test_that("prestige is incoming, directed, and snapshot-only", {
     incoming
   )
   expect_error(
-    dyn_centrality(
+    centrality_series(
       quiet_dynet(spells, directed = FALSE), measure = "prestige"
     ),
     class = "dynet_needs_directed"
   )
   expect_error(
-    dyn_centrality(dn, measure = "prestige", scope = "temporal"),
+    legacy_centrality(dn, measure = "prestige", scope = "temporal"),
     class = "dynet_unknown_measure"
   )
 })
@@ -228,22 +228,22 @@ test_that("prestige is incoming, directed, and snapshot-only", {
 test_that("prestige arguments are validated without silent effects", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
   expect_error(
-    dyn_centrality(dn, measure = "prestige", prestige = "unknown"),
+    centrality_series(dn, measure = "prestige", prestige = "unknown"),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_centrality(dn, measure = "prestige", rescale = NA),
+    centrality_series(dn, measure = "prestige", rescale = NA),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_centrality(dn, measure = "degree", rescale = TRUE),
+    centrality_series(dn, measure = "degree", rescale = TRUE),
     class = "dynet_bad_input"
   )
 })
 
 test_that("prestige publishes scoped mathematical metadata", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
-  result <- dyn_centrality(dn, measure = "prestige", rescale = TRUE)
+  result <- centrality_series(dn, measure = "prestige", rescale = TRUE)
   expect_identical(attr(result, "definition"), "indegree")
   expect_identical(attr(result, "direction"), "incoming")
   expect_identical(attr(result, "matrix_transform"), "none")
@@ -255,7 +255,7 @@ test_that("prestige publishes scoped mathematical metadata", {
   expect_identical(attr(result, "session_aggregation"),
                    "binary_calendar_union")
 
-  mixed <- dyn_centrality(
+  mixed <- centrality_series(
     dn, measure = c("degree", "prestige"), rescale = TRUE
   )
   expect_null(attr(mixed, "definition"))

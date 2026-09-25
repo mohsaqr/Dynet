@@ -21,7 +21,7 @@ Print a temporal measure
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, step = 4, window = 4)
+degree <- centrality_series(dn, step = 4, window = 4)
 degree
 print(degree, n = 4)
 }

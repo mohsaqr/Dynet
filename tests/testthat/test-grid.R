@@ -120,9 +120,9 @@ test_that("point-sampled event measures count events at the sample point", {
 test_that("the retired sample argument remains wired through public verbs", {
   dn <- quiet_dynet(random_edges(seed = 17L), interval = 1)
   expect_warning(
-    old_c <- as.data.frame(dyn_centrality(
+    old_c <- as.data.frame(centrality_series(
       dn, measure = "degree", sample = "instant")), "deprecated")
-  new_c <- as.data.frame(dyn_centrality(dn, measure = "degree", window = 0))
+  new_c <- as.data.frame(centrality_series(dn, measure = "degree", window = 0))
   expect_equal(old_c, new_c)
 
   expect_warning(old_s <- snapshots(dn, sample = "instant"), "deprecated")
@@ -172,7 +172,7 @@ test_that("every grid verb takes the four arguments and agrees on the grid", {
 
   expect_equal(unique(do.call(metrics,
     c(list(dn, measure = "density"), args))$time), times)
-  expect_equal(unique(do.call(dyn_centrality,
+  expect_equal(unique(do.call(centrality_series,
     c(list(dn, measure = "degree"), args))$time), times)
   expect_equal(unique(do.call(events,
     c(list(dn, measure = "formation"), args))$time), times)
@@ -189,8 +189,8 @@ test_that("the grid arguments are validated", {
   expect_error(metrics(dn, start = "yesterday"), class = "dynet_bad_input")
   # Temporal scope has no grid to place; saying otherwise is a mistake, not a
   # silently ignored argument.
-  expect_error(dyn_centrality(dn, measure = "closeness", scope = "temporal",
-                              window = 3), class = "dynet_bad_input")
+  expect_error(legacy_centrality(dn, measure = "closeness", scope = "temporal",
+                                 window = 3), class = "dynet_bad_input")
 })
 
 test_that("a network built from dates may be addressed with dates", {
@@ -225,9 +225,9 @@ test_that("a degenerate range still yields one measurement", {
 test_that("mode = in and out partition mode = all for degree and strength", {
   dn <- quiet_dynet(random_edges(seed = 13L))
   for (ms in c("degree", "strength")) {
-    all_v <- as.data.frame(dyn_centrality(dn, measure = ms, mode = "all"))
-    out_v <- as.data.frame(dyn_centrality(dn, measure = ms, mode = "out"))
-    in_v  <- as.data.frame(dyn_centrality(dn, measure = ms, mode = "in"))
+    all_v <- as.data.frame(centrality_series(dn, measure = ms, mode = "all"))
+    out_v <- as.data.frame(centrality_series(dn, measure = ms, mode = "out"))
+    in_v  <- as.data.frame(centrality_series(dn, measure = ms, mode = "in"))
     expect_equal(out_v$value + in_v$value, all_v$value)
     expect_equal(tapply(out_v$value, out_v$time, sum),
                  tapply(in_v$value, in_v$time, sum))
@@ -241,7 +241,7 @@ test_that("mode picks the right margin on a known network", {
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
   deg <- function(md) {
-    v <- as.data.frame(dyn_centrality(dn, measure = "degree", mode = md))
+    v <- as.data.frame(centrality_series(dn, measure = "degree", mode = md))
     stats::setNames(v$value, v$node)
   }
   expect_equal(unname(deg("in")[c("A", "B", "C", "H")]), c(0, 0, 0, 3))
@@ -257,7 +257,7 @@ test_that("mode changes closeness and coreness, not only degree", {
                    stringsAsFactors = FALSE)
   dn <- quiet_dynet(sp, interval = 1)
   cl <- function(md) {
-    v <- as.data.frame(dyn_centrality(dn, measure = "closeness", mode = md))
+    v <- as.data.frame(centrality_series(dn, measure = "closeness", mode = md))
     stats::setNames(v$value, v$node)[c("A", "B", "C")]
   }
   # A reaches B at 1 and C at 2: 2 / 3. B reaches C at 1: 1 / 1. C reaches none.
@@ -274,7 +274,7 @@ test_that("mode changes closeness and coreness, not only degree", {
                     start = 0, end = 1, stringsAsFactors = FALSE)
   dt <- quiet_dynet(tri, interval = 1)
   co <- function(md) {
-    v <- as.data.frame(dyn_centrality(dt, measure = "coreness", mode = md))
+    v <- as.data.frame(centrality_series(dt, measure = "coreness", mode = md))
     stats::setNames(v$value, v$node)[c("A", "B", "C", "D")]
   }
   expect_equal(unname(co("out")), c(1, 1, 1, 1))
@@ -285,48 +285,48 @@ test_that("mode changes closeness and coreness, not only degree", {
 test_that("mode is ignored where it has no meaning", {
   dn <- quiet_dynet(random_edges(seed = 14L))
   # Betweenness, PageRank and the rest have a single directional definition.
-  a <- as.data.frame(dyn_centrality(dn, measure = "betweenness", mode = "all"))
-  b <- as.data.frame(dyn_centrality(dn, measure = "betweenness", mode = "in"))
+  a <- as.data.frame(centrality_series(dn, measure = "betweenness", mode = "all"))
+  b <- as.data.frame(centrality_series(dn, measure = "betweenness", mode = "in"))
   expect_equal(a$value, b$value)
 
   und <- quiet_dynet(random_edges(seed = 14L), directed = FALSE)
-  u1 <- as.data.frame(dyn_centrality(und, measure = "degree", mode = "out"))
-  u2 <- as.data.frame(dyn_centrality(und, measure = "degree", mode = "in"))
+  u1 <- as.data.frame(centrality_series(und, measure = "degree", mode = "out"))
+  u2 <- as.data.frame(centrality_series(und, measure = "degree", mode = "in"))
   expect_equal(u1$value, u2$value)
 })
 
 test_that("retired degree names remain as deprecated aliases", {
   dn <- quiet_dynet(random_edges(seed = 15L))
   expect_warning(
-    old_in <- as.data.frame(dyn_centrality(dn, measure = "indegree")),
+    old_in <- as.data.frame(centrality_series(dn, measure = "indegree")),
     "deprecated")
   expect_warning(
-    old_out <- as.data.frame(dyn_centrality(dn, measure = "outdegree")),
+    old_out <- as.data.frame(centrality_series(dn, measure = "outdegree")),
     "deprecated")
-  new_in <- as.data.frame(dyn_centrality(dn, measure = "degree", mode = "in"))
-  new_out <- as.data.frame(dyn_centrality(dn, measure = "degree", mode = "out"))
+  new_in <- as.data.frame(centrality_series(dn, measure = "degree", mode = "in"))
+  new_out <- as.data.frame(centrality_series(dn, measure = "degree", mode = "out"))
   expect_equal(old_in$value, new_in$value)
   expect_equal(old_out$value, new_out$value)
-  expect_error(dyn_centrality(dn, mode = "sideways"))
+  expect_error(centrality_series(dn, mode = "sideways"))
 })
 
 test_that("temporal centrality rejects a snapshot direction mode", {
   dn <- quiet_dynet(chain_edges())
   expect_error(
-    dyn_centrality(dn, measure = "closeness", scope = "temporal", mode = "in"),
+    legacy_centrality(dn, measure = "closeness", scope = "temporal", mode = "in"),
     class = "dynet_bad_input")
 })
 
 test_that("the result records the grid and the mode it was measured on", {
   dn <- quiet_dynet(random_edges(seed = 16L), interval = 1)
-  m <- dyn_centrality(dn, measure = "degree", step = 2, window = 6,
-                      mode = "in")
+  m <- centrality_series(dn, measure = "degree", step = 2, window = 6,
+                         mode = "in")
   expect_equal(attr(m, "step"), 2)
   expect_equal(attr(m, "window"), 6)
   expect_equal(attr(m, "mode"), "in")
   expect_match(paste(capture.output(print(m)), collapse = " "), "rolling")
   expect_match(paste(capture.output(print(m)), collapse = " "), "mode in")
 
-  plain <- dyn_centrality(dn, measure = "degree")
+  plain <- centrality_series(dn, measure = "degree")
   expect_null(attr(plain, "mode"))
 })

@@ -31,7 +31,7 @@ incident calendar exposure), defaulting to events and total. A measure
 the chosen unit does not offer raises a \code{dynet_unknown_measure} error.}
 
 \item{sessions}{How to treat sessions: \code{"bounded"} (the default),
-\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=centrality_series]{centrality_series()}}.}
 
 \item{censored}{Whether to \code{"include"} known follow-up, the default, or
 \code{"exclude"} an entire edge raw spell or canonical vertex component with

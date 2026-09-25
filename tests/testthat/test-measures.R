@@ -2,7 +2,7 @@ test_that("snapshot degree on a triangle matches the value worked out by hand", 
   # A->B over [1,4), B->C over [2,5), C->A over [3,6). In the bin [3,4) all
   # three edges overlap, so every vertex has one edge in and one out.
   dn <- quiet_dynet(triangle_edges())
-  deg <- as.data.frame(dyn_centrality(dn, measure = "degree"))
+  deg <- as.data.frame(centrality_series(dn, measure = "degree"))
   at3 <- deg[deg$time == 3, , drop = FALSE]
   expect_equal(at3$value[order(at3$node)], c(2, 2, 2))
 })
@@ -15,7 +15,7 @@ test_that("degree counts self-loops with igraph's stub convention", {
                    out = c(A = 2, B = 0),
                    `in` = c(A = 1, B = 1))
   for (md in names(expected)) {
-    got <- as.data.frame(dyn_centrality(dn, measure = "degree", mode = md))
+    got <- as.data.frame(centrality_series(dn, measure = "degree", mode = md))
     got <- stats::setNames(got$value, got$node)
     expect_equal(got[names(expected[[md]])], expected[[md]])
   }
@@ -23,7 +23,7 @@ test_that("degree counts self-loops with igraph's stub convention", {
 
 test_that("temporal centrality on a chain matches hand calculation", {
   dn <- quiet_dynet(chain_edges())
-  got <- as.data.frame(dyn_centrality(
+  got <- as.data.frame(legacy_centrality(
     dn, measure = c("reach", "closeness", "betweenness"), scope = "temporal"))
   take <- function(measure)
     got$value[match(paste(c("A", "B", "C", "D", "E"), measure),
@@ -66,7 +66,7 @@ test_that("density stays inside the unit interval and degrees sum to twice the e
   dens <- metrics(dn, measure = "density")
   expect_true(all(dens$value >= 0 & dens$value <= 1))
 
-  deg <- as.data.frame(dyn_centrality(dn, measure = "degree"))
+  deg <- as.data.frame(centrality_series(dn, measure = "degree"))
   edges <- as.data.frame(metrics(dn, measure = "edges"))
   per_time <- tapply(deg$value, deg$time, sum)
   expect_equal(as.numeric(per_time),
@@ -90,8 +90,8 @@ test_that("measures are invariant to relabelling the vertices", {
   e2$from <- unname(relabel[e$from])
   e2$to   <- unname(relabel[e$to])
 
-  a <- as.data.frame(dyn_centrality(quiet_dynet(e), measure = "betweenness"))
-  b <- as.data.frame(dyn_centrality(quiet_dynet(e2), measure = "betweenness"))
+  a <- as.data.frame(centrality_series(quiet_dynet(e), measure = "betweenness"))
+  b <- as.data.frame(centrality_series(quiet_dynet(e2), measure = "betweenness"))
   a$node <- unname(relabel[a$node])
   key <- function(d) d$value[order(d$time, d$node)]
   expect_equal(key(a), key(b))

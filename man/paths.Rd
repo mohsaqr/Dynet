@@ -36,7 +36,7 @@ scale. It cannot be combined with \code{start} or \code{end}.}
 \item{direction}{\code{"forward"} traces where the vertex can reach;
 \code{"backward"} traces who could have reached it.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\item{sessions}{How to treat sessions, as in \code{\link[=path_centrality]{path_centrality()}}.}
 
 \item{start, end}{Inclusive lower and upper traversal-time bounds. Interval
 spells remain terminus-exclusive. When these are supplied, use them

@@ -9,7 +9,7 @@ test_that("a degenerate spectrum gives NA under a classed warning, a certified o
                    start = c(0, 0, 1, 1, 1), end = c(1, 1, 2, 2, 2))
   dn <- quiet_dynet(sp)
   expect_warning(
-    got <- as.data.frame(dyn_centrality(dn, measure = "eigenvector", mode = "out")),
+    got <- as.data.frame(centrality_series(dn, measure = "eigenvector", mode = "out")),
     class = "dynet_eigen_undefined")
   expect_true(all(is.na(got$value[got$time == 0])))
   cyc <- got$value[got$time == 1]
@@ -17,7 +17,7 @@ test_that("a degenerate spectrum gives NA under a classed warning, a certified o
   # hub and authority on a bin whose A A' has a repeated top eigenvalue: two
   # disjoint arcs A -> B and C -> D.
   two <- quiet_dynet(data.frame(from = c("A", "C"), to = c("B", "D"), start = 0, end = 1))
-  expect_warning(h <- as.data.frame(dyn_centrality(two, measure = "hub")),
+  expect_warning(h <- as.data.frame(centrality_series(two, measure = "hub")),
                  class = "dynet_eigen_undefined")
   expect_true(all(is.na(h$value)))
 })
@@ -25,7 +25,7 @@ test_that("a degenerate spectrum gives NA under a classed warning, a certified o
 test_that("a certified eigenvector satisfies its eigen-equation on a strongly connected snapshot", {
   set.seed(3)
   dn <- quiet_dynet(random_edges(n_v = 8L, n_e = 80L, span = 4, seed = 3L))
-  got <- as.data.frame(dyn_centrality(dn, measure = "eigenvector", mode = "out", window = "all"))
+  got <- as.data.frame(centrality_series(dn, measure = "eigenvector", mode = "out", window = "all"))
   if (!anyNA(got$value)) {
     a <- as.data.frame(collapse_network(dn))
     who <- as.data.frame(dn, what = "nodes")$name

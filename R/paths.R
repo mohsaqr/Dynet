@@ -1600,7 +1600,7 @@
 #'   scale. It cannot be combined with `start` or `end`.
 #' @param direction `"forward"` traces where the vertex can reach;
 #'   `"backward"` traces who could have reached it.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param sessions How to treat sessions, as in [path_centrality()].
 #' @param start,end Inclusive lower and upper traversal-time bounds. Interval
 #'   spells remain terminus-exclusive. When these are supplied, use them
 #'   instead of `at`.
@@ -1863,7 +1863,7 @@ paths <- function(dn, from, at = NULL,
 
 
 # ===========================================================================
-# dyn_reachability()
+# reachability()
 # ===========================================================================
 
 #' Reachability of every vertex
@@ -1887,7 +1887,7 @@ paths <- function(dn, from, at = NULL,
 #'   at the last instant searching backward, and one with no declared spells
 #'   starts at the window bound. Date and date-time values use the network's
 #'   time scale. It cannot be combined with `start` or `end`.
-#' @param sessions How to treat sessions, as in [dyn_centrality()].
+#' @param sessions How to treat sessions, as in [path_centrality()].
 #' @param start,end Inclusive lower and upper traversal-time bounds. Interval
 #'   spells remain terminus-exclusive.
 #' @param traversal_time Nonnegative duration charged for every hop, in the
@@ -1959,16 +1959,16 @@ paths <- function(dn, from, at = NULL,
 #'   start = c(0, 1, 2, 3),
 #'   end   = c(1, 2, 3, 4)
 #' ))
-#' dyn_reachability(dn)
-#' dyn_reachability(dn, direction = "forward")
-#' dyn_reachability(dn, start = 0, end = 2)
+#' reachability(dn)
+#' reachability(dn, direction = "forward")
+#' reachability(dn, start = 0, end = 2)
 #'
 #' @export
-dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
-                             at = NULL,
-                             sessions = c("bounded", "collapse", "separate"),
-                             start = NULL, end = NULL, traversal_time = 0,
-                             measure = "reach", plot = FALSE) {
+reachability <- function(dn, direction = c("both", "forward", "backward"),
+                         at = NULL,
+                         sessions = c("bounded", "collapse", "separate"),
+                         start = NULL, end = NULL, traversal_time = 0,
+                         measure = "reach", plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
   direction <- match.arg(direction)
@@ -2059,4 +2059,31 @@ dyn_reachability <- function(dn, direction = c("both", "forward", "backward"),
   effective_mode <- if (identical(sessions, "bounded") &&
                         is.null(dn$meta$sessions)) "collapse" else sessions
   .maybe_plot(.vertex_path_metadata(out, effective_mode), plot)
+}
+
+#' Deprecated name for `reachability()`
+#'
+#' `dyn_reachability()` was renamed [reachability()]. The old name still
+#' works: it passes every argument through unchanged and returns the same
+#' result, with a warning of class `dynet_deprecated`. It will be removed in a
+#' future release.
+#'
+#' @param ... Arguments passed to [reachability()].
+#' @return The result of [reachability()]: a node-level `dynet_metric`.
+#' @section Conditions:
+#' Warning: `dynet_deprecated` on every call. Errors are those of
+#' [reachability()].
+#' @examples
+#' dn <- dynet(data.frame(from = c("A", "B"), to = c("B", "C"),
+#'                        start = c(0, 1), end = c(1, 2)))
+#' # Warns, then returns what reachability(dn) returns.
+#' dyn_reachability(dn)
+#' @keywords internal
+#' @export
+dyn_reachability <- function(...) {
+  warning(warningCondition(
+    "`dyn_reachability()` is deprecated; use `reachability()`.",
+    class = "dynet_deprecated", call = NULL
+  ))
+  reachability(...)
 }

@@ -33,6 +33,8 @@
   edge_width = NULL,
   edge_width_range = NULL,
   edge_style = NULL,
+  edge_start_style = NULL,
+  edge_start_length = NULL,
   curvature = NULL,
   curve_pivot = NULL,
   label_size = NULL,
@@ -123,6 +125,12 @@ own default. They are honoured by the \code{"network"}, \code{"snapshots"} and
 aesthetics, named as in \code{cograph::splot()}. An \code{edge_color} overrides the
 source-to-target colour run with one colour.}
 
+\item{edge_start_style, edge_start_length}{How the origin of each link is
+marked, named as in \code{cograph::splot()}. For \code{"events"} the defaults follow
+cograph's TNA styling: the first \code{0.2} of every link, from its source, is
+\code{"dotted"}; \code{"dashed"} is also accepted and \code{"solid"} turns the mark off.
+\code{edge_start_length} is a share between 0 and 0.5.}
+
 \item{curvature, curve_pivot}{Bow geometry, as in \code{cograph::splot()}.
 \code{curvature} is the base bow as a fraction of the column gap and \code{0} draws
 straight links; \code{curve_pivot} slides where the bow peaks.}
@@ -135,7 +143,7 @@ default. Bins are sampled evenly across the window and the choice is
 reported.}
 
 \item{measure}{For the proximity view, the node-level measure that line
-thickness follows, \code{"degree"} by default. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}}
+thickness follows, \code{"degree"} by default. Any measure \code{\link[=centrality_series]{centrality_series()}}
 accepts at snapshot scope; the temporal-scope-only measures \code{"reach"} and
 \code{"reach_count"} are not available here, because the view redraws the
 measure over many short slices.}

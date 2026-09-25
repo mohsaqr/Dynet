@@ -187,8 +187,8 @@
 #' `dynet`, and a `start` or `end` that is not a single finite time. An
 #' unmatched `sessions`, `output` or `group_events` is rejected by
 #' [match.arg()] and is a plain error, not a classed one.
-#' @references Gibson, D. R. (2003). Participation shifts and institutional
-#'   change in relational systems. *Social Forces*, 81, 1335--1380.
+#' @references Gibson, D. R. (2003). Participation shifts: Order and
+#'   differentiation in group conversation. *Social Forces*, 81, 1335--1380.
 #'   \doi{10.1353/sof.2003.0055}
 #' @examples
 #' dn <- dynet(data.frame(

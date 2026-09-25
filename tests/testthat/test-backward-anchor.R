@@ -205,11 +205,11 @@ test_that("backward reach uses the explicit anchor as a deadline", {
     start = c(1, 3), end = c(4, 6), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(chain)
-  backward <- dyn_reachability(dn, direction = "backward", at = 5,
+  backward <- reachability(dn, direction = "backward", at = 5,
                                sessions = "collapse")
-  both <- dyn_reachability(dn, direction = "both", at = 5,
+  both <- reachability(dn, direction = "both", at = 5,
                            sessions = "collapse")
-  forward <- dyn_reachability(dn, direction = "forward", at = 5,
+  forward <- reachability(dn, direction = "forward", at = 5,
                               sessions = "collapse")
 
   expect_equal(vapply(c("A", "B", "C"), function(vertex) {

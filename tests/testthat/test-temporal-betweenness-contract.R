@@ -1,6 +1,6 @@
 betweenness_values <- function(dn, ...) {
-  result <- as.data.frame(dyn_centrality(
-    dn, measure = "betweenness", scope = "temporal", ...
+  result <- as.data.frame(path_centrality(
+    dn, measure = "betweenness", ...
   ))
   stats::setNames(result$value, result$node)
 }
@@ -136,8 +136,8 @@ test_that("session walls and full-cost winning families govern dependency", {
   expect_identical(unname(bounded[c("S", "A", "B", "T")]),
                    c(0, 1 / 2, 1 / 2, 0))
 
-  separate <- as.data.frame(dyn_centrality(
-    tied_dn, measure = "betweenness", scope = "temporal",
+  separate <- as.data.frame(path_centrality(
+    tied_dn, measure = "betweenness",
     sessions = "separate", start = 0, end = 2
   ))
   s1 <- stats::setNames(separate$value[separate$session == "s1"],
@@ -338,8 +338,8 @@ test_that("singleton, two-node, and all-direct families are zero", {
 
 test_that("temporal betweenness publishes scoped mathematical metadata", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 1))
-  result <- dyn_centrality(
-    dn, measure = "betweenness", scope = "temporal", start = 0, end = 1
+  result <- path_centrality(
+    dn, measure = "betweenness", start = 0, end = 1
   )
   expect_identical(attr(result, "criterion"), "foremost_then_shortest")
   expect_identical(attr(result, "pair_domain"),
@@ -348,7 +348,7 @@ test_that("temporal betweenness publishes scoped mathematical metadata", {
   expect_identical(attr(result, "path_identity"),
                    "canonical_atom_sequence")
 
-  mixed <- dyn_centrality(
+  mixed <- legacy_centrality(
     dn, measure = c("betweenness", "reach"), scope = "temporal"
   )
   expect_null(attr(mixed, "pair_domain"))

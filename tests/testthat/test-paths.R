@@ -76,15 +76,15 @@ test_that("earliest arrival matches tsna::tPath", {
 
 test_that("reachability is a proportion and the source is excluded", {
   dn <- quiet_dynet(random_edges())
-  r <- dyn_reachability(dn)
+  r <- reachability(dn)
   expect_true(all(r$value >= 0 & r$value <= 1))
   expect_setequal(unique(r$measure), c("forward_reach", "backward_reach"))
 })
 
 test_that("reachability never increases when the walker starts later", {
   dn <- quiet_dynet(random_edges(seed = 11L))
-  early <- dyn_reachability(dn, direction = "forward", at = 0)
-  late  <- dyn_reachability(dn, direction = "forward", at = 12)
+  early <- reachability(dn, direction = "forward", at = 0)
+  late  <- reachability(dn, direction = "forward", at = 12)
   expect_true(all(late$value <= early$value + 1e-12))
 })
 

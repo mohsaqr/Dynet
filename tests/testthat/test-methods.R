@@ -2,7 +2,7 @@ test_that("every result class has print, summary, plot and as.data.frame", {
   dn <- quiet_dynet(random_edges())
   objects <- list(
     dynet        = dn,
-    dynet_metric = dyn_centrality(dn, measure = "degree"),
+    dynet_metric = centrality_series(dn, measure = "degree"),
     dynet_paths  = paths(dn, from = "v1")
   )
   for (cls in names(objects)) {
@@ -45,7 +45,7 @@ test_that("temporal density counts observed duration against possible duration",
 test_that("printing does not tell the reader to reach into the object", {
   dn <- quiet_dynet(random_edges())
   shown <- paste(c(capture.output(print(dn)),
-                   capture.output(print(dyn_centrality(dn, measure = "degree"))),
+                   capture.output(print(centrality_series(dn, measure = "degree"))),
                    capture.output(print(paths(dn, from = "v1")))),
                  collapse = "\n")
   expect_false(grepl("$", shown, fixed = TRUE))
@@ -54,7 +54,7 @@ test_that("printing does not tell the reader to reach into the object", {
 test_that("print output is stable", {
   dn <- quiet_dynet(chain_edges())
   expect_snapshot(print(dn))
-  expect_snapshot(print(dyn_centrality(dn, measure = "degree")))
+  expect_snapshot(print(centrality_series(dn, measure = "degree")))
   expect_snapshot(print(paths(dn, from = "A")))
   expect_snapshot(print(summary(dn), row.names = FALSE))
 })

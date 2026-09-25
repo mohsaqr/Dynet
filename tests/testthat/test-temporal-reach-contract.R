@@ -17,8 +17,8 @@ reach_contract_diamond <- function() {
 
 test_that("the default reachability call remains proportion-only", {
   dn <- quiet_dynet(reach_contract_diamond())
-  default <- dyn_reachability(dn)
-  explicit <- dyn_reachability(dn, measure = "reach")
+  default <- reachability(dn)
+  explicit <- reachability(dn, measure = "reach")
   out <- as.data.frame(default)
 
   expect_identical(default, explicit)
@@ -32,13 +32,13 @@ test_that("the default reachability call remains proportion-only", {
   expect_s3_class(default, "dynet_metric")
   # `measure` and `plot` were both appended after the original arguments, so a
   # positional call written before either existed still means what it did.
-  expect_identical(tail(names(formals(dyn_reachability)), 2L),
+  expect_identical(tail(names(formals(reachability)), 2L),
                    c("measure", "plot"))
 })
 
 test_that("reach counts and proportions are distinct ordered measures", {
   dn <- quiet_dynet(reach_contract_diamond())
-  result <- dyn_reachability(
+  result <- reachability(
     dn, direction = "both", measure = c("reach_count", "reach")
   )
   out <- as.data.frame(result)
@@ -56,7 +56,7 @@ test_that("reach counts and proportions are distinct ordered measures", {
   ))
   expect_type(out$value, "double")
 
-  reversed <- as.data.frame(dyn_reachability(
+  reversed <- as.data.frame(reachability(
     dn, direction = "forward", measure = c("reach", "reach_count")
   ))
   expect_identical(
@@ -70,10 +70,10 @@ test_that("a singleton and isolates have finite source-excluding reach", {
   singleton <- quiet_dynet(
     data.frame(from = "A", to = "A", time = 1), loops = TRUE
   )
-  singleton_reach <- as.data.frame(dyn_reachability(
+  singleton_reach <- as.data.frame(reachability(
     singleton, measure = c("reach_count", "reach")
   ))
-  singleton_centrality <- as.data.frame(dyn_centrality(
+  singleton_centrality <- as.data.frame(legacy_centrality(
     singleton, measure = c("reach_count", "reach"), scope = "temporal"
   ))
   expect_equal(singleton_reach$value, rep(0, 4L))
@@ -87,7 +87,7 @@ test_that("a singleton and isolates have finite source-excluding reach", {
       stringsAsFactors = FALSE
     )
   )
-  isolates <- dyn_reachability(
+  isolates <- reachability(
     isolate_dn, start = 0, end = 1,
     measure = c("reach_count", "reach")
   )
@@ -116,11 +116,11 @@ test_that("a singleton and isolates have finite source-excluding reach", {
 
 test_that("temporal reach centrality shares the reachability reducer", {
   dn <- quiet_dynet(reach_contract_diamond())
-  reachability <- as.data.frame(dyn_reachability(
+  reachability <- as.data.frame(reachability(
     dn, direction = "forward", start = 1, end = 2,
     measure = c("reach_count", "reach")
   ))
-  centrality <- as.data.frame(dyn_centrality(
+  centrality <- as.data.frame(legacy_centrality(
     dn, measure = c("reach_count", "reach"), scope = "temporal",
     start = 1, end = 2
   ))
@@ -136,15 +136,15 @@ test_that("temporal reach centrality shares the reachability reducer", {
 
 test_that("closed path bounds determine both reach directions", {
   dn <- quiet_dynet(reach_contract_diamond())
-  full <- dyn_reachability(
+  full <- reachability(
     dn, direction = "both", start = 1, end = 2,
     measure = "reach_count"
   )
-  late <- dyn_reachability(
+  late <- reachability(
     dn, direction = "both", start = 1 + 1e-6, end = 2,
     measure = "reach_count"
   )
-  early_end <- dyn_reachability(
+  early_end <- reachability(
     dn, direction = "both", start = 1, end = 1,
     measure = "reach_count"
   )
@@ -181,11 +181,11 @@ test_that("reach inherits positive traversal duration", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(0, 2), end = c(2, 4), stringsAsFactors = FALSE
   ))
-  exact <- dyn_reachability(
+  exact <- reachability(
     dn, direction = "both", start = 0, end = 4,
     traversal_time = 2, measure = c("reach_count", "reach")
   )
-  too_slow <- dyn_reachability(
+  too_slow <- reachability(
     dn, direction = "both", start = 0, end = 4,
     traversal_time = 2.01, measure = "reach_count"
   )
@@ -209,7 +209,7 @@ test_that("reach inherits positive traversal duration", {
   )
   expect_true(all(as.data.frame(too_slow)$value == 0))
 
-  centrality <- dyn_centrality(
+  centrality <- legacy_centrality(
     dn, measure = c("reach_count", "reach"), scope = "temporal",
     start = 0, end = 4, traversal_time = 2
   )
@@ -229,7 +229,7 @@ test_that("finite unattained backward suprema still count", {
   )
   actor <- as.data.frame(paths)
   actor <- actor[actor$node == "A", , drop = FALSE]
-  reach <- dyn_reachability(
+  reach <- reachability(
     dn, direction = "backward", start = 0, end = 10,
     measure = c("reach_count", "reach")
   )
@@ -249,7 +249,7 @@ test_that("finite unattained backward suprema still count", {
     from = "A", to = "B", start = 0, end = 2,
     stringsAsFactors = FALSE
   ))
-  excluded <- dyn_reachability(
+  excluded <- reachability(
     boundary_only, direction = "backward", start = 2, end = 5,
     measure = c("reach_count", "reach")
   )
@@ -266,15 +266,15 @@ test_that("reach counts obey collapse, bounded, and separate sessions", {
     nodes = data.frame(name = c("A", "B", "C"))
   )
   nodes <- c("A", "B", "C")
-  collapsed <- dyn_reachability(
+  collapsed <- reachability(
     dn, direction = "both", sessions = "collapse", start = 0, end = 2,
     measure = c("reach_count", "reach")
   )
-  bounded <- dyn_reachability(
+  bounded <- reachability(
     dn, direction = "both", sessions = "bounded", start = 0, end = 2,
     measure = c("reach_count", "reach")
   )
-  separate <- dyn_reachability(
+  separate <- reachability(
     dn, direction = "both", sessions = "separate", start = 0, end = 2,
     measure = c("reach_count", "reach")
   )
@@ -330,7 +330,7 @@ test_that("reach counts obey collapse, bounded, and separate sessions", {
     from = c("A", "A"), to = c("B", "B"), time = c(1, 2),
     session = c("s1", "s2"), stringsAsFactors = FALSE
   ), session = "session")
-  duplicate_reach <- dyn_reachability(
+  duplicate_reach <- reachability(
     duplicated, direction = "forward", sessions = "bounded",
     start = 0, end = 2, measure = "reach_count"
   )
@@ -353,11 +353,11 @@ test_that("reachability and temporal centrality agree in every session mode", {
   )
 
   invisible(lapply(c("collapse", "bounded", "separate"), function(mode) {
-    reach <- as.data.frame(dyn_reachability(
+    reach <- as.data.frame(reachability(
       dn, direction = "forward", sessions = mode, start = 0, end = 2,
       measure = c("reach_count", "reach")
     ))
-    centrality <- as.data.frame(dyn_centrality(
+    centrality <- as.data.frame(legacy_centrality(
       dn, measure = c("reach_count", "reach"), scope = "temporal",
       sessions = mode, start = 0, end = 2
     ))
@@ -372,7 +372,7 @@ test_that("an out-of-window separate session returns complete zero rows", {
     session = c("early", "late"), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  reach <- dyn_reachability(
+  reach <- reachability(
     dn, direction = "forward", sessions = "separate", start = 5,
     measure = c("reach_count", "reach")
   )
@@ -397,31 +397,42 @@ test_that("reach measure validation is classed", {
   dn <- quiet_dynet(reach_contract_diamond())
 
   expect_error(
-    dyn_reachability(dn, measure = "degree"),
+    reachability(dn, measure = "degree"),
     class = "dynet_unknown_measure"
   )
   expect_error(
-    dyn_reachability(dn, measure = character()),
+    reachability(dn, measure = character()),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_reachability(dn, measure = 1),
+    reachability(dn, measure = 1),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_reachability(dn, measure = c("reach", NA_character_)),
+    reachability(dn, measure = c("reach", NA_character_)),
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_centrality(
+    legacy_centrality(
       dn, measure = c("reach_count", NA_character_), scope = "temporal"
     ),
     class = "dynet_bad_input"
   )
   expect_no_error(
-    dyn_centrality(
+    legacy_centrality(
       dn, measure = c("reach_count", "closeness"), scope = "temporal",
       start = 1, end = 2
     )
   )
+})
+
+test_that("the retired name warns by class and forwards unchanged", {
+  dn <- quiet_dynet(reach_contract_diamond())
+  expect_warning(dyn_reachability(dn), class = "dynet_deprecated")
+  old <- withCallingHandlers(
+    dyn_reachability(dn, direction = "forward", measure = "reach_count"),
+    dynet_deprecated = function(w) invokeRestart("muffleWarning")
+  )
+  new <- reachability(dn, direction = "forward", measure = "reach_count")
+  expect_identical(old, new)
 })

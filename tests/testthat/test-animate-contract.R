@@ -340,7 +340,7 @@ test_that("node size follows a measure computed on the animation's grid", {
   values <- measured$values
   expect_identical(dim(values), c(nrow(grid), nrow(dn$nodes)))
   # Each cell is the measure the verb reports for that bin and vertex.
-  reported <- dyn_centrality(dn, measure = "degree", step = 4, window = 4)
+  reported <- centrality_series(dn, measure = "degree", step = 4, window = 4)
   reported <- as.data.frame(reported)
   hit <- reported$node == "Ana" & abs(reported$time - grid$time[[2L]]) < 1e-9
   expect_equal(values[2L, match("Ana", dn$nodes$name)], reported$value[hit])
@@ -358,7 +358,7 @@ test_that("node size follows a measure computed on the animation's grid", {
   class = "dynet_needs_directed")
 })
 
-test_that("measure may be a dyn_centrality result or a vertex attribute", {
+test_that("measure may be a centrality_series result or a vertex attribute", {
   skip_if_no_gif()
   dn <- quiet_dynet(
     school_contacts,
@@ -375,13 +375,13 @@ test_that("measure may be a dyn_centrality result or a vertex attribute", {
   # A result on the same grid gives exactly what the name gives.
   by_name <- Dynet:::.animation_measure(dn, "degree", grid, "bounded",
                                         NULL, NULL, 4, 4)
-  per_bin <- dyn_centrality(dn, measure = "degree", step = 4, window = 4)
+  per_bin <- centrality_series(dn, measure = "degree", step = 4, window = 4)
   by_object <- Dynet:::.animation_measure(dn, per_bin, grid, "bounded",
                                           NULL, NULL, 4, 4)
   expect_identical(by_object$values, by_name$values)
 
   # One time point means one size per vertex for the whole film.
-  whole <- dyn_centrality(dn, measure = "degree", window = "all")
+  whole <- centrality_series(dn, measure = "degree", window = "all")
   fixed <- Dynet:::.animation_measure(dn, whole, grid, "bounded",
                                       NULL, NULL, 4, 4)
   expect_identical(dim(fixed$values), c(nrow(grid), nrow(dn$nodes)))
@@ -404,13 +404,13 @@ test_that("measure may be a dyn_centrality result or a vertex attribute", {
 
   # A result on another grid lands on no bin and says so; one that lands
   # on only some bins warns; a graph-level result is not a node measure.
-  elsewhere <- dyn_centrality(dn, measure = "degree", start = 0.5, end = 10,
-                              step = 3, window = 3)
+  elsewhere <- centrality_series(dn, measure = "degree", start = 0.5, end = 10,
+                                 step = 3, window = 3)
   expect_error(Dynet:::.animation_measure(dn, elsewhere, grid, "bounded",
                                           NULL, NULL, 4, 4),
                class = "dynet_bad_input")
-  partial <- dyn_centrality(dn, measure = "degree", start = 0, end = 8,
-                            step = 4, window = 4)
+  partial <- centrality_series(dn, measure = "degree", start = 0, end = 8,
+                               step = 4, window = 4)
   expect_warning(Dynet:::.animation_measure(dn, partial, grid, "bounded",
                                             NULL, NULL, 4, 4),
                  class = "dynet_partial_measure")

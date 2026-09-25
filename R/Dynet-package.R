@@ -12,8 +12,8 @@ NULL
 utils::globalVariables(c(
   ".grp", ".row", "arrival_time", "arrival_time_prev", "count", "depth", "vertex_fill",
   "depth_prev", "edge", "end_draw", "endpoint", "ev", "family", "freq",
-  "from", "group", "id", "label", "label_y", "measure", "node", "note",
-  "other", "pair", "position", "session", "shift", "size", "start", "ties",
+  "from", "group", "id", "label", "label_y", "lt", "measure", "node", "note",
+  "other", "pair", "part", "position", "session", "shift", "size", "start", "ties",
   "time", "tip", "to", "value", "vertex", "weight", "x", "xend", "y",
   "yend", "yf"
 ))

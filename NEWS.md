@@ -1,3 +1,67 @@
+# Dynet 0.4.13
+
+## Breaking changes
+
+* `dyn_reachability()` is renamed `reachability()`. The old name still works,
+  forwards every argument unchanged and warns with class `dynet_deprecated`;
+  it will be removed in a future release. Note that `sna` also exports a
+  `reachability()`: with both attached, the one attached last wins, so call
+  `Dynet::reachability()` when in doubt.
+
+* `dyn_centrality()` is split in two, because its two scopes returned
+  different things. `centrality_series()` is the old default
+  (`scope = "snapshot"`): centrality in every window, a series per vertex.
+  `path_centrality()` is the old `scope = "temporal"` for `"closeness"` and
+  `"betweenness"`: one value per vertex from time-respecting paths across the
+  period, with no `time` column. Temporal `"reach"` and `"reach_count"` are
+  `reachability()`. Neither new function has a `scope` argument, so each
+  returns one shape. `path_centrality(plot = TRUE)` now draws, which the old
+  temporal scope silently ignored. `dyn_centrality()` still works, returns
+  exactly what it returned before and warns with class `dynet_deprecated`.
+  The new names avoid `cograph::centrality()` and `tna::centralities()`.
+
+* `centrality_series(measure = "strength")` now weights each spell by the
+  share of its duration inside the window (`weight * overlap / duration`)
+  instead of counting its full weight in every window it touches. Tiled
+  windows therefore add back up to the network's total weight rather than
+  counting a long spell once per window. Point contacts keep their full
+  weight in the window that holds them, `window = 0` still uses full weights
+  at the instant, and the part of a spell outside the observation period is
+  not reassigned to observed windows. Degree and every binary measure are
+  unchanged. `snapshots()`, `animate()` and the network plots still count
+  each spell's full weight in every bin it touches, as
+  `networkDynamic::network.collapse()` does; their documentation now says so.
+
+* `plot(type = "events")` marks where each link starts the way cograph's TNA
+  styling does: the first 20% of each link, from its source, is dotted. The
+  new `edge_start_style` and `edge_start_length` arguments, named as in
+  `cograph::splot()`, change or turn off the mark. Row labels are now drawn in
+  their actor's colour, so they work as the colour key, and nodes are larger.
+
+## Bug fixes
+
+* `metrics()`' `"temporal_density"`, `"observed_pair_density"`,
+  `"onset_intensity"` and `"observed_pair_onset_intensity"` no longer count
+  time after the data end as exposure. Without explicit observation bounds, a
+  last window reaching past the final spell divided by its full width, so
+  tiled windows did not pool to the whole-period value. Integration now stops
+  at the observation period, which defaults to the data's span, as
+  `tsna::tEdgeDensity()` does. On `school_contacts` with weekly windows the
+  final partial week's temporal density goes from 0.0013 to 0.0181; explicit
+  `observation_end` values are honoured as before.
+
+* `metrics()`' `"concurrent_nodes"` and `"concurrent_share"` now require
+  simultaneity. With a positive `window` they were read from the window's
+  union snapshot, so a vertex tied to one partner early in the window and to
+  another later was counted as concurrent although the two ties never
+  overlapped. A vertex now counts when relations to two distinct neighbours
+  are active at the same instant somewhere in the window; spells that only
+  meet at a boundary do not overlap, and a point contact is concurrent with
+  whatever is active at its timestamp. `window = 0` results are unchanged.
+  The result records the rule in the `concurrency_window_rule` attribute.
+  `mixing()` is unaffected: it counts group pairs connected anywhere in the
+  window and never implied simultaneity.
+
 # Dynet 0.4.12
 
 ## Breaking changes

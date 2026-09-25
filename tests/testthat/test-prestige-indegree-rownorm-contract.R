@@ -1,5 +1,5 @@
 rownorm_prestige_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree.rownorm",
     rescale = rescale, ...
   ))
@@ -64,7 +64,7 @@ test_that("literal dyads distinguish row normalization from S01", {
   rownorm <- rownorm_prestige_vector(
     dn, start = 0, end = 0, window = 0
   )
-  raw <- as.data.frame(dyn_centrality(
+  raw <- as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree",
     start = 0, end = 0, window = 0
   ))
@@ -109,7 +109,7 @@ test_that("duplicates and values cannot change sender allocation", {
   alone <- rownorm_prestige_vector(
     dn, start = 0, end = 0, window = 0
   )
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"),
     prestige = "indegree.rownorm", start = 0, end = 0, window = 0
   ))
@@ -159,11 +159,11 @@ test_that("row-normalized prestige is selector-aware but mode-independent", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "A", "C"), to = c("B", "C", "B"), time = 0
   ))
-  incoming <- dyn_centrality(
+  incoming <- centrality_series(
     dn, measure = "prestige", prestige = "indegree.rownorm",
     start = 0, end = 0, window = 0
   )
-  outgoing_mode <- dyn_centrality(
+  outgoing_mode <- centrality_series(
     dn, measure = "prestige", prestige = "indegree.rownorm", mode = "out",
     start = 0, end = 0, window = 0
   )
@@ -177,7 +177,7 @@ test_that("row-normalized prestige publishes its exact transform and unit", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "A"), to = c("B", "C"), time = 0
   ))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "indegree.rownorm"
   )
   expect_identical(attr(raw, "definition"), "indegree.rownorm")
@@ -187,7 +187,7 @@ test_that("row-normalized prestige publishes its exact transform and unit", {
   expect_identical(attr(raw, "unit"), "active_sender_nomination_mass")
   expect_identical(attr(raw, "loops"), "retained_once")
 
-  mixed <- dyn_centrality(
+  mixed <- centrality_series(
     dn, measure = c("degree", "prestige"),
     prestige = "indegree.rownorm", rescale = TRUE
   )

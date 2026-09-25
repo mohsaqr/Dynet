@@ -182,7 +182,7 @@ test_that("an empty observed view retains fixed vertices and returns empty snaps
   expect_length(enc$start, 0L)
   expect_identical(enc$names, c("A", "B", "C"))
   expect_equal(.grid_for(enc, dn)$time, c(5, 6))
-  result <- as.data.frame(dyn_centrality(
+  result <- as.data.frame(centrality_series(
     dn, measure = "degree", start = 5, end = 5, window = 0
   ))
   expect_identical(result$node, c("A", "B", "C"))
@@ -200,15 +200,15 @@ test_that("empty observed sessions retain zero reach in every mode", {
   for (mode in c("bounded", "collapse", "separate")) {
     # Session modes are independent public cases; no iteration depends on a
     # previous result.
-    reach <- as.data.frame(dyn_reachability(
+    reach <- as.data.frame(reachability(
       dn, direction = "both", sessions = mode,
       measure = c("reach", "reach_count")
     ))
     expect_true(all(reach$value == 0))
     expect_true(all(reach$node %in% c("A", "B", "C")))
   }
-  close <- as.data.frame(dyn_centrality(
-    dn, measure = "closeness", scope = "temporal"
+  close <- as.data.frame(path_centrality(
+    dn, measure = "closeness"
   ))
   expect_identical(close$value, c(0, 0, 0))
 
@@ -315,8 +315,8 @@ test_that("public paths and temporal closeness use the observation origin", {
   latency <- quiet_dynet(data.frame(
     from = "A", to = "B", start = 5, end = 6
   ), observation_start = 0, observation_end = 10)
-  close <- as.data.frame(dyn_centrality(
-    latency, measure = "closeness", scope = "temporal"
+  close <- as.data.frame(path_centrality(
+    latency, measure = "closeness"
   ))
   expect_identical(close$value[close$node == "A"], 1 / 5)
 

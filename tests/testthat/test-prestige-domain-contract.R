@@ -1,5 +1,5 @@
 domain_prestige_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "domain",
     rescale = rescale, ...
   ))
@@ -104,11 +104,11 @@ test_that("the public chain is incoming and mode independent", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B", "A"), to = c("B", "C", "D"), time = 0
   ))
-  incoming <- dyn_centrality(
+  incoming <- centrality_series(
     dn, measure = "prestige", prestige = "domain",
     start = 0, end = 0, window = 0
   )
-  outgoing_mode <- dyn_centrality(
+  outgoing_mode <- centrality_series(
     dn, measure = "prestige", prestige = "domain", mode = "out",
     start = 0, end = 0, window = 0
   )
@@ -203,7 +203,7 @@ test_that("domain rescaling is local to each reporting block", {
 
 test_that("domain prestige publishes the frozen mathematical metadata", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
-  raw <- dyn_centrality(dn, measure = "prestige", prestige = "domain")
+  raw <- centrality_series(dn, measure = "prestige", prestige = "domain")
   expect_identical(attr(raw, "definition"), "domain")
   expect_identical(attr(raw, "direction"), "incoming")
   expect_identical(attr(raw, "matrix_transform"),
@@ -219,7 +219,7 @@ test_that("domain prestige publishes the frozen mathematical metadata", {
   expect_identical(attr(raw, "unreachable"), "zero")
   expect_identical(attr(raw, "zero_total"), "NaN")
 
-  mixed <- dyn_centrality(
+  mixed <- centrality_series(
     dn, measure = c("degree", "prestige"), prestige = "domain",
     rescale = TRUE
   )
@@ -257,11 +257,11 @@ test_that("domain public invariants and validation are explicit", {
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
   expect_error(
-    dyn_centrality(undirected, measure = "prestige", prestige = "domain"),
+    centrality_series(undirected, measure = "prestige", prestige = "domain"),
     class = "dynet_needs_directed"
   )
   expect_error(
-    dyn_centrality(
+    legacy_centrality(
       quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
       measure = "prestige", prestige = "domain", scope = "temporal"
     ),

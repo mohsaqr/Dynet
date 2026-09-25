@@ -280,7 +280,7 @@
 #' The node measure an animation sizes vertices by, as a bins-by-vertices matrix
 #'
 #' Three forms of `measure` are accepted. A measure name that
-#' [dyn_centrality()] offers is computed on the animation's own grid. A
+#' [centrality_series()] offers is computed on the animation's own grid. A
 #' node-level `dynet_metric` is matched by vertex, and by time when it holds
 #' more than one time point; one computed with `window = "all"` therefore
 #' gives every vertex one value for the whole animation. The name of a
@@ -324,9 +324,9 @@
     return(list(values = .place_measure_rows(tbl, dn, bins), label = label))
   }
   if (measure %in% .node_measures) {
-    values <- dyn_centrality(dn, measure = measure, sessions = sessions,
-                             start = start, end = end, step = step,
-                             window = window)
+    values <- centrality_series(dn, measure = measure, sessions = sessions,
+                                start = start, end = end, step = step,
+                                window = window)
     return(list(values = .place_measure_rows(as.data.frame(values), dn, bins),
                 label = measure))
   }
@@ -341,7 +341,7 @@
     return(list(values = .constant_measure(value, n_bins), label = measure))
   }
   stop(errorCondition(
-    sprintf("`measure = %s` is neither a measure dyn_centrality() offers nor a numeric vertex attribute.",
+    sprintf("`measure = %s` is neither a measure centrality_series() offers nor a numeric vertex attribute.",
             sQuote(measure)),
     class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
 }
@@ -702,16 +702,16 @@
 #' @param start,end,step,window The measurement grid, as in [snapshots()].
 #'   `NULL`, the default, takes each from the network's own observation
 #'   window and bin width.
-#' @param sessions How to treat sessions, as in [dyn_centrality()]: `"bounded"`
+#' @param sessions How to treat sessions, as in [centrality_series()]: `"bounded"`
 #'   (the default) or `"collapse"`. An animation draws calendar bins, so
 #'   `"separate"` is not offered.
 #' @param layout `"spring"` (the default), `"relaxed"`, `"circle"`, `"oval"`
 #'   or `"groups"`, or a data frame of coordinates. See details.
 #' @param measure What node size follows. `NULL`, the default, keeps every
 #'   vertex the same size. The name of a snapshot node measure from
-#'   [dyn_centrality()], such as `"degree"` or `"betweenness"`, computes it on
+#'   [centrality_series()], such as `"degree"` or `"betweenness"`, computes it on
 #'   the animation's own grid, so a vertex grows and shrinks bin by bin. A
-#'   node-level result of [dyn_centrality()] is matched by vertex and time;
+#'   node-level result of [centrality_series()] is matched by vertex and time;
 #'   one computed with `window = "all"` holds a single value per vertex, so
 #'   every vertex keeps one size for the whole film, for instance its degree
 #'   over the whole period. The name of a numeric vertex attribute supplied
@@ -744,7 +744,7 @@
 #'   way in and the dissolving colour on the way out; `"hide"` keeps it in
 #'   place, invisible.
 #' @param isolates How a vertex that is present but has no tie in a bin is
-#'   drawn. `"fade"`, the default, at a third of its opacity; `"show"` at
+#'   drawn. `"fade"`, the default, at 35% of its opacity; `"show"` at
 #'   full opacity; `"hide"` invisible.
 #' @param ease `"dwell"`, the default, holds each bin still before it
 #'   changes; `"continuous"` keeps everything moving, with positions on a
@@ -800,9 +800,9 @@
 #' without a partition or a `labels` naming no vertex attribute;
 #' `dynet_missing_column` and `dynet_unknown_node` for a
 #' coordinate table that is incomplete; `dynet_unknown_measure` for a
-#' `measure` that is neither a measure [dyn_centrality()] offers nor a
-#' numeric vertex attribute, and whatever [dyn_centrality()] raises for one it
-#' refuses; `dynet_bad_input` for a [dyn_centrality()] result that is not
+#' `measure` that is neither a measure [centrality_series()] offers nor a
+#' numeric vertex attribute, and whatever [centrality_series()] raises for one it
+#' refuses; `dynet_bad_input` for a [centrality_series()] result that is not
 #' node-level or lands on none of the bins, and a warning of class
 #' `dynet_partial_measure` when it lands on only some; and `dynet_bad_input` for a non-positive
 #' `fps`, `tween`, `width`, `height` or `res`, an odd video size, a `loop`
@@ -810,7 +810,7 @@
 #' `max_displacement` or `anchor_strength`.
 #'
 #' @seealso [snapshots()] for the same grid as a table, [plot.dynet()] with
-#'   `type = "snapshots"` for it as a static filmstrip, and [dyn_centrality()]
+#'   `type = "snapshots"` for it as a static filmstrip, and [centrality_series()]
 #'   for the measures node size can follow.
 #'
 #' @examples
@@ -864,7 +864,7 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
   .check(
     "`file` must be one non-missing file path." =
       is.character(file) && length(file) == 1L && !is.na(file) && nzchar(file),
-    "`measure` must be NULL, one name, or a dyn_centrality() result." =
+    "`measure` must be NULL, one name, or a centrality_series() result." =
       is.null(measure) || inherits(measure, "dynet_metric") ||
         (is.character(measure) && length(measure) == 1L && !is.na(measure)),
     "`tween` must be one positive whole number." = whole(tween),
@@ -967,7 +967,7 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
   })
   weights_seen <- unlist(lapply(frames, function(net) net$edges$weight))
   weight_range <- if (length(weights_seen)) range(weights_seen) else c(0, 0)
-  # `NA` is the value dyn_centrality() reports for a vertex absent from a
+  # `NA` is the value centrality_series() reports for a vertex absent from a
   # bin, so it is expected here and sits at the bottom of the size scale.
   value_range <- if (is.null(values) || all(is.na(values))) c(0, 0) else {
     range(values, na.rm = TRUE)

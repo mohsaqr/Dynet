@@ -17,7 +17,6 @@ articles:
     writes GIF and video files, which need gifski and av.
   contents:
   - articles/animating
-  - articles/mooc-posts
 
 - title: Case studies
   desc: >
@@ -67,8 +66,9 @@ reference:
     The measuring verbs. All take the same four grid arguments - start, end,
     step, window - and return a tidy one-row-per-observation table.
   contents:
-  - dyn_centrality
-  - dyn_reachability
+  - centrality_series
+  - path_centrality
+  - reachability
   - metrics
   - mixing
   - pshifts

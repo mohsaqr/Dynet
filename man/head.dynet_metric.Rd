@@ -23,6 +23,6 @@ header still describes the series the rows came from, and a \verb{first n of N r
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, step = 4, window = 4)
+degree <- centrality_series(dn, step = 4, window = 4)
 head(degree)
 }

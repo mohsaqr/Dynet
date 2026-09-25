@@ -16,7 +16,7 @@
 ---
 
     Code
-      print(dyn_centrality(dn, measure = "degree"))
+      print(centrality_series(dn, measure = "degree"))
     Output
       # Degree (node-level)
       # 5 vertices | 4 time points, 1 per bin | time in step

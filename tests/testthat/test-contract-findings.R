@@ -37,17 +37,17 @@ test_that("an undirected tie keeps its row position through an edit", {
 test_that("deprecations, duplicate nodes and singular kernels are classed conditions", {
   dn <- quiet_dynet(log)
   expect_warning(metrics(dn, measure = "edges", sample = "instant"), class = "dynet_deprecated")
-  expect_warning(dyn_centrality(dn, measure = "indegree"), class = "dynet_deprecated")
+  expect_warning(centrality_series(dn, measure = "indegree"), class = "dynet_deprecated")
   expect_warning(dynet(log, nodes = data.frame(name = c("A", "A", "B", "C", "D"))),
                  class = "dynet_duplicate_nodes")
   # Bonacich power at exponent 1 on a 2-cycle: I - A is singular.
   cyc <- quiet_dynet(data.frame(from = c("A", "B"), to = c("B", "A"), start = 0, end = 1))
-  expect_warning(pw <- as.data.frame(dyn_centrality(cyc, measure = "power", exponent = 1)),
+  expect_warning(pw <- as.data.frame(centrality_series(cyc, measure = "power", exponent = 1)),
                  class = "dynet_kernel_singular")
   expect_true(all(is.na(pw$value)))
   # information centrality on a disconnected undirected snapshot
   dis <- quiet_dynet(data.frame(from = c("A", "C"), to = c("B", "D"), start = 0, end = 1), directed = FALSE)
-  expect_warning(inf <- as.data.frame(dyn_centrality(dis, measure = "information")),
+  expect_warning(inf <- as.data.frame(centrality_series(dis, measure = "information")),
                  class = "dynet_kernel_singular")
   expect_true(all(is.na(inf$value)))
 })

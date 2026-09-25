@@ -123,13 +123,13 @@ test_that("canonical anchors preserve at and both-direction behavior", {
     as.data.frame(paths(dn, "C", end = 5, direction = "backward"))
   )
 
-  both <- as.data.frame(dyn_reachability(
+  both <- as.data.frame(reachability(
     dn, direction = "both", start = 1, end = 5, sessions = "collapse"
   ))
-  forward <- as.data.frame(dyn_reachability(
+  forward <- as.data.frame(reachability(
     dn, direction = "forward", start = 1, end = 5, sessions = "collapse"
   ))
-  backward <- as.data.frame(dyn_reachability(
+  backward <- as.data.frame(reachability(
     dn, direction = "backward", start = 1, end = 5,
     sessions = "collapse"
   ))
@@ -267,11 +267,11 @@ test_that("bounded paths, reachability, and temporal reach agree", {
     start = c(2, 5, 6), end = c(2, 5, 6)
   )
   dn <- quiet_dynet(spells)
-  reach <- as.data.frame(dyn_reachability(
+  reach <- as.data.frame(reachability(
     dn, direction = "forward", start = 0, end = 5,
     sessions = "collapse"
   ))
-  centrality <- as.data.frame(dyn_centrality(
+  centrality <- as.data.frame(legacy_centrality(
     dn, measure = "reach", scope = "temporal",
     start = 0, end = 5, sessions = "collapse"
   ))
@@ -287,10 +287,10 @@ test_that("bounded paths, reachability, and temporal reach agree", {
   expect_equal(stats::setNames(centrality$value, centrality$node), expected)
   expect_equal(stats::setNames(path_share, c("A", "B", "C", "D")),
                expected)
-  expect_no_error(dyn_centrality(
-    dn, measure = "closeness", scope = "temporal", start = 0, end = 5
+  expect_no_error(path_centrality(
+    dn, measure = "closeness", start = 0, end = 5
   ))
-  bounded_centrality <- as.data.frame(dyn_centrality(
+  bounded_centrality <- as.data.frame(legacy_centrality(
     dn, measure = c("reach", "betweenness"), scope = "temporal",
     start = 0, end = 5
   ))
@@ -306,7 +306,7 @@ test_that("backward reachability respects the common lower horizon", {
     from = c("A", "B"), to = c("B", "C"),
     start = c(0, 2), end = c(2, 4)
   )
-  result <- as.data.frame(dyn_reachability(
+  result <- as.data.frame(reachability(
     quiet_dynet(spells), direction = "backward", start = 2, end = 5,
     sessions = "collapse"
   ))
@@ -341,22 +341,22 @@ test_that("date path bounds equal their internal numeric offsets", {
   expect_equal(as.data.frame(backward_dated),
                as.data.frame(backward_numeric))
 
-  reach_dated <- dyn_reachability(
+  reach_dated <- reachability(
     dn, direction = "both", start = as.Date("2024-01-01"),
     end = as.Date("2024-01-02"), sessions = "collapse"
   )
-  reach_numeric <- dyn_reachability(
+  reach_numeric <- reachability(
     dn, direction = "both", start = -1, end = 0,
     sessions = "collapse"
   )
   expect_equal(as.data.frame(reach_dated), as.data.frame(reach_numeric))
 
-  centrality_dated <- dyn_centrality(
+  centrality_dated <- legacy_centrality(
     dn, measure = "reach", scope = "temporal",
     start = as.Date("2024-01-01"), end = as.Date("2024-01-02"),
     sessions = "collapse"
   )
-  centrality_numeric <- dyn_centrality(
+  centrality_numeric <- legacy_centrality(
     dn, measure = "reach", scope = "temporal",
     start = -1, end = 0, sessions = "collapse"
   )
@@ -374,13 +374,13 @@ test_that("one-sided windows retain zero rows for non-overlapping sessions", {
     start = c(2, 10), end = c(2, 10), session = c("early", "late")
   )
   dn <- quiet_dynet(spells, session = "session")
-  forward <- as.data.frame(dyn_reachability(
+  forward <- as.data.frame(reachability(
     dn, direction = "forward", end = 5, sessions = "separate"
   ))
-  backward <- as.data.frame(dyn_reachability(
+  backward <- as.data.frame(reachability(
     dn, direction = "backward", start = 5, sessions = "separate"
   ))
-  centrality <- as.data.frame(dyn_centrality(
+  centrality <- as.data.frame(legacy_centrality(
     dn, measure = "reach", scope = "temporal",
     end = 5, sessions = "separate"
   ))
@@ -408,7 +408,7 @@ test_that("invalid and conflicting path bounds are classed errors", {
   ), class = "dynet_bad_input")
   expect_error(paths(numeric, "A", at = 0, end = 1),
                class = "dynet_bad_input")
-  expect_error(dyn_reachability(numeric, at = 0, start = 0),
+  expect_error(reachability(numeric, at = 0, start = 0),
                class = "dynet_bad_input")
   expect_error(paths(numeric, "A", start = c(0, 1)),
                class = "dynet_bad_input")

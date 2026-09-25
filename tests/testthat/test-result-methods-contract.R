@@ -94,7 +94,7 @@ test_that("plot = TRUE draws without changing what a verb returns", {
   on.exit(grDevices::dev.off(), add = TRUE)
 
   verbs <- list(
-    function(p) dyn_centrality(dn, measure = "degree", plot = p),
+    function(p) centrality_series(dn, measure = "degree", plot = p),
     function(p) metrics(dn, plot = p),
     function(p) snapshots(dn, plot = p),
     function(p) paths(dn, from = "Ana", plot = p),
@@ -103,7 +103,7 @@ test_that("plot = TRUE draws without changing what a verb returns", {
     function(p) pathways(dn, from = "Ana", plot = p),
     function(p) burstiness(dn, plot = p),
     function(p) durations(dn, plot = p),
-    function(p) dyn_reachability(dn, plot = p),
+    function(p) reachability(dn, plot = p),
     function(p) events(dn, plot = p)
   )
   lapply(verbs, function(call_verb) {
@@ -135,8 +135,8 @@ test_that("`top` counts vertices whose series has an undefined bin", {
   )
   dn <- quiet_dynet(spells, vertex_spells = activity,
                     observation_start = 0, observation_end = 5)
-  degree <- dyn_centrality(dn, measure = "degree", start = 0, end = 5,
-                           step = 1, window = 1)
+  degree <- centrality_series(dn, measure = "degree", start = 0, end = 5,
+                              step = 1, window = 1)
   measured <- as.data.frame(degree)
   expect_true(anyNA(measured$value))
 
@@ -156,7 +156,7 @@ test_that("`top` counts vertices whose series has an undefined bin", {
 
 test_that("`top` selects the same vertices for the table and the plot", {
   dn <- quiet_dynet(school_contacts)
-  degree <- dyn_centrality(dn, measure = "degree", step = 4, window = 4)
+  degree <- centrality_series(dn, measure = "degree", step = 4, window = 4)
   kept <- as.data.frame(degree, top = 5)
   drawn <- plot(degree, top = 5)
   drawn_nodes <- sort(unique(drawn$data$node))
@@ -166,7 +166,7 @@ test_that("`top` selects the same vertices for the table and the plot", {
 
 test_that("both directed-only guards refuse the same measures", {
   # The proximity panel validates `measure` itself rather than going through
-  # dyn_centrality(), so the two lists must not drift apart. Its copy used to
+  # centrality_series(), so the two lists must not drift apart. Its copy used to
   # omit "prestige", which then ran on a symmetric adjacency and returned a
   # directed quantity without complaint.
   undirected <- quiet_dynet(school_contacts, directed = FALSE)
@@ -184,7 +184,7 @@ test_that("both directed-only guards refuse the same measures", {
   pdf(tempfile())
   on.exit(grDevices::dev.off(), add = TRUE)
   lapply(directed_only, function(measure) {
-    refuses(function() dyn_centrality(undirected, measure = measure))
+    refuses(function() centrality_series(undirected, measure = measure))
     refuses(function() plot(undirected, type = "proximity", measure = measure))
   })
 })

@@ -1,5 +1,5 @@
 domain_proximity_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "domain.proximity",
     rescale = rescale, ...
   ))
@@ -112,7 +112,7 @@ test_that("loops, values, and path multiplicity do not alter hop proximity", {
   alone <- domain_proximity_vector(
     weighted_dn, start = 0, end = 0, window = 0
   )
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     weighted_dn, measure = c("strength", "prestige"),
     prestige = "domain.proximity", start = 0, end = 0, window = 0
   ))
@@ -134,11 +134,11 @@ test_that("public domain proximity is incoming and mode independent", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B", "A"), to = c("B", "C", "D"), time = 0
   ))
-  incoming <- dyn_centrality(
+  incoming <- centrality_series(
     dn, measure = "prestige", prestige = "domain.proximity",
     start = 0, end = 0, window = 0
   )
-  outgoing_mode <- dyn_centrality(
+  outgoing_mode <- centrality_series(
     dn, measure = "prestige", prestige = "domain.proximity", mode = "out",
     start = 0, end = 0, window = 0
   )
@@ -238,7 +238,7 @@ test_that("point, interval, and final-bin boundaries precede geodesics", {
 
 test_that("domain proximity metadata states the complete formula", {
   dn <- quiet_dynet(data.frame(from = "A", to = "B", time = 0))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "domain.proximity"
   )
   expect_identical(attr(raw, "definition"), "domain.proximity")
@@ -262,7 +262,7 @@ test_that("domain proximity metadata states the complete formula", {
   expect_identical(attr(raw, "zero_domain"), "zero")
   expect_identical(attr(raw, "zero_total"), "NaN")
 
-  mixed <- dyn_centrality(
+  mixed <- centrality_series(
     dn, measure = c("degree", "prestige"),
     prestige = "domain.proximity", rescale = TRUE
   )
@@ -299,13 +299,13 @@ test_that("domain proximity obeys coordinate invariants and validation", {
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
   expect_error(
-    dyn_centrality(
+    centrality_series(
       undirected, measure = "prestige", prestige = "domain.proximity"
     ),
     class = "dynet_needs_directed"
   )
   expect_error(
-    dyn_centrality(
+    legacy_centrality(
       quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
       measure = "prestige", prestige = "domain.proximity", scope = "temporal"
     ),

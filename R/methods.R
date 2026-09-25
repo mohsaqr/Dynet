@@ -16,15 +16,15 @@
 #' @param measure Optional centrality measures to annotate the vertex table
 #'   with, valid only for `what = "nodes"`. Each becomes one column holding the
 #'   value over the whole observed period, so the vertex table can be filtered
-#'   or ranked without a second call. Any measure [dyn_centrality()] accepts at
+#'   or ranked without a second call. Any measure [centrality_series()] accepts at
 #'   snapshot scope is allowed, plus `"indegree"` and `"outdegree"`; anything
 #'   else raises a `dynet_unknown_measure` error, and a `measure` that is not a
 #'   character vector raises `dynet_bad_input`. Naming it for any other `what`
 #'   raises a `dynet_bad_input` error too.
 #' @param sessions How sessions are treated while `measure` is computed:
 #'   `"bounded"` (the default), `"collapse"` or `"separate"`, as in
-#'   [dyn_centrality()]. Ignored when `measure` is not given.
-#' @param start,end Measurement bounds passed to [dyn_centrality()] when
+#'   [centrality_series()]. Ignored when `measure` is not given.
+#' @param start,end Measurement bounds passed to [centrality_series()] when
 #'   `measure` is given, and ignored otherwise. Default to the observed range.
 #' @param ... Ignored.
 #'
@@ -176,7 +176,7 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
   modes <- c(indegree = "in", outdegree = "out")
   columns <- lapply(measure, function(m) {
     directed_degree <- m %in% names(modes)
-    long <- as.data.frame(dyn_centrality(
+    long <- as.data.frame(centrality_series(
       dn, measure = if (directed_degree) "degree" else m,
       mode = if (directed_degree) modes[[m]] else "all",
       sessions = sessions, start = start, end = end, window = "all"
@@ -611,9 +611,14 @@ summary.dynet <- function(object, temporal_density = FALSE, ...) {
   cohort <- cohort %||% .ever_observed_pairs(dn, enc, sessions, label)
   lo <- bin$lo[[1L]]
   hi <- bin$hi[[1L]]
-  change <- .temporal_exposure_changes(dn, enc, lo, hi)
+  # Exposure stops at the observation period, which defaults to the data's
+  # span; a window reaching past it must not add unobserved pair-time.
+  bounds <- dn$meta$time_range
+  exposure_lo <- max(lo, bounds[["start"]])
+  exposure_hi <- min(hi, bounds[["end"]])
+  change <- .temporal_exposure_changes(dn, enc, exposure_lo, exposure_hi)
   totals <- c(risk = 0, occupied = 0, observed_risk = 0)
-  if (hi > lo && length(change) >= 2L) {
+  if (exposure_hi > exposure_lo && length(change) >= 2L) {
     width <- diff(change)
     midpoint <- change[-length(change)] + width / 2
     cells <- vapply(seq_along(midpoint), function(index) {

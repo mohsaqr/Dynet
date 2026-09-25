@@ -27,7 +27,7 @@ outside every bin falls back to the nearest bin rather than failing, but
 that bin may itself hold no active tie, in which case the result is a
 zero-row frame with the documented columns.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\item{sessions}{How to treat sessions, as in \code{\link[=centrality_series]{centrality_series()}}:
 \code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}. \code{"separate"}
 needs a network built with a session column and raises
 \code{dynet_no_sessions} otherwise.}
@@ -65,8 +65,12 @@ row per bin, \code{\link[=plot]{plot()}} draws how many ties each bin holds, and
 \code{\link[=as.data.frame]{as.data.frame()}} returns the plain table. A pair
 joined by more than one spell in the same bin is one edge, with
 \code{n_spells} recording how many spells were collapsed -- so the edge counts
-here agree with those from \code{\link[=metrics]{metrics()}}. Eligible isolates have no
-synthetic edge row; use \code{\link[=dyn_centrality]{dyn_centrality()}} or \code{\link[=metrics]{metrics()}} when the
+here agree with those from \code{\link[=metrics]{metrics()}}. \code{weight} is the sum of those
+spells' full weights: a spell counts its whole weight in every bin it
+touches, as \code{networkDynamic::network.collapse()} does. Snapshot
+\code{"strength"} in \code{\link[=centrality_series]{centrality_series()}} instead splits a spell's weight by
+the share of its duration inside the bin. Eligible isolates have no
+synthetic edge row; use \code{\link[=centrality_series]{centrality_series()}} or \code{\link[=metrics]{metrics()}} when the
 eligible population itself is required.
 }
 \description{

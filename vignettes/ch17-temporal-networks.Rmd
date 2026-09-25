@@ -12,20 +12,13 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center",
                       fig.width = 7, fig.height = 4.5, dpi = 96)
 ```
 
-In this vignette we analyse the discussion forum of a massive open online
-course as a temporal network, in the order of the temporal network chapter of
-*Learning Analytics Methods and Tutorials* (Saqr, 2024): the network as a
-whole, its structure over time, the position of each participant, how far a
-post could travel, and how participants of different experience levels
-addressed one another.
+This vignette demonstrates temporal network analysis of participant interactions in a massive open online course (MOOC) discussion forum. Following the analytical framework presented by Saqr (2024) in *Learning Analytics Methods and Tutorials*, it examines changes in network structure, participants’ structural positions, reachability through time-respecting paths, and interaction patterns between participants with different experience levels.
 
 ## Data
 
-`mooc_posts` has one row per post: `sender` and `receiver` are the
-participants, `timestamp` the moment of the post and `discussion` the thread.
-`mooc_people` has one row per participant with the experience code, 1 for
-expert, 2 for student and 3 for teacher, and its label in `expert_level`,
-which serves later as the mixing attribute.
+This vignette uses the MOOC discussion-forum dataset analysed in Saqr (2024). It records timestamped interactions between participants and includes their experience levels. The data are available in Dynet as `mooc_posts`, containing the interactions, and `mooc_people`, containing participant attributes.
+
+In `mooc_posts`, `sender` and `receiver` identify the relational endpoints, `timestamp` records when the message was posted, and `discussion` identifies its thread. In `mooc_people`, experience is coded as 1 for expert, 2 for student, and 3 for teacher, with corresponding labels in `expert_level`.
 
 ```{r data}
 library(Dynet)
@@ -33,17 +26,13 @@ head(mooc_posts)
 head(mooc_people)
 ```
 
-## The network
+## Constructing the temporal network
 
-Following Saqr and Nouri (2020), a reply is taken to be active from the moment
-it is posted until its thread falls silent. Two kinds of rows carry no
-interaction: a post that answers its own author, which `dynet()` drops by
-default, and a thread that never received a second post, which
-`min_thread_posts = 2` drops. To build the network, we call `dynet()` with
-`from` and `to` for the two participant columns, `time` for the timestamp,
-`thread` for the thread column, which selects the threaded rule, `nodes` for
-the participant table so that `expert_level` travels with the network, and
-`time_unit = "days"`.
+`dynet()` constructs a temporal network from the MOOC reply data. The supplied variables `sender` and `receiver` identify the relational endpoints, while `timestamp` records when each reply was posted. Setting `thread = "discussion"` represents each reply relationship as a relational spell.
+
+The duration of a relational spell represents the period during which the discussion remained active through replies and further interactions. Each spell begins when a reply is posted and ends with the last recorded interaction in the same discussion. This models the reply relationship as part of an ongoing discussion in which contributions continued to be addressed and responded to, following Saqr and Nouri (2020).
+
+The constructor derives `start` from the reply timestamp, `end` from the last recorded timestamp in its discussion, and calculates `duration = end - start`. These variables are created during construction rather than supplied in `mooc_posts`. The `nodes` argument adds participant attributes from `mooc_people`, including `expert_level`, while `time_unit = "days"` expresses elapsed time in days.
 
 ```{r build}
 dn_full <- dynet(mooc_posts, from = "sender", to = "receiver",
@@ -53,67 +42,55 @@ dn_full <- dynet(mooc_posts, from = "sender", to = "receiver",
 summary(dn_full)
 ```
 
-The 86 self-replies and the 37 single-post threads are reported and dropped,
-leaving 2,406 posts in 299 threads. The network has 441 vertices and 2,406 spells on 1,907 distinct pairs,
-observed from day 0 to day 72.01 in 73 one-day bins. The mean snapshot
-density is 0.0035: on an average day about one pair in three hundred is
-connected.
+The call explicitly identifies the sender, receiver, and timestamp columns. Because `sender`, `receiver`, and `timestamp` are recognised aliases, the `from`, `to`, and `time` arguments could be omitted here. Alias matching is case-insensitive. Explicit column specification is needed only when names do not match recognised aliases or their intended interpretation is ambiguous.
 
-Most participants posted a few times. To restrict the analysis to the
-participants with more than 20 ties, we call `induce_subgraph()` with a
-condition on the vertex table; a centrality named in the condition is
-computed over the whole period.
+The analysis focuses on exchanges between different participants within discussions containing more than one post. Self-replies connect a participant to themselves and are excluded by the default `loops = FALSE`. Setting `min_thread_posts = 2` also excludes discussions with fewer than two posts remaining after self-replies have been removed. These filtering choices follow the chapter’s preparation of the interaction data; they are not requirements for constructing a temporal network. Here, they remove 86 self-replies and 37 single-post discussions, leaving 2,406 posts across 299 discussions.
+
+The resulting temporal network contains 441 vertices and 2,406 relational spells connecting 1,907 distinct ordered pairs of participants. The number of spells exceeds the number of pairs because participants may reply to the same person more than once. The observation period extends from day 0 to day 72.01. Mean snapshot density is 0.0035 across 73 one-day intervals, indicating that approximately 0.35% of possible directed connections are present in an average interval.
+
+Following the chapter, the subsequent analysis uses a smaller subnetwork to make the visualisations easier to interpret. `induce_subgraph()` retains participants whose degree exceeds 20 in the network aggregated over the observation period, together with the relational spells connecting those participants.
 
 ```{r active}
 dn <- induce_subgraph(dn_full, degree > 20)
 dn
 ```
 
-The active subnetwork has 45 vertices, 686 spells and 428 pairs, observed
-from day 0.11 to day 72.01. The first spell shows the thread rule at work: the
-reply from 219 to 444 posted on day 0.11 stays active until day 69.48,
-because its thread received posts for that long.
+The selected subnetwork contains 45 vertices, 686 relational spells, and 428 distinct ordered pairs, spanning day 0.11 to day 72.01. The first spell illustrates the discussion-based duration: participant `219` replied to participant `444` on day 0.11, and the spell continues until day 69.48, when the last interaction in that discussion was recorded.
+
+The analyses below describe this selected subnetwork. Their results therefore characterise relationships among the retained participants rather than the full MOOC forum.
 
 ## Visualisation
 
-To draw the aggregate network, we call `plot()` with `type = "network"`.
+The aggregate network displays all participant pairs connected during the observation period. It provides an overview of the relationships among the selected participants, but does not show when those relationships were active. Setting `type = "network"` produces this view.
 
 ```{r net-plot, fig.width = 7, fig.height = 6}
 plot(dn, type = "network")
 ```
 
-To draw the network in four one-day bins spaced across the period, with a
-shared layout, we set `type` to `"snapshots"` and `panels` to 4.
+Snapshots show how connectivity changes over time. The following call displays four one-day intervals spaced across the observation period. A shared layout keeps participants in the same positions, making changes in their connections easier to compare.
 
 ```{r snapshots, fig.width = 9, fig.height = 3}
 plot(dn, type = "snapshots", panels = 4)
 ```
 
-To count what the first four weeks hold, we call `snapshots()` with a grid of
-four one-week windows beginning on day 1, and `summary()` on the result.
-`ties` is the number of distinct pairs active in the window, `nodes` the
-number of participants with at least one active tie, and `weight` the number
-of spells.
+`snapshots()` also returns the connections within specified intervals in tidy format. The following call requests weekly windows beginning on days 1, 8, 15, and 22. Setting both `step` and `window` to 7 produces non-overlapping seven-day intervals.
 
 ```{r snapshot-counts}
 weekly <- snapshots(dn, start = 1, end = 22, step = 7, window = 7)
 summary(weekly)
 ```
 
-The week beginning on day 1 holds 58 pairs among 29 participants; the week
-beginning on day 22 holds 154 pairs among 44 of the 45. The counts grow
-because a reply stays active until its thread closes, so early ties are still
-present in later windows.
+The summary reports `ties`, the number of distinct connected pairs; `nodes`, the number of participants with at least one active tie; and `weight`, the summed weights of active spells. Because the reply data have unit weights, the latter counts active spells.
 
-To see when each participant was active, we set `type` to `"timeline"` and
-`top` to the number of participants to show.
+The window beginning on day 1 contains 58 connected pairs among 29 participants, compared with 154 pairs among 44 participants in the window beginning on day 22. These counts include relationships initiated earlier that remain active because their discussions continue to receive interactions. They therefore describe connectivity within each window, rather than only replies posted during that week.
+
+The activity timeline shows when relationships between participant pairs are active. Setting `top = 25` displays the 25 pairs with the most relational spells. For each pair, colour represents the proportion of a time bin during which at least one spell is active, counting overlapping spells once.
 
 ```{r timeline, fig.height = 5}
 plot(dn, type = "timeline", top = 25)
 ```
 
-To count the ties that form and dissolve each day, we call `events()` with
-`measure` for the two counts and a grid of one-day bins.
+`events()` counts relational spell onsets and terminations within successive intervals. The following call requests daily counts through `"formation"` and `"dissolution"`. In this threaded network, formation corresponds to a reply being posted, while termination occurs at the last recorded interaction in its discussion.
 
 ```{r turnover}
 turnover <- events(dn, measure = c("formation", "dissolution"),
@@ -122,24 +99,21 @@ summary(turnover)
 plot(turnover)
 ```
 
-On average 9.4 ties form and 9.4 dissolve per day; the means are equal because
-every spell begins and ends inside the period. Formation peaks at 40 on day
-46. Dissolution peaks at 99 on day 69, when the threads that had stayed open
-through the course fall silent together.
+On average, 9.4 spells begin and 9.4 terminate per day. Formation peaks at 40 spells on day 46, while termination peaks at 99 on day 69. Multiple spells can terminate together because replies belonging to the same discussion share its termination time. These counts describe relational spells, so the termination of one spell does not necessarily disconnect a participant pair if another spell remains active.
 
-The proximity timeline places participants who interact near each other and
-follows their positions through time. To draw it, we set `type` to
-`"proximity"` and `slices` to the number of time slices.
+The proximity timeline summarises changes in participants’ network positions. Within each temporal slice, shortest-path distances are calculated and represented along a single axis. Lines connect each participant’s positions across slices. Participants separated by shorter network distances are positioned closer together, allowing changes in clusters and relationships to be followed over time.
 
 ```{r proximity, fig.width = 8, fig.height = 6}
 plot(dn, type = "proximity", slices = 20)
 ```
 
+Here, `slices = 20` specifies the number of temporal slices. Proximity reflects network distance within a slice; it does not necessarily indicate a direct interaction between two participants.
+
 ## Structure over time
 
-Every measuring function takes `start`, `end`, `step` and `window`. To measure
-density over a rolling week, we call `metrics()` with `step = 1` and
-`window = 7`, so that each value covers the seven days beginning at its time.
+Graph-level measures describe how the network’s overall structure changes during the observation period. Density measures the proportion of possible directed connections that are present. Calculating density over successive windows shows whether relationships become more widespread or more restricted over time.
+
+The temporal settings determine which relationships contribute to each measurement. `start` and `end` specify the measurement range, `step` determines the interval between measurements, and `window` determines the period covered by each value. The following call calculates density daily, using a seven-day window beginning at each measurement time:
 
 ```{r density}
 weekly_density <- metrics(dn, measure = "density",
@@ -148,12 +122,9 @@ summary(weekly_density)
 plot(weekly_density)
 ```
 
-Over the 47 windows the weekly density averages 0.101 and ranges from 0.066
-to 0.139, with the peak in the week beginning on day 45.
+Because `window = 7` exceeds `step = 1`, successive windows overlap. Across the 47 windows, density averages 0.101 and ranges from 0.066 to 0.139. The maximum occurs in the window beginning on day 45. These values describe connections active during each seven-day period, including spells that began earlier and remained active.
 
-To obtain the density of the whole period, and the temporal density that
-weights each pair by the share of the period during which it was live, we set
-`window` to `"all"`.
+Aggregate density and temporal density summarise different aspects of connectivity. **Aggregate density** records whether each pair was connected at any time during the observation period, regardless of duration. **Temporal density** accounts for how long pairs were connected, expressing total connected-pair duration relative to the maximum possible over the period. Overlapping spells between the same endpoints contribute once to their connected duration.
 
 ```{r density-scalars}
 scalars <- metrics(dn, measure = c("edges", "density", "temporal_density"),
@@ -161,12 +132,11 @@ scalars <- metrics(dn, measure = c("edges", "density", "temporal_density"),
 scalars
 ```
 
-The 428 pairs give an aggregate density of 0.216. The temporal density is
-0.063, less than a third of it, because most pairs were live for only part of
-the period.
+The 428 connected pairs yield an aggregate density of 0.216. Temporal density is 0.063, indicating that these connections were active for only part of the observation period. The difference illustrates how aggregating all relationships can obscure periods when connectivity was lower.
 
-Reciprocity is the share of ties that are returned. To obtain it per day on
-the full network, we call `metrics()` with `measure = "reciprocity"`.
+Reciprocity describes the extent to which directed relationships are returned. A connection from A to B is reciprocated when the reverse connection from B to A is also present in the measurement window. With `measure = "reciprocity"`, `metrics()` returns the proportion of directed ties that have a corresponding reverse tie.
+
+The following calculation uses the full network, `dn_full`, rather than the selected subnetwork. It measures reciprocity within successive one-day intervals.
 
 ```{r recip}
 reciprocity <- metrics(dn_full, measure = "reciprocity",
@@ -175,11 +145,9 @@ summary(reciprocity)
 plot(reciprocity)
 ```
 
-Reciprocity averages 0.151 over the 73 days and peaks at 0.218 on day 47.
+Reciprocity averages 0.151 across the 73 intervals and reaches 0.218 in the interval beginning on day 47. Thus, approximately 15.1% of active directed ties are reciprocated in an average daily interval. These values describe the presence of relationships in both directions, rather than whether individual messages received a reply.
 
-The dyad census classifies every pair as mutual, asymmetric or null (Wasserman
-and Faust, 1994). To obtain it at each instant of the grid, we name the three
-classes in `measure` and set `window` to 0.
+The dyad census provides a complementary description by classifying each unordered pair of distinct participants. A **mutual** dyad contains ties in both directions, an **asymmetric** dyad contains a tie in only one direction, and a **null** dyad contains neither. Unlike reciprocity, which reports a proportion of directed ties, the census counts participant pairs in each category.
 
 ```{r dyads}
 dyad_census <- metrics(dn, measure = c("mutual", "asymmetric", "null"),
@@ -188,13 +156,9 @@ summary(dyad_census)
 plot(dyad_census)
 ```
 
-The 45 vertices form 990 dyads, all null at the first instant. Over the 73
-instants an average of 21.0 dyads are mutual and 81.5 asymmetric, and the
-mutual count peaks at 46 on day 48.
+Here, `window = 0` evaluates connections at individual time points, sampled one day apart. The 45 participants in `dn` form 990 unordered pairs, all classified as null at time 0. Across the 73 sampled instants, an average of 21.0 pairs are mutual and 81.5 are asymmetric. The number of mutual pairs peaks at 46 on day 48.
 
-Degree centralisation is 0 when every vertex has the same degree and 1 when
-one vertex holds every tie (Freeman, 1979). To obtain it per day, we set
-`measure` to `"centralization_degree"`.
+Degree centralisation describes how unevenly connections are distributed across the network (Freeman, 1979). It compares each participant’s degree with the highest degree in the network and summarises these differences relative to a theoretical maximum. Centralisation is zero when all participants have equal degree; higher values indicate that connections are concentrated around participants with higher degree. Unlike degree centrality, which describes an individual participant, centralisation describes the network as a whole.
 
 ```{r centralization}
 centralisation <- metrics(dn, measure = "centralization_degree",
@@ -203,60 +167,54 @@ summary(centralisation)
 plot(centralisation)
 ```
 
-Centralisation averages 0.379 and peaks at 0.508 on day 31, the day on which
-one participant's betweenness also peaks.
+Daily degree centralisation averages 0.379 and peaks at 0.508 in the interval beginning on day 31. This peak identifies the interval with the greatest concentration of degree under the specified calculation.
 
 ## Participants
 
-To obtain degree in all three directions for every participant on every day,
-we call `dyn_centrality()` with `measure = "degree"` and `mode` for the
-directions, then `summary()` with `by = "measure"` for one row per measure.
+Vertex-level centrality measures describe participants’ positions within the discussion network. Degree counts direct connections. Because ties run from the sender of a reply to its receiver, **indegree** counts the participants from whom a person has incoming connections, while **outdegree** counts the participants to whom they have outgoing connections. **Total degree** adds indegree and outdegree; a reciprocated relationship therefore contributes to both.
+
+The following call computes all three measures within successive daily intervals. Setting `by = "measure"` summarises each measure across participants and measurement times.
 
 ```{r degree}
-degree_series <- dyn_centrality(dn, measure = "degree",
-                                mode = c("all", "in", "out"),
-                                start = 1, end = 73, step = 1, window = 1)
+degree_series <- centrality_series(dn, measure = "degree",
+                                   mode = c("all", "in", "out"),
+                                   start = 1, end = 73, step = 1, window = 1)
 summary(degree_series, by = "measure")
 ```
 
-Mean degree is 5.77 per participant per day, with a maximum of 52 on day 49.
-In-degree and out-degree share the mean of 2.88, but in-degree is far more
-dispersed: its maximum is 35 on day 50 against 19 for out-degree on day 31.
-Replies concentrate on a few receivers more than on a few senders.
+Mean total degree is 5.77 per participant per daily interval, with a maximum of 52 on day 49. Indegree and outdegree both average 2.88, as every directed tie contributes once to each. Their maxima differ: indegree reaches 35 on day 50, whereas outdegree reaches 19 on day 31. The highest incoming degree therefore involves more distinct replying participants than the highest outgoing degree involves distinct recipients.
 
-To draw the trajectories of the ten most central participants, we call
-`plot()` with `top`.
+The following plot displays the degree trajectories of the ten participants selected by `top = 10`:
 
 ```{r degree-plot, fig.height = 4.5}
-degree <- dyn_centrality(dn, measure = "degree",
-                         start = 1, end = 73, step = 1, window = 1)
+degree <- centrality_series(dn, measure = "degree",
+                            start = 1, end = 73, step = 1, window = 1)
 plot(degree, top = 10)
 ```
 
-Closeness, betweenness and eigenvector centrality describe reach, brokerage
-and connection to well-connected others (Freeman, 1979; Bonacich, 1987). To
-obtain all three on the same grid, we name them in `measure`.
+Closeness, betweenness, and eigenvector centrality describe different aspects of participants’ positions in the network (Freeman, 1979; Bonacich, 1987). **Closeness centrality** is based on shortest-path distances to other participants. Higher values indicate shorter average distances, meaning that fewer steps are required to reach others. **Betweenness centrality** measures the extent to which a participant lies on shortest paths between other participants, identifying potential intermediary positions. **Eigenvector centrality** accounts for the centrality of a participant’s neighbours, assigning higher scores to connections with other highly central participants.
+
+The following call computes all three measures within successive one-day intervals. These calculations use the connections present within each interval; they do not trace time-respecting paths across intervals.
 
 ```{r other-centrality}
-other_centrality <- dyn_centrality(dn,
-                                   measure = c("closeness", "betweenness",
-                                               "eigenvector"),
-                                   start = 1, end = 73, step = 1, window = 1)
+other_centrality <- centrality_series(dn,
+                                      measure = c("closeness", "betweenness",
+                                                  "eigenvector"),
+                                      start = 1, end = 73, step = 1, window = 1)
 summary(other_centrality, by = "measure")
 ```
 
-Betweenness averages 34.6 and peaks at 974.1 on day 31. Closeness averages
-0.42 and eigenvector centrality 0.24; both reach their bound of 1 on day 1.
+Across participants and daily intervals, betweenness averages 34.6 and reaches a maximum of 974.1 on day 31. Mean closeness is 0.42, and mean eigenvector centrality is 0.24; their reported maxima are both 1 on day 1. These measures have different scales and interpretations, so their numerical magnitudes should not be compared directly.
+
+Plotting betweenness trajectories shows when participants occupy intermediary positions and how those positions change during the course.
 
 ```{r betweenness-plot, fig.height = 4.5}
-betweenness <- dyn_centrality(dn, measure = "betweenness",
-                              start = 1, end = 73, step = 1, window = 1)
+betweenness <- centrality_series(dn, measure = "betweenness",
+                                 start = 1, end = 73, step = 1, window = 1)
 plot(betweenness, top = 10)
 ```
 
-Aggregate centrality over the whole period is carried by the vertex table. To
-obtain it, we call `as.data.frame()` with `what = "nodes"` and `measure` for
-the centralities to annotate.
+Centrality can also be calculated on the network aggregated over the full observation period. The following call returns a tidy participant table containing vertex attributes and the requested aggregate centralities:
 
 ```{r node-table}
 ranked <- as.data.frame(dn, what = "nodes",
@@ -264,20 +222,15 @@ ranked <- as.data.frame(dn, what = "nodes",
 head(ranked)
 ```
 
-Among the first six participants, 11, a teacher, has the highest aggregate
-degree, 47, the highest betweenness, 180.5, and the highest eigenvector
-centrality, 0.896.
+Among the first six participants displayed, participant `11`, a teacher, has the highest degree (47), betweenness (180.5), and eigenvector centrality (0.896). These comparisons concern only the displayed participants. Aggregate centralities summarise positions across the full period, whereas the daily trajectories show when those positions emerge or change.
 
 ## Reachability
 
-A time-respecting path may only use ties in chronological order (Kempe,
-Kleinberg and Kumar, 2002), so it shows how far, and how fast, something
-posted by one participant could travel through the forum. To find the
-earliest path from participant 444 to every other, we call `paths()` with
-`from` for the source. `arrival_time` is the earliest moment a participant
-can be reached, `latency` that moment minus the source's start, `n_hops` the
-number of ties on the earliest route and `n_paths` the number of routes that
-arrive equally early.
+Temporal reachability describes whether one participant can reach another through a sequence of interactions that follows temporal order. For example, a path from A through B to C requires the connection from B to C to be available after arrival at B. Waiting between interactions is permitted, but an earlier interaction cannot be used to continue a path that reaches B later.
+
+`paths()` identifies the earliest-arrival paths from a specified participant. It first minimises arrival time and then, among paths arriving equally early, minimises the number of hops. A path through several intermediaries may therefore reach its destination before a direct connection becomes available.
+
+The following call searches forward from participant `444`:
 
 ```{r paths}
 forward <- paths(dn, from = "444", direction = "forward")
@@ -285,31 +238,32 @@ forward
 summary(forward)
 ```
 
-Participant 444 reaches all 44 others. Participant 19 is reached in one hop
-after 2.11 days and participant 11 in one hop after 12.27 days; participant 15
-needs five hops but is reached after 6.02 days, earlier than participant 11.
-The median latency is 17.6 days and the maximum 50.9; the median route has two
-hops and the longest five.
+The result reports the earliest arrival at each participant in `arrival_time`. The `latency` column measures elapsed time from the search origin to arrival, including waiting between interactions. `n_hops` records the number of traversed ties, and `n_paths` records the number of optimal paths. By default, traversal itself takes zero time; arrival times are determined by when the required connections become available.
 
-To draw the earliest routes as a tree, we call `plot()` on the result; to draw
-them against time, we call `path_trajectories()` on the result and
-`plot_path_trajectories()` with `measure = "time"`.
+Participant `444` can reach all 44 other participants. Participant `19` is reached in one hop after 2.11 days, while participant `11` is reached in one hop after 12.27 days. Participant `15` requires five hops but is reached after 6.02 days, illustrating why fewer hops do not necessarily imply earlier arrival. Median latency is 17.6 days, and the maximum is 50.9 days. The median path contains two hops, and the longest contains five.
+
+These paths follow the network’s reply direction, from the replying participant to the participant addressed. They therefore describe reachability through the specified reply relationships. Interpreting them as the forward transmission of information requires this direction to match the process being modelled.
+
+The path plot displays the routes connecting the source to reachable participants:
 
 ```{r path-plot, fig.width = 8, fig.height = 6}
 plot(forward, base_size = 9)
 ```
+
+The temporal progression of these paths can be displayed using `path_trajectories()` and `plot_path_trajectories()`. The first function organises the path result into a tree of trajectories. Setting `measure = "time"` then positions the trajectory steps according to their temporal values, showing when participants are reached along each route.
 
 ```{r trajectories, fig.width = 9, fig.height = 6}
 tree <- path_trajectories(forward)
 plot_path_trajectories(tree, measure = "time", base_size = 9)
 ```
 
+This complements the path diagram by making timing explicit. Routes with similar numbers of hops may have different arrival times because their constituent interactions become available at different points in the observation period.
+
 ## Mixing between experience levels
 
-To count the ties within and between experience levels per day, we call
-`mixing()` with `attribute` for the vertex attribute that defines the groups,
-then `summary()` for one row per ordered pair of levels. Each measure reads
-from the sender's level to the receiver's (Newman, 2003).
+Mixing describes the pattern of relationships within and between categories of participants (Newman, 2003). Here, the categories are teachers, students, and experts, recorded in `expert_level`. The analysis examines how connections among these categories change over the course—for example, student-to-student connections compared with student-to-teacher connections.
+
+`mixing()` groups active connections according to the experience levels of their senders and receivers. The following call computes these counts within successive one-day intervals:
 
 ```{r mixing}
 mix <- mixing(dn, attribute = "expert_level",
@@ -318,36 +272,30 @@ summary(mix)
 plot(mix)
 ```
 
-Teachers writing to teachers is the most common tie, 36.8 active ties per day
-on average with a peak of 67, followed by students writing to teachers at
-33.5. Experts writing to experts is the rarest, at 2.9 per day. Direction
-matters: ties from experts to teachers average 14.3 per day, from teachers to
-experts 5.8.
+Each value counts distinct connected participant pairs within the corresponding category combination. Several active spells from the same student to the same teacher contribute one student-to-teacher connection in that interval. The counts therefore describe active relationships, rather than the number of replies posted that day. Connections included in a daily window need not all be active at the same instant.
+
+Teacher-to-teacher connections are the most frequent, averaging 36.8 per daily interval and reaching a maximum of 67. Student-to-teacher connections average 33.5, while expert-to-expert connections average 2.9. The pattern also differs by direction: expert-to-teacher connections average 14.3, compared with 5.8 for teacher-to-expert connections. These are unnormalised counts and should be interpreted in relation to the number of participants in each category.
 
 ## Interpretation
 
-The forum is sparse on any given day and dense in aggregate: one pair in three
-hundred is connected on an average day, one in five over the course, and the
-gap between the temporal density of 0.063 and the aggregate density of 0.216
-says that most ties were live for only a fraction of the period. Activity is
-concentrated on receivers rather than senders, and on teachers: the most
-common exchange is between teachers, students address teachers more than
-anyone else, and the most central participant over the whole period is a
-teacher. Everything posted by participant 444 could in principle reach every
-active participant, but the median took more than two weeks and the longest
-route seven weeks, so the forum spreads information slowly even though it
-connects everyone.
+The analysis shows how the timing of relationships changes the description of the forum. In the selected subnetwork, aggregate density is 0.216, whereas temporal density is 0.063. The aggregate network therefore contains substantially more connectivity than is sustained throughout the observation period: many participant pairs are connected, but only for part of that period.
+
+Participants’ positions also vary over time. Indegree reaches a higher maximum than outdegree, indicating that some participants receive connections from more distinct participants than any participant addresses within a daily interval. Mixing counts show frequent teacher-to-teacher and student-to-teacher relationships, although differences in category size must be considered when interpreting these counts.
+
+Participant `444` can reach every other participant in the selected subnetwork through time-respecting paths. However, median latency is 17.6 days, and the maximum is 50.9 days. Complete reachability therefore coexists with substantial waiting before some destinations become accessible. These values describe possible traversal of the modelled reply relationships; they do not measure the observed transmission speed of information.
 
 ## Limitations
 
-A reply that stays active until its thread closes is a modelling choice; a
-shorter tie life would give sparser windows and longer latencies. The
-analysis of structure and centrality is restricted to the 45 participants
-with more than 20 ties, so it describes the active core, not the course.
-Participants who wrote or received no surviving exchange are absent, and the
-observation period is taken from the data rather than the course calendar.
+Relational duration is defined by continued activity within a discussion: each reply relationship remains active until the discussion’s last recorded interaction. This assumption affects network density, centrality, and temporal paths. Shorter spell durations could produce fewer active connections, longer waiting times, or unreachable destinations. The assigned duration should therefore be interpreted as a model of discussion activity rather than continuous interpersonal contact.
+
+Most analyses concern the 45 participants whose aggregate degree exceeds 20. Their results describe relationships among these selected participants and cannot be generalised directly to the full forum. The reciprocity analysis explicitly uses `dn_full` and consequently describes a different participant population.
+
+Daily and weekly windows combine relationships active during the same interval. Such relationships need not overlap at an instant, whereas calculations with `window = 0` evaluate connectivity at specific time points. The observation period is determined from the supplied interaction data rather than independently specified course dates.
+
+Finally, ties run from the replying participant to the participant addressed. Temporal paths follow this direction. Interpreting those paths as information dissemination requires a substantive justification for how the direction of reply relationships represents the process of interest.
 
 ## References
+
 
 Bonacich, P. (1987). Power and centrality: A family of measures. *American
 Journal of Sociology*, 92(5), 1170–1182.

@@ -34,7 +34,7 @@ question a temporal network is being asked.
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, measure = "degree")
+degree <- centrality_series(dn, measure = "degree")
 summary(degree)
 summary(degree, by = "time")
 

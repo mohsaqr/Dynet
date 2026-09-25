@@ -27,3 +27,6 @@
 ^vignettes/articles$
 ^README\.Rmd$
 ^vignettes/.*_beatrina$
+^README\.html$
+^TODO\.md$
+^review$

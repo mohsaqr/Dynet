@@ -69,7 +69,7 @@ Tidy data frame of a temporal measure
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, measure = "degree")
+degree <- centrality_series(dn, measure = "degree")
 as.data.frame(degree)
 as.data.frame(degree, layout = "wide")
 as.data.frame(degree, top = 5)

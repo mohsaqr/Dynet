@@ -53,7 +53,7 @@ test_that("a bin with eligible isolates and no edge can be drawn", {
 test_that("measures plot as lines, heatmaps and bars", {
   skip_if_not_installed("ggplot2")
   dn <- quiet_dynet(school_contacts)
-  deg <- dyn_centrality(dn, measure = "degree")
+  deg <- centrality_series(dn, measure = "degree")
   expect_no_error(ggplot2::ggplot_build(plot(deg, top = 5)))
   expect_no_error(ggplot2::ggplot_build(plot(deg, type = "heatmap")))
   expect_no_error(ggplot2::ggplot_build(plot(deg, highlight = c("Ana", "Ben"))))
@@ -70,8 +70,8 @@ test_that("infinite temporal closeness survives default bar selection", {
   # Every target is reached at latency zero, so closeness is genuinely
   # infinite and the verb says so before returning it.
   expect_warning(
-    closeness <- dyn_centrality(
-      dn, measure = "closeness", scope = "temporal", start = 0, end = 0
+    closeness <- path_centrality(
+      dn, measure = "closeness", start = 0, end = 0
     ),
     class = "dynet_zero_latency"
   )
@@ -413,7 +413,7 @@ test_that("highlight on a mixing result selects a group's flows by name", {
 test_that("a highlight that matches nothing is an error, not a grey plot", {
   skip_if_not_installed("ggplot2")
   dn <- quiet_dynet(school_contacts)
-  deg <- dyn_centrality(dn, measure = "degree")
+  deg <- centrality_series(dn, measure = "degree")
   expect_error(plot(deg, highlight = "Nobody"), class = "dynet_unknown_highlight")
   expect_error(plot(deg, highlight = 1), class = "simpleError")
 })

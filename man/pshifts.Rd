@@ -93,7 +93,7 @@ dn <- dynet(data.frame(
 pshifts(dn)
 }
 \references{
-Gibson, D. R. (2003). Participation shifts and institutional
-change in relational systems. \emph{Social Forces}, 81, 1335--1380.
+Gibson, D. R. (2003). Participation shifts: Order and
+differentiation in group conversation. \emph{Social Forces}, 81, 1335--1380.
 \doi{10.1353/sof.2003.0055}
 }

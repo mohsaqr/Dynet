@@ -61,10 +61,10 @@ test_that("bounded paths exclude a journey assembled across sessions", {
   expect_false(session_path_rows(separate, "s1", "Y")$reachable)
   expect_false(session_path_rows(separate, "s2", "Y")$reachable)
 
-  bounded_reach <- as.data.frame(dyn_reachability(
+  bounded_reach <- as.data.frame(reachability(
     dn, direction = "forward", at = 0, sessions = "bounded"
   ))
-  collapsed_reach <- as.data.frame(dyn_reachability(
+  collapsed_reach <- as.data.frame(reachability(
     dn, direction = "forward", at = 0, sessions = "collapse"
   ))
   expect_equal(bounded_reach$value[bounded_reach$node == "S"], 1 / 2)
@@ -79,8 +79,8 @@ test_that("bounded temporal betweenness combines complete winning sessions", {
     stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells, session = "session")
-  result <- as.data.frame(dyn_centrality(
-    dn, measure = "betweenness", scope = "temporal", sessions = "bounded"
+  result <- as.data.frame(path_centrality(
+    dn, measure = "betweenness", sessions = "bounded"
   ))
   value <- stats::setNames(result$value, result$node)
 

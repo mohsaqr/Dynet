@@ -1,5 +1,5 @@
 ---
-title: "Case study: How kinds of contribution follow one another in course discussions"
+title: "Temporal networks of interactions in course discussions"
 output:
   html_document:
     toc: true
@@ -10,22 +10,15 @@ output:
 knitr::opts_chunk$set(fig.width = 10, fig.height = 6, dpi = 120)
 ```
 
-In this article we analyse the reply table of the *Trees of Thought* study,
-which coded the messages of asynchronous course discussions into kinds of
-contribution such as inquiring, arguing or approving. The unit of analysis is
-the code rather than the student: a tie runs from the code of a reply to the
-code of the message it answers. We ask which kinds of contribution the
-discussions return to, how quickly a contribution of one kind can lead to any
-other, and which kinds sit on the routes between the rest.
+This vignette demonstrates temporal network analysis of coded contributions to asynchronous course discussions. The `thought_chains` dataset provides reply relationships in tidy format, with contributions classified into categories such as inquiring, arguing, and approving. Contribution categories constitute the vertices, and directed ties connect the category of a reply to the category of the message it addresses.
+
+The analysis examines how relationships among contribution categories evolve over time, which categories receive replies, and how categories are connected through time-respecting paths. Network measures, centrality indices, relational durations, and temporal paths describe the structure, timing, and reachability of these relationships.
 
 ## Data
 
-`thought_chains` is the study's reply table, anonymised: 23,017 reply links
-among nine codes, from 1,169 discussions in 29 groups across five courses.
-Each row is one reply. `from` is the code of the reply, `to` the code of the
-message it answers, `time` the moment of the reply, `discussion` the thread it
-belongs to, and `course` and `group` the course and course group. A code that
-answers itself is a self-link; there are 9,452 of them.
+The dataset is synthetic and based on the original data analysed by [Saqr, López-Pernas, and Törmänen (2026)](https://doi.org/10.1007/s11412-025-09464-5). It is used to demonstrate temporal network construction, measurement, and visualisation. Results reported in this vignette describe the supplied dataset and should not be interpreted as empirical findings from the original study.
+
+The synthetic dataset contains 23,017 reply links among nine contribution categories, spanning 1,169 discussions in 29 groups across five courses. The relational endpoints are `from`, the category assigned to the reply, and `to`, the category assigned to the message it addresses. The variable `time` records when the reply was posted; `discussion`, `course`, and `group` identify the discussion thread, course, and course group, respectively. The dataset includes 9,452 self-links, where the reply and the message it addresses share the same category.
 
 ```{r data}
 library(Dynet)
@@ -34,13 +27,9 @@ head(thought_chains)
 
 ## The network
 
-A reply is a contribution to a conversation that is still open, so, following
-Saqr and Nouri (2020), it becomes a tie that opens when the reply is posted
-and closes when its discussion ends. To build the network, we call `dynet()`
-with `thread` for the discussion column, `thread_clock = "relative"` so that
-time is counted in days from the first post of each discussion, `loops = TRUE`
-to keep self-links, and `observation_end = 4` for a four-day observation
-window. The `course` column is recognised as the session column.
+Each reply is represented as a relational spell with onset at the time of posting and termination at the end of its discussion. This specification treats the relationship as active for the remaining duration of the discussion.
+
+The call to `dynet()` explicitly identifies `discussion` as the thread variable through `thread = "discussion"`. Setting `thread_clock = "relative"` expresses time in days since the first recorded reply in each discussion, while `loops = TRUE` retains self-links and `observation_end = 4` specifies a four-day observation period. The constructor automatically recognises `course` as the session variable.
 
 ```{r import}
 dn <- dynet(thought_chains, thread = "discussion", thread_clock = "relative",
@@ -49,15 +38,15 @@ dn
 summary(dn)
 ```
 
-The network has nine vertices and 23,017 spells on 80 of the 81 possible
-ordered pairs of codes. Time is in days, and on an average day nine of every
-ten ordered pairs are connected (mean snapshot density 0.8958). The network is
-dense because a tie stays open for the life of its discussion.
+Ties are directed from the category of a reply to the category of the message it addresses. Paths following these ties therefore represent directed reply relationships between contribution categories. They do not, by themselves, establish the forward dissemination of ideas or the transmission of particular content.
+
+Setting `thread_clock = "relative"` aligns each discussion to its first recorded reply. Temporal overlap consequently represents comparable elapsed times within discussions, rather than simultaneous activity on a shared calendar. The constructor recognises `course` as the session variable. With the default `sessions = "bounded"`, each temporal path remains within a single course, although it may combine ties from different discussions or groups within that course. These paths describe category-level reachability under the specified alignment and session boundaries.
+
+The resulting temporal network contains nine vertices and 23,017 relational spells distributed across 80 of the 81 possible ordered pairs, including self-pairs. The mean snapshot density is 0.8958. This high density reflects the specification that relational spells remain active until their discussions terminate.
 
 ## Ties over time
 
-To count the ties that open and close in each half day, we call `events()`
-with `step` and `window` of 0.5.
+`events()` computes relational spell onset and termination counts over successive half-day intervals. Setting both `step` and `window` to 0.5 produces non-overlapping intervals.
 
 ```{r events}
 tie_events <- events(dn, measure = c("formation", "dissolution"),
@@ -65,20 +54,15 @@ tie_events <- events(dn, measure = c("formation", "dissolution"),
 tie_events
 ```
 
-13,094 ties open in the first half day, 4,435 in the second and 2,442 in the
-third; only 10 open in the last. Closures peak in the third half day, at
-5,348, when the shorter discussions end. Most of the network is therefore in
-place from the start, and the analysis below asks what happens within it.
+The first three intervals contain 13,094, 4,435, and 2,442 onsets, respectively, compared with 10 in the final interval. Terminations peak in the third interval, with 5,348 spells ending. Relational spell onsets are therefore concentrated early in the observation period.
 
-To draw the spells over time, we call `plot()` with `type = "timeline"`; each
-bar is one spell, on an hourly grid, and the forty busiest pairs are drawn.
+The timeline displays relational activity for the 40 ordered pairs with the most spells, using an hourly grid. Colour represents the proportion of each interval during which the pair was active, counting overlapping spells once.
 
 ```{r timeline, fig.height=8}
 plot(dn, type = "timeline", step = 1 / 24)
 ```
 
-To draw the counts of opening and closing ties with the stock of active ties
-beneath them, we set `type` to `"activity"`.
+The activity plot displays onset and termination counts alongside the number of active relational spells over time.
 
 ```{r activity}
 plot(dn, type = "activity")
@@ -86,63 +70,45 @@ plot(dn, type = "activity")
 
 ## Drawing the network
 
-To draw the union of every tie active in the window, we set `type` to
-`"network"`; the drawing is cograph's and `layout` is passed to it.
+Setting `type = "network"` displays the union of ties active during the observation period. The network is drawn using cograph, to which the `layout` argument is passed.
 
 ```{r network, fig.height=8}
 plot(dn, type = "network", layout = "oval")
 ```
 
-The binary union treats a tie active for an hour like one active for four
-days. To weight each pair by the time it was active, counting overlapping
-spells once, we call `collapse_network()` with `weight = "union_duration"` and
-draw the static network it returns.
+The binary union records whether each ordered pair was connected at any time during the observation period. To account for duration, `collapse_network()` with `weight = "union_duration"` weights each pair by the total duration for which at least one relational spell was active, counting overlapping spells once.
 
 ```{r collapsed, fig.height=8}
 collapsed <- collapse_network(dn, weight = "union_duration")
 plot(collapsed, layout = "oval")
 ```
 
-To draw the network at nine equally spaced cross-sections with a shared
-layout, we set `type` to `"snapshots"`.
+Setting `type = "snapshots"` displays the network at nine equally spaced time points using a common layout.
 
 ```{r snapshots, fig.height=9, fig.width=10}
 plot(dn, type = "snapshots", panels = 9)
 ```
 
-The proximity timeline follows each code through time: the window is measured
-in overlapping slices, the distances in each slice are reduced to one
-dimension, and each code is a line whose height follows that coordinate, so
-codes that interact sit close together. Line thickness follows degree. To draw
-it with 80 slices and five phase networks, we set `type` to `"proximity"`.
+The proximity timeline represents changes in the relationships among contribution categories. Network distances are computed within overlapping temporal slices and reduced to a single coordinate for each category. Lines connect these coordinates across slices, with proximity indicating shorter network distances within a slice. Line thickness represents degree by default. The following call specifies 80 slices and five accompanying phase networks.
 
 ```{r proximity, fig.height=8, fig.width=12}
 plot(dn, type = "proximity", phases = 5, slices = 80)
 ```
 
-To let thickness follow betweenness and omit the phase networks, we set
-`measure` and `networks`.
+Setting `measure = "betweenness"` maps line thickness to betweenness centrality, while `networks = FALSE` omits the phase networks.
 
 ```{r proximity-lines, fig.height=7, fig.width=12}
 plot(dn, type = "proximity", measure = "betweenness",
      networks = FALSE, slices = 80)
 ```
 
-Cutting the window into slices and treating each slice as one layer of a
-multilayer network shows structure and time together. To draw three slices as
-planes, we set `type` to `"layers"` and `step` to `4 / 3`; to draw them as
-matrices keeping only cells with at least 50 active dyads, we set `type` to
-`"heatmap"` and `threshold` to 50; to draw them as a projection in which each
-plane carries every tie active up to it, we set `type` to `"stack"` and
-`cumulative` to `TRUE`.
+Layered visualisations represent successive temporal slices as separate network layers. Setting `type = "layers"` and `step = 4 / 3` displays three slices as planes.
 
 ```{r layers, fig.height=9, fig.width=13}
 plot(dn, type = "layers", step = 4 / 3, layout = "circle")
 ```
 
-```{r heatmap-threshold, fig.height=9, fig.width=13}
-plot(dn, type = "heatmap", step = 4 / 3, threshold = 50)
-```
+Setting `type = "stack"` and `cumulative = TRUE` produces a cumulative projection in which each plane includes all ties active up to that slice.
 
 ```{r stack, fig.height=10, fig.width=13}
 plot(dn, type = "stack", step = 4 / 3, cumulative = TRUE)
@@ -150,12 +116,9 @@ plot(dn, type = "stack", step = 4 / 3, cumulative = TRUE)
 
 ## Structure over time
 
-To measure the network in each hour, we call `metrics()` with `step` and
-`window` of `1 / 24`. Density is the share of ordered pairs connected in the
-hour, reciprocity the share of arcs whose reverse is also present, and
-efficiency and connectedness two of Krackhardt's (1994) indices of how far a
-directed network departs from an out-tree. To draw one panel per measure, we
-call `plot()` with `type = "ridge"`.
+Dynet computes both graph-level and vertex-level metrics for temporal networks. Graph-level metrics characterise the network as a whole, describing properties such as density, reciprocity, and connectivity. Vertex-level metrics characterise the structural position of individual vertices through measures such as degree, closeness, and betweenness. In this vignette, vertices represent contribution categories, so vertex-level metrics describe the positions of these categories within the discussion network. Both levels can be examined over successive temporal intervals to quantify changes in network structure and vertex position.
+
+`metrics()` computes graph-level measures over specified temporal intervals. Setting both `step` and `window` to `1 / 24` produces successive, non-overlapping hourly intervals. Density measures the proportion of possible directed ties present, while reciprocity measures the proportion of directed ties whose reverse is also present. Efficiency and connectedness are two of Krackhardt’s (1994) indices for characterising departures from an out-tree structure. The number of edges and mean degree provide additional descriptions of network connectivity.
 
 ```{r structure}
 structure <- metrics(dn,
@@ -166,14 +129,9 @@ structure
 plot(structure, type = "ridge")
 ```
 
-In the first hour, 57 arcs give a density of 0.79, connectedness is 1, so every
-code is joined to every other, and reciprocity is 0.91: almost every transition
-between two codes occurs in both directions within the same hour. An hour
-later the density is 0.82.
+Setting `type = "ridge"` displays a separate panel for each measure. In the first hour, the network contains 57 directed ties and has a density of 0.79. Connectedness is 1, indicating that all contribution categories belong to a single weakly connected component; this does not imply that every category is directly connected to every other category. Reciprocity is 0.91, indicating that most directed ties have a corresponding reverse tie within the interval. Density increases to 0.82 in the second hour.
 
-To obtain the dyad census (Holland and Leinhardt, 1976), we name the mutual,
-asymmetric and null counts in `measure`; to obtain the sixteen-class triad
-census, we set `measure` to `"triads"`.
+The dyad census (Holland and Leinhardt, 1976) classifies unordered pairs of distinct vertices as mutual, asymmetric, or null, depending on whether both, one, or neither of the possible directed ties are present. The corresponding counts are requested through `measure`.
 
 ```{r dyads}
 dyads <- metrics(dn, measure = c("mutual", "asymmetric", "null"),
@@ -182,19 +140,17 @@ dyads
 plot(dyads)
 ```
 
+In the first hour, the 36 unordered pairs comprise 26 mutual, five asymmetric, and five null dyads. These counts describe connectivity between distinct contribution categories and exclude self-links.
+
+Setting `measure = "triads"` computes the sixteen-class directed triad census, which classifies sets of three distinct vertices according to their directed ties. The heatmap displays changes in the frequency of each triad class across hourly intervals.
+
 ```{r triads, fig.height=8}
 triads <- metrics(dn, measure = "triads", step = 1 / 24, window = 1 / 24)
 triads
 plot(triads, type = "heatmap")
 ```
 
-Of the 36 unordered pairs of codes, 26 are mutual in the first hour, 5
-asymmetric and 5 null. No triad is empty; nine are of class 102, one mutual
-dyad with two null dyads, eight of class 111U and seven of class 201.
-
-To obtain the two-star, two-path and triangle counts and the degree sums raised
-to 1.5 used as terms in exponential-family random graph models (Morris,
-Handcock and Hunter, 2008), we name them in `measure`.
+Additional graph-level statistics describe local configurations of directed ties. These include two-stars, two-paths, triangles, and sums of indegrees and outdegrees raised to the power 1.5. Such statistics are also used as terms in exponential-family random graph models (Morris, Handcock and Hunter, 2008).
 
 ```{r ergm}
 local <- metrics(dn,
@@ -205,70 +161,57 @@ local
 plot(local, type = "ridge")
 ```
 
-The first hour holds 376 directed triangles and 325 two-paths; the second, 436
-and 356.
+The first hourly interval contains 376 directed triangles and 325 two-paths; the corresponding counts in the second interval are 436 and 356.
 
-## Codes
+## Vertex-level metrics
 
-To measure each code in each hour, we call `dyn_centrality()` with the indices
-in `measure`: degree, closeness and betweenness (Freeman, 1979), eigenvector
-centrality, flow betweenness (Freeman, Borgatti and White, 1991) and diffusion
-degree (Kundu, Murthy and Pal, 2011). `plot()` with `type = "heatmap"` draws
-one tile per code and hour, and `type = "ridge"` draws the trajectories as
-lines.
+`centrality_series()` computes centrality measures for each contribution category over specified temporal intervals. The following call requests degree, closeness, and betweenness (Freeman, 1979), eigenvector centrality, flow betweenness (Freeman, Borgatti and White, 1991), and diffusion degree (Kundu, Murthy and Pal, 2011). These measures characterise the positions of categories within each hourly network. Paths used in these interval-specific calculations are evaluated within the corresponding network; temporal centrality based on time-respecting paths is considered separately below.
 
 ```{r centrality, fig.height=11}
-centrality <- dyn_centrality(dn,
-                             measure = c("degree", "closeness", "betweenness",
-                                         "eigenvector", "flow_betweenness",
-                                         "diffusion"),
-                             step = 1 / 24, window = 1 / 24)
+centrality <- centrality_series(dn,
+                                measure = c("degree", "closeness", "betweenness",
+                                            "eigenvector", "flow_betweenness",
+                                            "diffusion"),
+                                step = 1 / 24, window = 1 / 24)
 centrality
 plot(centrality, type = "heatmap")
 ```
+
+Setting `type = "heatmap"` displays centrality values by category and hourly interval. Setting `type = "ridge"` displays their trajectories over the observation period.
 
 ```{r centrality-ridge, fig.height=10}
 plot(centrality, type = "ridge")
 ```
 
-In the first hour `Socialising` has the highest degree, 18, and `Objecting`
-the lowest, 7; `Arguing` has a closeness of 1, so it reaches every other code
-in one step. `Objecting` stays at the margin throughout: it has the lowest
-mean degree, closeness and betweenness over the 96 hours.
+In the first hour, `Socialising` has the highest degree (18), and `Objecting` has the lowest (7). `Arguing` has a closeness centrality of 1, indicating that it reaches every other category in one step under the specified calculation. Across the 96 hourly intervals, `Objecting` has the lowest mean degree, closeness, and betweenness.
 
-On a directed network the direction of degree is the `mode` argument.
+For directed networks, `mode` specifies the direction used to calculate degree. Because ties are directed from the reply category to the category being addressed, `mode = "in"` measures incoming connections from replying categories, whereas `mode = "out"` measures outgoing connections to addressed categories.
 
 ```{r directed-degree, fig.height=7}
-in_degree <- dyn_centrality(dn, measure = "degree", mode = "in",
-                            step = 1 / 24, window = 1 / 24)
-out_degree <- dyn_centrality(dn, measure = "degree", mode = "out",
-                             step = 1 / 24, window = 1 / 24)
+in_degree <- centrality_series(dn, measure = "degree", mode = "in",
+                               step = 1 / 24, window = 1 / 24)
+out_degree <- centrality_series(dn, measure = "degree", mode = "out",
+                                step = 1 / 24, window = 1 / 24)
 plot(in_degree, type = "heatmap")
 plot(out_degree, type = "heatmap")
 ```
 
-Prestige indices describe a code by the ties it receives (Wasserman and Faust,
-1994). Indegree prestige counts the distinct codes with a tie into a code;
-domain proximity prestige discounts the share of codes with a directed path
-into it by their mean distance. To obtain them, we set `measure` to
-`"prestige"` and name the variant in `prestige`.
+Prestige indices characterise a vertex through its incoming relationships (Wasserman and Faust, 1994). Indegree prestige measures direct incoming connections. Domain proximity prestige incorporates indirect connections by dividing the proportion of other vertices that can reach the focal vertex by their mean directed distance to it. Setting `measure = "prestige"` requests prestige, with the variant specified through `prestige`.
 
 ```{r prestige, fig.height=7}
-prestige_indegree <- dyn_centrality(dn, measure = "prestige",
-                                    prestige = "indegree",
-                                    step = 1 / 24, window = 1 / 24)
-prestige_proximity <- dyn_centrality(dn, measure = "prestige",
-                                     prestige = "domain.proximity",
-                                     step = 1 / 24, window = 1 / 24)
+prestige_indegree <- centrality_series(dn, measure = "prestige",
+                                       prestige = "indegree",
+                                       step = 1 / 24, window = 1 / 24)
+prestige_proximity <- centrality_series(dn, measure = "prestige",
+                                        prestige = "domain.proximity",
+                                        step = 1 / 24, window = 1 / 24)
 plot(prestige_indegree, type = "heatmap")
 plot(prestige_proximity, type = "heatmap")
 ```
 
 ## Flows between codes
 
-To count the active dyads from each code to each other code in each hour, we
-call `mixing()` with `attribute = "name"`. Each row is one hour and one ordered
-pair of codes, and `plot()` with `type = "heatmap"` draws all 81 pairs.
+`mixing()` summarises directed relationships between categories of a vertex attribute within each temporal interval. Setting `attribute = "name"` uses the vertex names, which represent contribution categories in this network. The result contains counts of distinct active ordered vertex pairs for each hourly interval and pair of categories. Repeated spells and their weights do not multiply these counts. Setting `type = "heatmap"` displays all 81 ordered pairs, including self-pairs.
 
 ```{r mixing, fig.height=14}
 flows <- mixing(dn, attribute = "name", step = 1 / 24, window = 1 / 24)
@@ -276,9 +219,7 @@ flows
 plot(flows, type = "heatmap")
 ```
 
-To follow one code's flows against the rest, we call `plot()` with
-`highlight` naming the code. The flows into and out of `Coordinating` are
-drawn in colour and the others in grey.
+The `highlight` argument selects a category for visual emphasis. The following plot displays incoming and outgoing relationships involving `Coordinating` in colour and the remaining relationships in grey.
 
 ```{r mixing-highlight, fig.height=7}
 plot(flows, highlight = "Coordinating")
@@ -286,10 +227,7 @@ plot(flows, highlight = "Coordinating")
 
 ## Duration
 
-To measure how much tie time each code carries, we call `durations()` with
-`unit = "node_ties"`, `mode = "all"` for ties in either direction, and
-`measure` for the number of spells, their summed duration and the union of
-their active time, which counts overlapping spells once.
+`durations()` summarises relational spells and their durations over the observation period. Setting `unit = "node_ties"` groups spells by their incident vertex, while `mode = "all"` includes both incoming and outgoing incidences. The requested measures are the incident spell count (`"events"`), summed incident duration (`"total"`), and union duration (`"union"`). A self-link contributes twice to the additive counts and durations, once for each endpoint. Summed duration includes overlapping spells separately, whereas union duration counts each period of activity once.
 
 ```{r node-ties, fig.height=10}
 node_ties <- durations(dn, unit = "node_ties", mode = "all",
@@ -298,13 +236,9 @@ node_ties
 plot(node_ties)
 ```
 
-`Resourcing` is incident to 20,999 spells with a summed duration of 22,781
-days, against 109 spells and 71 days for `Objecting`. The union column shows
-the ceiling: no code is in contact for more than the four days of the window,
-and six of the nine are in contact for all of it.
+`Resourcing` has 20,999 incident spell counts with a summed duration of 22,781 days, compared with 109 and 71 days for `Objecting`. These summed durations accumulate time across spell incidences and can therefore exceed the observation period. Union duration is bounded by the four-day observation period; six of the nine categories have at least one incident spell active throughout this period.
 
-To obtain the same accounting per ordered pair of codes, with the mean spell
-length added, we set `unit` to `"pair"`.
+Setting `unit = "pair"` computes the same summaries for each ordered pair of contribution categories. Including `"mean"` additionally returns the mean spell duration.
 
 ```{r pairs, fig.height=10}
 pair_duration <- durations(dn, unit = "pair",
@@ -313,56 +247,37 @@ pair_duration
 plot(pair_duration)
 ```
 
-The pairs differ by three orders of magnitude: 1,353 spells run from
-`Approving` to `Resourcing` and 4 from `Approving` to `Objecting`.
+Spell counts vary substantially across ordered pairs. For example, 1,353 spells connect `Approving` to `Resourcing`, compared with four connecting `Approving` to `Objecting`.
 
 ## Reachability and temporal centrality
 
-A time-respecting path may only use ties in chronological order (Kempe,
-Kleinberg and Kumar, 2002). To obtain the share and the number of other codes
-each code can reach, and be reached from, along such paths, we call
-`dyn_reachability()` with `direction = "both"`.
+Temporal reachability describes whether vertices can be connected through time-respecting paths, whose successive traversals follow chronological order and respect tie availability (Kempe, Kleinberg and Kumar, 2002). `reachability()` computes the proportion (`"reach"`) and number (`"reach_count"`) of other vertices reachable along these paths. Setting `direction = "both"` requests both forward reachability and backward reachability: which categories a focal category can reach and which can reach it.
 
 ```{r reachability, fig.height=8}
-reachability <- dyn_reachability(dn, direction = "both",
-                                 measure = c("reach", "reach_count"))
-reachability
-plot(reachability)
+reach <- reachability(dn, direction = "both",
+                      measure = c("reach", "reach_count"))
+reach
+plot(reach)
 ```
 
-Every code reaches all eight others and is reached by all eight. With so many
-ties open from the start this is expected, and the informative quantities are
-how quickly and by how many routes.
+Every category can reach all eight other categories and can be reached from all eight. Under the specified spell durations and observation period, reachability therefore does not differentiate the categories. Temporal centrality and path analysis provide further information about arrival times and the routes connecting them.
 
-Temporal closeness is the inverse of the mean time a code needs to reach the
-others, and temporal betweenness the share of earliest routes between other
-codes that pass through a code (Pan and Saramäki, 2011). Because the ties that
-carry the routes are open at time 0, a hop that costs nothing arrives at once
-and closeness is unbounded; `traversal_time = 0.1` charges a tenth of a day
-per hop so that the indices separate. To obtain them, we call
-`dyn_centrality()` with `scope = "temporal"`.
+Temporal closeness measures how quickly a vertex can reach other vertices, whereas temporal betweenness measures its contribution to earliest-arrival paths between other vertices (Pan and Saramäki, 2011). These measures are requested through `path_centrality()`.
+
+When traversal has zero duration, paths composed of ties active at time zero can arrive immediately, yielding zero latency and potentially unbounded temporal closeness. Setting `traversal_time = 0.1` imposes a traversal duration of one tenth of a day per tie. This is an analytical assumption rather than an observed response time.
 
 ```{r temporal, fig.height=9}
-temporal <- dyn_centrality(dn, measure = c("closeness", "betweenness"),
-                           scope = "temporal", traversal_time = 0.1)
+temporal <- path_centrality(dn, measure = c("closeness", "betweenness"),
+                            traversal_time = 0.1)
 temporal
 plot(temporal)
 ```
 
-`Tutoring` has the highest temporal closeness, 10, the reciprocal of the
-traversal cost: it reaches every other code in one hop without waiting.
-`Objecting` has the lowest, 5.5. Betweenness is concentrated in `Socialising`,
-`Arguing` and `Resourcing`, while `Approving`, `Drafting` and `Objecting`
-relay no earliest route at all.
+`Tutoring` has the highest temporal closeness (10), corresponding to the reciprocal of the specified traversal duration: it reaches every other category directly without waiting. `Objecting` has the lowest temporal closeness (5.5). Temporal betweenness is concentrated in `Socialising`, `Arguing`, and `Resourcing`, whereas `Approving`, `Drafting`, and `Objecting` are not intermediate vertices on any earliest-arrival path between other categories.
 
 ## Paths
 
-To obtain the earliest route from one code to every other, we call `paths()`
-with `from` for the source and the same traversal cost. `arrival_time` is the
-earliest moment a code can be reached, `n_hops` the length of the earliest
-route and `n_paths` the number of routes that arrive equally early;
-`path_session` names the course whose ties achieve the optimum when it is
-unique. To draw the routes as a tree, we call `plot()` on the result.
+`paths()` identifies earliest-arrival paths from the category specified by `from`, minimising hop count among paths with the same earliest arrival. The following call uses the same traversal duration as the temporal centrality analysis. In the result, `arrival_time` records the earliest arrival at each destination, `n_hops` records the number of traversed ties, and `n_paths` records the number of optimal paths. When the optimal session is unique, `path_session` identifies the course containing the ties that achieve that arrival time. The plot displays the resulting paths as a tree.
 
 ```{r paths, fig.height=8, fig.width=12}
 from_inquiring <- paths(dn, from = "Inquiring", traversal_time = 0.1)
@@ -370,15 +285,9 @@ from_inquiring
 plot(from_inquiring)
 ```
 
-From `Inquiring` every code is reached in one hop. `Arguing`, `Drafting`,
-`Resourcing` and `Socialising` are reached at exactly 0.1 days, the traversal
-cost with no waiting, and `Objecting` last, at 0.189 days. `Resourcing` is
-reached by nine equally early routes.
+From `Inquiring`, every category is reachable in one hop. Arrival at `Arguing`, `Drafting`, `Resourcing`, and `Socialising` occurs at day 0.1, requiring only the specified traversal duration. `Objecting` is reached last, at day 0.189. Nine equally early paths reach `Resourcing`.
 
-To ask which codes could have fed into a code, leaving as late as possible and
-still arriving by the end of the window, we set `direction` to `"backward"`
-with `start` and `end` as the window. `arrival_time` then holds the latest
-moment a sender could depart, and `latency` the deadline minus that moment.
+Backward path analysis identifies the latest departure times that permit arrival at a focal category by a specified deadline. Setting `direction = "backward"` makes `from` the focal destination, while `start` and `end` delimit the observation period. In this result, `arrival_time` contains the supremum of feasible departure times, and `latency` is the difference between the deadline and that value. An excluded interval endpoint may yield a supremum that cannot itself be attained; this is indicated by `attained = FALSE`.
 
 ```{r backward, fig.height=8, fig.width=12}
 into_approving <- paths(dn, from = "Approving", direction = "backward",
@@ -387,13 +296,9 @@ into_approving
 plot(into_approving)
 ```
 
-`Arguing` and `Resourcing` can depart as late as day 3.9 and still reach
-`Approving` by the deadline, while `Objecting` must depart by day 2.83, a
-latency of 1.17 days, because the network thins towards the end of the window.
+`Arguing` and `Resourcing` can depart at day 3.9 and reach `Approving` by day 4. In contrast, the latest feasible departure from `Objecting` is day 2.83, corresponding to a latency of 1.17 days. This difference reflects the availability of ties towards the end of the observation period.
 
-To rank whole routes by how often they are used across every source, we call
-`pathways()` with `top` for the number of routes. The plot places a point per
-code at the moment the route reaches it.
+`pathways()` ranks routes across source vertices, with `top` specifying the number returned. Counts represent optimal paths grouped by vertex sequence, rather than observed frequencies of message sequences. The plot represents each category along a route at its arrival time. This call uses the default zero traversal duration.
 
 ```{r pathways, fig.height=8, fig.width=12}
 top_routes <- pathways(dn, top = 12)
@@ -403,18 +308,14 @@ plot(top_routes)
 
 ## Timing
 
-To compare the network across half-day bins, we call `similarity()` with
-`step` and `window` of 0.5. The default coefficient is Jaccard, and the plot
-is a heatmap of bins against bins.
+`similarity()` compares network structure across temporal intervals. Setting both `step` and `window` to 0.5 produces non-overlapping half-day intervals. The default Jaccard coefficient measures similarity between their tie sets, and the plot displays the pairwise comparisons as a heatmap.
 
 ```{r similarity, fig.height=7, fig.width=8}
 bin_similarity <- similarity(dn, step = 0.5, window = 0.5)
 plot(bin_similarity)
 ```
 
-To classify how one turn follows another, we call `pshifts()`. It counts
-Gibson's (2003) thirteen participation shifts, in which A addresses B and the
-next turn is taken by B, by A again, or by a third party X.
+`pshifts()` classifies consecutive directed interactions using Gibson’s (2003) thirteen participation shifts. These distinguish whether an interaction from A to B is followed by an interaction initiated by B, by A again, or by another vertex X. Here, vertices represent contribution categories, so the classifications describe changes in category-level relational endpoints.
 
 ```{r pshifts, fig.height=6, fig.width=10}
 shifts <- pshifts(dn)
@@ -422,14 +323,9 @@ shifts
 plot(shifts)
 ```
 
-Of the 3,423 classified transitions, the largest family is turn usurping, in
-which a third code takes the turn. The single most frequent shift is AB-XB,
-642 cases: a new code addresses the code that was just addressed.
+Of the 3,423 classified transitions, the largest family is turn usurping, in which a third category becomes the source of the next interaction. The most frequent individual shift is AB-XB, with 642 occurrences: a different source category addresses the same target category.
 
-To measure whether each code's activity is clustered in time, we call
-`burstiness()`. Burstiness compares the gaps between a code's replies with the
-exponential reference: 1 is the bursty limit, 0 the Poisson reference and -1
-regular activity (Goh and Barabási, 2008).
+`burstiness()` characterises the temporal distribution of activity using inter-event intervals. The burstiness coefficient approaches 1 for highly heterogeneous intervals, is 0 for an exponential inter-event distribution, and is −1 for equal intervals (Goh and Barabási, 2008).
 
 ```{r burstiness, fig.height=6, fig.width=10}
 bursts <- burstiness(dn)
@@ -437,27 +333,20 @@ summary(bursts)
 plot(bursts)
 ```
 
-Every code is bursty, from 0.43 for `Objecting` to 0.74 for `Resourcing`, and
-memory is close to zero throughout: replies arrive in clusters whose lengths
-do not predict one another.
+All categories have positive burstiness coefficients, ranging from 0.43 for `Objecting` to 0.74 for `Resourcing`. The memory coefficients are close to zero, indicating little correlation between successive inter-event intervals.
 
 ## One course group
 
-The `group` column travels with every spell, so a course group is a selection
-over the network rather than a second construction. To select group `A_01`,
-we call `induce_subgraph()` with `ties` set to a condition on the spell table.
+The `group` variable is retained as a spell attribute during network construction. A course group can therefore be selected by filtering the existing temporal network. `induce_subgraph()` with `ties = group == "A_01"` retains spells associated with group `A_01`.
 
 ```{r group}
 one_group <- induce_subgraph(dn, ties = group == "A_01")
 summary(one_group)
 ```
 
-The group has 2,425 spells on 53 of the 81 ordered pairs, a mean snapshot
-density of 0.559 and one session, and it is small enough for every reply to be
-read. To draw each reply at the moment it fires, with codes on the vertical
-axis and each link leaving in its source's colour and arriving in its
-target's, we set `type` to `"events"`; `time = "clock"` places each reply at
-its exact time and `blend = TRUE` blends the two colours along the link.
+The resulting subnetwork contains 2,425 spells across 53 of the 81 possible ordered pairs, with a mean snapshot density of 0.559 and one session.
+
+Setting `type = "events"` displays reply events with contribution categories on the vertical axis. Specifying `time = "clock"` positions events at their recorded times, while `blend = TRUE` interpolates link colours between their source and target categories.
 
 ```{r group-events, fig.height=8, fig.width=13}
 plot(one_group, type = "events")
@@ -467,8 +356,7 @@ plot(one_group, type = "events")
 plot(one_group, type = "events", time = "clock", blend = TRUE)
 ```
 
-To measure the group on the same hourly grid, we call `metrics()` on the
-subnetwork and draw the result.
+Graph-level metrics can be computed for the subnetwork using the same hourly intervals as the full network.
 
 ```{r group-metrics}
 group_structure <- metrics(one_group,
@@ -480,26 +368,20 @@ plot(group_structure, type = "ridge")
 
 ## Interpretation
 
-The discussions return to `Resourcing` more than to any other kind of
-contribution: it is incident to the most replies, it is the code most often
-reached by several equally early routes, and it is one of the three codes that
-relay most of the earliest routes between the others, with `Socialising` and
-`Arguing`. `Objecting` is the opposite case, rarely addressed, slowest to
-reach and never a relay. Because ties stay open for the life of a discussion,
-every code can reach every other; what separates the codes is how quickly and
-through whom, which is what the temporal measures report.
+In this synthetic example, `Resourcing` is incident to the largest number of reply links and is frequently reachable through multiple equally early paths. Together with `Socialising` and `Arguing`, it accounts for much of the temporal betweenness. `Objecting` has comparatively few incident replies, the lowest temporal closeness, and no temporal betweenness.
+
+Under the specified construction, relational spells remain active until discussion termination, and every category is temporally reachable from every other category. Differences in arrival times and intermediate categories provide additional distinctions that reachability alone does not capture. These results illustrate the analytical methods applied to the synthetic dataset and do not constitute empirical findings about the original study.
 
 ## Limitations
 
-A tie that stays open until its discussion ends is a modelling choice that
-makes the network dense and reachability near-total; a shorter tie life would
-give sparser snapshots and longer latencies. The vertices are codes, not
-students, so the network says nothing about who talked to whom. The four-day
-window truncates the longest discussions. The table is the study's, trimmed
-and anonymised as described in `?thought_chains`, and repeated rows for a
-reply carrying two codes are counted as separate ties.
+Maintaining each relational spell until discussion termination is a modelling assumption that increases tie availability and contributes to high network density and complete reachability. Shorter spell durations could produce sparser networks, longer waiting times, or unreachable destinations. The four-day observation period also truncates longer discussions for measurement, without modifying their raw spell endpoints.
+
+Vertices represent contribution categories rather than individual participants; consequently, the analysis characterises relationships among categories and does not identify interpersonal interaction patterns. Replies assigned multiple categories may contribute multiple ties, affecting spell counts and accumulated durations. Temporal path results additionally depend on the specified traversal duration.
+
+The dataset is synthetic and based on the original study data. Its results serve to demonstrate package functionality; correspondence with empirical patterns in the original data requires separate assessment.
 
 ## References
+
 
 Freeman, L. C. (1979). Centrality in social networks: conceptual
 clarification. *Social Networks*, 1(3), 215–239.
@@ -535,6 +417,8 @@ exponential-family random graph models: terms and computational aspects.
 
 Pan, R. K., & Saramäki, J. (2011). Path lengths, correlations, and centrality
 in temporal networks. *Physical Review E*, 84(1), 016105.
+
+Saqr, M., López-Pernas, S., & Törmänen, T. (2026). A temporal network approach to reveal the longitudinal dynamics of CSCL group regulation and productive collaboration. *International Journal of Computer-Supported Collaborative Learning*, 21, 237–270. https://doi.org/10.1007/s11412-025-09464-5
 
 Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis to
 understand and improve collaborative learning. In *Proceedings of the Tenth

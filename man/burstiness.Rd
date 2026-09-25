@@ -19,7 +19,7 @@ burstiness(
 \code{dynet_unknown_measure} error.}
 
 \item{sessions}{How to treat sessions: \code{"bounded"} (the default),
-\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=centrality_series]{centrality_series()}}.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns

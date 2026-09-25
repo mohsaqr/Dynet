@@ -54,7 +54,7 @@
 #'   directed network, raising `dynet_needs_directed` on an undirected one:
 #'   `"reciprocity"`, `"mutual"`, `"asymmetric"`, `"null"`, `"in_2stars"`,
 #'   `"out_2stars"`, `"indegree_1_5"` and `"outdegree_1_5"`.
-#' @param sessions How to treat sessions, as in [dyn_centrality()]:
+#' @param sessions How to treat sessions, as in [centrality_series()]:
 #'   `"bounded"` (the default) keeps each session apart while pooling the
 #'   reported rows, `"collapse"` ignores session labels, and `"separate"`
 #'   reports each session on its own rows and needs a network built with a
@@ -103,7 +103,11 @@
 #' `O = sum(r) integral(Y[r](t) E[r](t) dt)`, and
 #' `R_H = sum(r in H) integral(Y[r](t) dt)`. The two occupancies are `O/R`
 #' and `O/R_H` and lie in `[0, 1]`. Loops, weights, duplicates, and censor
-#' flags cannot multiply occupancy.
+#' flags cannot multiply occupancy. Integration stops at the observation
+#' period, which defaults to the span of the data, so a last window reaching
+#' past the final spell is measured over its observed part only, and tiled
+#' windows pool to the whole-period value. `tsna::tEdgeDensity()` uses the
+#' same observation-period rule.
 #'
 #' `"onset_intensity"` and `"observed_pair_onset_intensity"` divide the
 #' number of known raw spell starts by `R` and `R_H`. Each nonloop raw row,
@@ -161,8 +165,20 @@
 #' `"outdegree_1_5"` sum the corresponding vertex degrees raised to 1.5.
 #' Directed `"triangles"` is the sum of cyclic and transitive triples, while
 #' an undirected triangle is counted once.
-#' A concurrent vertex has at least two distinct neighbours, so a reciprocal
-#' dyad still supplies only one neighbour. `"in_2stars"` and `"out_2stars"`
+#' A concurrent vertex has relations to at least two distinct neighbours
+#' active at the same instant, so a reciprocal dyad still supplies only one
+#' neighbour. Unlike the other structural selectors, concurrency is not read
+#' from the window's union snapshot: with a positive `window`, two ties that
+#' fall in the same window without overlapping in time do not make their
+#' shared vertex concurrent. A vertex counts in a window when it is
+#' concurrent at any instant inside it; `"concurrent_nodes"` is the number of
+#' such vertices and `"concurrent_share"` divides it by the window's eligible
+#' vertices. With `window = 0` the snapshot is itself an instant, so both
+#' readings coincide. Half-open spells that only meet at a boundary do not
+#' overlap, and a point contact is concurrent with every relation active at
+#' its timestamp. [mixing()] answers a different question -- which groups are
+#' connected somewhere in the window -- and requires no simultaneity.
+#' `"in_2stars"` and `"out_2stars"`
 #' sum `choose(degree, 2)` over directed in- and out-degrees. Directed
 #' `"two_paths"` counts ordered `i -> j -> k` paths with `i != k`;
 #' undirected two-paths count each unordered wedge once. Empty eligible
@@ -207,6 +223,10 @@
 #'
 #' Newman, M. E. J. (2002). Assortative mixing in networks. *Physical Review
 #' Letters*, 89, 208701. \doi{10.1103/PhysRevLett.89.208701}
+#'
+#' Morris, M., & Kretzschmar, M. (1997). Concurrent partnerships and the
+#' spread of HIV. *AIDS*, 11(5), 641-648.
+#' \doi{10.1097/00002030-199705000-00012}
 #'
 #' Holland, P. W., & Leinhardt, S. (1976). Local structure in social networks.
 #' *Sociological Methodology*, 7, 1-45. \doi{10.2307/270703}
@@ -256,22 +276,33 @@ metrics <- function(dn, measure = "density",
     }
   }
 
+  concurrency <- intersect(measure, c("concurrent_nodes", "concurrent_share"))
   df <- .over_bins(dn, sessions, node_level = FALSE, spec = spec,
     snapshot = TRUE, fun = function(enc, act, bin, state) {
       full <- .adjacency(enc, act, dn$directed)
       a <- full[state$index, state$index, drop = FALSE]
+      label <- if (identical(sessions, "separate")) {
+        as.character(enc$raw_event_session[[1L]])
+      } else "all"
       temporal <- intersect(measure, .temporal_graph_measures)
       temporal_values <- if (length(temporal)) {
-        label <- if (identical(sessions, "separate")) {
-          as.character(enc$raw_event_session[[1L]])
-        } else "all"
         .temporal_edge_values(.temporal_edge_ledger(
           dn, enc, bin, sessions, label
         ))
       } else numeric()
+      # A point window already holds the exact state, so its union snapshot
+      # is correct; a positive window must look instant by instant.
+      concurrent <- if (length(concurrency) && spec$window > 0) {
+        .window_concurrency(dn, enc, bin, sessions, label)[state$index]
+      }
       unlist(lapply(measure, function(m) {
         if (m %in% .temporal_graph_measures) {
           stats::setNames(unname(temporal_values[[m]]), m)
+        } else if (m %in% concurrency && !is.null(concurrent)) {
+          stats::setNames(switch(m,
+            concurrent_nodes = sum(concurrent),
+            concurrent_share = if (length(concurrent)) mean(concurrent) else 0
+          ), m)
         } else .graph_measure(m, a, dn$directed)
       }), use.names = TRUE)
     })
@@ -377,7 +408,11 @@ metrics <- function(dn, measure = "density",
   if (length(lightweight)) {
     attr(out, "structural_binary") <- TRUE
     attr(out, "structural_loops") <- "excluded"
-    attr(out, "concurrency_rule") <- "at_least_two_distinct_neighbours"
+    attr(out, "concurrency_rule") <-
+      "at_least_two_distinct_neighbours_at_one_instant"
+    attr(out, "concurrency_window_rule") <- if (spec$window == 0) {
+      "instant_exact"
+    } else "any_instant_in_window"
     attr(out, "degree_rule") <- if (dn$directed) {
       "incoming_plus_outgoing_arcs"
     } else "distinct_neighbours"
@@ -499,6 +534,50 @@ metrics <- function(dn, measure = "density",
   } else {
     stats::setNames(val, m)
   }
+}
+
+#' Vertices holding two simultaneous relations inside a window
+#'
+#' Concurrency is a property of an instant: a vertex is concurrent when
+#' relations to two distinct neighbours are active at the same time. A
+#' positive window cannot read it off the window's union snapshot, where a
+#' tie that ended before another began still supplies a second neighbour.
+#' The exact state is constant between change points (spell, vertex-activity
+#' and observation boundaries), so it is evaluated at every change point in
+#' the window and at the midpoint of every gap between two of them. A vertex
+#' is concurrent in the window when it is concurrent at any one of those
+#' instants. The window's upper bound is an instant of the window only when
+#' the bin is closed.
+#'
+#' @param dn Parent temporal network.
+#' @param enc Encoded session block.
+#' @param bin One-row positive reporting window with `lo`, `hi`, `closed`.
+#' @param sessions Session aggregation policy.
+#' @param label Session label for a separate block.
+#' @return A logical vector with one value per encoded vertex.
+#' @examples
+#' dn <- dynet(data.frame(from = c("A", "A"), to = c("B", "C"),
+#'                        start = c(0, 2), end = c(1, 3)))
+#' Dynet:::.window_concurrency(dn, Dynet:::.encode(dn),
+#'   data.frame(lo = 0, hi = 3, closed = TRUE), "collapse", "all")
+#' @noRd
+.window_concurrency <- function(dn, enc, bin, sessions, label) {
+  lo <- bin$lo[[1L]]
+  hi <- bin$hi[[1L]]
+  change <- .temporal_exposure_changes(dn, enc, lo, hi)
+  width <- diff(change)
+  midpoints <- change[-length(change)][width > 0] + width[width > 0] / 2
+  boundaries <- if (isTRUE(bin$closed[[1L]])) {
+    change
+  } else change[!.time_eq(change, hi)]
+  concurrent_at <- function(time) {
+    point <- data.frame(lo = time, hi = time, closed = TRUE, time = time)
+    state <- .snapshot_state(dn, enc, point, 0, sessions, label)
+    b <- .binary(.adjacency(enc, state$active, dn$directed), dn$directed)
+    rowSums(pmax(b, t(b))) >= 2L
+  }
+  Reduce(`|`, lapply(c(boundaries, midpoints), concurrent_at),
+         rep(FALSE, enc$n))
 }
 
 #' Finite off-diagonal geodesic distances

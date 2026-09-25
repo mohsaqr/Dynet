@@ -1,5 +1,5 @@
 rownorm_eigen_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.rownorm",
     rescale = rescale, ...
   ))
@@ -192,7 +192,7 @@ test_that("public row-normalized eigen prestige is binary and mode invariant", {
     expected, tolerance = 1e-14
   )
 
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"),
     prestige = "eigenvector.rownorm", start = 0, end = 0, window = 0
   ))
@@ -255,7 +255,7 @@ test_that("snapshot boundaries are applied before row normalization", {
     c(A = 1, B = 0), tolerance = 1e-14
   )
   expect_warning(
-    half_open <- dyn_centrality(
+    half_open <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.rownorm",
       start = 1, end = 1, window = 1
     ), class = "dynet_prestige_eigen_undefined"
@@ -271,7 +271,7 @@ test_that("row-normalized eigen prestige publishes transform and solver", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B"), to = c("B", "A"), time = 0
   ))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.rownorm"
   )
   expect_identical(attr(raw, "definition"), "eigenvector.rownorm")
@@ -289,7 +289,7 @@ test_that("row-normalized eigen prestige publishes transform and solver", {
                    "retained_once_before_row_normalization")
   expect_identical(attr(raw, "undefined"), "NA")
 
-  scaled <- dyn_centrality(
+  scaled <- centrality_series(
     dn, measure = c("degree", "prestige"),
     prestige = "eigenvector.rownorm", rescale = TRUE
   )
@@ -325,10 +325,10 @@ test_that("row-normalized eigen prestige obeys coordinates and scope", {
 
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
-  expect_error(dyn_centrality(
+  expect_error(centrality_series(
     undirected, measure = "prestige", prestige = "eigenvector.rownorm"
   ), class = "dynet_needs_directed")
-  expect_error(dyn_centrality(
+  expect_error(legacy_centrality(
     quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
     measure = "prestige", prestige = "eigenvector.rownorm",
     scope = "temporal"

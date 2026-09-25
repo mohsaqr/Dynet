@@ -1,5 +1,5 @@
 # ===========================================================================
-# dyn_centrality() — time-varying vertex centrality
+# centrality_series() and path_centrality() — vertex centrality over time
 # ===========================================================================
 
 .node_measures <- c("degree", "indegree", "outdegree", "strength", "prestige",
@@ -9,7 +9,7 @@
                     "information", "load", "flow_betweenness", "diffusion")
 
 # The measures that read a direction off the adjacency and are therefore
-# undefined on an undirected network. `dyn_centrality()` and the proximity
+# undefined on an undirected network. `centrality_series()` and the proximity
 # plot both gate on this, so it is named once rather than spelled out twice.
 .directed_only_measures <- c("indegree", "outdegree", "prestige",
                              "hub", "authority")
@@ -94,22 +94,17 @@
 #' in one call and they arrive stacked in a single tidy frame, one row per
 #' vertex, time point and measure.
 #'
-#' Two scopes answer two different questions. `"snapshot"` measures the
-#' network as it stands in each time bin, so the result is a trajectory of
-#' ordinary centrality. `"temporal"` measures the vertex against time-respecting
-#' paths across the whole observation window, or the supplied `start`-to-`end`
-#' traversal window for temporal reach, closeness, and betweenness. This quantity has no counterpart in a
-#' static network: it cannot run backwards in time, so it is never inflated the
-#' way a flattened network is.
+#' Each value measures the network as it stands in one time bin, so the
+#' result is a trajectory of ordinary centrality. Order within a bin is not
+#' used: every tie active in the bin counts as present. Centrality computed
+#' from time-respecting paths across the whole period is [path_centrality()].
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param measure One or more of `"degree"`, `"strength"`, `"prestige"`, `"closeness"`,
 #'   `"betweenness"`, `"eigenvector"`, `"pagerank"`, `"hub"`, `"authority"`,
 #'   `"coreness"`, `"constraint"`, `"power"`, `"harary"`, `"information"`,
-#'   `"load"`, `"flow_betweenness"`, or `"diffusion"` for snapshot scope;
-#'   `"closeness"`,
-#'   `"betweenness"`, `"reach"` or `"reach_count"` for temporal scope.
-#'   Snapshot scope also still accepts the deprecated names `"indegree"` and
+#'   `"load"`, `"flow_betweenness"`, or `"diffusion"`.
+#'   The deprecated names `"indegree"` and
 #'   `"outdegree"`, which warn with class `dynet_deprecated` and are replaced
 #'   by `measure = "degree"` with `mode = "in"` or `mode = "out"`. Defaults to
 #'   `"degree"`. Any other
@@ -117,9 +112,6 @@
 #'   measures `"prestige"`, `"hub"`, `"authority"` and the two deprecated
 #'   names `"indegree"` and `"outdegree"` raise `dynet_needs_directed` on an
 #'   undirected network.
-#' @param scope `"snapshot"` (the default) for a value per time bin,
-#'   `"temporal"` for one
-#'   value per vertex computed on time-respecting paths.
 #' @param mode Which edges count on a directed network: `"all"` both
 #'   directions, `"out"` outgoing only, `"in"` incoming only. Defaults to
 #'   `"all"`; any other string raises an error of class `dynet_bad_input`.
@@ -142,8 +134,7 @@
 #' @param sample Deprecated. `"instant"` is equivalent to `window = 0`;
 #'   `"window"` uses the current positive/default window.
 #' @param start,end First and last time at which to measure. Default to the
-#'   observed range. For temporal measures these are inclusive path-traversal
-#'   bounds. A network built from dates may be addressed with dates.
+#'   observed range. A network built from dates may be addressed with dates.
 #' @param step How often to measure. Defaults to the interval the network was
 #'   built with.
 #' @param window How much time each measurement covers. Defaults to `step`,
@@ -186,12 +177,6 @@
 #'   definitions return `NaN`; structurally undefined spectral definitions
 #'   return `NA`. This argument requires `measure = "prestige"`, and raises
 #'   `dynet_bad_input` otherwise.
-#' @param traversal_time Nonnegative duration charged for every temporal-path
-#'   hop, in the network's time unit; `0` by default. A calendar network also
-#'   accepts a scalar
-#'   `difftime`. Nonzero values require `scope = "temporal"`, and raise
-#'   `dynet_bad_input` otherwise.
-#'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
@@ -200,12 +185,11 @@
 #' @return A `dynet_metric`: a tidy data frame with one row per vertex, time
 #'   point and measure. Columns are `session` (only under
 #'   `sessions = "separate"`, which is the only mode that keeps session labels
-#'   apart), `time` (snapshot scope only), `node`, `measure` and `value`.
+#'   apart), `time`, `node`, `measure` and `value`.
 #'   Print it, [summary()] it, [plot()] it, or take the plain frame with
-#'   [as.data.frame()]. A closeness- or betweenness-only temporal result stores
-#'   its mathematical choices as direct attributes; a mixed temporal result
-#'   stores named records under `measure_metadata`. Snapshot prestige follows
-#'   the same direct-versus-scoped metadata convention. When a prestige
+#'   [as.data.frame()]. Prestige stores its mathematical choices as direct
+#'   attributes for a prestige-only result and as named records under
+#'   `measure_metadata` otherwise. When a prestige
 #'   variant is structurally undefined or fails to converge, the affected
 #'   values are `NA`, a warning says how many reporting blocks were affected,
 #'   and a record naming the stage and reason for each comes out through
@@ -222,7 +206,17 @@
 #' Snapshot `"degree"` counts distinct active binary dyads, so duplicate,
 #' split and overlapping spells do not multiply it; `mode = "all"` on a
 #' directed snapshot is in-degree plus out-degree. `"strength"` is the same
-#' margin taken over summed spell weights rather than over binary dyads.
+#' margin taken over spell weights rather than over binary dyads. In a
+#' positive window each spell contributes its weight in proportion to the
+#' share of its duration that falls inside the window, `weight * overlap /
+#' duration`, so a spell straddling two tiled windows splits its weight
+#' between them and the pieces add back to the whole. A point contact has no
+#' duration to split and contributes its full weight to the window holding
+#' it. With `window = 0` every active spell contributes its full weight at
+#' that instant. The share uses the spell's recorded duration, so the part of
+#' a spell outside the observation period is not reassigned to observed
+#' windows. [snapshots()] and the network plots keep full weights per bin, so
+#' their `weight` column is not the input to this strength.
 #'
 #' Snapshot `"closeness"` is **not** Freeman's \eqn{1 / \sum_z d_{sz}}, which
 #' is
@@ -327,42 +321,8 @@
 #' `1 / sqrt(n)` raw or `1 / n` rescaled. This selector diagnoses support,
 #' balance, and irreducibility; it is not a vertex ranking.
 #'
-#' Temporal betweenness is the raw dependency sum over reachable forward
-#' ordered pairs. For each source-target pair, its unit dependency is divided
-#' equally over every canonical shortest-foremost journey, and an internal
-#' vertex receives the fraction of those journeys that contain it. Sources and
-#' targets receive no endpoint credit. This ordered-pair convention also
-#' applies to undirected contacts because temporal reach is generally
-#' asymmetric. The result is not normalised; its fixed range is
-#' `[0, (n - 1) * (n - 2)]`.
-#'
-#' Temporal closeness is inverse mean forward latency over reachable vertices:
-#' if \eqn{R_s} is the set of reachable vertices other than source \eqn{s},
-#' \deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - o_s),}
-#' where \eqn{a_z} is the foremost arrival time and \eqn{o_s} is the source's
-#' resolved origin: the traversal window's lower bound, or -- when vertex
-#' activity was declared -- the source's first presence inside that window.
-#' Every reachable endpoint is included once, regardless
-#' of how many optimal paths reach it. A source with no reachable nonself
-#' endpoints has value zero. If all reachable endpoints have zero latency, the
-#' value is `Inf`; zero-latency endpoints remain in the numerator when mixed
-#' with positive latencies. The measure therefore has inverse-time units, is
-#' invariant to translating the time axis, and scales inversely when time is
-#' rescaled.
-#'
-#' Temporal measures use [paths()] traversal semantics: nondecreasing
-#' times, unlimited waiting, half-open interval spells, and a separate exact
-#' timestamp rule for point events. Positive `traversal_time` requires an
-#' interval traversal to finish within continuous pair activity; a point event
-#' triggers at its timestamp and reaches its endpoint after that duration.
-#' `start` and `end` bound every temporal measure. Temporal `"reach"` is the
-#' proportion of other vertices reachable in the forward direction, while
-#' `"reach_count"` is their number. The source is excluded from both and a
-#' singleton proportion is defined as zero. In separate-session output, a
-#' session outside a one-sided bound contributes zero-reach rows.
-#'
 #' @section Conditions:
-#' Errors: `dynet_unknown_measure` (a measure this scope does not offer),
+#' Errors: `dynet_unknown_measure` (a measure not listed above),
 #' `dynet_needs_directed` (`"prestige"`, `"hub"`, `"authority"`,
 #' `"indegree"` or `"outdegree"` on an undirected network),
 #' `dynet_no_sessions` (`sessions = "separate"` without a session column),
@@ -370,10 +330,8 @@
 #' it also carries `dynet_bad_input`),
 #' and `dynet_bad_input` for every other broken contract -- `dn` not a
 #' `dynet`, an unknown `mode`, an out-of-range `damping`, `exponent`,
-#' `lambda`, `prestige`, `rescale`, `start`, `end`, `step`, `window` or
-#' `traversal_time`, `rescale = TRUE` without `measure = "prestige"`, a
-#' nonzero `traversal_time` at snapshot scope, and `mode`, `step` or `window`
-#' at temporal scope.
+#' `lambda`, `prestige`, `rescale`, `start`, `end`, `step` or `window`, and
+#' `rescale = TRUE` without `measure = "prestige"`.
 #'
 #' Warnings: `dynet_deprecated` (`measure = "indegree"`/`"outdegree"`, or the
 #' retired `sample` argument), `dynet_eigen_undefined` and
@@ -386,17 +344,6 @@
 #' @references
 #' Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
 #' 519(3), 97-125.
-#'
-#' Tang, J., Musolesi, M., Mascolo, C., Latora, V., & Nicosia, V. (2010).
-#' Analysing information flows and key mediators through temporal centrality
-#' metrics. *Proceedings of SNS '10*.
-#'
-#' Buss, S., Molter, H., Niedermeier, R., & Rymar, M. (2024). Algorithmic
-#' aspects of temporal betweenness. *Network Science*, 12(2), 160-188.
-#'
-#' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
-#' (2013). Graph metrics for temporal networks. In *Temporal Networks*
-#' (pp. 15-40). Springer.
 #'
 #' Wasserman, S., & Faust, K. (1994). *Social Network Analysis: Methods and
 #' Applications*. Cambridge University Press, Chapter 5.
@@ -470,67 +417,53 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #'
-#' dyn_centrality(dn, measure = "degree")
-#' dyn_centrality(dn, measure = c("degree", "betweenness"))
-#' dyn_centrality(dn, measure = "prestige", rescale = TRUE)
-#' dyn_centrality(dn, measure = "prestige",
-#'                prestige = "indegree.rownorm")
-#' dyn_centrality(dn, measure = "prestige", prestige = "domain")
-#' dyn_centrality(dn, measure = "prestige",
-#'                prestige = "domain.proximity")
-#' dyn_centrality(dn, measure = "prestige", prestige = "eigenvector")
-#' dyn_centrality(dn, measure = "prestige",
-#'                prestige = "eigenvector.rownorm")
-#' dyn_centrality(dn, measure = "prestige",
-#'                prestige = "eigenvector.colnorm")
-#' dyn_centrality(dn, measure = "prestige",
-#'                prestige = "eigenvector.rowcolnorm")
-#' # Temporal scope walks journeys between every ordered pair, so it costs far
-#' # more than a snapshot and grows steeply with the vertex count. Shown on a
-#' # subgraph so the example stays quick.
-#' few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
-#'                                      "Finn", "Gita", "Hugo"))
-#' dyn_centrality(few, measure = "closeness", scope = "temporal")
-#' dyn_centrality(few, measure = "reach", scope = "temporal",
-#'                start = 0, end = 10)
+#' centrality_series(dn, measure = "degree")
+#' centrality_series(dn, measure = c("degree", "betweenness"))
+#' centrality_series(dn, measure = "prestige", rescale = TRUE)
+#' centrality_series(dn, measure = "prestige",
+#'                   prestige = "indegree.rownorm")
+#' centrality_series(dn, measure = "prestige", prestige = "domain")
+#' centrality_series(dn, measure = "prestige",
+#'                   prestige = "domain.proximity")
+#' centrality_series(dn, measure = "prestige", prestige = "eigenvector")
+#' centrality_series(dn, measure = "prestige",
+#'                   prestige = "eigenvector.rownorm")
+#' centrality_series(dn, measure = "prestige",
+#'                   prestige = "eigenvector.colnorm")
+#' centrality_series(dn, measure = "prestige",
+#'                   prestige = "eigenvector.rowcolnorm")
 #'
 #' # A seven-day window, stepped one day at a time.
-#' dyn_centrality(dn, measure = "degree", step = 1, window = 7)
+#' centrality_series(dn, measure = "degree", step = 1, window = 7)
 #'
-#' degree <- dyn_centrality(dn, measure = "degree")
+#' degree <- centrality_series(dn, measure = "degree")
 #' summary(degree)
 #'
 #' @details
-#' At snapshot scope, declared vertex activity induces the eligible vertex
-#' population before any kernel is evaluated. Positive windows independently
-#' use any-time vertex and edge unions before induction, while `window = 0`
-#' evaluates the exact state. Results remain rectangular over the fixed vertex
-#' universe: inactive vertices receive typed `NA`, while eligible isolates keep
-#' the centrality kernel's ordinary static result. At temporal scope, declared
-#' vertex activity gates the exact source anchor and every hop. Waiting after a
-#' valid anchor may cross inactivity; interval traversal requires both endpoints
-#' through completion, while a point trigger requires the receiver again after
-#' any traversal delay. Fixed node rows and full-network denominators are
-#' retained.
+#' Declared vertex activity induces the eligible vertex population before any
+#' kernel is evaluated. Positive windows independently use any-time vertex and
+#' edge unions before induction, while `window = 0` evaluates the exact state.
+#' Results remain rectangular over the fixed vertex universe: inactive
+#' vertices receive typed `NA`, while eligible isolates keep the centrality
+#' kernel's ordinary static result.
 #'
+#' @seealso [path_centrality()] for closeness and betweenness on
+#'   time-respecting paths; [reachability()] for temporal reach.
 #' @export
-dyn_centrality <- function(dn,
-                           measure = "degree",
-                           scope = c("snapshot", "temporal"),
-                           sessions = c("bounded", "collapse", "separate"),
-                           sample = NULL,
-                           damping = 0.85,
-                           mode = c("all", "out", "in"),
-                           start = NULL, end = NULL,
-                           step = NULL, window = NULL,
-                           exponent = 1, traversal_time = 0,
-                           prestige = "indegree", rescale = FALSE,
-                           lambda = 1, plot = FALSE) {
+centrality_series <- function(dn,
+                              measure = "degree",
+                              sessions = c("bounded", "collapse", "separate"),
+                              sample = NULL,
+                              damping = 0.85,
+                              mode = c("all", "out", "in"),
+                              start = NULL, end = NULL,
+                              step = NULL, window = NULL,
+                              exponent = 1,
+                              prestige = "indegree", rescale = FALSE,
+                              lambda = 1, plot = FALSE) {
   sessions <- match.arg(sessions)
   .check_dynet(dn, sessions)
-  scope <- match.arg(scope)
   mode  <- .resolve_modes(mode)
-  traversal_time <- .as_traversal_time(traversal_time, dn)
   window <- .legacy_sample(window, sample)
   .check(
     "`measure` must be a character vector." = is.character(measure),
@@ -561,13 +494,15 @@ dyn_centrality <- function(dn,
     ))
   }
 
-  allowed <- if (identical(scope, "temporal")) .temporal_measures else .node_measures
-  bad <- setdiff(measure, allowed)
+  bad <- setdiff(measure, .node_measures)
   if (length(bad) > 0L) {
     stop(errorCondition(
-      sprintf("Unknown measure %s for scope \"%s\". Available: %s",
-              paste(sQuote(bad), collapse = ", "), scope,
-              paste(allowed, collapse = ", ")),
+      sprintf("Unknown measure %s. Available: %s%s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(.node_measures, collapse = ", "),
+              if (any(bad %in% c("reach", "reach_count"))) {
+                "; temporal reach is `reachability()`"
+              } else ""),
       class = "dynet_unknown_measure", call = NULL))
   }
   retired <- intersect(measure, c("indegree", "outdegree"))
@@ -589,34 +524,6 @@ dyn_centrality <- function(dn,
     }
   }
 
-  if (identical(scope, "temporal")) {
-    if (!identical(mode, "all")) {
-      stop(errorCondition(
-        "`mode` has no meaning for `scope = \"temporal\"`; temporal paths use the network's recorded direction.",
-        class = "dynet_bad_input", call = NULL))
-    }
-    grid_args <- c("step", "window")
-    given <- grid_args[!vapply(list(step, window), is.null,
-                               logical(1L))]
-    if (length(given) > 0L) {
-      stop(errorCondition(sprintf(
-        "%s %s no meaning for scope = \"temporal\", which measures time-respecting paths across the whole window rather than a grid of snapshots.",
-        paste(sQuote(given), collapse = ", "),
-        if (length(given) == 1L) "has" else "have"),
-        class = "dynet_bad_input", call = NULL))
-    }
-    return(.temporal_centrality(
-      dn, measure, sessions, start, end, traversal_time
-    ))
-  }
-
-  if (traversal_time > 0) {
-    stop(errorCondition(
-      "A nonzero `traversal_time` applies only to `scope = \"temporal\"`.",
-      class = "dynet_bad_input", call = NULL
-    ))
-  }
-
   jobs <- .measure_modes(measure, mode, dn$directed)
   spec <- .window_spec(dn, start, end, step, window)
   prestige_diagnostics <- list()
@@ -626,7 +533,10 @@ dyn_centrality <- function(dn,
       binary_full <- .adjacency(enc, act, dn$directed, weighted = FALSE)
       binary_a <- binary_full[state$index, state$index, drop = FALSE]
       valued_a <- if ("strength" %in% measure) {
-        valued_full <- .adjacency(enc, act, dn$directed, weighted = TRUE)
+        shared <- enc
+        shared$weight <- enc$weight * .window_weight_share(enc, bin,
+                                                           spec$window)
+        valued_full <- .adjacency(shared, act, dn$directed, weighted = TRUE)
         valued_full[state$index, state$index, drop = FALSE]
       } else {
         binary_a
@@ -954,6 +864,261 @@ dyn_centrality <- function(dn,
     }
   }
   .maybe_plot(out, plot)
+}
+
+#' Closeness and betweenness on time-respecting paths
+#'
+#' @description
+#' Centrality computed from the time-respecting paths that [paths()] finds,
+#' taken across the whole observation period (or the `start`-to-`end`
+#' window). A path may only continue along a tie that is available after it
+#' arrives, so these values cannot be inflated by ties that occur in the
+#' wrong order, as a flattened network is. The result is one value per
+#' vertex, not a series: for centrality that changes from window to window,
+#' use [centrality_series()]; for the number of vertices a vertex can reach,
+#' use [reachability()].
+#'
+#' @param dn A temporal network from [dynet()].
+#' @param measure One or both of `"closeness"` (the default) and
+#'   `"betweenness"`. Any other name raises `dynet_unknown_measure`.
+#' @param sessions How to treat sessions: `"bounded"` (the default) keeps
+#'   paths inside a session, `"collapse"` ignores sessions, `"separate"`
+#'   reports each session on its own rows. `"separate"` on a network built
+#'   without a session column raises `dynet_no_sessions`.
+#' @param start,end Inclusive path-traversal bounds. Default to the observed
+#'   range. A network built from dates may be addressed with dates.
+#' @param traversal_time Nonnegative duration charged for every hop, in the
+#'   network's time unit; `0` by default. A calendar network also accepts a
+#'   scalar `difftime`.
+#' @param plot Whether to draw the result as well as return it. Drawing is a
+#'   side effect in the manner of [graphics::hist()]: the verb still returns
+#'   its tidy table, invisibly when it has drawn.
+#' @return A node-level `dynet_metric`: a tidy data frame with one row per
+#'   vertex and measure, columns `node`, `measure` and `value`, preceded by
+#'   `session` under `sessions = "separate"`. There is no `time` column. A
+#'   single-measure result stores its mathematical choices as direct
+#'   attributes; a two-measure result stores named records under
+#'   `measure_metadata`.
+#'
+#' @details
+#' Betweenness is the raw dependency sum over reachable forward
+#' ordered pairs. For each source-target pair, its unit dependency is divided
+#' equally over every canonical shortest-foremost journey, and an internal
+#' vertex receives the fraction of those journeys that contain it. Sources and
+#' targets receive no endpoint credit. This ordered-pair convention also
+#' applies to undirected contacts because temporal reach is generally
+#' asymmetric. The result is not normalised; its fixed range is
+#' `[0, (n - 1) * (n - 2)]`.
+#'
+#' Closeness is inverse mean forward latency over reachable vertices:
+#' if \eqn{R_s} is the set of reachable vertices other than source \eqn{s},
+#' \deqn{C(s) = |R_s| / \sum_{z \in R_s} (a_z - o_s),}
+#' where \eqn{a_z} is the foremost arrival time and \eqn{o_s} is the source's
+#' resolved origin: the traversal window's lower bound, or -- when vertex
+#' activity was declared -- the source's first presence inside that window.
+#' Every reachable endpoint is included once, regardless
+#' of how many optimal paths reach it. A source with no reachable nonself
+#' endpoints has value zero. If all reachable endpoints have zero latency, the
+#' value is `Inf`; zero-latency endpoints remain in the numerator when mixed
+#' with positive latencies. The measure therefore has inverse-time units, is
+#' invariant to translating the time axis, and scales inversely when time is
+#' rescaled.
+#'
+#' Both measures use [paths()] traversal semantics: nondecreasing
+#' times, unlimited waiting, half-open interval spells, and a separate exact
+#' timestamp rule for point events. Positive `traversal_time` requires an
+#' interval traversal to finish within continuous pair activity; a point event
+#' triggers at its timestamp and reaches its endpoint after that duration.
+#' `start` and `end` bound every measure. In separate-session output, a
+#' session outside a one-sided bound contributes zero rows.
+#'
+#' Declared vertex activity gates the exact source anchor and every hop.
+#' Waiting after a valid anchor may cross inactivity; interval traversal
+#' requires both endpoints through completion, while a point trigger requires
+#' the receiver again after any traversal delay. Fixed node rows and
+#' full-network denominators are retained.
+#'
+#' @section Conditions:
+#' Errors: `dynet_unknown_measure` (a measure other than `"closeness"` or
+#' `"betweenness"`), `dynet_no_sessions` (`sessions = "separate"` without a
+#' session column), `dynet_outside_observation` (the requested range misses
+#' observed support; it also carries `dynet_bad_input`), and
+#' `dynet_bad_input` for every other broken contract -- `dn` not a `dynet`, a
+#' malformed `measure`, an out-of-range `start`, `end` or `traversal_time`.
+#'
+#' @references
+#' Pan, R. K., & Saramaki, J. (2011). Path lengths, correlations, and
+#' centrality in temporal networks. *Physical Review E*, 84(1), 016105.
+#'
+#' Tang, J., Musolesi, M., Mascolo, C., Latora, V., & Nicosia, V. (2010).
+#' Analysing information flows and key mediators through temporal centrality
+#' metrics. *Proceedings of SNS '10*.
+#'
+#' Buss, S., Molter, H., Niedermeier, R., & Rymar, M. (2024). Algorithmic
+#' aspects of temporal betweenness. *Network Science*, 12(2), 160-188.
+#'
+#' Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
+#' (2013). Graph metrics for temporal networks. In *Temporal Networks*
+#' (pp. 15-40). Springer.
+#'
+#' @examples
+#' # Every ordered pair is searched, so the cost grows steeply with the
+#' # vertex count; a subgraph keeps the example quick.
+#' dn <- dynet(school_contacts)
+#' few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
+#'                                      "Finn", "Gita", "Hugo"))
+#' path_centrality(few)
+#' path_centrality(few, measure = c("closeness", "betweenness"),
+#'                 start = 0, end = 10)
+#' @seealso [paths()], [reachability()], [centrality_series()].
+#' @export
+path_centrality <- function(dn, measure = "closeness",
+                            sessions = c("bounded", "collapse", "separate"),
+                            start = NULL, end = NULL, traversal_time = 0,
+                            plot = FALSE) {
+  sessions <- match.arg(sessions)
+  .check_dynet(dn, sessions)
+  traversal_time <- .as_traversal_time(traversal_time, dn)
+  .check(
+    "`measure` must be a character vector." = is.character(measure),
+    "`measure` must name at least one measure." = length(measure) > 0L,
+    "`measure` cannot contain missing values." = !anyNA(measure)
+  )
+  allowed <- c("closeness", "betweenness")
+  bad <- setdiff(measure, allowed)
+  if (length(bad) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown measure %s. Available: %s%s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(allowed, collapse = ", "),
+              if (any(bad %in% c("reach", "reach_count"))) {
+                "; temporal reach is `reachability()`"
+              } else ""),
+      class = "dynet_unknown_measure", call = NULL))
+  }
+  out <- .temporal_centrality(dn, measure, sessions, start, end,
+                              traversal_time)
+  .maybe_plot(out, plot)
+}
+
+#' Deprecated name for `centrality_series()` and `path_centrality()`
+#'
+#' `dyn_centrality()` was split in two. Its default `scope = "snapshot"` is
+#' now [centrality_series()]; `scope = "temporal"` is [path_centrality()]
+#' for closeness and betweenness and [reachability()] for reach. The old
+#' name still works and returns what it always returned, with a warning of
+#' class `dynet_deprecated`. It will be removed in a future release.
+#'
+#' @param dn,measure,sessions,sample,damping,mode,start,end,step,window,exponent,prestige,rescale,lambda,plot
+#'   As in [centrality_series()].
+#' @param scope `"snapshot"` (the default) or `"temporal"`.
+#' @param traversal_time As in [path_centrality()]; nonzero only with
+#'   `scope = "temporal"`.
+#' @return A node-level `dynet_metric`, as returned by the function it
+#'   forwards to.
+#' @section Conditions:
+#' Warning: `dynet_deprecated` on every call. Errors are those of the
+#' function it forwards to, plus `dynet_bad_input` for `mode`, `step` or
+#' `window` with `scope = "temporal"` and a nonzero `traversal_time` with
+#' `scope = "snapshot"`.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' # Warns, then returns what centrality_series(dn) returns.
+#' dyn_centrality(dn)
+#' @keywords internal
+#' @export
+dyn_centrality <- function(dn,
+                           measure = "degree",
+                           scope = c("snapshot", "temporal"),
+                           sessions = c("bounded", "collapse", "separate"),
+                           sample = NULL,
+                           damping = 0.85,
+                           mode = c("all", "out", "in"),
+                           start = NULL, end = NULL,
+                           step = NULL, window = NULL,
+                           exponent = 1, traversal_time = 0,
+                           prestige = "indegree", rescale = FALSE,
+                           lambda = 1, plot = FALSE) {
+  scope <- match.arg(scope)
+  warning(warningCondition(sprintf(
+    "`dyn_centrality()` is deprecated; use %s.",
+    if (identical(scope, "temporal")) {
+      "`path_centrality()` or, for reach, `reachability()`"
+    } else "`centrality_series()`"
+  ), class = "dynet_deprecated", call = NULL))
+  if (identical(scope, "snapshot")) {
+    if (!isTRUE(all.equal(traversal_time, 0))) {
+      stop(errorCondition(
+        "A nonzero `traversal_time` applies only to `path_centrality()`.",
+        class = "dynet_bad_input", call = NULL))
+    }
+    return(centrality_series(
+      dn, measure = measure, sessions = sessions, sample = sample,
+      damping = damping, mode = mode, start = start, end = end, step = step,
+      window = window, exponent = exponent, prestige = prestige,
+      rescale = rescale, lambda = lambda, plot = plot
+    ))
+  }
+  sessions <- match.arg(sessions)
+  .check_dynet(dn, sessions)
+  traversal_time <- .as_traversal_time(traversal_time, dn)
+  if (!identical(.resolve_modes(mode), "all")) {
+    stop(errorCondition(
+      "`mode` has no meaning for time-respecting paths, which use the network's recorded direction.",
+      class = "dynet_bad_input", call = NULL))
+  }
+  given <- c("step", "window")[!vapply(list(step, window), is.null,
+                                       logical(1L))]
+  if (length(given) > 0L) {
+    stop(errorCondition(sprintf(
+      "%s %s no meaning for time-respecting paths, which are measured across the whole window rather than a grid of snapshots.",
+      paste(sQuote(given), collapse = ", "),
+      if (length(given) == 1L) "has" else "have"),
+      class = "dynet_bad_input", call = NULL))
+  }
+  .check(
+    "`measure` must be a character vector." = is.character(measure),
+    "`measure` must name at least one measure." = length(measure) > 0L,
+    "`measure` cannot contain missing values." = !anyNA(measure)
+  )
+  bad <- setdiff(measure, .temporal_measures)
+  if (length(bad) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown measure %s for scope \"temporal\". Available: %s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(.temporal_measures, collapse = ", ")),
+      class = "dynet_unknown_measure", call = NULL))
+  }
+  .maybe_plot(.temporal_centrality(dn, measure, sessions, start, end,
+                                   traversal_time), plot)
+}
+
+#' Share of each spell's weight that belongs to a reporting window
+#'
+#' A spell's weight is spread evenly over its recorded duration, so the share
+#' a window receives is the fraction of that duration inside it. Rows are
+#' observation fragments, so the overlap is taken on the fragment and the
+#' denominator on the raw spell. Point contacts, zero-duration spells and
+#' point windows keep a share of one.
+#'
+#' @param enc Encoded edge rows.
+#' @param bin One-row reporting window with `lo` and `hi`.
+#' @param window Reporting-window width.
+#' @return A numeric vector in `[0, 1]`, one value per encoded row.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 4))
+#' Dynet:::.window_weight_share(Dynet:::.encode(dn),
+#'   data.frame(lo = 1, hi = 2), 1)
+#' @noRd
+.window_weight_share <- function(enc, bin, window) {
+  if (!length(enc$weight) || window == 0) return(rep(1, length(enc$weight)))
+  duration <- enc$raw_end - enc$raw_start
+  overlap <- pmax(0, pmin(enc$end, bin$hi[[1L]]) -
+                     pmax(enc$start, bin$lo[[1L]]))
+  point <- enc$instant | duration <= .time_tol(enc$raw_start, enc$raw_end)
+  share <- rep(1, length(duration))
+  share[!point] <- pmin(1, overlap[!point] / duration[!point])
+  share
 }
 
 #' Compute one snapshot centrality measure

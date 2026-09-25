@@ -34,7 +34,7 @@ list cograph renders.}
 \item{measure}{Optional centrality measures to annotate the vertex table
 with, valid only for \code{what = "nodes"}. Each becomes one column holding the
 value over the whole observed period, so the vertex table can be filtered
-or ranked without a second call. Any measure \code{\link[=dyn_centrality]{dyn_centrality()}} accepts at
+or ranked without a second call. Any measure \code{\link[=centrality_series]{centrality_series()}} accepts at
 snapshot scope is allowed, plus \code{"indegree"} and \code{"outdegree"}; anything
 else raises a \code{dynet_unknown_measure} error, and a \code{measure} that is not a
 character vector raises \code{dynet_bad_input}. Naming it for any other \code{what}
@@ -42,9 +42,9 @@ raises a \code{dynet_bad_input} error too.}
 
 \item{sessions}{How sessions are treated while \code{measure} is computed:
 \code{"bounded"} (the default), \code{"collapse"} or \code{"separate"}, as in
-\code{\link[=dyn_centrality]{dyn_centrality()}}. Ignored when \code{measure} is not given.}
+\code{\link[=centrality_series]{centrality_series()}}. Ignored when \code{measure} is not given.}
 
-\item{start, end}{Measurement bounds passed to \code{\link[=dyn_centrality]{dyn_centrality()}} when
+\item{start, end}{Measurement bounds passed to \code{\link[=centrality_series]{centrality_series()}} when
 \code{measure} is given, and ignored otherwise. Default to the observed range.}
 
 \item{...}{Ignored.}

@@ -13,8 +13,8 @@ test_that("each measure becomes one column, one row per vertex", {
 test_that("the annotation is the whole-period centrality, not a first bin", {
   dn <- dynet(school_contacts)
   annotated <- as.data.frame(dn, what = "nodes", measure = "degree")
-  direct <- as.data.frame(dyn_centrality(dn, measure = "degree",
-                                         window = "all"))
+  direct <- as.data.frame(centrality_series(dn, measure = "degree",
+                                            window = "all"))
   expect_equal(annotated$degree[match(direct$node, annotated$name)],
                direct$value)
 })

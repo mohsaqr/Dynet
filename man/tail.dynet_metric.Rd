@@ -23,6 +23,6 @@ series and a \verb{last n of N rows} line records the truncation.
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, step = 4, window = 4)
+degree <- centrality_series(dn, step = 4, window = 4)
 tail(degree)
 }

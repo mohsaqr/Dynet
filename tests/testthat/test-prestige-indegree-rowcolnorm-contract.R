@@ -1,5 +1,5 @@
 rowcol_prestige_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree.rowcolnorm",
     rescale = rescale, ...
   ))
@@ -142,11 +142,11 @@ test_that("public feasible prestige is uniform and selector-distinct", {
   expect_identical(raw, c(A = 1, B = 1, C = 1))
   expect_identical(scaled, c(A = 1 / 3, B = 1 / 3, C = 1 / 3))
 
-  s01 <- as.data.frame(dyn_centrality(
+  s01 <- as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree",
     start = 0, end = 0, window = 0
   ))
-  s02 <- as.data.frame(dyn_centrality(
+  s02 <- as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "indegree.rownorm",
     start = 0, end = 0, window = 0
   ))
@@ -159,7 +159,7 @@ test_that("structurally infeasible public blocks are warned and all NA", {
     from = c("A", "B"), to = c("B", "C"), time = 0
   ))
   expect_warning(
-    result <- dyn_centrality(
+    result <- centrality_series(
       chain, measure = "prestige", prestige = "indegree.rowcolnorm",
       start = 0, end = 0, window = 0
     ),
@@ -180,7 +180,7 @@ test_that("loop policy precedes total-support feasibility", {
     c(Q = 1)
   )
   expect_warning(
-    inactive <- dyn_centrality(
+    inactive <- centrality_series(
       looped, measure = "prestige", prestige = "indegree.rowcolnorm",
       start = 1, end = 1, window = 0
     ),
@@ -229,7 +229,7 @@ test_that("bounded union occurs before feasibility and session balancing", {
     c(A = 1 / 2, B = 1 / 2)
   )
   expect_warning(
-    separate <- dyn_centrality(
+    separate <- centrality_series(
       dn, measure = "prestige", prestige = "indegree.rowcolnorm",
       sessions = "separate", start = 0, end = 0, window = 0
     ),
@@ -246,7 +246,7 @@ test_that("weights and repeated spells do not enter the balancing matrix", {
     weight = c(9, -9, 0, 7, 2, -3, 100, 4)
   )
   dn <- quiet_dynet(spells, loops = TRUE, weight = "weight")
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"),
     prestige = "indegree.rowcolnorm",
     start = 0, end = 0, window = 0
@@ -263,7 +263,7 @@ test_that("row-column prestige publishes support and solver metadata", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B"), to = c("B", "A"), time = 0
   ))
-  result <- dyn_centrality(
+  result <- centrality_series(
     dn, measure = "prestige", prestige = "indegree.rowcolnorm"
   )
   expect_identical(attr(result, "what"),

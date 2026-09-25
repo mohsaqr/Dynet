@@ -3,13 +3,13 @@
 
 all_verbs <- function(dn) {
   list(
-    centrality  = dyn_centrality(dn, measure = c("degree", "closeness")),
-    temporal    = dyn_centrality(dn, measure = "closeness", scope = "temporal"),
+    centrality  = centrality_series(dn, measure = c("degree", "closeness")),
+    temporal    = path_centrality(dn, measure = "closeness"),
     metrics     = metrics(dn, measure = c("density", "reciprocity")),
     events      = events(dn),
     durations   = durations(dn),
     burstiness  = burstiness(dn),
-    reachability = dyn_reachability(dn)
+    reachability = reachability(dn)
   )
 }
 
@@ -50,18 +50,18 @@ test_that("sessions add rows rather than nesting the result in a list", {
   e$session <- rep(c("term1", "term2"), length.out = nrow(e))
   dn <- quiet_dynet(e, session = "session")
 
-  sep <- dyn_centrality(dn, measure = "degree", sessions = "separate")
+  sep <- centrality_series(dn, measure = "degree", sessions = "separate")
   expect_s3_class(sep, "data.frame")
   expect_false(is.list(sep$value) || inherits(sep, "list"))
   expect_setequal(unique(sep$session), c("term1", "term2"))
 
-  pooled <- dyn_centrality(dn, measure = "degree", sessions = "collapse")
+  pooled <- centrality_series(dn, measure = "degree", sessions = "collapse")
   expect_false("session" %in% names(pooled))
 })
 
 test_that("as.data.frame gives long and wide layouts without hand-reshaping", {
   dn <- quiet_dynet(random_edges())
-  deg <- dyn_centrality(dn, measure = "degree")
+  deg <- centrality_series(dn, measure = "degree")
   long <- as.data.frame(deg)
   wide <- as.data.frame(deg, layout = "wide")
   expect_identical(class(long), "data.frame")
@@ -72,39 +72,39 @@ test_that("as.data.frame gives long and wide layouts without hand-reshaping", {
 
 test_that("summary collapses time into a tidy table with a peak", {
   dn <- quiet_dynet(random_edges())
-  s <- summary(dyn_centrality(dn, measure = "degree"))
+  s <- summary(centrality_series(dn, measure = "degree"))
   expect_s3_class(s, "data.frame")
   expect_true(all(c("node", "measure", "n", "mean", "sd", "min", "max",
                     "peak_time") %in% names(s)))
-  expect_equal(nrow(s), length(unique(dyn_centrality(dn, measure = "degree")$node)))
+  expect_equal(nrow(s), length(unique(centrality_series(dn, measure = "degree")$node)))
 
-  by_time <- summary(dyn_centrality(dn, measure = "degree"), by = "time")
+  by_time <- summary(centrality_series(dn, measure = "degree"), by = "time")
   expect_true("time" %in% names(by_time))
 })
 
 test_that("asking for several measures stacks them in one frame", {
   dn <- quiet_dynet(random_edges())
-  two <- dyn_centrality(dn, measure = c("degree", "betweenness"))
+  two <- centrality_series(dn, measure = c("degree", "betweenness"))
   expect_setequal(unique(two$measure), c("degree", "betweenness"))
-  one <- dyn_centrality(dn, measure = "degree")
+  one <- centrality_series(dn, measure = "degree")
   expect_equal(nrow(two), 2L * nrow(one))
 })
 
 test_that("unknown measures and wrong directedness raise classed conditions", {
   dn <- quiet_dynet(random_edges())
-  expect_error(dyn_centrality(dn, measure = "nonsense"),
+  expect_error(centrality_series(dn, measure = "nonsense"),
                class = "dynet_unknown_measure")
   expect_error(metrics(dn, measure = "nonsense"),
                class = "dynet_unknown_measure")
   expect_error(paths(dn, from = "not_a_vertex"),
                class = "dynet_unknown_vertex")
-  expect_error(dyn_centrality(dn, sessions = "separate"),
+  expect_error(centrality_series(dn, sessions = "separate"),
                class = "dynet_no_sessions")
   expect_error(mixing(dn, attribute = "role"),
                class = "dynet_unknown_attribute")
 
   und <- quiet_dynet(random_edges(), directed = FALSE)
-  expect_error(dyn_centrality(und, measure = "hub"),
+  expect_error(centrality_series(und, measure = "hub"),
                class = "dynet_needs_directed")
   expect_error(metrics(und, measure = "reciprocity"),
                class = "dynet_needs_directed")
@@ -118,7 +118,7 @@ test_that("summary n counts the values the statistics used", {
                       start = c(0, 5), end = c(1, 6))
   dn <- dynet(edges, vertex_spells = data.frame(node = "A", start = 3,
                                                 end = 6))
-  measured <- dyn_centrality(dn, measure = "degree")
+  measured <- centrality_series(dn, measure = "degree")
   long <- as.data.frame(measured)
   stats <- summary(measured)
 

@@ -321,7 +321,7 @@
 #'   asking for a fraction and a rate in one call raises
 #'   `dynet_incompatible_transition_windows`.
 #' @param sessions How to treat sessions: `"bounded"` (the default),
-#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
+#'   `"collapse"` or `"separate"`, as in [centrality_series()].
 #' @param start,end First and last time at which to measure. Default to the
 #'   observed range. A network built from dates may be addressed with dates.
 #' @param step How often to measure. Defaults to the interval the network was
@@ -964,7 +964,7 @@ events <- function(dn,
 #'   incident calendar exposure), defaulting to events and total. A measure
 #'   the chosen unit does not offer raises a `dynet_unknown_measure` error.
 #' @param sessions How to treat sessions: `"bounded"` (the default),
-#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
+#'   `"collapse"` or `"separate"`, as in [centrality_series()].
 #' @param censored Whether to `"include"` known follow-up, the default, or
 #'   `"exclude"` an entire edge raw spell or canonical vertex component with
 #'   either explicit outer censor flag. Administrative observation cuts never
@@ -1357,7 +1357,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #'   `"mean_gap"`. Defaults to the first three. Anything else raises a
 #'   `dynet_unknown_measure` error.
 #' @param sessions How to treat sessions: `"bounded"` (the default),
-#'   `"collapse"` or `"separate"`, as in [dyn_centrality()].
+#'   `"collapse"` or `"separate"`, as in [centrality_series()].
 #'
 #' @param plot Whether to draw the result as well as return it. Drawing is a
 #'   side effect in the manner of [graphics::hist()]: the verb still returns

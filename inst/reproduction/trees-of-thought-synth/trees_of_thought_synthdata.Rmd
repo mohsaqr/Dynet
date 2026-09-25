@@ -53,10 +53,10 @@ an exported Dynet verb. The mapping is:
 | `tErgmStats("edges" / "meandeg" / "triangle" / "idegree1.5" / "odegree1.5")` | `metrics(measure = ...)` |
 | `tSnaStats("dyad.census")`, `tSnaStats("triad.census")` | `metrics(measure = c("mutual", "asymmetric", "null"))`, `metrics(measure = "triads")` |
 | `tErgmStats('nodemix("Name")')` | `mixing(attribute = "name")` |
-| four `while` loops over `tSnaStats(snafun = degree / evcent / flowbet / betweenness / closeness / prestige)` | one `dyn_centrality(measure = ...)` call |
-| `centiserve::diffusion.degree(lambda = 1)` on the aggregate | `dyn_centrality(measure = "diffusion")` |
+| four `while` loops over `tSnaStats(snafun = degree / evcent / flowbet / betweenness / closeness / prestige)` | one `centrality_series(measure = ...)` call |
+| `centiserve::diffusion.degree(lambda = 1)` on the aggregate | `centrality_series(measure = "diffusion")` |
 | `tiedDuration(mode = , neighborhood = )` | `durations(unit = , mode = )` |
-| `tReach(direction = "fwd", start = , end = )` | `dyn_reachability()`, `dyn_centrality(scope = "temporal")` |
+| `tReach(direction = "fwd", start = , end = )` | `reachability()`, `path_centrality()` |
 | `proximity.timeline(time.increment = 0.1)` (`Visualize.Rmd`) | `plot(dn, type = "proximity")` |
 | `tPath(type = "earliest.arrive", graph.step.time = 0.1)` + `transmissionTimeline()` / `plotPaths()` inside a `while` loop over the ten codes (`Visualize.Rmd`) | `paths(direction = "forward", traversal_time = 0.1)` + `plot_path_trajectories()` |
 | `tPath(direction = "bkwd", type = "latest.depart", start = 0)` | `paths(direction = "backward", ...)` |
@@ -377,7 +377,7 @@ closeness, betweenness, eigenvector, flow betweenness — plus diffusion degree
 aggregate) come from a single call that already returns them tidily.
 
 ```{r centrality-heatmap, fig.height=11}
-centrality <- dyn_centrality(
+centrality <- centrality_series(
   dn,
   measure = c(
     "degree", "closeness", "betweenness", "eigenvector",
@@ -399,11 +399,11 @@ The study ran separate loops with `cmode = "indegree"` and
 `cmode = "outdegree"`; in Dynet the direction is the `mode` argument.
 
 ```{r directed-degree, fig.height=7}
-directed_degree <- dyn_centrality(
+directed_degree <- centrality_series(
   dn, measure = "degree", mode = "in",
   step = 0.1, window = 0.1
 )
-out_degree <- dyn_centrality(
+out_degree <- centrality_series(
   dn, measure = "degree", mode = "out",
   step = 0.1, window = 0.1
 )
@@ -418,19 +418,19 @@ The four prestige variants the study looped over — `indegree`, `eigenvector`,
 argument.
 
 ```{r prestige, fig.height=7}
-prestige_indegree <- dyn_centrality(
+prestige_indegree <- centrality_series(
   dn, measure = "prestige", prestige = "indegree",
   step = 0.1, window = 0.1
 )
-prestige_eigenvector <- dyn_centrality(
+prestige_eigenvector <- centrality_series(
   dn, measure = "prestige", prestige = "eigenvector",
   step = 0.1, window = 0.1
 )
-prestige_domain <- dyn_centrality(
+prestige_domain <- centrality_series(
   dn, measure = "prestige", prestige = "domain",
   step = 0.1, window = 0.1
 )
-prestige_proximity <- dyn_centrality(
+prestige_proximity <- centrality_series(
   dn, measure = "prestige", prestige = "domain.proximity",
   step = 0.1, window = 0.1
 )
@@ -526,24 +526,23 @@ plot(vertex_duration)
 # Temporal reachability and centrality
 
 `tReach()` was used to count, for each code, how many other codes it could
-reach along time-respecting paths within a window. `dyn_reachability()`
+reach along time-respecting paths within a window. `reachability()`
 answers the same question in both directions at once, and
-`dyn_centrality(scope = "temporal")` returns the path-based measures computed
+`path_centrality()` returns the path-based measures computed
 on the time-respecting paths themselves rather than on a snapshot.
 
 ```{r reachability, fig.height=8}
-reachability <- dyn_reachability(
+reach <- reachability(
   dn, direction = "both", measure = c("reach", "reach_count")
 )
-reachability
-plot(reachability)
+reach
+plot(reach)
 ```
 
 ```{r temporal-centrality, fig.height=9}
-temporal_centrality <- dyn_centrality(
+temporal_centrality <- path_centrality(
   dn,
-  measure = c("closeness", "betweenness", "reach", "reach_count"),
-  scope = "temporal"
+  measure = c("closeness", "betweenness")
 )
 temporal_centrality
 plot(temporal_centrality)
@@ -712,7 +711,7 @@ internal, or had been renamed, the check below would say so.
 ```{r audit-exports}
 verbs_used <- c(
   "as_dynet", "collapse_network", "events", "metrics", "mixing",
-  "durations", "dyn_centrality", "dyn_reachability", "paths",
+  "durations", "centrality_series", "path_centrality", "reachability", "paths",
   "path_trajectories", "plot_path_trajectories", "induce_subgraph"
 )
 data.frame(

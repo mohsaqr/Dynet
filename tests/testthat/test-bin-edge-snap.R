@@ -38,8 +38,8 @@ test_that("integer hours and POSIXct hours give identical hourly series", {
     expect_equal(b$value, a$value, info = measure)
     expect_equal(b$time * 24, a$time)
   }
-  a <- as.data.frame(dyn_centrality(p$hours, measure = "degree"))
-  b <- as.data.frame(dyn_centrality(p$stamps, measure = "degree", step = h, window = h))
+  a <- as.data.frame(centrality_series(p$hours, measure = "degree"))
+  b <- as.data.frame(centrality_series(p$stamps, measure = "degree", step = h, window = h))
   expect_equal(b$value, a$value)
   a <- as.data.frame(events(p$hours))
   b <- as.data.frame(events(p$stamps, step = h, window = h))

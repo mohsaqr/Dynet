@@ -45,7 +45,7 @@ test_that("V02 exact snapshots use the eligible induced population", {
   expect_equal(v02_values(centralization, "centralization_closeness"),
                c(1/2, 13/60, 2/9, 7/20, 13/60, NA))
 
-  degree <- as.data.frame(dyn_centrality(
+  degree <- as.data.frame(centrality_series(
     dn, "degree", start = 0, end = 5, step = 1, window = 0
   ))
   actual <- matrix(degree$value, nrow = 5)
@@ -117,7 +117,7 @@ test_that("V02 empty and singleton eligible populations retain exact pins", {
   expect_true(all(is.nan(scalar[c("hierarchy", "lubness")])))
   expect_equal(sum(grepl("^triad_", names(scalar))), 16)
   expect_equal(sum(scalar[grepl("^triad_", names(scalar))]), 0)
-  expect_true(all(is.na(as.data.frame(dyn_centrality(
+  expect_true(all(is.na(as.data.frame(centrality_series(
     empty, "degree", start = 2, end = 2, step = 1, window = 0
   ))$value)))
 
@@ -185,7 +185,7 @@ test_that("V02 snapshots, mixing, loops, weights and isolates share one state", 
   expect_equal(v02_values(graph, "active_nodes"), 2)
   expect_equal(v02_values(graph, "isolates"), 1)
   expect_equal(v02_values(graph, "density"), 1/6)
-  node <- as.data.frame(dyn_centrality(
+  node <- as.data.frame(centrality_series(
     dn, c("degree", "strength"), start = 1, end = 1, step = 1, window = 0
   ))
   expect_equal(node$value[node$measure == "degree"], c(3, 1, 0))
@@ -244,7 +244,7 @@ test_that("V02 all snapshot centralities pin empty and singleton populations", {
     node = c("A", "B", "C"), start = 0, end = 1
   ))
   measures <- setdiff(Dynet:::.node_measures, c("indegree", "outdegree"))
-  got <- as.data.frame(dyn_centrality(
+  got <- as.data.frame(centrality_series(
     empty, measures, start = 2, end = 2, step = 1, window = 0
   ))
   expect_true(all(is.na(got$value)))
@@ -252,7 +252,7 @@ test_that("V02 all snapshot centralities pin empty and singleton populations", {
   singleton <- quiet_dynet(edges, nodes = nodes, vertex_spells = data.frame(
     node = c("A", "B", "C"), start = c(2, 0, 0), end = c(3, 1, 1)
   ))
-  one <- as.data.frame(dyn_centrality(
+  one <- as.data.frame(centrality_series(
     singleton, measures, start = 2, end = 2, step = 1, window = 0
   ))
   expect_true(all(is.na(one$value[one$node != "A"])))
@@ -268,8 +268,8 @@ test_that("V02 no-activity compatibility preserves public values and shape", {
   expect_equal(metrics(base, c("density", "triads")),
                metrics(empty, c("density", "triads")),
                ignore_attr = TRUE)
-  expect_equal(dyn_centrality(base, c("degree", "pagerank", "strength")),
-               dyn_centrality(empty, c("degree", "pagerank", "strength")),
+  expect_equal(centrality_series(base, c("degree", "pagerank", "strength")),
+               centrality_series(empty, c("degree", "pagerank", "strength")),
                ignore_attr = TRUE)
   expect_equal(snapshots(base), snapshots(empty))
 })

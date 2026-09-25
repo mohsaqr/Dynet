@@ -40,7 +40,7 @@ animate(
 \code{NULL}, the default, takes each from the network's own observation
 window and bin width.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}: \code{"bounded"}
+\item{sessions}{How to treat sessions, as in \code{\link[=centrality_series]{centrality_series()}}: \code{"bounded"}
 (the default) or \code{"collapse"}. An animation draws calendar bins, so
 \code{"separate"} is not offered.}
 
@@ -49,9 +49,9 @@ or \code{"groups"}, or a data frame of coordinates. See details.}
 
 \item{measure}{What node size follows. \code{NULL}, the default, keeps every
 vertex the same size. The name of a snapshot node measure from
-\code{\link[=dyn_centrality]{dyn_centrality()}}, such as \code{"degree"} or \code{"betweenness"}, computes it on
+\code{\link[=centrality_series]{centrality_series()}}, such as \code{"degree"} or \code{"betweenness"}, computes it on
 the animation's own grid, so a vertex grows and shrinks bin by bin. A
-node-level result of \code{\link[=dyn_centrality]{dyn_centrality()}} is matched by vertex and time;
+node-level result of \code{\link[=centrality_series]{centrality_series()}} is matched by vertex and time;
 one computed with \code{window = "all"} holds a single value per vertex, so
 every vertex keeps one size for the whole film, for instance its degree
 over the whole period. The name of a numeric vertex attribute supplied
@@ -95,7 +95,7 @@ way in and the dissolving colour on the way out; \code{"hide"} keeps it in
 place, invisible.}
 
 \item{isolates}{How a vertex that is present but has no tie in a bin is
-drawn. \code{"fade"}, the default, at a third of its opacity; \code{"show"} at
+drawn. \code{"fade"}, the default, at 35\% of its opacity; \code{"show"} at
 full opacity; \code{"hide"} invisible.}
 
 \item{ease}{\code{"dwell"}, the default, holds each bin still before it
@@ -225,9 +225,9 @@ drawn; \code{dynet_unknown_attribute} for \code{layout = "groups"} on a network
 without a partition or a \code{labels} naming no vertex attribute;
 \code{dynet_missing_column} and \code{dynet_unknown_node} for a
 coordinate table that is incomplete; \code{dynet_unknown_measure} for a
-\code{measure} that is neither a measure \code{\link[=dyn_centrality]{dyn_centrality()}} offers nor a
-numeric vertex attribute, and whatever \code{\link[=dyn_centrality]{dyn_centrality()}} raises for one it
-refuses; \code{dynet_bad_input} for a \code{\link[=dyn_centrality]{dyn_centrality()}} result that is not
+\code{measure} that is neither a measure \code{\link[=centrality_series]{centrality_series()}} offers nor a
+numeric vertex attribute, and whatever \code{\link[=centrality_series]{centrality_series()}} raises for one it
+refuses; \code{dynet_bad_input} for a \code{\link[=centrality_series]{centrality_series()}} result that is not
 node-level or lands on none of the bins, and a warning of class
 \code{dynet_partial_measure} when it lands on only some; and \code{dynet_bad_input} for a non-positive
 \code{fps}, \code{tween}, \code{width}, \code{height} or \code{res}, an odd video size, a \code{loop}
@@ -256,6 +256,6 @@ if (requireNamespace("av", quietly = TRUE) &&
 }
 \seealso{
 \code{\link[=snapshots]{snapshots()}} for the same grid as a table, \code{\link[=plot.dynet]{plot.dynet()}} with
-\code{type = "snapshots"} for it as a static filmstrip, and \code{\link[=dyn_centrality]{dyn_centrality()}}
+\code{type = "snapshots"} for it as a static filmstrip, and \code{\link[=centrality_series]{centrality_series()}}
 for the measures node size can follow.
 }

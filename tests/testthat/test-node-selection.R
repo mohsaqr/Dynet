@@ -12,8 +12,8 @@ test_that("a node-bearing data frame selects the same subgraph as its names", {
 
 test_that("a `node` column is read as well as a `name` column", {
   dn <- dynet(school_contacts)
-  top <- subset(as.data.frame(dyn_centrality(dn, measure = "degree",
-                                             window = "all")), value > 16)
+  top <- subset(as.data.frame(centrality_series(dn, measure = "degree",
+                                                window = "all")), value > 16)
   expect_true("node" %in% names(top))
   sub <- induce_subgraph(dn, nodes = top)
   expect_setequal(as.data.frame(sub, what = "nodes")$name, top$node)

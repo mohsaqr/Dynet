@@ -22,7 +22,7 @@
 #'   `"cosine"` or `"pearson"`.
 #' @param sessions How to treat sessions when the layers are built:
 #'   `"bounded"` (the default) and `"collapse"` differ in whether a session
-#'   wall gates a tie into its bin. Unlike [dyn_centrality()], `"separate"`
+#'   wall gates a tie into its bin. Unlike [centrality_series()], `"separate"`
 #'   adds no `session` column here: layers are keyed on time alone, so two
 #'   session-local bins sharing a time are compared as one layer.
 #' @param start,end First and last time to measure. Default to the observed

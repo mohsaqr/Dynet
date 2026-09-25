@@ -234,7 +234,7 @@
                             style = .dyn_style(), ...) {
   if (networks) .need_cograph()
   # The measure is read straight off each slice rather than through
-  # dyn_centrality(), so it has to be validated here.
+  # centrality_series(), so it has to be validated here.
   if (!measure %in% .node_measures || length(measure) != 1L) {
     stop(errorCondition(
       sprintf("`measure` must be one of %s.",

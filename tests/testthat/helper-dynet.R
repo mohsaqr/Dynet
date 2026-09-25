@@ -27,3 +27,13 @@ random_edges <- function(n_v = 12L, n_e = 60L, span = 20, seed = 1L) {
 }
 
 quiet_dynet <- function(...) suppressMessages(dynet(...))
+
+# The retired `dyn_centrality()` still routes `scope = "temporal"` reach and
+# its old argument checks; tests of those contracts silence only its classed
+# deprecation warning, so any other warning still reaches the test.
+legacy_centrality <- function(...) {
+  withCallingHandlers(
+    dyn_centrality(...),
+    dynet_deprecated = function(w) invokeRestart("muffleWarning")
+  )
+}

@@ -115,7 +115,7 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, measure = "degree")
+#' degree <- centrality_series(dn, measure = "degree")
 #' as.data.frame(degree)
 #' as.data.frame(degree, layout = "wide")
 #' as.data.frame(degree, top = 5)
@@ -203,7 +203,7 @@ as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
 #' @return `x`, invisibly.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' degree <- centrality_series(dn, step = 4, window = 4)
 #' degree
 #' print(degree, n = 4)
 #' @export
@@ -307,7 +307,7 @@ print.dynet_metric <- function(x, n = 12L, ...) {
 #'   so its header stays true to the series.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' degree <- centrality_series(dn, step = 4, window = 4)
 #' head(degree)
 #' @export
 head.dynet_metric <- function(x, n = 6L, ...) {
@@ -326,7 +326,7 @@ head.dynet_metric <- function(x, n = 6L, ...) {
 #'   so its header stays true to the series.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, step = 4, window = 4)
+#' degree <- centrality_series(dn, step = 4, window = 4)
 #' tail(degree)
 #' @export
 tail.dynet_metric <- function(x, n = 6L, ...) {
@@ -358,7 +358,7 @@ tail.dynet_metric <- function(x, n = 6L, ...) {
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, measure = "degree")
+#' degree <- centrality_series(dn, measure = "degree")
 #' summary(degree)
 #' summary(degree, by = "time")
 #'
@@ -461,7 +461,7 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' degree <- dyn_centrality(dn, measure = "degree")
+#' degree <- centrality_series(dn, measure = "degree")
 #' plot(degree, top = 5)
 #' plot(degree, palette = "extended")
 #'

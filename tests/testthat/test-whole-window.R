@@ -34,7 +34,7 @@ test_that("aggregate density equals the static density of the union network", {
 test_that("degree over the whole window is the aggregate degree", {
   dn <- dynet(data.frame(from = c("A", "A", "B"), to = c("B", "C", "C"),
                          start = c(0, 2, 4), end = c(1, 3, 5)))
-  got <- as.data.frame(dyn_centrality(dn, measure = "degree", window = "all"))
+  got <- as.data.frame(centrality_series(dn, measure = "degree", window = "all"))
   expect_equal(got$value[got$node == "A"], 2)
   expect_equal(got$value[got$node == "B"], 2)
   expect_equal(got$value[got$node == "C"], 2)

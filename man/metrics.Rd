@@ -42,7 +42,7 @@ directed network, raising \code{dynet_needs_directed} on an undirected one:
 \code{"reciprocity"}, \code{"mutual"}, \code{"asymmetric"}, \code{"null"}, \code{"in_2stars"},
 \code{"out_2stars"}, \code{"indegree_1_5"} and \code{"outdegree_1_5"}.}
 
-\item{sessions}{How to treat sessions, as in \code{\link[=dyn_centrality]{dyn_centrality()}}:
+\item{sessions}{How to treat sessions, as in \code{\link[=centrality_series]{centrality_series()}}:
 \code{"bounded"} (the default) keeps each session apart while pooling the
 reported rows, \code{"collapse"} ignores session labels, and \code{"separate"}
 reports each session on its own rows and needs a network built with a
@@ -103,7 +103,11 @@ ledgers are \verb{R = sum(r) integral(Y[r](t) dt)},
 \verb{O = sum(r) integral(Y[r](t) E[r](t) dt)}, and
 \verb{R_H = sum(r in H) integral(Y[r](t) dt)}. The two occupancies are \code{O/R}
 and \code{O/R_H} and lie in \verb{[0, 1]}. Loops, weights, duplicates, and censor
-flags cannot multiply occupancy.
+flags cannot multiply occupancy. Integration stops at the observation
+period, which defaults to the span of the data, so a last window reaching
+past the final spell is measured over its observed part only, and tiled
+windows pool to the whole-period value. \code{tsna::tEdgeDensity()} uses the
+same observation-period rule.
 
 \code{"onset_intensity"} and \code{"observed_pair_onset_intensity"} divide the
 number of known raw spell starts by \code{R} and \code{R_H}. Each nonloop raw row,
@@ -161,8 +165,20 @@ this matches ERGM's \code{meandeg} statistic. \code{"indegree_1_5"} and
 \code{"outdegree_1_5"} sum the corresponding vertex degrees raised to 1.5.
 Directed \code{"triangles"} is the sum of cyclic and transitive triples, while
 an undirected triangle is counted once.
-A concurrent vertex has at least two distinct neighbours, so a reciprocal
-dyad still supplies only one neighbour. \code{"in_2stars"} and \code{"out_2stars"}
+A concurrent vertex has relations to at least two distinct neighbours
+active at the same instant, so a reciprocal dyad still supplies only one
+neighbour. Unlike the other structural selectors, concurrency is not read
+from the window's union snapshot: with a positive \code{window}, two ties that
+fall in the same window without overlapping in time do not make their
+shared vertex concurrent. A vertex counts in a window when it is
+concurrent at any instant inside it; \code{"concurrent_nodes"} is the number of
+such vertices and \code{"concurrent_share"} divides it by the window's eligible
+vertices. With \code{window = 0} the snapshot is itself an instant, so both
+readings coincide. Half-open spells that only meet at a boundary do not
+overlap, and a point contact is concurrent with every relation active at
+its timestamp. \code{\link[=mixing]{mixing()}} answers a different question -- which groups are
+connected somewhere in the window -- and requires no simultaneity.
+\code{"in_2stars"} and \code{"out_2stars"}
 sum \code{choose(degree, 2)} over directed in- and out-degrees. Directed
 \code{"two_paths"} counts ordered \code{i -> j -> k} paths with \code{i != k};
 undirected two-paths count each unordered wedge once. Empty eligible
@@ -218,6 +234,10 @@ Lawrence Erlbaum.
 
 Newman, M. E. J. (2002). Assortative mixing in networks. \emph{Physical Review
 Letters}, 89, 208701. \doi{10.1103/PhysRevLett.89.208701}
+
+Morris, M., & Kretzschmar, M. (1997). Concurrent partnerships and the
+spread of HIV. \emph{AIDS}, 11(5), 641-648.
+\doi{10.1097/00002030-199705000-00012}
 
 Holland, P. W., & Leinhardt, S. (1976). Local structure in social networks.
 \emph{Sociological Methodology}, 7, 1-45. \doi{10.2307/270703}

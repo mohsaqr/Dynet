@@ -16,7 +16,7 @@ test_that("diffusion degree is available over temporal snapshots", {
     from = c("A", "A", "B"), to = c("B", "C", "C"),
     start = 0, end = 1
   ))
-  out <- as.data.frame(dyn_centrality(
+  out <- as.data.frame(centrality_series(
     dn, measure = "diffusion", mode = "out", lambda = 0.5,
     start = 0, end = 0, step = 1, window = 0
   ))

@@ -76,7 +76,7 @@ test_that("the new measures reach the public verbs", {
   # Bonacich power hits a singular `I - beta A` on some blocks; that is now a
   # classed warning rather than a silent NA (review 2026-09-05, finding 9).
   expect_warning(
-    node <- as.data.frame(dyn_centrality(dn,
+    node <- as.data.frame(centrality_series(dn,
       measure = c("power", "harary", "information", "load", "flow_betweenness"))),
     class = "dynet_kernel_singular")
   expect_setequal(unique(node$measure),
@@ -181,13 +181,13 @@ test_that("an edge counts once however many spells produced it", {
 
   ms <- c("degree", "closeness", "betweenness", "eigenvector", "pagerank",
           "coreness", "power", "harary", "information", "load")
-  twice <- as.data.frame(dyn_centrality(dn, measure = ms))
-  single <- as.data.frame(dyn_centrality(dn1, measure = ms))
+  twice <- as.data.frame(centrality_series(dn, measure = ms))
+  single <- as.data.frame(centrality_series(dn1, measure = ms))
   expect_equal(twice$value, single$value)
 
   # Strength is the exception, and must see the repetition.
-  s2 <- as.data.frame(dyn_centrality(dn, measure = "strength"))
-  s1 <- as.data.frame(dyn_centrality(dn1, measure = "strength"))
+  s2 <- as.data.frame(centrality_series(dn, measure = "strength"))
+  s1 <- as.data.frame(centrality_series(dn1, measure = "strength"))
   expect_gt(sum(s2$value), sum(s1$value))
 })
 

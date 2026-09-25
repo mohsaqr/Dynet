@@ -66,11 +66,11 @@ test_that("arrival at an interval terminus cannot board it", {
   paths <- paths(dn, from = "A", at = 0, sessions = "collapse")
 
   expect_equal(.path_arrivals(paths, c("A", "B", "C")), c(0, 5, NA))
-  reach <- dyn_reachability(dn, direction = "forward", at = 0,
+  reach <- reachability(dn, direction = "forward", at = 0,
                             sessions = "collapse")
   expect_equal(.reach_value(reach, "A"), 0.5)
-  centrality <- dyn_centrality(dn, measure = "reach", scope = "temporal",
-                               sessions = "collapse")
+  centrality <- legacy_centrality(dn, measure = "reach", scope = "temporal",
+                                  sessions = "collapse")
   expect_equal(.reach_value(centrality, "A", measure_name = "reach"), 0.5)
 
   enc <- .encode(dn)
@@ -168,7 +168,7 @@ test_that("a simultaneous cycle terminates without changing the source time", {
 
   expect_no_warning(paths <- paths(dn, from = "A", at = 0))
   expect_equal(.path_arrivals(paths, c("A", "B", "C")), c(0, 5, 5))
-  reach <- dyn_reachability(dn, direction = "forward", at = 0)
+  reach <- reachability(dn, direction = "forward", at = 0)
   expect_equal(as.data.frame(reach)$value, rep(1, 3))
 })
 

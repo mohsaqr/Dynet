@@ -1,5 +1,5 @@
 rowcolnorm_eigen_frame <- function(dn, rescale = FALSE, ...) {
-  as.data.frame(dyn_centrality(
+  as.data.frame(centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
     rescale = rescale, ...
   ))
@@ -73,7 +73,7 @@ test_that("balanced eigen prestige leaves RNG state untouched", {
     to = c("A", "B", "A", "B", "C", "B", "C"), time = 0
   ), loops = TRUE)
   before_public <- .Random.seed
-  invisible(dyn_centrality(
+  invisible(centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
     start = 0, end = 0, window = 0
   ))
@@ -235,7 +235,7 @@ test_that("public balanced eigen prestige ignores weights and mode", {
       dn, mode = "out", start = 0, end = 0, window = 0
     ), expected, tolerance = 1e-14
   )
-  mixed <- as.data.frame(dyn_centrality(
+  mixed <- as.data.frame(centrality_series(
     dn, measure = c("strength", "prestige"),
     prestige = "eigenvector.rowcolnorm", start = 0, end = 0, window = 0
   ))
@@ -261,7 +261,7 @@ test_that("session union precedes support balancing and spectrum", {
     ), c(A = 1 / 2, B = 1 / 2), tolerance = 1e-14
   )
   expect_warning(
-    separate <- dyn_centrality(
+    separate <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
       sessions = "separate", start = 0, end = 0, window = 0
     ), class = "dynet_prestige_infeasible"
@@ -275,7 +275,7 @@ test_that("session union precedes support balancing and spectrum", {
     session = c("s1", "s2")
   ), session = "session", loops = TRUE)
   expect_warning(
-    union_identity <- dyn_centrality(
+    union_identity <- centrality_series(
       loops, measure = "prestige", prestige = "eigenvector.rowcolnorm",
       sessions = "bounded", start = 0, end = 0, window = 0
     ), class = "dynet_prestige_eigen_undefined"
@@ -314,7 +314,7 @@ test_that("final-bin point changes support and public status", {
   dn <- quiet_dynet(spells)
   warning_classes <- character()
   several <- withCallingHandlers(
-    dyn_centrality(
+    centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
       start = 0, step = 1, window = 1
     ), warning = function(w) {
@@ -334,7 +334,7 @@ test_that("final-bin point changes support and public status", {
   expect_identical(diagnostics$stage, "support")
 
   expect_warning(
-    point <- dyn_centrality(
+    point <- centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
       start = 2, end = 2, window = 0
     ), class = "dynet_prestige_infeasible"
@@ -355,7 +355,7 @@ test_that("mixed terminal stages aggregate distinct warning classes", {
   dn <- quiet_dynet(spells, loops = TRUE)
   warning_classes <- character()
   result <- withCallingHandlers(
-    dyn_centrality(
+    centrality_series(
       dn, measure = "prestige", prestige = "eigenvector.rowcolnorm",
       start = 0, end = 2, step = 1, window = 0
     ), warning = function(w) {
@@ -381,7 +381,7 @@ test_that("balanced eigen prestige publishes both certification stages", {
   dn <- quiet_dynet(data.frame(
     from = c("A", "B"), to = c("B", "A"), time = 0
   ))
-  raw <- dyn_centrality(
+  raw <- centrality_series(
     dn, measure = "prestige", prestige = "eigenvector.rowcolnorm"
   )
   expect_identical(attr(raw, "definition"), "eigenvector.rowcolnorm")
@@ -405,7 +405,7 @@ test_that("balanced eigen prestige publishes both certification stages", {
                    "retained_once_before_support_and_balancing")
   expect_identical(attr(raw, "undefined"), "NA")
 
-  scaled <- dyn_centrality(
+  scaled <- centrality_series(
     dn, measure = c("degree", "prestige"),
     prestige = "eigenvector.rowcolnorm", rescale = TRUE
   )
@@ -443,10 +443,10 @@ test_that("balanced eigen prestige obeys coordinates and scope", {
 
   undirected <- quiet_dynet(data.frame(from = "A", to = "B", time = 0),
                             directed = FALSE)
-  expect_error(dyn_centrality(
+  expect_error(centrality_series(
     undirected, measure = "prestige", prestige = "eigenvector.rowcolnorm"
   ), class = "dynet_needs_directed")
-  expect_error(dyn_centrality(
+  expect_error(legacy_centrality(
     quiet_dynet(data.frame(from = "A", to = "B", time = 0)),
     measure = "prestige", prestige = "eigenvector.rowcolnorm",
     scope = "temporal"

@@ -429,11 +429,11 @@ test_that("path, reachability, and temporal reach share duration semantics", {
     start = c(0, 2), end = c(2, 4), stringsAsFactors = FALSE
   )
   dn <- quiet_dynet(spells)
-  reach_result <- dyn_reachability(
+  reach_result <- reachability(
     dn, direction = "forward", start = 0, end = 4,
     traversal_time = 2
   )
-  centrality_result <- dyn_centrality(
+  centrality_result <- legacy_centrality(
     dn, measure = "reach", scope = "temporal", start = 0, end = 4,
     traversal_time = 2
   )
@@ -602,17 +602,17 @@ test_that("zero traversal preserves the established path result", {
     as.data.frame(backward_explicit, what = "steps")
   )
 
-  reach_implicit <- dyn_reachability(
+  reach_implicit <- reachability(
     dn, direction = "both", start = 0, end = 20
   )
-  reach_explicit <- dyn_reachability(
+  reach_explicit <- reachability(
     dn, direction = "both", start = 0, end = 20,
     traversal_time = 0
   )
-  centrality_implicit <- dyn_centrality(
+  centrality_implicit <- legacy_centrality(
     dn, measure = "reach", scope = "temporal", start = 0, end = 20
   )
-  centrality_explicit <- dyn_centrality(
+  centrality_explicit <- legacy_centrality(
     dn, measure = "reach", scope = "temporal", start = 0, end = 20,
     traversal_time = 0
   )
@@ -636,7 +636,7 @@ test_that("traversal duration validates units and centrality scope", {
     class = "dynet_bad_input"
   )
   expect_error(
-    dyn_centrality(dn, traversal_time = 1),
+    legacy_centrality(dn, traversal_time = 1),
     class = "dynet_bad_input"
   )
   expect_error(

@@ -42,7 +42,7 @@
 #' @param attribute Name of a column in the vertex table. A name the network
 #'   does not carry raises an error of class `dynet_unknown_attribute` that
 #'   lists the attributes it does have.
-#' @param sessions How to treat sessions, as in [dyn_centrality()]:
+#' @param sessions How to treat sessions, as in [centrality_series()]:
 #'   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
 #'   needs a network built with a session column and raises
 #'   `dynet_no_sessions` otherwise.
@@ -248,7 +248,7 @@ mixing <- function(dn, attribute,
 #'   outside every bin falls back to the nearest bin rather than failing, but
 #'   that bin may itself hold no active tie, in which case the result is a
 #'   zero-row frame with the documented columns.
-#' @param sessions How to treat sessions, as in [dyn_centrality()]:
+#' @param sessions How to treat sessions, as in [centrality_series()]:
 #'   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
 #'   needs a network built with a session column and raises
 #'   `dynet_no_sessions` otherwise.
@@ -280,8 +280,12 @@ mixing <- function(dn, attribute,
 #'   [as.data.frame()] returns the plain table. A pair
 #'   joined by more than one spell in the same bin is one edge, with
 #'   `n_spells` recording how many spells were collapsed -- so the edge counts
-#'   here agree with those from [metrics()]. Eligible isolates have no
-#'   synthetic edge row; use [dyn_centrality()] or [metrics()] when the
+#'   here agree with those from [metrics()]. `weight` is the sum of those
+#'   spells' full weights: a spell counts its whole weight in every bin it
+#'   touches, as `networkDynamic::network.collapse()` does. Snapshot
+#'   `"strength"` in [centrality_series()] instead splits a spell's weight by
+#'   the share of its duration inside the bin. Eligible isolates have no
+#'   synthetic edge row; use [centrality_series()] or [metrics()] when the
 #'   eligible population itself is required.
 #'
 #' @section Conditions:

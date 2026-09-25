@@ -35,7 +35,7 @@ asking for a fraction and a rate in one call raises
 \code{dynet_incompatible_transition_windows}.}
 
 \item{sessions}{How to treat sessions: \code{"bounded"} (the default),
-\code{"collapse"} or \code{"separate"}, as in \code{\link[=dyn_centrality]{dyn_centrality()}}.}
+\code{"collapse"} or \code{"separate"}, as in \code{\link[=centrality_series]{centrality_series()}}.}
 
 \item{start, end}{First and last time at which to measure. Default to the
 observed range. A network built from dates may be addressed with dates.}

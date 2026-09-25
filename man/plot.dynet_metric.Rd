@@ -59,7 +59,7 @@ act on there and are ignored.
 }
 \examples{
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, measure = "degree")
+degree <- centrality_series(dn, measure = "degree")
 plot(degree, top = 5)
 plot(degree, palette = "extended")
 

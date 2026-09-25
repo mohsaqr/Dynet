@@ -111,10 +111,10 @@ test_that("cograph aesthetic names are honoured by the event view", {
   dn <- .contact_net()
   built <- function(...) ggplot2::ggplot_build(plot(dn, type = "events", ...))
 
-  nodes <- built(node_size = 5)$data[[3L]]
+  nodes <- built(node_size = 5)$data[[4L]]
   expect_true(all(nodes$size == 5))
-  expect_identical(unique(built(node_shape = "square")$data[[3L]]$shape), 22L)
-  expect_true(all(built(node_fill = "grey80")$data[[3L]]$fill == "grey80"))
+  expect_identical(unique(built(node_shape = "square")$data[[4L]]$shape), 22L)
+  expect_true(all(built(node_fill = "grey80")$data[[4L]]$fill == "grey80"))
 
   # A single edge_color overrides the source-to-target run entirely.
   expect_identical(unique(built(edge_color = "#D55E00")$data[[2L]]$colour),
@@ -171,4 +171,47 @@ test_that("splot aesthetic names still reach splot for delegating views", {
   expect_s3_class(plot(dn, type = "network", curvature = 0.3), "dynet")
   expect_error(plot(dn, type = "network", nodesize = 8),
                class = "dynet_unknown_plot_arg")
+})
+
+test_that("the event view colours each row label with its actor", {
+  dn <- .contact_net()
+  built <- ggplot2::ggplot_build(plot(dn, type = "events"))
+  nodes <- built$data[[4L]]
+  labels <- built$data[[length(built$data)]]
+  # Each label sits on its row in the colour of the nodes drawn on that row,
+  # and no separate legend is added.
+  row_colours <- vapply(split(nodes$fill, nodes$y), unique, character(1L))
+  expect_identical(labels$colour, unname(row_colours[as.character(labels$y)]))
+  expect_identical(trimws(labels$label), rev(dn$nodes$name))
+  expect_null(built$plot$scales$get_scales("fill"))
+  fixed <- ggplot2::ggplot_build(plot(dn, type = "events",
+                                      label_color = "grey20"))
+  expect_true(all(fixed$data[[length(fixed$data)]]$colour == "grey20"))
+})
+
+test_that("only the origin of a link is dotted, as in cograph's TNA style", {
+  dn <- .contact_net()
+  built <- ggplot2::ggplot_build(plot(dn, type = "events", time = "event"))
+  solid <- built$data[[2L]]
+  origin <- built$data[[3L]]
+  expect_true(all(origin$linetype == "12"))
+  expect_true(all(solid$linetype == 1))
+  # One dotted origin per link, in one colour, the source's; it covers the
+  # first fifth of the link and the solid rest carries the colour run.
+  expect_identical(length(unique(origin$group)), length(unique(solid$group)))
+  per_piece <- vapply(split(origin$colour, origin$group),
+                      \(v) length(unique(v)), integer(1L))
+  expect_true(all(per_piece == 1L))
+  share <- nrow(origin) / (nrow(origin) + nrow(solid) - length(unique(solid$group)))
+  expect_equal(share, 0.2, tolerance = 0.02)
+  longer <- ggplot2::ggplot_build(plot(dn, type = "events", time = "event",
+                                       edge_start_length = 0.4))
+  expect_gt(nrow(longer$data[[3L]]), nrow(origin))
+  off <- ggplot2::ggplot_build(plot(dn, type = "events",
+                                    edge_start_style = "solid"))
+  expect_identical(nrow(off$data[[3L]]), 0L)
+  expect_error(plot(dn, type = "events", edge_start_length = 0.9),
+               class = "dynet_bad_input")
+  expect_error(plot(dn, type = "events", edge_start_style = "wavy"),
+               class = "dynet_bad_input")
 })
