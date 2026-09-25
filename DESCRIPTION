@@ -1,6 +1,6 @@
 Package: Dynet
 Title: Tidy Temporal Network Analysis
-Version: 0.4.11
+Version: 0.4.12
 Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre"),
     email = "saqr@saqr.me")
 Description: Construction, measurement and visualisation of temporal
@@ -45,5 +45,5 @@ Config/testthat/edition: 3
 URL: https://pak.dynasite.org/Dynet, https://github.com/mohsaqr/Dynet
 BugReports: https://github.com/mohsaqr/Dynet/issues
 LazyData: true
-Config/Needs/website: av, dplyr, gifski, igraph, janitor, lubridate,
-    network, networkDynamic, rio, sna, tsna
+Config/Needs/website: av, gifski, igraph, network, networkDynamic, sna,
+    tsna

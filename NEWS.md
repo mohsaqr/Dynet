@@ -1,4 +1,4 @@
-# Dynet 0.4.11
+# Dynet 0.4.12
 
 ## Breaking changes
 
@@ -20,6 +20,10 @@
   series raises `dynet_unknown_highlight` instead of drawing everything grey.
 * `mooc_people` carries `expert_level`, the chapter's label for the
   experience code, so the mixing attribute needs no recode.
+* The website article that rebuilt the MOOC network from the published CSV
+  files was removed; `vignette("ch17-temporal-networks")` builds the same
+  network from the bundled data in one call. The site deploy now clears
+  files that are no longer built.
 * `set_tie_sessions()` gains `breaks` and `labels`: sessions can be cut on
   the time axis (`breaks = c(7, 14)` gives three weeks) instead of being
   derived by hand as a column and matched positionally against the spell

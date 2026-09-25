@@ -22,11 +22,9 @@ articles:
 - title: Case studies
   desc: >
     Complete analyses of real data. The MOOC forum case study ships with the
-    package on bundled data; the second MOOC document builds the same network
-    from the published CSV files; the Trees of Thought study is website-only.
+    package on bundled data; the Trees of Thought study is website-only.
   contents:
   - ch17-temporal-networks
-  - articles/ch17-published-data
   - articles/thought-chains
 
 reference:
