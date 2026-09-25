@@ -35,7 +35,7 @@ its header stays true to the series.
 
 ``` r
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, step = 4, window = 4)
+degree <- centrality_series(dn, step = 4, window = 4)
 tail(degree)
 #> # Degree (node-level)
 #> # 14 vertices | 6 time points, 4 per bin | time in step

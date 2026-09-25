@@ -1,84 +1,75 @@
 # Dynet
 
-The Dynet R package provides functions for constructing, measuring and
-visualising temporal networks, that is, networks whose ties are located
-in time. A network is built with one constructor from any of four kinds
-of relational log: interval logs with a start and an end per tie,
-contact logs of instantaneous events, threaded logs such as forum or
-chat data, and co-presence logs where actors sharing a group become
-connected. Measurement covers time-varying centrality, graph-level
-structure, tie formation and dissolution, tie duration, burstiness,
-group mixing, time-respecting paths, reachability and temporal
-centrality. Every function returns a data frame with one row per
-observation, addressed by vertex name, so results are read, plotted and
-modelled without further manipulation. The implementation is base R; the
-values are checked against the `igraph`, `sna` and `tsna` packages in
-the test suite. Drawing is delegated to `cograph`, of which every Dynet
-network is an instance.
+Dynet provides functions for constructing, analysing, and visualising
+temporal networks in R. The constructor accepts interval, contact,
+threaded, and co-presence data. Analyses include graph-level structure,
+vertex-level centrality, relational spell onsets and terminations,
+duration, burstiness, group mixing, and time-respecting paths.
+Measurement functions return tidy data frames identified by vertex
+names, temporal intervals, and measures, as applicable. Core
+calculations are implemented in base R.
 
 ## Temporal networks
 
-A social network is usually recorded as a set of ties between actors,
-and the ties are then analysed as if they had all existed at once. Most
-relational data are not like that. Conversations, messages, meetings and
-collaborations happen at particular moments and last for particular
-lengths of time. A temporal network keeps this information: each tie is
-a *spell*, a pair of actors together with the time at which the tie
-began and the time at which it ended, or a single instant when the tie
-has no duration (Holme and Saramäki, 2012). The same pair of actors may
-have many spells.
+Temporal networks map the dynamics of relationships as they occur over
+time, preserving when interactions occur, their duration, and their
+temporal order. Two common representations are contact sequences and
+interval networks (Holme and Saramäki, 2012). In a contact sequence,
+interactions are recorded as timestamps and treated as instantaneous
+because their duration is negligible for the analysis. In an interval
+network, relationships are represented as relational spells with onset
+and termination times. Both representations accommodate repeated
+interactions between the same vertices.
 
-Aggregating the spells into one static network loses two things. The
-first is duration and intensity: a pair that spoke once for a minute and
-a pair that worked together every day become the same edge. The second,
-and more consequential, is order. In a static network, a tie from A to B
-and a tie from B to C imply a path from A to C. In a temporal network
-they imply a path only if the tie from B to C is still active at, or
-begins after, the moment the tie from A to B delivered something to B. A
-path that respects this constraint is called a *time-respecting path*
-(Kempe, Kleinberg and Kumar, 2002). Because the constraint is
-one-directional, temporal reachability is not symmetric even in an
-undirected network, and a static network systematically overstates how
-many actors can reach one another (Moody, 2002). Measures built on
-time-respecting paths, such as temporal closeness and temporal
-betweenness, describe the network as a medium through which something
-can travel (Pan and Saramäki, 2011; Nicosia et al., 2013). Measures
-built on the timing of a single actor’s events, such as burstiness and
-memory, describe the rhythm of activity itself (Goh and Barabási, 2008).
+In temporal networks, interactions unfold as time progresses, and paths
+must follow their chronological order. For example, if A shares
+information with B on Monday and B interacts with C on Tuesday, the
+information can potentially reach C through B. If B’s interaction with C
+occurred on Sunday, that interaction could not carry information
+received on Monday. A sequence that follows this temporal order is
+called a *time-respecting path*. Unlike static networks, which connect
+interactions regardless of when they occurred, temporal networks permit
+only paths that follow the order and availability of interactions. [Saqr
+and Peeters (2022)](https://doi.org/10.1111/bjet.13187).
 
-Measures of a temporal network are computed in one of two ways. Density,
-reciprocity, transitivity, centrality and the counts of ties formed and
-dissolved are computed within windows of time: the observation period is
-divided into windows, which may tile it or overlap, each window is
-measured as a static network, and the result is a time series whose
-resolution is set by the width of the window. Reachability, latency,
-temporal closeness and temporal betweenness are computed on the spells
-directly, along time-respecting paths, and have no static counterpart:
-they report the earliest time at which one actor can reach another, how
-many distinct routes achieve it, and how much of the network is
-reachable from a given moment. In educational research these methods
-have been used to study how collaboration unfolds within a course and
-which students act as bridges over time (Saqr and Nouri, 2020; Saqr,
-2024).
+Temporal networks also account for when relationships begin and end. A
+connection may be active during one period and absent during another,
+changing the network’s structure and the paths available between
+vertices. Combining all interactions into a static network obscures
+these changes: the resulting network may appear densely connected even
+when few connections were active at the same time. [Saqr and Peeters
+(2022)](https://doi.org/10.1111/bjet.13187).
 
-Relational logs arrive in different shapes, and the shape determines how
-spells are defined. An *interval* log records a start and an end for
-every row. A *contact* log records only a timestamp, so every spell is a
-point. A *threaded* log, typical of discussion forums, records a
-timestamp and the thread a message belongs to; following Saqr and Nouri
-(2020), a message is taken to be active from the moment it is posted
-until the thread falls silent, so a message that provoked a long
-discussion stays live longer than one that did not. A *co-presence* log
-records which actors attended which occasion; every pair of attendees is
-connected for the span of the occasion. Dynet reads all four with one
-function and infers the shape from the arguments given to it.
+Temporal networks can be analysed at the graph, vertex, and edge levels.
+Graph-level measures, such as density and reciprocity, describe the
+overall network structure. Vertex-level measures, such as degree,
+closeness, and betweenness, describe the positions of individual
+vertices. Edge-level measures describe relationships between pairs of
+vertices, including their onset, termination, duration, and recurrence.
+Examining these measures over time reveals changes in the network, its
+vertices, and their relationships. Time-respecting paths provide
+additional information about reachability, the time required to reach
+other vertices, and the intermediate vertices involved.
+
+The construction of a temporal network depends on how relationships and
+their timing are recorded. Dynet supports four data formats. **Interval
+data** explicitly record when each relationship begins and ends; a
+duration may be supplied instead of a termination time. **Contact data**
+record interactions at specific timestamps, with their duration treated
+as negligible. **Threaded data**, such as discussion replies, include
+timestamps and discussion identifiers. For these data, the constructor
+assigns each reply relationship an onset at its posting time and a
+termination at the last recorded event in its discussion. **Co-presence
+data** record participation in shared events, such as meetings or
+seminars; relationships between participants are derived from their
+attendance at the same event.
 
 ## Installation
 
-Dynet is not on CRAN. The development version is installed from the
-author’s R-universe repository, which also resolves its `cograph`
-dependency, or from GitHub. These commands are not evaluated when this
-page is rendered.
+The development version can be installed from the author’s R-universe
+repository, which also provides the `cograph` dependency, or from
+GitHub. The installation commands are not evaluated when this page is
+rendered.
 
 ``` r
 
@@ -92,16 +83,16 @@ remotes::install_github("mohsaqr/Dynet")
 
 ## Data
 
-Four bundled logs are used below. `school_contacts` is a simulated
-interval log of 240 face-to-face contacts among fourteen named students,
-with time in arbitrary units over about 21.5 units. `forum_posts` is a
-simulated threaded log of 241 posts by twenty participants over eight
-weeks, with a companion table `forum_people` that gives each participant
-a role. `seminar_attendance` is a simulated co-presence log of which
-students attended which weekly seminar. The package also ships
-`mooc_posts`, the 2,529 posts of a real MOOC discussion forum analysed
-in Saqr (2024), and `thought_chains`, the reply table of the *Trees of
-Thought* study.
+The examples use bundled datasets in tidy format. `school_contacts` is a
+simulated interval dataset containing 240 face-to-face contacts among
+fourteen students over approximately 21.5 arbitrary time units.
+`forum_posts` contains 241 simulated posts by twenty participants over
+eight weeks; `forum_people` supplies participant attributes, including
+role. `seminar_attendance` records simulated attendance at weekly
+seminars. The package also includes `mooc_posts`, containing 2,529 posts
+from the MOOC forum analysed by Saqr (2024), and `thought_chains`, a
+synthetic reply dataset based on the study by Saqr, López-Pernas, and
+Törmänen (2026).
 
 ``` r
 
@@ -116,21 +107,42 @@ head(school_contacts)
 #> 6   Leo Iris  0.38 0.50
 ```
 
-Each row is one contact from one student to another, with the time it
-began and the time it ended.
+In `school_contacts`, `from` and `to` identify the relational endpoints,
+while `start` and `end` specify contact onset and termination.
 
 ## Building a network
 
-To build a temporal network from an interval log, we call
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with the
-log. The columns `from`, `to`, `start` and `end` are recognised by name;
-`sender` and `receiver`, `source` and `target`, `onset` and `terminus`,
-and several other spellings are accepted as well, and times may be
-numeric, dates or date-times. Printing the network describes its format
-and shows the first spells.
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+recognises common column names automatically, using case-insensitive
+matching. Relational endpoints may be named `from`/`to`,
+`sender`/`receiver`, or `source`/`target`; interval boundaries may be
+named `start`/`end` or `onset`/`terminus`. For contact data, recognised
+timestamp names include `time`, `timestamp`, `date`, and `datetime`.
+Explicit column specification is needed only when names do not match
+recognised aliases or when their intended interpretation is ambiguous.
+The `format` argument can explicitly select the input format; for
+example, `format = "contact"` specifies instantaneous interactions.
+
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+represents relational data in tidy format, retaining the endpoints and
+recording the onset, termination, duration, and multiplicity of each
+relational spell. For interval data, termination is supplied through
+`end` or calculated as `start + duration`. Duration is recorded as
+`duration = end - start`. Instantaneous contacts have equal onset and
+termination times and therefore zero duration. Multiplicity is recorded
+in `weight`, which defaults to 1 when no multiplicity variable is
+supplied or recognised.
+
+The following example constructs a temporal network from
+`school_contacts`, a simulated dataset of 240 contacts among fourteen
+students. The supplied variables `from` and `to` identify the relational
+endpoints, while `start` and `end` record contact onset and termination
+in arbitrary time units. These names are recognised automatically, so no
+column arguments are required.
 
 ``` r
 
+library(Dynet)
 dn <- dynet(school_contacts)
 dn
 #> # Temporal network (interval format, directed) | a cograph netobject
@@ -147,10 +159,13 @@ dn
 #> # 234 more spells. summary() describes the network; plot() draws it.
 ```
 
-To see the network’s dimensions in one table, we call
-[`summary()`](https://rdrr.io/r/base/summary.html). The mean snapshot
-density is the average over one-unit bins of the share of pairs that are
-connected in the bin.
+[`summary()`](https://rdrr.io/r/base/summary.html) describes the network
+over its observation period, including the number of vertices,
+relational spells, and distinct pairs of connected vertices. It also
+reports mean snapshot density: the average proportion of possible vertex
+pairs connected within each measurement interval. This distinguishes the
+relationships accumulated over the full observation period from the
+connectivity observed within individual intervals.
 
 ``` r
 
@@ -173,41 +188,48 @@ summary(dn)
 #> 15     vertex attributes         none
 ```
 
-The other three log shapes are built with the same function. For a
-contact log, we name the timestamp column in `time`. For a threaded log,
-we name the thread column in `thread`, and pass the participant table to
-`nodes` so that its attributes travel with the network. For a
-co-presence log, we name the actor column in `actor` and the occasion
-column in `group`.
+The same constructor can represent timestamped replies as either
+instantaneous contacts or relationships that remain active within a
+discussion. In the first call, `time` explicitly identifies the
+timestamp column, and the constructor infers contact data. In the
+second, `thread` selects threaded construction: each reply relationship
+remains active until the last recorded event in its discussion. The
+`nodes` argument supplies participant attributes from `forum_people`.
 
 ``` r
 
 contacts <- dynet(forum_posts, time = "timestamp")
 forum <- dynet(forum_posts, thread = "thread", nodes = forum_people)
-seminars <- dynet(seminar_attendance, actor = "student", group = "seminar")
-forum
-#> # Temporal network (threaded format, directed) | a cograph netobject
-#> # 20 vertices | 241 edge spells | 172 distinct pairs
-#> # observed from 0 to 54.96387 days, binned every 1
-#> # vertex attributes: role, achievement
-#> 
-#>        from         to     start      end duration weight    thread
-#>  student_14 student_05 0.0000000 2.296969 2.296969      1 thread_47
-#>  student_10 student_05 0.7257216 2.296969 1.571247      1 thread_47
-#>   teacher_A student_09 0.8559934 3.235993 2.380000      1 thread_11
-#>  student_04 student_05 1.1715344 2.296969 1.125435      1 thread_47
-#>  student_02 student_09 1.2382611 3.235993 1.997732      1 thread_11
-#>  student_06  teacher_A 1.9797595 3.235993 1.256234      1 thread_11
-#> # 235 more spells. summary() describes the network; plot() draws it.
 ```
 
-The threaded network reports its time in days, because the log carried
-date-times; the unit is chosen to suit the span and is stated in every
-result.
+Co-presence data record participation in shared events rather than
+direct interactions between participants. The `actor` argument
+identifies the participant column, and `group` identifies the shared
+event. The constructor derives an undirected relationship between each
+pair of participants attending the same event, with onset and
+termination determined by the event’s recorded temporal extent.
 
-To draw the spells over time, we call
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) on the network.
-Each horizontal segment is one spell.
+``` r
+
+seminars <- dynet(seminar_attendance, actor = "student", group = "seminar")
+```
+
+These ties represent shared attendance; they do not establish that
+participants interacted directly.
+
+Dynet accepts numeric times, dates, and date-times. Numeric times retain
+their supplied scale. Dates and date-times are converted to elapsed
+time, with the unit selected automatically when `time_unit = "auto"`,
+the default. The unit can also be specified explicitly through
+`time_unit`, for example as `"hours"` or `"days"`. In the threaded
+example, time is expressed in days.
+
+The timeline plot displays when each pair of vertices is connected
+during the observation period. For interval data, colour indicates the
+proportion of each time bin during which at least one relational spell
+is active. Overlapping spells between the same endpoints are counted
+once, so the plot represents the duration of connectivity rather than
+the number of interactions.
 
 ``` r
 
@@ -218,18 +240,26 @@ plot(dn)
 
 ## Measuring in windows
 
-Every measuring function that returns a time series takes the same four
-arguments. `start` and `end` bound the period, `step` is the interval
-between measurements, and `window` is the length of time each
-measurement covers. When `window` equals `step`, the windows tile the
-period; when `window` is larger, they overlap and the series is a
-rolling one; when `window` is zero, the network is sampled at each
-instant. The defaults tile the observed period into unit bins.
+Window-based analyses use four arguments to define when measurements are
+taken and which interactions they include. `start` and `end` delimit the
+measurement period. `step` specifies the interval between measurements,
+while `window` specifies the duration covered by each measurement.
+Setting `window` equal to `step` produces non-overlapping intervals; a
+larger `window` produces overlapping intervals. For snapshot measures,
+`window = 0` evaluates the network at individual time points.
 
-To obtain a graph-level measure in each window, we call
-[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) with
-the network and `measure` for the statistic. Here density is measured
-every unit over a rolling window of seven units.
+[`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
+computes graph-level measures within the specified temporal windows.
+These measures describe the structure of the network as a whole. For
+example, density is the proportion of possible ties present within a
+window, while reciprocity describes the extent to which directed ties
+are reciprocated. Other measures characterise connected components,
+local configurations of ties, and the distribution of centrality across
+vertices.
+
+The following call computes density at one-unit intervals, using a
+seven-unit window for each measurement. Because `window` exceeds `step`,
+successive measurements include overlapping periods.
 
 ``` r
 
@@ -253,45 +283,70 @@ density
 #> # 10 more rows. summary() aggregates them; plot() draws them.
 ```
 
-To summarise a series, we call
-[`summary()`](https://rdrr.io/r/base/summary.html) on it. The table
-reports one row per measure with its mean, spread, range and the time at
-which it peaked.
+The result is a tidy data frame identifying the measurement time,
+measure, and value. Multiple statistics can be requested through
+`measure`; their results are distinguished by the `measure` column.
+Available measures include density, reciprocity, transitivity, dyad and
+triad censuses, component counts, centralisation, and Krackhardt’s
+indices. Their definitions and calculation conventions are documented in
+[`?metrics`](https://pak.dynasite.org/Dynet/reference/metrics.md).
+
+[`summary()`](https://rdrr.io/r/base/summary.html) summarises the
+resulting time series, including its mean, dispersion, range, and peak
+time. [`plot()`](https://rdrr.io/r/graphics/plot.default.html) displays
+how the measure changes over the observation period.
 
 ``` r
 
 summary(density)
 #>   measure  n     mean       sd        min       max peak_time
 #> 1 density 22 0.285964 0.111584 0.03296703 0.3956044         8
-```
-
-To draw the series, we call
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) on it.
-
-``` r
-
 plot(density)
 ```
 
-![](reference/figures/README-metrics-plot-1.png)
-
-Several measures may be requested in one call; they arrive stacked in
-one data frame with a `measure` column. The graph-level catalogue
-includes density, reciprocity, transitivity, the dyad and triad
-censuses, component counts, centralisation and the Krackhardt indices,
-and is listed in
-[`?metrics`](https://pak.dynasite.org/Dynet/reference/metrics.md).
+![](reference/figures/README-metrics-summary-1.png)
 
 ## Vertex measures
 
-To obtain a centrality for every vertex in every window, we call
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-with the network and `measure` for the index. The result has one row per
-vertex per time point.
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
+computes measures that describe how a vertex is connected to the rest of
+the network. Each centrality captures a different aspect of structural
+position. **Degree** counts direct connections, indicating the extent of
+a vertex’s immediate neighbourhood. In directed networks, indegree
+counts incoming connections and outdegree counts outgoing connections.
+**Strength** accounts for the weights of those connections,
+distinguishing the number of connected neighbours from the multiplicity
+of their relationships.
+
+**Closeness centrality** is based on the shortest-path distances from a
+vertex to other vertices. Higher closeness indicates shorter average
+distances, meaning that fewer steps are required to reach other
+vertices. In a directed network, these paths follow tie direction.
+
+**Betweenness** measures the extent to which a vertex lies on shortest
+paths between other vertices. It therefore identifies potential
+intermediary positions, although occupying such a position does not
+establish that information actually passed through that vertex.
+
+Other measures incorporate the positions of a vertex’s neighbours.
+**Eigenvector centrality** assigns higher scores to vertices connected
+to other highly central vertices. **PageRank** and **hub and authority
+scores** also use neighbouring vertices’ scores but apply different
+rules for directed relationships. **Prestige** measures characterise a
+vertex through its incoming connections, including, for some variants,
+the vertices that can reach it indirectly. The choice of measure should
+therefore follow the substantive question and the meaning assigned to
+tie direction.
+
+By default, these measures are calculated within successive temporal
+windows. This produces a centrality trajectory for each vertex, showing
+when it becomes more or less connected, accessible, or prominent as an
+intermediary. The following call computes degree using the default
+measurement intervals:
 
 ``` r
 
-degree <- dyn_centrality(dn, measure = "degree")
+degree <- centrality_series(dn, measure = "degree")
 degree
 #> # Degree (node-level)
 #> # 14 vertices | 22 time points, 1 per bin | time in step
@@ -311,9 +366,11 @@ degree
 #> # 296 more rows. summary() aggregates them; plot() draws them.
 ```
 
-To reduce the series to one row per vertex, we call
-[`summary()`](https://rdrr.io/r/base/summary.html) on it. The
-`peak_time` column gives the time at which each vertex was most central.
+The result is a tidy data frame containing vertex names, measurement
+times, measures, and values.
+[`summary()`](https://rdrr.io/r/base/summary.html) summarises each
+trajectory; `peak_time` identifies when the corresponding centrality
+attained its maximum.
 
 ``` r
 
@@ -335,15 +392,19 @@ summary(degree)
 #> 14  Nils  degree 22 2.181818 2.174229   0   7        14
 ```
 
-The measures above are computed on the network as it stands in each
-window. To compute a centrality on time-respecting paths across the
-whole period instead, we set `scope` to `"temporal"`. Temporal closeness
-is the inverse of the mean time a vertex needs to reach the others; it
-has one value per vertex, not one per window.
+[`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
+instead computes centrality from time-respecting paths across the
+specified observation period. **Temporal closeness** measures how
+quickly a vertex can reach other reachable vertices, using the inverse
+of their mean arrival latency. **Temporal betweenness** measures a
+vertex’s contribution as an intermediary on optimal temporal paths
+between other vertices. These measures account for the order and
+availability of interactions, whereas window-based centralities describe
+the connections present within each window.
 
 ``` r
 
-closeness <- dyn_centrality(dn, measure = "closeness", scope = "temporal")
+closeness <- path_centrality(dn, measure = "closeness")
 closeness
 #> # Closeness (node-level)
 #> # 14 vertices | time in step
@@ -364,23 +425,27 @@ closeness
 #> # 2 more rows. summary() aggregates them; plot() draws them.
 ```
 
-On a directed network, `mode` selects whether incoming, outgoing or all
-ties are counted. The vertex-level catalogue includes degree, strength,
-closeness, betweenness, eigenvector centrality, PageRank, hub and
-authority scores, coreness, Burt’s constraint and several prestige
-indices, and is listed in
-[`?dyn_centrality`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
-
 ## Time-respecting paths
 
-To find the earliest time-respecting path from one vertex to every
-other, we call
-[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) with the
-network and `from` for the source. The result has one row per vertex.
-`arrival_time` is the earliest moment the vertex can be reached,
-`latency` is that moment minus the time the source started, `n_hops` is
-the number of ties the earliest route uses, and `n_paths` is the number
-of distinct routes that arrive equally early.
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) examines
+how a source vertex can reach other vertices through a sequence of
+interactions over time. A path may involve a direct interaction or
+several intermediate vertices. Each interaction must occur when its tie
+is available, and a vertex cannot pass something onward before receiving
+it. Waiting between interactions is permitted: if A contacts B on Monday
+and B next contacts C on Wednesday, a path from A to C can include the
+intervening wait.
+
+The timing of these interactions determines which path arrives earliest.
+Suppose A can contact C directly on Friday, but can reach C through B on
+Wednesday. The two-hop path through B arrives earlier than the direct
+path. [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md)
+therefore minimises arrival time first, rather than the number of hops.
+If several paths arrive equally early, it retains those with the fewest
+hops.
+
+The following call searches from `Ana`, beginning at the start of the
+observation period in this example:
 
 ``` r
 
@@ -404,8 +469,21 @@ from_ana
 #> # 2 more rows. summary() aggregates them; plot() draws the tree.
 ```
 
-To summarise the reachable set, we call
-[`summary()`](https://rdrr.io/r/base/summary.html) on the result.
+The result describes the optimal paths to each destination.
+`arrival_time` records the earliest time at which the destination can be
+reached. `latency` is the elapsed time between the search origin and
+arrival, including any waiting for subsequent interactions. `n_hops`
+records how many ties the path traverses, while `n_paths` records how
+many distinct paths achieve both the earliest arrival and the minimum
+hop count. A destination with `n_paths = 0` is unreachable under the
+specified temporal constraints.
+
+By default, traversing a tie takes zero time, although a path may still
+require waiting for a later interaction. A positive `traversal_time`
+assigns a duration to each traversal, expressed in the network’s time
+unit. This is an analytical assumption that affects arrival times and
+potentially reachability; it should be selected according to the process
+being represented.
 
 ``` r
 
@@ -421,12 +499,14 @@ summary(from_ana)
 #> 8        max hops       4
 ```
 
-Ana reaches every other student within four hops. Three of them, Ben,
-Eve and Finn, never meet her directly and are joined to her only through
-intermediaries whose contacts happened in the right order. The same
-question asked from a later starting point has a different answer,
-because the contacts that carried the earlier routes have already
-passed. To start the search later, we set `start`.
+The summary describes the reachable set and its path characteristics.
+These results concern possible routes through the recorded
+relationships. They do not establish that information, resources, or
+other content actually travelled along those routes.
+
+Reachability also depends on when the search begins. Starting later
+excludes earlier contacts that may have connected the source to other
+vertices. The following call starts at time 18:
 
 ``` r
 
@@ -443,10 +523,15 @@ summary(from_ana_late)
 #> 8        max hops       3
 ```
 
-To list the routes themselves, we call
+Comparing the two results shows how the timing of participation changes
+the destinations Ana can reach and the routes available to her. This
+distinction is lost in a static network, where all recorded connections
+are available without regard to their timing.
+
 [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)
-with the network and `from` for the source. Each row is one distinct
-sequence of vertices, with the number of earliest routes that follow it.
+provides the corresponding vertex sequences, such as A → B → C, and
+counts the optimal paths following each sequence. The path plot displays
+the routes and their temporal progression.
 
 ``` r
 
@@ -465,31 +550,84 @@ pathways(dn, from = "Ana")
 #>         10.00
 #>          9.65
 #>          7.98
-```
-
-To draw the routes as a tree, we call
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) on the paths
-result. A vertex appears more than once when it is entered at different
-times, because each entry time leaves a different set of onward contacts
-available.
-
-``` r
-
 plot(from_ana)
 ```
 
-![](reference/figures/README-paths-plot-1.png)
+![](reference/figures/README-pathways-1.png)
 
-To obtain the share of the network each vertex can reach, or be reached
-from, we call
-[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
-with the network; `direction` selects forward, backward or both.
+## Temporal reachability
 
-## Tie dynamics and timing
+[`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
+summarises which vertices can be connected through time-respecting
+paths. **Forward reachability** identifies the vertices that a source
+can reach during the specified observation period. **Backward
+reachability** identifies the vertices from which a focal vertex can be
+reached by the end of that period. These sets need not be identical: the
+order of interactions may permit a path from A to B without permitting a
+return path from B to A.
 
-To count the ties that form and dissolve in each window, we call
-[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) with
-the network. The default measures are formation and dissolution.
+The `direction` argument selects `"forward"`, `"backward"`, or `"both"`.
+Setting `measure = "reach_count"` returns the number of reachable
+vertices other than the focal vertex. Setting `measure = "reach"`
+expresses this count as a proportion of all other vertices in the
+network.
+
+``` r
+
+reach <- reachability(
+  dn,
+  direction = "both",
+  measure = c("reach", "reach_count")
+)
+reach
+#> # Reachability (node-level)
+#> # 14 vertices | time in step
+#> # measures: forward_reach, forward_reach_count, backward_reach, backward_reach_count
+#> # count and share of other vertices joined by a time-respecting path
+#>   node       measure value
+#>    Ana forward_reach     1
+#>    Ben forward_reach     1
+#>   Cara forward_reach     1
+#>    Dan forward_reach     1
+#>    Eve forward_reach     1
+#>   Finn forward_reach     1
+#>   Gita forward_reach     1
+#>   Hugo forward_reach     1
+#>   Iris forward_reach     1
+#>  Jonas forward_reach     1
+#>   Kira forward_reach     1
+#>    Leo forward_reach     1
+#> # 44 more rows. summary() aggregates them; plot() draws them.
+```
+
+A forward reach of 1 indicates that the source can reach every other
+vertex within the specified period. A value of 0 indicates that it
+cannot reach any other vertex. Intermediate values describe partial
+reachability. These measures include indirect connections through
+intermediate vertices, so they capture more than the immediate
+neighbourhood measured by degree.
+
+Reachability describes whether a temporal connection is possible; it
+does not describe how quickly the destination can be reached. Two
+vertices can therefore have equal reachability but different temporal
+closeness because their arrival latencies differ. Examining reachability
+alongside path timing distinguishes the extent of possible contact from
+the time required to achieve it.
+
+## Tie dynamics and duration
+
+Relational spells have an onset, a termination, and a duration.
+Examining these properties describes when relationships become active,
+when they cease, and how long they persist. In datasets with repeated
+interactions, several spells may connect the same pair of vertices.
+Counts of spell onsets and terminations therefore differ from counts of
+distinct connected pairs.
+
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md)
+summarises spell onsets and terminations within temporal windows through
+the measures `"formation"` and `"dissolution"`, which are requested by
+default. The following call uses the network’s default measurement
+intervals:
 
 ``` r
 
@@ -500,12 +638,16 @@ summary(turnover)
 #> 2   formation 22 10.90909 6.689787   0  29        13
 ```
 
-To measure how long ties last, we call
+These counts describe changes in relational activity. A spell onset does
+not necessarily introduce a previously unconnected pair: it may
+represent another interaction between endpoints that already have an
+active spell. Similarly, the termination of one spell does not
+necessarily disconnect its endpoints if another spell remains active.
+
 [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
-with the network and `measure` for the statistic. With
-`measure = "mean"` the result is the mean spell length of each pair;
-`unit` moves the question from pairs to individual spells or to vertex
-activity.
+summarises the duration of relationships. By default, results are
+grouped by endpoint pair. Setting `measure = "mean"` returns the mean
+spell duration for each pair:
 
 ``` r
 
@@ -530,13 +672,32 @@ lengths
 #> # 98 more rows. summary() aggregates them; plot() draws them.
 ```
 
-To measure whether a vertex’s contacts are regular or clustered in time,
-we call
+Different duration summaries answer different questions. **Summed
+duration** adds the durations of individual spells, including
+overlapping spells separately. **Union duration** measures the total
+time during which at least one spell connects the endpoints, counting
+overlap once. For example, if two spells connect the same pair during
+hours 1–3 and 2–4, their summed duration is four hours, while their
+union duration is three hours. Mean duration describes the average
+length of an individual spell.
+
+The `unit` argument determines whether durations are summarised for
+endpoint pairs, individual spells, vertex activity, or ties incident to
+a vertex. Vertex activity describes when a vertex is present or eligible
+to participate; incident-tie duration describes its recorded
+relationships. These quantities should be interpreted separately.
+
+## Burstiness and memory
+
 [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
-with the network. Burstiness compares the dispersion of the gaps between
-a vertex’s events with the exponential reference: 1 is the bursty limit,
-0 the Poisson reference and -1 perfectly regular activity. Memory is the
-correlation between consecutive gaps.
+describes how interactions are distributed over time using the intervals
+between successive events. Regular activity produces intervals of
+similar length, whereas clustered activity produces short intervals
+within bursts and longer intervals between them. The burstiness
+coefficient summarises this variation: −1 corresponds to equal
+intervals, 0 to the exponential inter-event distribution associated with
+a Poisson process, and values approaching 1 indicate increasingly
+heterogeneous intervals (Goh and Barabási, 2008).
 
 ``` r
 
@@ -587,14 +748,29 @@ summary(rhythm)
 #> 42  Nils     memory 1  0.22784733 NA  0.22784733  0.22784733
 ```
 
+Burstiness and memory describe different properties of event timing.
+**Burstiness** measures variation in interval lengths, without
+considering their order. **Memory** measures the correlation between
+consecutive intervals. Positive memory indicates that short intervals
+tend to follow short intervals and long intervals tend to follow long
+intervals. Negative memory indicates a tendency for short and long
+intervals to alternate. A value near zero indicates little linear
+association between successive intervals.
+
+A vertex can therefore exhibit bursty activity without substantial
+memory: its inter-event intervals may vary considerably while
+consecutive interval lengths remain weakly correlated. Interpreting both
+measures helps distinguish variability in activity timing from
+dependence between successive intervals.
+
 ## Mixing between groups
 
-To count ties within and between groups of vertices, we call
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) with
-the network and `attribute` for the vertex attribute that defines the
-groups. The forum network carries a `role` attribute from
-`forum_people`. A `step` wider than the observation period collapses the
-counts into one table; the default reports them per window.
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) counts
+distinct active vertex pairs within and between groups defined by a
+vertex attribute. Repeated spells and their weights do not multiply
+these binary-dyad counts. The forum network inherits `role` from
+`forum_people`. Setting `step = 60`, which exceeds this network’s
+observation period, produces a single interval for the comparison.
 
 ``` r
 
@@ -615,12 +791,19 @@ mixing(forum, attribute = "role", step = 60)
 #>     0         Teacher -> Teacher     0     Teacher     Teacher
 ```
 
-## Static views of a temporal network
+## Network aggregation, subsetting, and snapshots
 
-To reduce a temporal network to a weighted static network, we call
 [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
-with the network and `weight` for the aggregation rule. The result is a
-`cograph` network and can be drawn and measured as one.
+summarises a temporal network as a weighted static network. Each edge
+represents a pair of vertices connected during the observation period,
+and its weight summarises their relational spells according to the
+selected rule. This provides an overall description of relationships
+while removing their temporal order.
+
+Setting `weight = "union_duration"` assigns each edge the total time
+during which at least one spell connects its endpoints. Overlapping
+spells are counted once. For example, spells spanning hours 1–3 and 2–4
+produce an edge weight of three hours.
 
 ``` r
 
@@ -651,11 +834,12 @@ flat
 #>               1
 ```
 
-To restrict a network to some of its vertices, we call
 [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
-with the network and a condition on the vertex table in `nodes`. A
-centrality named in the condition is computed over the whole observed
-period.
+selects part of the network for further analysis. Selection may be based
+on vertex attributes or structural measures. In the following example,
+degree is calculated over the full observation period, and vertices with
+degree greater than 16 are retained together with the relational spells
+connecting them.
 
 ``` r
 
@@ -675,9 +859,10 @@ core
 #> # 25 more spells. summary() describes the network; plot() draws it.
 ```
 
-To list the ties active in one window, we call
 [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-with the network and `at` for the time.
+extracts connections within specified temporal windows. The following
+call returns the connections in the default measurement window
+containing time 3:
 
 ``` r
 
@@ -697,23 +882,23 @@ snapshots(dn, at = 3)
 #> # 2 more rows. summary() counts them by bin.
 ```
 
-## Editing a network
+A snapshot summarises connectivity within its window; it does not retain
+the ordering of interactions within that interval.
 
-Editing functions return a new network and leave the input unchanged. To
-add a vertex, we call
+## Editing a temporal network
+
+Dynet provides functions for modifying vertices, relational spells, and
+observation settings. Each editing function returns a modified network
+without changing the input object. This allows alternative network
+specifications to be constructed while retaining the original for
+comparison.
+
 [`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md)
-with a table of names and attributes. To add a tie, we call
+adds vertices and their attributes.
 [`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md)
-with a table of spells.
-[`remove_nodes()`](https://pak.dynasite.org/Dynet/reference/remove_nodes.md),
-[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md),
-[`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md),
-[`update_ties()`](https://pak.dynasite.org/Dynet/reference/update_ties.md),
-[`rename_nodes()`](https://pak.dynasite.org/Dynet/reference/rename_nodes.md),
-[`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
-and
-[`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
-complete the set.
+adds relational spells using their endpoints, onset, and termination.
+The following example adds a vertex named `Omar`, then adds a directed
+relationship from `Ana` to `Omar`, active from time 4 to time 6:
 
 ``` r
 
@@ -734,39 +919,132 @@ dn2
 #> # 235 more spells. summary() describes the network; plot() draws it.
 ```
 
-## Drawing and animating
+Related functions support removal, revision, and relabelling.
+[`remove_nodes()`](https://pak.dynasite.org/Dynet/reference/remove_nodes.md)
+and
+[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md)
+remove selected vertices or spells;
+[`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md)
+and
+[`update_ties()`](https://pak.dynasite.org/Dynet/reference/update_ties.md)
+revise their attributes or values; and
+[`rename_nodes()`](https://pak.dynasite.org/Dynet/reference/rename_nodes.md)
+changes vertex names while maintaining their references in the network.
 
-A Dynet network is a `cograph` network, so every `cograph` drawing
-function applies to it directly.
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) adds the views
-that concern time. To draw the network as it stands in one window, we
-set `type` to `"network"` and give the time in `at`. To draw a sequence
-of windows as small multiples with a shared layout, we set `type` to
-`"snapshots"`. To draw the proximity timeline, in which vertices that
-interact are placed near each other and their positions are followed
-through time, we set `type` to `"proximity"`. The proximity timeline is
-described in the article on drawing.
+[`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
+specifies periods during which vertices are present or eligible to
+participate.
+[`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
+specifies the periods over which the network is observed. These
+declarations serve different purposes: vertex activity constrains
+participation, whereas observation periods constrain measurement.
+Changing observation settings does not alter the original relational
+spell endpoints.
 
-To animate the measurement windows, we call
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) with
-the same four grid arguments as the measuring functions and a file name
-whose extension selects the encoder; `.gif` needs the `gifski` package
-and `.mp4` or `.webm` the `av` package. The article on animating shows
-the result.
+## Visualising temporal networks
 
-## Documentation
+Temporal network visualisations describe both the structure of
+relationships and their development over time. Different views address
+different questions: which vertices are connected during a particular
+period, how connectivity changes between periods, and when individual
+relationships are active.
+
+Setting `type = "network"` displays connections within a selected
+measurement window. The `at` argument identifies the time of interest.
+Setting `type = "snapshots"` displays several temporal slices using a
+shared layout, making changes in connections easier to compare.
+
+``` r
+
+plot(dn, type = "network", at = 3)
+```
+
+![](reference/figures/README-network-views-1.png)
+
+``` r
+
+plot(dn, type = "snapshots", panels = 6)
+#> Drawing 6 of 22 bins, evenly spaced across the window.
+```
+
+![](reference/figures/README-network-views-2.png)
+
+A timeline places relational activity along a time axis. For interval
+data, colour represents the proportion of each time bin during which an
+endpoint pair is connected. This view shows periods of activity and
+inactivity that may be difficult to distinguish in successive network
+diagrams.
+
+``` r
+
+plot(dn, type = "timeline")
+```
+
+![](reference/figures/README-timeline-1.png)
+
+A proximity timeline follows the changing relationships among vertices.
+Network distances are calculated within temporal slices and represented
+as positions along a single axis. Lines connect each vertex’s positions
+across slices, showing how its proximity to other vertices changes.
+Nearby lines indicate shorter network distances in the corresponding
+slice; they do not necessarily indicate a direct tie.
+
+``` r
+
+plot(dn, type = "proximity")
+```
+
+![](reference/figures/README-proximity-1.png)
+
+These views complement one another: network diagrams show connections,
+activity timelines show their timing, and proximity timelines summarise
+changes in network distances.
+
+## Animating temporal networks
+
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
+displays a sequence of network snapshots over the observation period.
+Vertices retain a shared layout across frames, allowing changes in
+connections to be followed without changes in position obscuring the
+comparison.
+
+The temporal settings follow the same conventions as window-based
+measurement. `start` and `end` delimit the period, `step` determines the
+time between successive frames, and `window` determines the period
+represented in each frame. A positive window displays connections active
+within that interval; it does not imply that all displayed connections
+were active simultaneously.
+
+The output filename determines the format. GIF output requires the
+`gifski` package, while MP4 and WebM output require `av`. The animation
+tutorial provides examples of temporal settings, visual options, and
+export procedures.
+
+## Further documentation
+
+The package documentation provides additional examples and
+methodological details:
 
 - [`vignette("dynet")`](https://pak.dynasite.org/Dynet/articles/dynet.md)
-  walks through one analysis from log to result.
+  presents an analysis from network construction through measurement and
+  interpretation.
 - [`vignette("building-networks")`](https://pak.dynasite.org/Dynet/articles/building-networks.md)
-  covers the four log shapes, vertex attributes, observation windows,
-  sessions and censoring.
+  explains input formats, column recognition, vertex attributes,
+  observation periods, sessions, and censoring.
 - [`vignette("ch17-temporal-networks")`](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md)
-  re-runs the temporal network chapter of *Learning Analytics Methods
-  and Tutorials* on the bundled MOOC forum.
-- The package website at <https://pak.dynasite.org/Dynet/> adds a
-  function catalogue, tutorials on animation and on the MOOC data, and a
-  full reproduction of the *Trees of Thought* study.
+  reproduces the temporal network analysis chapter of *Learning
+  Analytics Methods and Tutorials* using the bundled MOOC data.
+- The [package website](https://pak.dynasite.org/Dynet/) provides a
+  function catalogue, animation examples, dataset tutorials, and a case
+  study using `thought_chains`.
+
+Function help pages document arguments, defaults, return values, and
+calculation conventions. For example,
+[`?dynet`](https://pak.dynasite.org/Dynet/reference/dynet.md),
+[`?metrics`](https://pak.dynasite.org/Dynet/reference/metrics.md), and
+[`?paths`](https://pak.dynasite.org/Dynet/reference/paths.md) describe
+network construction, graph-level measurement, and temporal path
+analysis, respectively.
 
 ## References
 
@@ -800,10 +1078,20 @@ Saqr, M. (2024). Temporal network analysis: Introduction, methods and
 analysis with R. In M. Saqr & S. López-Pernas (Eds.), *Learning
 analytics methods and tutorials: A practical guide using R*. Springer.
 
+Saqr, M., López-Pernas, S., & Törmänen, T. (2026). A temporal network
+approach to reveal the longitudinal dynamics of CSCL group regulation
+and productive collaboration. *International Journal of
+Computer-Supported Collaborative Learning*, 21, 237–270.
+<https://doi.org/10.1007/s11412-025-09464-5>
+
 Saqr, M., & Nouri, J. (2020). High resolution temporal network analysis
 to understand and improve collaborative learning. In *Proceedings of the
 Tenth International Conference on Learning Analytics & Knowledge*
 (pp. 314–319). ACM.
+
+Saqr, M., & Peeters, W. (2022). Temporal networks in collaborative
+learning: A case study. *British Journal of Educational Technology*,
+53(5), 1283–1303. <https://doi.org/10.1111/bjet.13187>
 
 # Package index
 
@@ -868,9 +1156,11 @@ returns a new network and leaves the input unchanged.
 The measuring verbs. All take the same four grid arguments - start, end,
 step, window - and return a tidy one-row-per-observation table.
 
-- [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+- [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   : Time-varying vertex centrality
-- [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
+- [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
+  : Closeness and betweenness on time-respecting paths
+- [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
   : Reachability of every vertex
 - [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) :
   Time-varying graph-level structure
@@ -945,102 +1235,165 @@ Print, summary, plot and as.data.frame for every result class.
 - [`Dynet`](https://pak.dynasite.org/Dynet/reference/Dynet-package.md)
   [`Dynet-package`](https://pak.dynasite.org/Dynet/reference/Dynet-package.md)
   : Dynet: Tidy Temporal Network Analysis
+
+- [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  :
+
+  Deprecated name for
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
+  and
+  [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
+
+- [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
+  :
+
+  Deprecated name for
+  [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
+
 - [`print(`*`<dynet>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet.md)
   : Print a temporal network
+
 - [`print(`*`<dynet_animation>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_animation.md)
   : Print an animation's bin table
+
 - [`print(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_collapsed.md)
   : Print a collapsed temporal network
+
 - [`print(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_collapsed_list.md)
   : Print session-specific collapsed networks
+
 - [`print(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_metric.md)
   : Print a temporal measure
+
 - [`print(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_path_trajectories.md)
   : Print a temporal trajectory tree
+
 - [`print(`*`<dynet_paths>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_paths.md)
   : Print time-respecting paths
+
 - [`print(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_pathways.md)
   : Print ranked pathways
+
 - [`print(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_projection.md)
   : Print a time-projected network
+
 - [`print(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_pshifts.md)
   : Print participation shift counts
+
 - [`print(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_similarity.md)
   : Print time-bin similarity
+
 - [`print(`*`<dynet_snapshot>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_snapshot.md)
   : Print snapshot edges
+
 - [`summary(`*`<dynet>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet.md)
   : Describe a temporal network
+
 - [`summary(`*`<dynet_animation>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_animation.md)
   : Summarise an animation
+
 - [`summary(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed_list.md)
   : Summarise session-specific collapsed networks
+
 - [`summary(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_metric.md)
   : Summarise a temporal measure
+
 - [`summary(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_path_trajectories.md)
   : Summarise path trajectories
+
 - [`summary(`*`<dynet_paths>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_paths.md)
   : Summarise time-respecting paths
+
 - [`summary(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_pathways.md)
   : Summarise ranked pathways
+
 - [`summary(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_projection.md)
   : Summarise a time projection
+
 - [`summary(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_pshifts.md)
   : Summarise participation shifts by family
+
 - [`summary(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_similarity.md)
   : Summarise snapshot similarity
+
 - [`summary(`*`<dynet_snapshot>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_snapshot.md)
   : Summarise snapshot edges by time bin
+
 - [`plot(`*`<dynet>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md)
   : Draw a temporal network
+
 - [`plot(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed.md)
   : Draw a collapsed temporal network
+
 - [`plot(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_metric.md)
   : Plot a temporal measure
+
 - [`plot(`*`<dynet_path_network>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_path_network.md)
   : Draw a path network
+
 - [`plot(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_path_trajectories.md)
   : Plot path trajectories
+
 - [`plot(`*`<dynet_paths>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_paths.md)
   : Plot time-respecting paths when a valid renderer exists
+
 - [`plot(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_pathways.md)
   : Plot pathways on a time axis
+
 - [`plot(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_pshifts.md)
   : Plot participation shift counts
+
 - [`plot(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_similarity.md)
   : Draw time-bin similarity as a heatmap
+
 - [`plot(`*`<dynet_snapshot>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_snapshot.md)
   : Plot how many ties each snapshot holds
+
 - [`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)
   : Draw optimal temporal paths as a trajectory tree
+
 - [`head(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/head.dynet_metric.md)
   : First rows of a temporal measure
+
 - [`tail(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/tail.dynet_metric.md)
   : Last rows of a temporal measure
+
 - [`as.data.frame(`*`<dynet>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet.md)
   : Tidy tables from a temporal network
+
 - [`as.data.frame(`*`<dynet_animation>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_animation.md)
   : Coerce an animation to a data frame
+
 - [`as.data.frame(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_collapsed.md)
   : Tidy tables from a collapsed temporal network
+
 - [`as.data.frame(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_collapsed_list.md)
   : Tidy data frame of session-specific collapsed networks
+
 - [`as.data.frame(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_metric.md)
   : Tidy data frame of a temporal measure
+
 - [`as.data.frame(`*`<dynet_path_network>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_path_network.md)
   : Tidy tables from a temporal path-union network
+
 - [`as.data.frame(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_path_trajectories.md)
   : Tidy table of a temporal trajectory tree
+
 - [`as.data.frame(`*`<dynet_paths>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_paths.md)
   : Tidy data frame of time-respecting paths
+
 - [`as.data.frame(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_pathways.md)
   : Tidy data frame of ranked pathways
+
 - [`as.data.frame(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_projection.md)
   : Tidy tables from a time-projected network
+
 - [`as.data.frame(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_pshifts.md)
   : Tidy data frame of participation shift counts
+
 - [`as.data.frame(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_similarity.md)
   : Tidy table of time-bin similarity
+
 - [`as.data.frame(`*`<dynet_snapshot>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_snapshot.md)
   : Tidy table of snapshot edges
 
@@ -1062,8 +1415,6 @@ writes GIF and video files, which need gifski and av.
 
 - [Animating a temporal
   network](https://pak.dynasite.org/Dynet/articles/animating.md):
-- [The MOOC forum
-  data](https://pak.dynasite.org/Dynet/articles/mooc-posts.md):
 
 ### Case studies
 
@@ -1072,5 +1423,5 @@ package on bundled data; the Trees of Thought study is website-only.
 
 - [Case study: A MOOC discussion forum as a temporal
   network](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md):
-- [Case study: How kinds of contribution follow one another in course
+- [Temporal networks of interactions in course
   discussions](https://pak.dynasite.org/Dynet/articles/thought-chains.md):

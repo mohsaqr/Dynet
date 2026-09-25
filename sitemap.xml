@@ -11,7 +11,6 @@
 <url><loc>https://pak.dynasite.org/Dynet/articles/dynet.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/articles/function-catalogue.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/articles/index.html</loc></url>
-<url><loc>https://pak.dynasite.org/Dynet/articles/mooc-posts.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/articles/thought-chains.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/authors.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/index.html</loc></url>
@@ -38,6 +37,7 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/as_dynet.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/as_dynet.networkDynamic.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/burstiness.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/centrality_series.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/clear_observations.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/collapse_network.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/durations.html</loc></url>
@@ -54,6 +54,7 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/mixing.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/mooc_people.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/mooc_posts.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/path_centrality.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/path_network.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/path_trajectories.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/paths.html</loc></url>
@@ -83,6 +84,7 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/print.dynet_snapshot.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/projection.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/pshifts.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/reachability.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/remove_arcs.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/remove_nodes.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/remove_ties.html</loc></url>

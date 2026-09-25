@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,7 +91,7 @@ list cograph renders.</p></dd>
 <dd><p>Optional centrality measures to annotate the vertex table
 with, valid only for <code>what = "nodes"</code>. Each becomes one column holding the
 value over the whole observed period, so the vertex table can be filtered
-or ranked without a second call. Any measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code> accepts at
+or ranked without a second call. Any measure <code><a href="centrality_series.html">centrality_series()</a></code> accepts at
 snapshot scope is allowed, plus <code>"indegree"</code> and <code>"outdegree"</code>; anything
 else raises a <code>dynet_unknown_measure</code> error, and a <code>measure</code> that is not a
 character vector raises <code>dynet_bad_input</code>. Naming it for any other <code>what</code>
@@ -101,11 +101,11 @@ raises a <code>dynet_bad_input</code> error too.</p></dd>
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
 <dd><p>How sessions are treated while <code>measure</code> is computed:
 <code>"bounded"</code> (the default), <code>"collapse"</code> or <code>"separate"</code>, as in
-<code><a href="dyn_centrality.html">dyn_centrality()</a></code>. Ignored when <code>measure</code> is not given.</p></dd>
+<code><a href="centrality_series.html">centrality_series()</a></code>. Ignored when <code>measure</code> is not given.</p></dd>
 
 
 <dt id="arg-start-end">start, end<a class="anchor" aria-label="anchor" href="#arg-start-end"></a></dt>
-<dd><p>Measurement bounds passed to <code><a href="dyn_centrality.html">dyn_centrality()</a></code> when
+<dd><p>Measurement bounds passed to <code><a href="centrality_series.html">centrality_series()</a></code> when
 <code>measure</code> is given, and ignored otherwise. Default to the observed range.</p></dd>
 
 

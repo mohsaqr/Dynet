@@ -110,8 +110,8 @@ error, not a classed one.
 
 ## References
 
-Gibson, D. R. (2003). Participation shifts and institutional change in
-relational systems. *Social Forces*, 81, 1335–1380.
+Gibson, D. R. (2003). Participation shifts: Order and differentiation in
+group conversation. *Social Forces*, 81, 1335–1380.
 [doi:10.1353/sof.2003.0055](https://doi.org/10.1353/sof.2003.0055)
 
 ## Examples

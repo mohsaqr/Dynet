@@ -43,7 +43,7 @@ similarity(
   How to treat sessions when the layers are built: `"bounded"` (the
   default) and `"collapse"` differ in whether a session wall gates a tie
   into its bin. Unlike
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md),
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md),
   `"separate"` adds no `session` column here: layers are keyed on time
   alone, so two session-local bins sharing a time are compared as one
   layer.

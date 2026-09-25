@@ -49,7 +49,7 @@ durations(
 
   How to treat sessions: `"bounded"` (the default), `"collapse"` or
   `"separate"`, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md).
 
 - censored:
 

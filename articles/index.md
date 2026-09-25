@@ -16,8 +16,6 @@ writes GIF and video files, which need gifski and av.
 
 - [Animating a temporal
   network](https://pak.dynasite.org/Dynet/articles/animating.md):
-- [The MOOC forum
-  data](https://pak.dynasite.org/Dynet/articles/mooc-posts.md):
 
 ### Case studies
 
@@ -26,5 +24,5 @@ package on bundled data; the Trees of Thought study is website-only.
 
 - [Case study: A MOOC discussion forum as a temporal
   network](https://pak.dynasite.org/Dynet/articles/ch17-temporal-networks.md):
-- [Case study: How kinds of contribution follow one another in course
+- [Temporal networks of interactions in course
   discussions](https://pak.dynasite.org/Dynet/articles/thought-chains.md):

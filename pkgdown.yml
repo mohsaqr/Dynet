@@ -7,9 +7,8 @@ articles:
   ch17-temporal-networks: ch17-temporal-networks.html
   dynet: dynet.html
   articles/function-catalogue: function-catalogue.html
-  articles/mooc-posts: mooc-posts.html
   articles/thought-chains: thought-chains.html
-last_built: 2026-09-25T05:49Z
+last_built: 2026-09-25T16:35Z
 urls:
   reference: https://pak.dynasite.org/Dynet/reference
   article: https://pak.dynasite.org/Dynet/articles

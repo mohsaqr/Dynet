@@ -56,7 +56,7 @@ metrics(
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md):
   `"bounded"` (the default) keeps each session apart while pooling the
   reported rows, `"collapse"` ignores session labels, and `"separate"`
   reports each session on its own rows and needs a network built with a
@@ -130,7 +130,12 @@ exposure ledgers are `R = sum(r) integral(Y[r](t) dt)`,
 `O = sum(r) integral(Y[r](t) E[r](t) dt)`, and
 `R_H = sum(r in H) integral(Y[r](t) dt)`. The two occupancies are `O/R`
 and `O/R_H` and lie in `[0, 1]`. Loops, weights, duplicates, and censor
-flags cannot multiply occupancy.
+flags cannot multiply occupancy. Integration stops at the observation
+period, which defaults to the span of the data, so a last window
+reaching past the final spell is measured over its observed part only,
+and tiled windows pool to the whole-period value.
+[`tsna::tEdgeDensity()`](https://rdrr.io/pkg/tsna/man/density.html) uses
+the same observation-period rule.
 
 `"onset_intensity"` and `"observed_pair_onset_intensity"` divide the
 number of known raw spell starts by `R` and `R_H`. Each nonloop raw row,
@@ -194,8 +199,21 @@ undirected graph; this matches ERGM's `meandeg` statistic.
 `"indegree_1_5"` and `"outdegree_1_5"` sum the corresponding vertex
 degrees raised to 1.5. Directed `"triangles"` is the sum of cyclic and
 transitive triples, while an undirected triangle is counted once. A
-concurrent vertex has at least two distinct neighbours, so a reciprocal
-dyad still supplies only one neighbour. `"in_2stars"` and `"out_2stars"`
+concurrent vertex has relations to at least two distinct neighbours
+active at the same instant, so a reciprocal dyad still supplies only one
+neighbour. Unlike the other structural selectors, concurrency is not
+read from the window's union snapshot: with a positive `window`, two
+ties that fall in the same window without overlapping in time do not
+make their shared vertex concurrent. A vertex counts in a window when it
+is concurrent at any instant inside it; `"concurrent_nodes"` is the
+number of such vertices and `"concurrent_share"` divides it by the
+window's eligible vertices. With `window = 0` the snapshot is itself an
+instant, so both readings coincide. Half-open spells that only meet at a
+boundary do not overlap, and a point contact is concurrent with every
+relation active at its timestamp.
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) answers
+a different question – which groups are connected somewhere in the
+window – and requires no simultaneity. `"in_2stars"` and `"out_2stars"`
 sum `choose(degree, 2)` over directed in- and out-degrees. Directed
 `"two_paths"` counts ordered `i -> j -> k` paths with `i != k`;
 undirected two-paths count each unordered wedge once. Empty eligible
@@ -247,6 +265,10 @@ Lawrence Erlbaum.
 Newman, M. E. J. (2002). Assortative mixing in networks. *Physical
 Review Letters*, 89, 208701.
 [doi:10.1103/PhysRevLett.89.208701](https://doi.org/10.1103/PhysRevLett.89.208701)
+
+Morris, M., & Kretzschmar, M. (1997). Concurrent partnerships and the
+spread of HIV. *AIDS*, 11(5), 641-648.
+[doi:10.1097/00002030-199705000-00012](https://doi.org/10.1097/00002030-199705000-00012)
 
 Holland, P. W., & Leinhardt, S. (1976). Local structure in social
 networks. *Sociological Methodology*, 7, 1-45.

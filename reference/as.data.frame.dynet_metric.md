@@ -89,7 +89,7 @@ measure is already wide and comes back unchanged.
 
 ``` r
 dn <- dynet(school_contacts)
-degree <- dyn_centrality(dn, measure = "degree")
+degree <- centrality_series(dn, measure = "degree")
 as.data.frame(degree)
 #>     time  node measure value
 #> 1      0   Ana  degree     1

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,22 +69,28 @@
 
     
     
-<p>In this vignette we analyse the discussion forum of a massive open
-online course as a temporal network, in the order of the temporal
-network chapter of <em>Learning Analytics Methods and Tutorials</em>
-(Saqr, 2024): the network as a whole, its structure over time, the
-position of each participant, how far a post could travel, and how
-participants of different experience levels addressed one another.</p>
+<p>This vignette demonstrates temporal network analysis of participant
+interactions in a massive open online course (MOOC) discussion forum.
+Following the analytical framework presented by Saqr (2024) in
+<em>Learning Analytics Methods and Tutorials</em>, it examines changes
+in network structure, participants’ structural positions, reachability
+through time-respecting paths, and interaction patterns between
+participants with different experience levels.</p>
 <div class="section level2">
 <h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
 </h2>
-<p><code>mooc_posts</code> has one row per post: <code>sender</code> and
-<code>receiver</code> are the participants, <code>timestamp</code> the
-moment of the post and <code>discussion</code> the thread.
-<code>mooc_people</code> has one row per participant with the experience
-code, 1 for expert, 2 for student and 3 for teacher, and its label in
-<code>expert_level</code>, which serves later as the mixing
-attribute.</p>
+<p>This vignette uses the MOOC discussion-forum dataset analysed in Saqr
+(2024). It records timestamped interactions between participants and
+includes their experience levels. The data are available in Dynet as
+<code>mooc_posts</code>, containing the interactions, and
+<code>mooc_people</code>, containing participant attributes.</p>
+<p>In <code>mooc_posts</code>, <code>sender</code> and
+<code>receiver</code> identify the relational endpoints,
+<code>timestamp</code> records when the message was posted, and
+<code>discussion</code> identifies its thread. In
+<code>mooc_people</code>, experience is coded as 1 for expert, 2 for
+student, and 3 for teacher, with corresponding labels in
+<code>expert_level</code>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mooc_posts</span><span class="op">)</span></span>
@@ -112,19 +118,28 @@ attribute.</p>
 <span><span class="co">#&gt; 6    6          1       Expert</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="the-network">The network<a class="anchor" aria-label="anchor" href="#the-network"></a>
+<h2 id="constructing-the-temporal-network">Constructing the temporal network<a class="anchor" aria-label="anchor" href="#constructing-the-temporal-network"></a>
 </h2>
-<p>Following Saqr and Nouri (2020), a reply is taken to be active from
-the moment it is posted until its thread falls silent. Two kinds of rows
-carry no interaction: a post that answers its own author, which
-<code><a href="../reference/dynet.html">dynet()</a></code> drops by default, and a thread that never received
-a second post, which <code>min_thread_posts = 2</code> drops. To build
-the network, we call <code><a href="../reference/dynet.html">dynet()</a></code> with <code>from</code> and
-<code>to</code> for the two participant columns, <code>time</code> for
-the timestamp, <code>thread</code> for the thread column, which selects
-the threaded rule, <code>nodes</code> for the participant table so that
-<code>expert_level</code> travels with the network, and
-<code>time_unit = "days"</code>.</p>
+<p><code><a href="../reference/dynet.html">dynet()</a></code> constructs a temporal network from the MOOC
+reply data. The supplied variables <code>sender</code> and
+<code>receiver</code> identify the relational endpoints, while
+<code>timestamp</code> records when each reply was posted. Setting
+<code>thread = "discussion"</code> represents each reply relationship as
+a relational spell.</p>
+<p>The duration of a relational spell represents the period during which
+the discussion remained active through replies and further interactions.
+Each spell begins when a reply is posted and ends with the last recorded
+interaction in the same discussion. This models the reply relationship
+as part of an ongoing discussion in which contributions continued to be
+addressed and responded to, following Saqr and Nouri (2020).</p>
+<p>The constructor derives <code>start</code> from the reply timestamp,
+<code>end</code> from the last recorded timestamp in its discussion, and
+calculates <code>duration = end - start</code>. These variables are
+created during construction rather than supplied in
+<code>mooc_posts</code>. The <code>nodes</code> argument adds
+participant attributes from <code>mooc_people</code>, including
+<code>expert_level</code>, while <code>time_unit = "days"</code>
+expresses elapsed time in days.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">mooc_posts</span>, from <span class="op">=</span> <span class="st">"sender"</span>, to <span class="op">=</span> <span class="st">"receiver"</span>,</span>
 <span>                 time <span class="op">=</span> <span class="st">"timestamp"</span>, thread <span class="op">=</span> <span class="st">"discussion"</span>,</span>
@@ -149,15 +164,36 @@ the threaded rule, <code>nodes</code> for the participant table so that
 <span><span class="co">#&gt; 13      temporal density             not computed</span></span>
 <span><span class="co">#&gt; 14              sessions                     none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes experience, expert_level</span></span></code></pre></div>
-<p>The 86 self-replies and the 37 single-post threads are reported and
-dropped, leaving 2,406 posts in 299 threads. The network has 441
-vertices and 2,406 spells on 1,907 distinct pairs, observed from day 0
-to day 72.01 in 73 one-day bins. The mean snapshot density is 0.0035: on
-an average day about one pair in three hundred is connected.</p>
-<p>Most participants posted a few times. To restrict the analysis to the
-participants with more than 20 ties, we call
-<code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> with a condition on the vertex table; a
-centrality named in the condition is computed over the whole period.</p>
+<p>The call explicitly identifies the sender, receiver, and timestamp
+columns. Because <code>sender</code>, <code>receiver</code>, and
+<code>timestamp</code> are recognised aliases, the <code>from</code>,
+<code>to</code>, and <code>time</code> arguments could be omitted here.
+Alias matching is case-insensitive. Explicit column specification is
+needed only when names do not match recognised aliases or their intended
+interpretation is ambiguous.</p>
+<p>The analysis focuses on exchanges between different participants
+within discussions containing more than one post. Self-replies connect a
+participant to themselves and are excluded by the default
+<code>loops = FALSE</code>. Setting <code>min_thread_posts = 2</code>
+also excludes discussions with fewer than two posts remaining after
+self-replies have been removed. These filtering choices follow the
+chapter’s preparation of the interaction data; they are not requirements
+for constructing a temporal network. Here, they remove 86 self-replies
+and 37 single-post discussions, leaving 2,406 posts across 299
+discussions.</p>
+<p>The resulting temporal network contains 441 vertices and 2,406
+relational spells connecting 1,907 distinct ordered pairs of
+participants. The number of spells exceeds the number of pairs because
+participants may reply to the same person more than once. The
+observation period extends from day 0 to day 72.01. Mean snapshot
+density is 0.0035 across 73 one-day intervals, indicating that
+approximately 0.35% of possible directed connections are present in an
+average interval.</p>
+<p>Following the chapter, the subsequent analysis uses a smaller
+subnetwork to make the visualisations easier to interpret.
+<code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> retains participants whose degree exceeds
+20 in the network aggregated over the observation period, together with
+the relational spells connecting those participants.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">dn_full</span>, <span class="va">degree</span> <span class="op">&gt;</span> <span class="fl">20</span><span class="op">)</span></span>
 <span><span class="va">dn</span></span>
@@ -181,32 +217,40 @@ centrality named in the condition is computed over the whole period.</p>
 <span><span class="co">#&gt;                         Most important change for your school or district?</span></span>
 <span><span class="co">#&gt;                                  Submitting Questions for the Expert Panel</span></span>
 <span><span class="co">#&gt; # 680 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>The active subnetwork has 45 vertices, 686 spells and 428 pairs,
-observed from day 0.11 to day 72.01. The first spell shows the thread
-rule at work: the reply from 219 to 444 posted on day 0.11 stays active
-until day 69.48, because its thread received posts for that long.</p>
+<p>The selected subnetwork contains 45 vertices, 686 relational spells,
+and 428 distinct ordered pairs, spanning day 0.11 to day 72.01. The
+first spell illustrates the discussion-based duration: participant
+<code>219</code> replied to participant <code>444</code> on day 0.11,
+and the spell continues until day 69.48, when the last interaction in
+that discussion was recorded.</p>
+<p>The analyses below describe this selected subnetwork. Their results
+therefore characterise relationships among the retained participants
+rather than the full MOOC forum.</p>
 </div>
 <div class="section level2">
 <h2 id="visualisation">Visualisation<a class="anchor" aria-label="anchor" href="#visualisation"></a>
 </h2>
-<p>To draw the aggregate network, we call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> with
-<code>type = "network"</code>.</p>
+<p>The aggregate network displays all participant pairs connected during
+the observation period. It provides an overview of the relationships
+among the selected participants, but does not show when those
+relationships were active. Setting <code>type = "network"</code>
+produces this view.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"network"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/net-plot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>To draw the network in four one-day bins spaced across the period,
-with a shared layout, we set <code>type</code> to
-<code>"snapshots"</code> and <code>panels</code> to 4.</p>
+<p>Snapshots show how connectivity changes over time. The following call
+displays four one-day intervals spaced across the observation period. A
+shared layout keeps participants in the same positions, making changes
+in their connections easier to compare.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"snapshots"</span>, panels <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Drawing 4 of 72 bins, evenly spaced across the window.</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/snapshots-1.png" class="r-plt" alt="" width="864" style="display: block; margin: auto;"></p>
-<p>To count what the first four weeks hold, we call
-<code><a href="../reference/snapshots.html">snapshots()</a></code> with a grid of four one-week windows beginning
-on day 1, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> on the result. <code>ties</code> is
-the number of distinct pairs active in the window, <code>nodes</code>
-the number of participants with at least one active tie, and
-<code>weight</code> the number of spells.</p>
+<p><code><a href="../reference/snapshots.html">snapshots()</a></code> also returns the connections within
+specified intervals in tidy format. The following call requests weekly
+windows beginning on days 1, 8, 15, and 22. Setting both
+<code>step</code> and <code>window</code> to 7 produces non-overlapping
+seven-day intervals.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">weekly</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">dn</span>, start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">22</span>, step <span class="op">=</span> <span class="fl">7</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">weekly</span><span class="op">)</span></span>
@@ -215,19 +259,31 @@ the number of participants with at least one active tie, and
 <span><span class="co">#&gt; 2    8   95    38    128</span></span>
 <span><span class="co">#&gt; 3   15  137    41    193</span></span>
 <span><span class="co">#&gt; 4   22  154    44    210</span></span></code></pre></div>
-<p>The week beginning on day 1 holds 58 pairs among 29 participants; the
-week beginning on day 22 holds 154 pairs among 44 of the 45. The counts
-grow because a reply stays active until its thread closes, so early ties
-are still present in later windows.</p>
-<p>To see when each participant was active, we set <code>type</code> to
-<code>"timeline"</code> and <code>top</code> to the number of
-participants to show.</p>
+<p>The summary reports <code>ties</code>, the number of distinct
+connected pairs; <code>nodes</code>, the number of participants with at
+least one active tie; and <code>weight</code>, the summed weights of
+active spells. Because the reply data have unit weights, the latter
+counts active spells.</p>
+<p>The window beginning on day 1 contains 58 connected pairs among 29
+participants, compared with 154 pairs among 44 participants in the
+window beginning on day 22. These counts include relationships initiated
+earlier that remain active because their discussions continue to receive
+interactions. They therefore describe connectivity within each window,
+rather than only replies posted during that week.</p>
+<p>The activity timeline shows when relationships between participant
+pairs are active. Setting <code>top = 25</code> displays the 25 pairs
+with the most relational spells. For each pair, colour represents the
+proportion of a time bin during which at least one spell is active,
+counting overlapping spells once.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"timeline"</span>, top <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/timeline-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>To count the ties that form and dissolve each day, we call
-<code><a href="../reference/events.html">events()</a></code> with <code>measure</code> for the two counts and a
-grid of one-day bins.</p>
+<p><code><a href="../reference/events.html">events()</a></code> counts relational spell onsets and terminations
+within successive intervals. The following call requests daily counts
+through <code>"formation"</code> and <code>"dissolution"</code>. In this
+threaded network, formation corresponds to a reply being posted, while
+termination occurs at the last recorded interaction in its
+discussion.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">turnover</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"formation"</span>, <span class="st">"dissolution"</span><span class="op">)</span>,</span>
 <span>                   start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">72</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -237,27 +293,39 @@ grid of one-day bins.</p>
 <span><span class="co">#&gt; 2   formation 73 9.39726  8.60029   0  40        46</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">turnover</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/turnover-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>On average 9.4 ties form and 9.4 dissolve per day; the means are
-equal because every spell begins and ends inside the period. Formation
-peaks at 40 on day 46. Dissolution peaks at 99 on day 69, when the
-threads that had stayed open through the course fall silent
-together.</p>
-<p>The proximity timeline places participants who interact near each
-other and follows their positions through time. To draw it, we set
-<code>type</code> to <code>"proximity"</code> and <code>slices</code> to
-the number of time slices.</p>
+<p>On average, 9.4 spells begin and 9.4 terminate per day. Formation
+peaks at 40 spells on day 46, while termination peaks at 99 on day 69.
+Multiple spells can terminate together because replies belonging to the
+same discussion share its termination time. These counts describe
+relational spells, so the termination of one spell does not necessarily
+disconnect a participant pair if another spell remains active.</p>
+<p>The proximity timeline summarises changes in participants’ network
+positions. Within each temporal slice, shortest-path distances are
+calculated and represented along a single axis. Lines connect each
+participant’s positions across slices. Participants separated by shorter
+network distances are positioned closer together, allowing changes in
+clusters and relationships to be followed over time.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dn</span>, type <span class="op">=</span> <span class="st">"proximity"</span>, slices <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/proximity-1.png" class="r-plt" alt="" width="768" style="display: block; margin: auto;"></p>
+<p>Here, <code>slices = 20</code> specifies the number of temporal
+slices. Proximity reflects network distance within a slice; it does not
+necessarily indicate a direct interaction between two participants.</p>
 </div>
 <div class="section level2">
 <h2 id="structure-over-time">Structure over time<a class="anchor" aria-label="anchor" href="#structure-over-time"></a>
 </h2>
-<p>Every measuring function takes <code>start</code>, <code>end</code>,
-<code>step</code> and <code>window</code>. To measure density over a
-rolling week, we call <code><a href="../reference/metrics.html">metrics()</a></code> with <code>step = 1</code>
-and <code>window = 7</code>, so that each value covers the seven days
-beginning at its time.</p>
+<p>Graph-level measures describe how the network’s overall structure
+changes during the observation period. Density measures the proportion
+of possible directed connections that are present. Calculating density
+over successive windows shows whether relationships become more
+widespread or more restricted over time.</p>
+<p>The temporal settings determine which relationships contribute to
+each measurement. <code>start</code> and <code>end</code> specify the
+measurement range, <code>step</code> determines the interval between
+measurements, and <code>window</code> determines the period covered by
+each value. The following call calculates density daily, using a
+seven-day window beginning at each measurement time:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">weekly_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span>,</span>
 <span>                          start <span class="op">=</span> <span class="fl">14</span>, end <span class="op">=</span> <span class="fl">60</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
@@ -266,11 +334,19 @@ beginning at its time.</p>
 <span><span class="co">#&gt; 1 density 47 0.1006233 0.02149729 0.06616162 0.1393939        45</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">weekly_density</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/density-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Over the 47 windows the weekly density averages 0.101 and ranges from
-0.066 to 0.139, with the peak in the week beginning on day 45.</p>
-<p>To obtain the density of the whole period, and the temporal density
-that weights each pair by the share of the period during which it was
-live, we set <code>window</code> to <code>"all"</code>.</p>
+<p>Because <code>window = 7</code> exceeds <code>step = 1</code>,
+successive windows overlap. Across the 47 windows, density averages
+0.101 and ranges from 0.066 to 0.139. The maximum occurs in the window
+beginning on day 45. These values describe connections active during
+each seven-day period, including spells that began earlier and remained
+active.</p>
+<p>Aggregate density and temporal density summarise different aspects of
+connectivity. <strong>Aggregate density</strong> records whether each
+pair was connected at any time during the observation period, regardless
+of duration. <strong>Temporal density</strong> accounts for how long
+pairs were connected, expressing total connected-pair duration relative
+to the maximum possible over the period. Overlapping spells between the
+same endpoints contribute once to their connected duration.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scalars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"edges"</span>, <span class="st">"density"</span>, <span class="st">"temporal_density"</span><span class="op">)</span>,</span>
 <span>                   window <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
@@ -282,12 +358,19 @@ live, we set <code>window</code> to <code>"all"</code>.</p>
 <span><span class="co">#&gt;  0.1138889            edges 428.00000000</span></span>
 <span><span class="co">#&gt;  0.1138889          density   0.21616162</span></span>
 <span><span class="co">#&gt;  0.1138889 temporal_density   0.06348315</span></span></code></pre></div>
-<p>The 428 pairs give an aggregate density of 0.216. The temporal
-density is 0.063, less than a third of it, because most pairs were live
-for only part of the period.</p>
-<p>Reciprocity is the share of ties that are returned. To obtain it per
-day on the full network, we call <code><a href="../reference/metrics.html">metrics()</a></code> with
-<code>measure = "reciprocity"</code>.</p>
+<p>The 428 connected pairs yield an aggregate density of 0.216. Temporal
+density is 0.063, indicating that these connections were active for only
+part of the observation period. The difference illustrates how
+aggregating all relationships can obscure periods when connectivity was
+lower.</p>
+<p>Reciprocity describes the extent to which directed relationships are
+returned. A connection from A to B is reciprocated when the reverse
+connection from B to A is also present in the measurement window. With
+<code>measure = "reciprocity"</code>, <code><a href="../reference/metrics.html">metrics()</a></code> returns the
+proportion of directed ties that have a corresponding reverse tie.</p>
+<p>The following calculation uses the full network,
+<code>dn_full</code>, rather than the selected subnetwork. It measures
+reciprocity within successive one-day intervals.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">reciprocity</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn_full</span>, measure <span class="op">=</span> <span class="st">"reciprocity"</span>,</span>
 <span>                       start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -296,12 +379,17 @@ day on the full network, we call <code><a href="../reference/metrics.html">metri
 <span><span class="co">#&gt; 1 reciprocity 73 0.1509793 0.04198243   0 0.2178218        47</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">reciprocity</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/recip-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Reciprocity averages 0.151 over the 73 days and peaks at 0.218 on day
-47.</p>
-<p>The dyad census classifies every pair as mutual, asymmetric or null
-(Wasserman and Faust, 1994). To obtain it at each instant of the grid,
-we name the three classes in <code>measure</code> and set
-<code>window</code> to 0.</p>
+<p>Reciprocity averages 0.151 across the 73 intervals and reaches 0.218
+in the interval beginning on day 47. Thus, approximately 15.1% of active
+directed ties are reciprocated in an average daily interval. These
+values describe the presence of relationships in both directions, rather
+than whether individual messages received a reply.</p>
+<p>The dyad census provides a complementary description by classifying
+each unordered pair of distinct participants. A <strong>mutual</strong>
+dyad contains ties in both directions, an <strong>asymmetric</strong>
+dyad contains a tie in only one direction, and a <strong>null</strong>
+dyad contains neither. Unlike reciprocity, which reports a proportion of
+directed ties, the census counts participant pairs in each category.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dyad_census</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mutual"</span>, <span class="st">"asymmetric"</span>, <span class="st">"null"</span><span class="op">)</span>,</span>
 <span>                       start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">72</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
@@ -312,12 +400,21 @@ we name the three classes in <code>measure</code> and set
 <span><span class="co">#&gt; 3       null 73 887.53425 47.64833 817 990         0</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dyad_census</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/dyads-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>The 45 vertices form 990 dyads, all null at the first instant. Over
-the 73 instants an average of 21.0 dyads are mutual and 81.5 asymmetric,
-and the mutual count peaks at 46 on day 48.</p>
-<p>Degree centralisation is 0 when every vertex has the same degree and
-1 when one vertex holds every tie (Freeman, 1979). To obtain it per day,
-we set <code>measure</code> to <code>"centralization_degree"</code>.</p>
+<p>Here, <code>window = 0</code> evaluates connections at individual
+time points, sampled one day apart. The 45 participants in
+<code>dn</code> form 990 unordered pairs, all classified as null at time
+0. Across the 73 sampled instants, an average of 21.0 pairs are mutual
+and 81.5 are asymmetric. The number of mutual pairs peaks at 46 on day
+48.</p>
+<p>Degree centralisation describes how unevenly connections are
+distributed across the network (Freeman, 1979). It compares each
+participant’s degree with the highest degree in the network and
+summarises these differences relative to a theoretical maximum.
+Centralisation is zero when all participants have equal degree; higher
+values indicate that connections are concentrated around participants
+with higher degree. Unlike degree centrality, which describes an
+individual participant, centralisation describes the network as a
+whole.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">centralisation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"centralization_degree"</span>,</span>
 <span>                          start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -326,64 +423,89 @@ we set <code>measure</code> to <code>"centralization_degree"</code>.</p>
 <span><span class="co">#&gt; 1 centralization_degree 73 0.3789387 0.1104169   0 0.5081924        31</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">centralisation</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/centralization-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Centralisation averages 0.379 and peaks at 0.508 on day 31, the day
-on which one participant’s betweenness also peaks.</p>
+<p>Daily degree centralisation averages 0.379 and peaks at 0.508 in the
+interval beginning on day 31. This peak identifies the interval with the
+greatest concentration of degree under the specified calculation.</p>
 </div>
 <div class="section level2">
 <h2 id="participants">Participants<a class="anchor" aria-label="anchor" href="#participants"></a>
 </h2>
-<p>To obtain degree in all three directions for every participant on
-every day, we call <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> with
-<code>measure = "degree"</code> and <code>mode</code> for the
-directions, then <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> with <code>by = "measure"</code>
-for one row per measure.</p>
+<p>Vertex-level centrality measures describe participants’ positions
+within the discussion network. Degree counts direct connections. Because
+ties run from the sender of a reply to its receiver,
+<strong>indegree</strong> counts the participants from whom a person has
+incoming connections, while <strong>outdegree</strong> counts the
+participants to whom they have outgoing connections. <strong>Total
+degree</strong> adds indegree and outdegree; a reciprocated relationship
+therefore contributes to both.</p>
+<p>The following call computes all three measures within successive
+daily intervals. Setting <code>by = "measure"</code> summarises each
+measure across participants and measurement times.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">degree_series</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
-<span>                                mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"in"</span>, <span class="st">"out"</span><span class="op">)</span>,</span>
-<span>                                start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">degree_series</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
+<span>                                   mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"in"</span>, <span class="st">"out"</span><span class="op">)</span>,</span>
+<span>                                   start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">degree_series</span>, by <span class="op">=</span> <span class="st">"measure"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      measure    n     mean       sd min max peak_time</span></span>
 <span><span class="co">#&gt; 1     degree 3285 5.765601 7.273446   0  52        49</span></span>
 <span><span class="co">#&gt; 2  degree_in 3285 2.882801 5.477055   0  35        50</span></span>
 <span><span class="co">#&gt; 3 degree_out 3285 2.882801 2.706619   0  19        31</span></span></code></pre></div>
-<p>Mean degree is 5.77 per participant per day, with a maximum of 52 on
-day 49. In-degree and out-degree share the mean of 2.88, but in-degree
-is far more dispersed: its maximum is 35 on day 50 against 19 for
-out-degree on day 31. Replies concentrate on a few receivers more than
-on a few senders.</p>
-<p>To draw the trajectories of the ten most central participants, we
-call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> with <code>top</code>.</p>
+<p>Mean total degree is 5.77 per participant per daily interval, with a
+maximum of 52 on day 49. Indegree and outdegree both average 2.88, as
+every directed tie contributes once to each. Their maxima differ:
+indegree reaches 35 on day 50, whereas outdegree reaches 19 on day 31.
+The highest incoming degree therefore involves more distinct replying
+participants than the highest outgoing degree involves distinct
+recipients.</p>
+<p>The following plot displays the degree trajectories of the ten
+participants selected by <code>top = 10</code>:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
-<span>                         start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"degree"</span>,</span>
+<span>                            start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">degree</span>, top <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/degree-plot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Closeness, betweenness and eigenvector centrality describe reach,
-brokerage and connection to well-connected others (Freeman, 1979;
-Bonacich, 1987). To obtain all three on the same grid, we name them in
-<code>measure</code>.</p>
+<p>Closeness, betweenness, and eigenvector centrality describe different
+aspects of participants’ positions in the network (Freeman, 1979;
+Bonacich, 1987). <strong>Closeness centrality</strong> is based on
+shortest-path distances to other participants. Higher values indicate
+shorter average distances, meaning that fewer steps are required to
+reach others. <strong>Betweenness centrality</strong> measures the
+extent to which a participant lies on shortest paths between other
+participants, identifying potential intermediary positions.
+<strong>Eigenvector centrality</strong> accounts for the centrality of a
+participant’s neighbours, assigning higher scores to connections with
+other highly central participants.</p>
+<p>The following call computes all three measures within successive
+one-day intervals. These calculations use the connections present within
+each interval; they do not trace time-respecting paths across
+intervals.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">other_centrality</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>,</span>
-<span>                                   measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"closeness"</span>, <span class="st">"betweenness"</span>,</span>
-<span>                                               <span class="st">"eigenvector"</span><span class="op">)</span>,</span>
-<span>                                   start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">other_centrality</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">dn</span>,</span>
+<span>                                      measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"closeness"</span>, <span class="st">"betweenness"</span>,</span>
+<span>                                                  <span class="st">"eigenvector"</span><span class="op">)</span>,</span>
+<span>                                      start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">other_centrality</span>, by <span class="op">=</span> <span class="st">"measure"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       measure    n       mean         sd min      max peak_time</span></span>
 <span><span class="co">#&gt; 1 betweenness 3285 34.5716895 98.4872310   0 974.0571        31</span></span>
 <span><span class="co">#&gt; 2   closeness 3285  0.4221442  0.2069263   0   1.0000         1</span></span>
 <span><span class="co">#&gt; 3 eigenvector 3285  0.2351984  0.2028102   0   1.0000         1</span></span></code></pre></div>
-<p>Betweenness averages 34.6 and peaks at 974.1 on day 31. Closeness
-averages 0.42 and eigenvector centrality 0.24; both reach their bound of
-1 on day 1.</p>
+<p>Across participants and daily intervals, betweenness averages 34.6
+and reaches a maximum of 974.1 on day 31. Mean closeness is 0.42, and
+mean eigenvector centrality is 0.24; their reported maxima are both 1 on
+day 1. These measures have different scales and interpretations, so
+their numerical magnitudes should not be compared directly.</p>
+<p>Plotting betweenness trajectories shows when participants occupy
+intermediary positions and how those positions change during the
+course.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">betweenness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span>,</span>
-<span>                              start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">betweenness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span>,</span>
+<span>                                 start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">betweenness</span>, top <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/betweenness-plot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Aggregate centrality over the whole period is carried by the vertex
-table. To obtain it, we call <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> with
-<code>what = "nodes"</code> and <code>measure</code> for the
-centralities to annotate.</p>
+<p>Centrality can also be calculated on the network aggregated over the
+full observation period. The following call returns a tidy participant
+table containing vertex attributes and the requested aggregate
+centralities:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ranked</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">dn</span>, what <span class="op">=</span> <span class="st">"nodes"</span>,</span>
 <span>                        measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"degree"</span>, <span class="st">"betweenness"</span>, <span class="st">"eigenvector"</span><span class="op">)</span><span class="op">)</span></span>
@@ -395,22 +517,29 @@ centralities to annotate.</p>
 <span><span class="co">#&gt; 4    7          2      Student     26   34.113923   0.5748078</span></span>
 <span><span class="co">#&gt; 5   11          3      Teacher     47  180.530502   0.8963590</span></span>
 <span><span class="co">#&gt; 6   13          2      Student     15   16.629447   0.4051050</span></span></code></pre></div>
-<p>Among the first six participants, 11, a teacher, has the highest
-aggregate degree, 47, the highest betweenness, 180.5, and the highest
-eigenvector centrality, 0.896.</p>
+<p>Among the first six participants displayed, participant
+<code>11</code>, a teacher, has the highest degree (47), betweenness
+(180.5), and eigenvector centrality (0.896). These comparisons concern
+only the displayed participants. Aggregate centralities summarise
+positions across the full period, whereas the daily trajectories show
+when those positions emerge or change.</p>
 </div>
 <div class="section level2">
 <h2 id="reachability">Reachability<a class="anchor" aria-label="anchor" href="#reachability"></a>
 </h2>
-<p>A time-respecting path may only use ties in chronological order
-(Kempe, Kleinberg and Kumar, 2002), so it shows how far, and how fast,
-something posted by one participant could travel through the forum. To
-find the earliest path from participant 444 to every other, we call
-<code><a href="../reference/paths.html">paths()</a></code> with <code>from</code> for the source.
-<code>arrival_time</code> is the earliest moment a participant can be
-reached, <code>latency</code> that moment minus the source’s start,
-<code>n_hops</code> the number of ties on the earliest route and
-<code>n_paths</code> the number of routes that arrive equally early.</p>
+<p>Temporal reachability describes whether one participant can reach
+another through a sequence of interactions that follows temporal order.
+For example, a path from A through B to C requires the connection from B
+to C to be available after arrival at B. Waiting between interactions is
+permitted, but an earlier interaction cannot be used to continue a path
+that reaches B later.</p>
+<p><code><a href="../reference/paths.html">paths()</a></code> identifies the earliest-arrival paths from a
+specified participant. It first minimises arrival time and then, among
+paths arriving equally early, minimises the number of hops. A path
+through several intermediaries may therefore reach its destination
+before a direct connection becomes available.</p>
+<p>The following call searches forward from participant
+<code>444</code>:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">forward</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"444"</span>, direction <span class="op">=</span> <span class="st">"forward"</span><span class="op">)</span></span>
 <span><span class="va">forward</span></span>
@@ -440,32 +569,58 @@ reached, <code>latency</code> that moment minus the source’s start,
 <span><span class="co">#&gt; 6     max latency 50.87431</span></span>
 <span><span class="co">#&gt; 7     median hops        2</span></span>
 <span><span class="co">#&gt; 8        max hops        5</span></span></code></pre></div>
-<p>Participant 444 reaches all 44 others. Participant 19 is reached in
-one hop after 2.11 days and participant 11 in one hop after 12.27 days;
-participant 15 needs five hops but is reached after 6.02 days, earlier
-than participant 11. The median latency is 17.6 days and the maximum
-50.9; the median route has two hops and the longest five.</p>
-<p>To draw the earliest routes as a tree, we call <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on
-the result; to draw them against time, we call
-<code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> on the result and
-<code><a href="../reference/plot_path_trajectories.html">plot_path_trajectories()</a></code> with
-<code>measure = "time"</code>.</p>
+<p>The result reports the earliest arrival at each participant in
+<code>arrival_time</code>. The <code>latency</code> column measures
+elapsed time from the search origin to arrival, including waiting
+between interactions. <code>n_hops</code> records the number of
+traversed ties, and <code>n_paths</code> records the number of optimal
+paths. By default, traversal itself takes zero time; arrival times are
+determined by when the required connections become available.</p>
+<p>Participant <code>444</code> can reach all 44 other participants.
+Participant <code>19</code> is reached in one hop after 2.11 days, while
+participant <code>11</code> is reached in one hop after 12.27 days.
+Participant <code>15</code> requires five hops but is reached after 6.02
+days, illustrating why fewer hops do not necessarily imply earlier
+arrival. Median latency is 17.6 days, and the maximum is 50.9 days. The
+median path contains two hops, and the longest contains five.</p>
+<p>These paths follow the network’s reply direction, from the replying
+participant to the participant addressed. They therefore describe
+reachability through the specified reply relationships. Interpreting
+them as the forward transmission of information requires this direction
+to match the process being modelled.</p>
+<p>The path plot displays the routes connecting the source to reachable
+participants:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">forward</span>, base_size <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/path-plot-1.png" class="r-plt" alt="" width="768" style="display: block; margin: auto;"></p>
+<p>The temporal progression of these paths can be displayed using
+<code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> and
+<code><a href="../reference/plot_path_trajectories.html">plot_path_trajectories()</a></code>. The first function organises the
+path result into a tree of trajectories. Setting
+<code>measure = "time"</code> then positions the trajectory steps
+according to their temporal values, showing when participants are
+reached along each route.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/path_trajectories.html">path_trajectories</a></span><span class="op">(</span><span class="va">forward</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/plot_path_trajectories.html">plot_path_trajectories</a></span><span class="op">(</span><span class="va">tree</span>, measure <span class="op">=</span> <span class="st">"time"</span>, base_size <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/trajectories-1.png" class="r-plt" alt="" width="864" style="display: block; margin: auto;"></p>
+<p>This complements the path diagram by making timing explicit. Routes
+with similar numbers of hops may have different arrival times because
+their constituent interactions become available at different points in
+the observation period.</p>
 </div>
 <div class="section level2">
 <h2 id="mixing-between-experience-levels">Mixing between experience levels<a class="anchor" aria-label="anchor" href="#mixing-between-experience-levels"></a>
 </h2>
-<p>To count the ties within and between experience levels per day, we
-call <code><a href="../reference/mixing.html">mixing()</a></code> with <code>attribute</code> for the vertex
-attribute that defines the groups, then <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> for one
-row per ordered pair of levels. Each measure reads from the sender’s
-level to the receiver’s (Newman, 2003).</p>
+<p>Mixing describes the pattern of relationships within and between
+categories of participants (Newman, 2003). Here, the categories are
+teachers, students, and experts, recorded in <code>expert_level</code>.
+The analysis examines how connections among these categories change over
+the course—for example, student-to-student connections compared with
+student-to-teacher connections.</p>
+<p><code><a href="../reference/mixing.html">mixing()</a></code> groups active connections according to the
+experience levels of their senders and receivers. The following call
+computes these counts within successive one-day intervals:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">dn</span>, attribute <span class="op">=</span> <span class="st">"expert_level"</span>,</span>
 <span>              start <span class="op">=</span> <span class="fl">1</span>, end <span class="op">=</span> <span class="fl">73</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -482,38 +637,71 @@ level to the receiver’s (Newman, 2003).</p>
 <span><span class="co">#&gt; 9 Teacher -&gt; Teacher 73 36.821918 15.738614   0  67        49</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mix</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ch17-temporal-networks_files/figure-html/mixing-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Teachers writing to teachers is the most common tie, 36.8 active ties
-per day on average with a peak of 67, followed by students writing to
-teachers at 33.5. Experts writing to experts is the rarest, at 2.9 per
-day. Direction matters: ties from experts to teachers average 14.3 per
-day, from teachers to experts 5.8.</p>
+<p>Each value counts distinct connected participant pairs within the
+corresponding category combination. Several active spells from the same
+student to the same teacher contribute one student-to-teacher connection
+in that interval. The counts therefore describe active relationships,
+rather than the number of replies posted that day. Connections included
+in a daily window need not all be active at the same instant.</p>
+<p>Teacher-to-teacher connections are the most frequent, averaging 36.8
+per daily interval and reaching a maximum of 67. Student-to-teacher
+connections average 33.5, while expert-to-expert connections average
+2.9. The pattern also differs by direction: expert-to-teacher
+connections average 14.3, compared with 5.8 for teacher-to-expert
+connections. These are unnormalised counts and should be interpreted in
+relation to the number of participants in each category.</p>
 </div>
 <div class="section level2">
 <h2 id="interpretation">Interpretation<a class="anchor" aria-label="anchor" href="#interpretation"></a>
 </h2>
-<p>The forum is sparse on any given day and dense in aggregate: one pair
-in three hundred is connected on an average day, one in five over the
-course, and the gap between the temporal density of 0.063 and the
-aggregate density of 0.216 says that most ties were live for only a
-fraction of the period. Activity is concentrated on receivers rather
-than senders, and on teachers: the most common exchange is between
-teachers, students address teachers more than anyone else, and the most
-central participant over the whole period is a teacher. Everything
-posted by participant 444 could in principle reach every active
-participant, but the median took more than two weeks and the longest
-route seven weeks, so the forum spreads information slowly even though
-it connects everyone.</p>
+<p>The analysis shows how the timing of relationships changes the
+description of the forum. In the selected subnetwork, aggregate density
+is 0.216, whereas temporal density is 0.063. The aggregate network
+therefore contains substantially more connectivity than is sustained
+throughout the observation period: many participant pairs are connected,
+but only for part of that period.</p>
+<p>Participants’ positions also vary over time. Indegree reaches a
+higher maximum than outdegree, indicating that some participants receive
+connections from more distinct participants than any participant
+addresses within a daily interval. Mixing counts show frequent
+teacher-to-teacher and student-to-teacher relationships, although
+differences in category size must be considered when interpreting these
+counts.</p>
+<p>Participant <code>444</code> can reach every other participant in the
+selected subnetwork through time-respecting paths. However, median
+latency is 17.6 days, and the maximum is 50.9 days. Complete
+reachability therefore coexists with substantial waiting before some
+destinations become accessible. These values describe possible traversal
+of the modelled reply relationships; they do not measure the observed
+transmission speed of information.</p>
 </div>
 <div class="section level2">
 <h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
 </h2>
-<p>A reply that stays active until its thread closes is a modelling
-choice; a shorter tie life would give sparser windows and longer
-latencies. The analysis of structure and centrality is restricted to the
-45 participants with more than 20 ties, so it describes the active core,
-not the course. Participants who wrote or received no surviving exchange
-are absent, and the observation period is taken from the data rather
-than the course calendar.</p>
+<p>Relational duration is defined by continued activity within a
+discussion: each reply relationship remains active until the
+discussion’s last recorded interaction. This assumption affects network
+density, centrality, and temporal paths. Shorter spell durations could
+produce fewer active connections, longer waiting times, or unreachable
+destinations. The assigned duration should therefore be interpreted as a
+model of discussion activity rather than continuous interpersonal
+contact.</p>
+<p>Most analyses concern the 45 participants whose aggregate degree
+exceeds 20. Their results describe relationships among these selected
+participants and cannot be generalised directly to the full forum. The
+reciprocity analysis explicitly uses <code>dn_full</code> and
+consequently describes a different participant population.</p>
+<p>Daily and weekly windows combine relationships active during the same
+interval. Such relationships need not overlap at an instant, whereas
+calculations with <code>window = 0</code> evaluate connectivity at
+specific time points. The observation period is determined from the
+supplied interaction data rather than independently specified course
+dates.</p>
+<p>Finally, ties run from the replying participant to the participant
+addressed. Temporal paths follow this direction. Interpreting those
+paths as information dissemination requires a substantive justification
+for how the direction of reply relationships represents the process of
+interest.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

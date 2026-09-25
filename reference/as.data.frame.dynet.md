@@ -50,7 +50,7 @@ as.data.frame(
   only for `what = "nodes"`. Each becomes one column holding the value
   over the whole observed period, so the vertex table can be filtered or
   ranked without a second call. Any measure
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   accepts at snapshot scope is allowed, plus `"indegree"` and
   `"outdegree"`; anything else raises a `dynet_unknown_measure` error,
   and a `measure` that is not a character vector raises
@@ -61,13 +61,13 @@ as.data.frame(
 
   How sessions are treated while `measure` is computed: `"bounded"` (the
   default), `"collapse"` or `"separate"`, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md).
   Ignored when `measure` is not given.
 
 - start, end:
 
   Measurement bounds passed to
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   when `measure` is given, and ignored otherwise. Default to the
   observed range.
 

@@ -11,7 +11,7 @@ verbs are seeing."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,7 +85,7 @@ zero-row frame with the documented columns.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>:
+<dd><p>How to treat sessions, as in <code><a href="centrality_series.html">centrality_series()</a></code>:
 <code>"bounded"</code> (the default), <code>"collapse"</code> or <code>"separate"</code>. <code>"separate"</code>
 needs a network built with a session column and raises
 <code>dynet_no_sessions</code> otherwise.</p></dd>
@@ -135,8 +135,12 @@ row per bin, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class=
 <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> returns the plain table. A pair
 joined by more than one spell in the same bin is one edge, with
 <code>n_spells</code> recording how many spells were collapsed – so the edge counts
-here agree with those from <code><a href="metrics.html">metrics()</a></code>. Eligible isolates have no
-synthetic edge row; use <code><a href="dyn_centrality.html">dyn_centrality()</a></code> or <code><a href="metrics.html">metrics()</a></code> when the
+here agree with those from <code><a href="metrics.html">metrics()</a></code>. <code>weight</code> is the sum of those
+spells' full weights: a spell counts its whole weight in every bin it
+touches, as <code><a href="https://rdrr.io/pkg/networkDynamic/man/network.collapse.html" class="external-link">networkDynamic::network.collapse()</a></code> does. Snapshot
+<code>"strength"</code> in <code><a href="centrality_series.html">centrality_series()</a></code> instead splits a spell's weight by
+the share of its duration inside the bin. Eligible isolates have no
+synthetic edge row; use <code><a href="centrality_series.html">centrality_series()</a></code> or <code><a href="metrics.html">metrics()</a></code> when the
 eligible population itself is required.</p>
     </div>
     <div class="section level2">

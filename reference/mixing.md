@@ -42,7 +42,7 @@ mixing(
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md):
   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
   needs a network built with a session column and raises
   `dynet_no_sessions` otherwise.

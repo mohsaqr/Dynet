@@ -57,7 +57,7 @@ animate(
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md):
   `"bounded"` (the default) or `"collapse"`. An animation draws calendar
   bins, so `"separate"` is not offered.
 
@@ -70,11 +70,11 @@ animate(
 
   What node size follows. `NULL`, the default, keeps every vertex the
   same size. The name of a snapshot node measure from
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md),
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md),
   such as `"degree"` or `"betweenness"`, computes it on the animation's
   own grid, so a vertex grows and shrinks bin by bin. A node-level
   result of
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   is matched by vertex and time; one computed with `window = "all"`
   holds a single value per vertex, so every vertex keeps one size for
   the whole film, for instance its degree over the whole period. The
@@ -140,7 +140,7 @@ animate(
 - isolates:
 
   How a vertex that is present but has no tie in a bin is drawn.
-  `"fade"`, the default, at a third of its opacity; `"show"` at full
+  `"fade"`, the default, at 35% of its opacity; `"show"` at full
   opacity; `"hide"` invisible.
 
 - ease:
@@ -283,11 +283,11 @@ a network without a partition or a `labels` naming no vertex attribute;
 `dynet_missing_column` and `dynet_unknown_node` for a coordinate table
 that is incomplete; `dynet_unknown_measure` for a `measure` that is
 neither a measure
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
 offers nor a numeric vertex attribute, and whatever
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
 raises for one it refuses; `dynet_bad_input` for a
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
 result that is not node-level or lands on none of the bins, and a
 warning of class `dynet_partial_measure` when it lands on only some; and
 `dynet_bad_input` for a non-positive `fps`, `tween`, `width`, `height`
@@ -301,7 +301,7 @@ positive whole number, or a negative `max_displacement` or
 for the same grid as a table,
 [`plot.dynet()`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md)
 with `type = "snapshots"` for it as a static filmstrip, and
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
 for the measures node size can follow.
 
 ## Examples
@@ -317,7 +317,7 @@ if (requireNamespace("gifski", quietly = TRUE) &&
 #>   bins frames fps seconds tween  ease layout format measure first_time
 #> 1    6     12  12       1     2 dwell spring    gif    <NA>          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1        20       17       51 0.5490196 /tmp/RtmpBEGvI6/file1d1e3b3294e1.gif
+#> 1        20       17       51 0.5490196 /tmp/RtmpnxMZ4i/file1c5e4a2b87b1.gif
 # \donttest{
 if (requireNamespace("av", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
@@ -330,6 +330,6 @@ if (requireNamespace("av", quietly = TRUE) &&
 #>   bins frames fps seconds tween  ease  layout format measure first_time
 #> 1   11     66  12     5.5     6 dwell relaxed    mp4  degree          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1        20       17       54 0.3074074 /tmp/RtmpBEGvI6/file1d1e72a7b361.mp4
+#> 1        20       17       54 0.3074074 /tmp/RtmpnxMZ4i/file1c5e31943fff.mp4
 # }
 ```

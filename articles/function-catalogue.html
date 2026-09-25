@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,11 +69,13 @@
 
     
     
-<p>Dynet exports 38 functions in six categories, and registers 50 S3
-methods across its result classes. Every function addresses vertices by
-name and returns a data frame with one row per observation. This page
-lists each function with what it takes and what it returns; the help
-page of each function gives the full contract.</p>
+<p>Dynet provides functions for temporal network construction, editing,
+measurement, path analysis, aggregation, and animation. Vertices are
+identified by name, and analytical results are returned in tidy formats
+with methods for printing, summarising, and plotting. This catalogue
+describes the principal inputs and outputs of the 39 exported functions.
+Individual help pages document their arguments and conditions in
+detail.</p>
 <table class="table">
 <colgroup>
 <col width="30%">
@@ -89,51 +91,66 @@ page of each function gives the full contract.</p>
 <tr class="odd">
 <td>Construction</td>
 <td align="right">4</td>
-<td>Build a network from a relational log and read it back per time
-bin</td>
+<td>Construct or convert networks and inspect spells and snapshots</td>
 </tr>
 <tr class="even">
 <td>Editing</td>
 <td align="right">17</td>
-<td>Rewrite spells and vertex activity without breaking time</td>
+<td>Modify vertices, relational spells, sessions, and observation
+periods</td>
 </tr>
 <tr class="odd">
 <td>Measurement</td>
-<td align="right">8</td>
-<td>Centrality, reachability, structure, mixing, turn-taking,
-burstiness, duration, similarity</td>
+<td align="right">9</td>
+<td>Measure centrality, reachability, structure, mixing, turn-taking,
+timing, duration, and similarity</td>
 </tr>
 <tr class="even">
 <td>Paths</td>
 <td align="right">5</td>
-<td>Time-respecting paths and four views of the result</td>
+<td>Find time-respecting paths and summarise or visualise their
+routes</td>
 </tr>
 <tr class="odd">
 <td>Structure</td>
 <td align="right">3</td>
-<td>Turn the network into another object</td>
+<td>Project, aggregate, or subset a network</td>
 </tr>
 <tr class="even">
 <td>Animation</td>
 <td align="right">1</td>
-<td>Render the measurement grid as an animation</td>
+<td>Animate successive temporal snapshots</td>
 </tr>
 </tbody>
 </table>
 <div class="section level2">
 <h2 id="construction">Construction<a class="anchor" aria-label="anchor" href="#construction"></a>
 </h2>
-<p><code><a href="../reference/dynet.html">dynet()</a></code> builds a temporal network from a relational log.
-It takes a data frame of ties and a set of column selectors, infers one
-of four log formats from which selectors are named, and returns an
-object of class <code>c("dynet", "netobject", "cograph_network")</code>
-carrying the spell table, the vertex table and the construction
-metadata. The four formats are interval logs with a start and an end per
-tie, contact logs of instantaneous events, threaded logs in which a tie
-stays active until its thread falls silent, and co-presence logs in
-which actors sharing a group become connected. To build a network from
-an interval log, we call <code><a href="../reference/dynet.html">dynet()</a></code> with the log; the columns
-are recognised by name.</p>
+<p><code><a href="../reference/dynet.html">dynet()</a></code> constructs a temporal network from relational
+data. It returns an object of class
+<code>c("dynet", "netobject", "cograph_network")</code>, containing
+relational spells, vertices, and construction metadata.</p>
+<p>Four input formats are supported. Interval data supply onset and
+termination, or onset and duration. Contact data supply instantaneous
+interaction timestamps. Threaded data derive termination from the last
+retained interaction in each thread. Co-presence data connect actors
+attending the same occasion.</p>
+<p>With <code>format = "auto"</code>, specifying <code>actor</code> and
+<code>group</code> selects co-presence; otherwise, specifying
+<code>thread</code> selects threaded construction. A specified or
+recognised termination or duration column selects interval data when
+neither preceding condition applies. Otherwise, contact data are
+selected. <code>format</code> can also be specified explicitly.</p>
+<p>Column matching is case-insensitive. Recognised endpoint aliases
+include <code>from</code>/<code>to</code>,
+<code>sender</code>/<code>receiver</code>, and
+<code>source</code>/<code>target</code>; interval boundaries include
+<code>start</code>/<code>end</code> and
+<code>onset</code>/<code>terminus</code>. Explicit column specification
+is needed only for unrecognised or ambiguous names. The constructor
+calculates <code>duration = end - start</code> and assigns
+<code>weight = 1</code> when no multiplicity variable is supplied or
+recognised.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
 <span><span class="va">dn</span></span>
@@ -149,33 +166,30 @@ are recognised by name.</p>
 <span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
 <span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
 <span><span class="co">#&gt; # 234 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>The network has 14 vertices and 240 spells over 110 distinct pairs,
-observed from 0 to 21.52 time units.</p>
-<p><code><a href="../reference/as_dynet.html">as_dynet()</a></code> converts an object of another class to a
-temporal network. It takes that object and returns a <code>dynet</code>.
-The method for <code>networkDynamic</code> imports edge spells, vertex
-spells, the observation period and per-edge attributes. The method for
-<code>dynet</code> returns its input unchanged, so the call is safe on
-an object that is already a temporal network.</p>
-<p><code><a href="../reference/events.html">events()</a></code> counts tie formation and dissolution over time.
-It takes a network, one or more measure names in <code>measure</code>,
-and the four grid arguments, and returns a <code>dynet_metric</code> at
-graph level with one row per time point and measure. Eight measures are
-available: <code>"formation"</code>, <code>"dissolution"</code>,
+<p>The example contains fourteen vertices, 240 relational spells, and
+110 distinct ordered pairs, observed from time 0 to 21.52.</p>
+<p><code><a href="../reference/as_dynet.html">as_dynet()</a></code> converts supported network objects to
+<code>dynet</code>. Its <code>networkDynamic</code> method imports edge
+spells, vertex activity spells, observation periods, and edge
+attributes. Applied to a <code>dynet</code> object, it returns the input
+unchanged.</p>
+<p><code><a href="../reference/events.html">events()</a></code> measures spell formation, dissolution, and
+activity over time. It accepts <code>measure</code> and the
+measurement-grid arguments and returns a graph-level
+<code>dynet_metric</code>. Available measures are
+<code>"formation"</code>, <code>"dissolution"</code>,
 <code>"active"</code>, <code>"new_pairs"</code>,
 <code>"formation_fraction"</code>, <code>"dissolution_fraction"</code>,
-<code>"formation_rate"</code> and <code>"dissolution_rate"</code>. The
-two rates divide the transitions by the exact eligible pair-time.</p>
-<p><code><a href="../reference/snapshots.html">snapshots()</a></code> lists the ties active in each time bin. It
-takes a network and the grid arguments, or a single time in
-<code>at</code>, and returns a <code>dynet_snapshot</code> data frame
-with one row per active tie per bin, holding <code>time</code>,
-<code>from</code>, <code>to</code>, <code>weight</code> and
-<code>n_spells</code>, preceded by <code>session</code> when the network
-has sessions. A pair joined by more than one spell inside one bin is one
-tie, and <code>n_spells</code> records how many spells produced it. To
-list the ties in four-unit bins, we call <code><a href="../reference/snapshots.html">snapshots()</a></code> with
-<code>step</code> set to 4.</p>
+<code>"formation_rate"</code>, and <code>"dissolution_rate"</code>.
+Formation and dissolution rates divide transition counts by eligible
+pair-time.</p>
+<p><code><a href="../reference/snapshots.html">snapshots()</a></code> returns the connections active within each
+measurement bin as a <code>dynet_snapshot</code>. Its tidy columns
+include <code>time</code>, <code>from</code>, <code>to</code>,
+<code>weight</code>, and <code>n_spells</code>, with session identifiers
+when applicable. Multiple spells on the same pair are combined within a
+bin: <code>weight</code> sums their weights and <code>n_spells</code>
+counts them. <code>at</code> selects a single measurement time.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bins</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">dn</span>, step <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="va">bins</span></span>
@@ -192,121 +206,101 @@ list the ties in four-unit bins, we call <code><a href="../reference/snapshots.h
 <span><span class="co">#&gt; 9     0   Leo  Finn      1        1</span></span>
 <span><span class="co">#&gt; 10    0   Leo  Iris      2        2</span></span>
 <span><span class="co">#&gt; # 206 more rows. summary() counts them by bin.</span></span></code></pre></div>
-<p>Six bins hold 216 tie rows. In the first bin Ana and Jonas are joined
-by two spells, which <code>n_spells</code> records, and
-<code>weight</code> sums them.</p>
+<p>The six four-unit bins contain 216 pair-by-bin observations. In the
+first bin, two spells connect Ana and Jonas; <code>n_spells</code>
+records both and <code>weight</code> sums their contributions.</p>
 </div>
 <div class="section level2">
 <h2 id="editing">Editing<a class="anchor" aria-label="anchor" href="#editing"></a>
 </h2>
-<p>Seventeen functions rewrite the spell table, the vertex table or the
-vertex activity table. Each takes a network in <code>dn</code>, returns
-a new network of class
-<code>c("dynet", "netobject", "cograph_network")</code>, and leaves its
-input unchanged. Every edit goes through a rebuild, so the canonical
-spell identifiers can renumber after any of them.</p>
+<p>Editing functions return a new temporal network and leave their input
+unchanged. They update relational spells, vertex attributes, and
+associated network representations together. Rebuilding may change spell
+identifiers, so subsequent selections should refer to the updated
+object.</p>
 <div class="section level3">
 <h3 id="adding">Adding<a class="anchor" aria-label="anchor" href="#adding"></a>
 </h3>
-<p><code><a href="../reference/add_nodes.html">add_nodes()</a></code> adds vertices. It takes in <code>data</code>
-a character vector of names or a data frame with a <code>name</code>
-column and static attributes, and returns a network in which the new
-vertices are implicit always-active isolates until ties or vertex
-activity are supplied.</p>
-<p><code><a href="../reference/add_ties.html">add_ties()</a></code> adds tie spells. It takes in
-<code>data</code> a data frame of endpoints and times, and returns a
-network with the temporal ties and every flattened cograph field rebuilt
-together. Columns beyond the spell fields are carried as tie attributes.
-<code>loops</code> decides whether a self-tie is accepted.</p>
-<p><code><a href="../reference/add_arcs.html">add_arcs()</a></code> is the directed counterpart of
-<code><a href="../reference/add_ties.html">add_ties()</a></code> and takes the same arguments.</p>
-<p><code><a href="../reference/add_vertex_spells.html">add_vertex_spells()</a></code> declares periods in which a vertex
-is present. It takes in <code>data</code> a data frame with
-<code>node</code>, <code>start</code> and <code>end</code>, and returns
-a network in which the existing activity and the supplied spells are
-canonicalised together, so a spell that overlaps or abuts an existing
-one for the same vertex is merged into it.</p>
+<p><code><a href="../reference/add_nodes.html">add_nodes()</a></code> adds vertices from a character vector or a
+data frame containing <code>name</code> and optional attributes. New
+vertices are treated as eligible throughout observation unless activity
+spells are declared.</p>
+<p><code><a href="../reference/add_ties.html">add_ties()</a></code> adds relational spells from a data frame of
+endpoints and times. Additional columns are retained as spell
+attributes, and <code>loops</code> controls whether self-links are
+accepted. The endpoints must already exist in the network.
+<code><a href="../reference/add_arcs.html">add_arcs()</a></code> is the directed counterpart with the same
+arguments.</p>
+<p><code><a href="../reference/add_vertex_spells.html">add_vertex_spells()</a></code> adds activity periods from a table
+containing <code>node</code>, <code>start</code>, and <code>end</code>.
+Overlapping or adjacent periods for the same vertex are merged with
+existing declarations.</p>
 </div>
 <div class="section level3">
 <h3 id="removing">Removing<a class="anchor" aria-label="anchor" href="#removing"></a>
 </h3>
-<p><code><a href="../reference/remove_nodes.html">remove_nodes()</a></code> removes vertices. It takes their names in
-<code>nodes</code> and a <code>cascade</code> flag, and returns a
-network without them and, under <code>cascade = TRUE</code>, without
-their ties and activity spells. A selection that leaves no vertex or no
-tie raises <code>dynet_empty_network</code>.</p>
-<p><code><a href="../reference/remove_ties.html">remove_ties()</a></code> removes tie spells. It takes row positions
-or a condition over the spell table in <code>ties</code>, or the
-endpoint and time selectors <code>from</code>, <code>to</code>,
-<code>start</code>, <code>end</code> and <code>session</code>, and
-returns a network without the matched spells. A request that matches
-nothing raises <code>dynet_tie_not_found</code>.</p>
-<p><code><a href="../reference/remove_arcs.html">remove_arcs()</a></code> is the directed counterpart of
-<code><a href="../reference/remove_ties.html">remove_ties()</a></code> and takes the same arguments.</p>
-<p><code><a href="../reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> drops declared activity
-components. It takes integer positions or a logical mask in
-<code>spells</code> and returns a network with the rest canonicalised
-again, so the remaining spell identifiers renumber. A vertex left with
-no declaration becomes implicitly always active.</p>
+<p><code><a href="../reference/remove_nodes.html">remove_nodes()</a></code> removes vertices selected by name. With
+<code>cascade = TRUE</code>, it also removes their incident spells and
+activity declarations. A selection leaving no vertices or no ties raises
+<code>dynet_empty_network</code>.</p>
+<p><code><a href="../reference/remove_ties.html">remove_ties()</a></code> selects spells through positions or a
+condition in <code>ties</code>, or through <code>from</code>,
+<code>to</code>, <code>start</code>, <code>end</code>, and
+<code>session</code>. A selection matching no spells raises
+<code>dynet_tie_not_found</code>. <code><a href="../reference/remove_arcs.html">remove_arcs()</a></code> is the
+directed counterpart.</p>
+<p><code><a href="../reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> removes declared activity
+components selected by integer positions or a logical mask in
+<code>spells</code>. Remaining components are merged where needed and
+assigned updated identifiers. A vertex with no remaining declaration
+becomes implicitly eligible throughout observation.</p>
 </div>
 <div class="section level3">
 <h3 id="updating-and-renaming">Updating and renaming<a class="anchor" aria-label="anchor" href="#updating-and-renaming"></a>
 </h3>
-<p><code><a href="../reference/update_nodes.html">update_nodes()</a></code> adds or replaces static vertex
-attributes. It takes in <code>data</code> a data frame with a
-<code>name</code> key and one or more attribute columns, and returns a
-network with the same spells, activity and metadata, and the attributes
-written onto the named vertices. Vertices not named keep their
-values.</p>
-<p><code><a href="../reference/update_ties.html">update_ties()</a></code> edits selected spells. It takes a
-selection in <code>ties</code> and a data frame of replacement values in
-<code>data</code>, and returns a network holding the unselected spells
-unchanged and the selected ones with the supplied values
-substituted.</p>
-<p><code><a href="../reference/update_vertex_spells.html">update_vertex_spells()</a></code> edits selected activity
-components. It takes positions in <code>spells</code> and a data frame
-of replacement fields in <code>data</code>, and returns a network in
-which the updated components are canonicalised with the retained ones. A
-column outside the vertex-spell schema raises
-<code>dynet_unknown_column</code>.</p>
-<p><code><a href="../reference/rename_nodes.html">rename_nodes()</a></code> renames vertices. It takes in
-<code>mapping</code> a named character vector, a two-column data frame
-named <code>old</code> and <code>new</code>, or the name of a vertex
-attribute whose values become the names, and returns a network with tie
-endpoints, vertex attributes, vertex activity, cograph labels and groups
-renamed together.</p>
-<p><code><a href="../reference/rename_sessions.html">rename_sessions()</a></code> renames session labels. It takes the
-same mapping forms in <code>mapping</code> and returns a network with
-tie and vertex session labels renamed together and the session scheme in
-the metadata updated. Labels absent from the mapping are left alone.</p>
+<p><code><a href="../reference/update_nodes.html">update_nodes()</a></code> adds or replaces vertex attributes from a
+table keyed by <code>name</code>. Vertices absent from the supplied
+table retain their existing attributes.</p>
+<p><code><a href="../reference/update_ties.html">update_ties()</a></code> replaces fields of spells selected through
+<code>ties</code>, using replacement values supplied in
+<code>data</code>. Unselected spells are retained.</p>
+<p><code><a href="../reference/update_vertex_spells.html">update_vertex_spells()</a></code> replaces fields of activity
+components selected through <code>spells</code>. The updated and
+retained periods are combined, merging overlaps and adjacent periods.
+Unrecognised fields raise <code>dynet_unknown_column</code>.</p>
+<p><code><a href="../reference/rename_nodes.html">rename_nodes()</a></code> updates vertex names throughout the
+network. <code>mapping</code> accepts a named character vector, a data
+frame with <code>old</code> and <code>new</code> columns, or a vertex
+attribute whose values provide the new names. Relational endpoints,
+vertex attributes, activity declarations, and associated labels are
+updated together.</p>
+<p><code><a href="../reference/rename_sessions.html">rename_sessions()</a></code> updates session identifiers using the
+supported mapping forms and updates the session metadata. Unmapped
+session labels are retained.</p>
 </div>
 <div class="section level3">
-<h3 id="declaring-support">Declaring support<a class="anchor" aria-label="anchor" href="#declaring-support"></a>
+<h3 id="observation-periods-and-activity">Observation periods and activity<a class="anchor" aria-label="anchor" href="#observation-periods-and-activity"></a>
 </h3>
-<p><code><a href="../reference/set_observations.html">set_observations()</a></code> replaces the observation window. It
-takes either a two-column data frame of components in <code>data</code>
-or a <code>start</code> and <code>end</code> pair, and returns a network
-whose raw spells are unchanged and whose measurement view alone is
-replaced, so <code>as.data.frame(x)</code> still returns the
-originals.</p>
-<p><code><a href="../reference/clear_observations.html">clear_observations()</a></code> restores implicit support. It takes
-a network and returns one observed continuously from its earliest raw
-start to its latest raw end, with every explicit observation field
-dropped from the metadata.</p>
-<p><code><a href="../reference/set_tie_sessions.html">set_tie_sessions()</a></code> assigns or removes session walls. It
-takes in <code>session</code> a character vector of length one or of the
-raw tie count, and returns a network with a <code>session</code> column
-on the spell table and the scheme recorded in the metadata, or with both
-removed under <code>session = NULL</code>. A full-length vector is
-matched positionally against the sorted spell table, so labels should be
-derived from <code>as.data.frame(dn)</code>.</p>
-<p><code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> replaces declared vertex activity.
-It takes in <code>data</code> a vertex-spell data frame, or the string
-<code>"ties"</code> to declare each vertex present from its first tie to
-its last, and returns a network whose declared activity is exactly that.
-To declare presence from the ties, we call it with <code>"ties"</code>,
-and to read the declared activity we call <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>
-with <code>what</code> set to <code>"vertex_spells"</code>.</p>
+<p><code><a href="../reference/set_observations.html">set_observations()</a></code> replaces the observation calendar
+using a table of intervals in <code>data</code> or a <code>start</code>
+and <code>end</code> pair. The original relational spells remain
+available through <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>; measurements use their
+intersections with the declared periods.</p>
+<p><code><a href="../reference/clear_observations.html">clear_observations()</a></code> removes the explicit calendar and
+restores continuous observation from the earliest raw onset to the
+latest raw termination.</p>
+<p><code><a href="../reference/set_tie_sessions.html">set_tie_sessions()</a></code> assigns session labels through
+<code>session</code>, using either a single label or a vector matching
+the number of raw spells. A full-length vector follows the sorted
+spell-table order and should therefore be derived from
+<code>as.data.frame(dn)</code>. Setting <code>session = NULL</code>
+removes the assignments. The function also supports assigning sessions
+from onset-time boundaries through <code>breaks</code> and
+<code>labels</code>.</p>
+<p><code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> replaces declared vertex activity
+using a table in <code>data</code>. The special value
+<code>"ties"</code> derives activity from each vertex’s first spell
+onset to its last termination.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">present</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/set_vertex_spells.html">set_vertex_spells</a></span><span class="op">(</span><span class="va">dn</span>, <span class="st">"ties"</span><span class="op">)</span></span>
 <span><span class="va">present</span></span>
@@ -338,42 +332,39 @@ with <code>what</code> set to <code>"vertex_spells"</code>.</p>
 <span><span class="co">#&gt; 4             FALSE</span></span>
 <span><span class="co">#&gt; 5             FALSE</span></span>
 <span><span class="co">#&gt; 6             FALSE</span></span></code></pre></div>
-<p>The tie spells are unchanged, so the network prints as before. The
-activity table has one row per vertex, running from the vertex’s first
-contact to its last.</p>
+<p>The relational spells are unchanged. The extracted activity table
+records a derived participation period for each vertex; these boundaries
+need not represent independently observed arrival or departure
+times.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="measurement">Measurement<a class="anchor" aria-label="anchor" href="#measurement"></a>
 </h2>
-<p>Eight functions measure a network over time. Each returns a
-<code>dynet_metric</code>: a data frame whose columns are ordered
-<code>session</code>, <code>time</code>, the unit of observation,
-<code>measure</code> and <code>value</code>. The <code>session</code>
-column appears only under <code>sessions = "separate"</code>, the one
-mode that keeps session labels apart.</p>
-<p>The grid arguments are not shared by all eight.
-<code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code>, <code><a href="../reference/metrics.html">metrics()</a></code>,
-<code><a href="../reference/mixing.html">mixing()</a></code> and <code><a href="../reference/similarity.html">similarity()</a></code> take all four;
-<code><a href="../reference/dyn_reachability.html">dyn_reachability()</a></code> and <code><a href="../reference/pshifts.html">pshifts()</a></code> take
-<code>start</code> and <code>end</code> only; <code><a href="../reference/burstiness.html">burstiness()</a></code>
-and <code><a href="../reference/durations.html">durations()</a></code> take none and summarise the whole observed
-period.</p>
-<p><code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> computes vertex centrality. It takes
-one or more measure names in <code>measure</code> and a
-<code>scope</code>, and returns one row per vertex, time point and
-measure. Nineteen measures are available at
-<code>scope = "snapshot"</code>, which treats each time bin as a static
-graph, and four at <code>scope = "temporal"</code>,
-<code>"closeness"</code>, <code>"betweenness"</code>,
-<code>"reach"</code> and <code>"reach_count"</code>, which are measured
-along time-respecting paths and report no <code>time</code> column
-because the whole window yields one value per vertex. On a directed
-network <code>mode</code> selects incoming, outgoing or all ties. To
-measure betweenness in each unit bin, we call it with
-<code>measure</code> set to <code>"betweenness"</code>.</p>
+<p>Graph-level measures describe network structure as a whole.
+Vertex-level measures describe individual positions, while pair-level
+measures describe relationships between endpoints. Dynet returns these
+quantities in tidy results identified by the relevant vertices or pairs,
+<code>measure</code>, and <code>value</code>, with <code>time</code> and
+<code>session</code> where applicable.</p>
+<p>The functions differ in their temporal arguments.
+<code><a href="../reference/centrality_series.html">centrality_series()</a></code>, <code><a href="../reference/metrics.html">metrics()</a></code>,
+<code><a href="../reference/mixing.html">mixing()</a></code>, and <code><a href="../reference/similarity.html">similarity()</a></code> accept
+<code>start</code>, <code>end</code>, <code>step</code>, and
+<code>window</code>. <code><a href="../reference/reachability.html">reachability()</a></code>,
+<code><a href="../reference/path_centrality.html">path_centrality()</a></code>, and <code><a href="../reference/pshifts.html">pshifts()</a></code> accept
+<code>start</code> and <code>end</code>. <code><a href="../reference/burstiness.html">burstiness()</a></code> and
+<code><a href="../reference/durations.html">durations()</a></code> summarise the observation period without a
+measurement grid.</p>
+<p><code><a href="../reference/centrality_series.html">centrality_series()</a></code> applies the selected centrality
+measures to successive snapshots. For measures supporting direction
+selection, <code>mode</code> selects incoming, outgoing, or all
+connections. <code><a href="../reference/path_centrality.html">path_centrality()</a></code> calculates
+<code>"closeness"</code> and <code>"betweenness"</code> using
+time-respecting paths; its results describe the selected search period
+and have no <code>time</code> column.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">between</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">between</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"betweenness"</span><span class="op">)</span></span>
 <span><span class="va">between</span></span>
 <span><span class="co">#&gt; # Betweenness (node-level)</span></span>
 <span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
@@ -391,23 +382,21 @@ measure betweenness in each unit bin, we call it with
 <span><span class="co">#&gt;     0  Kira betweenness     1</span></span>
 <span><span class="co">#&gt;     0   Leo betweenness     0</span></span>
 <span><span class="co">#&gt; # 296 more rows. summary() aggregates them; plot() draws them.</span></span></code></pre></div>
-<p>The result has 14 vertices at 22 time points, 308 rows in all. Among
-the rows printed for the first bin, Iris and Kira are the only vertices
-with a nonzero value.</p>
-<p><code><a href="../reference/dyn_reachability.html">dyn_reachability()</a></code> computes how much of the network each
-vertex can reach. It takes a <code>direction</code> and a
-<code>measure</code>, <code>"reach"</code> for the proportion or
-<code>"reach_count"</code> for the count, and returns one row per vertex
-per measure at node level. The measures are labelled
-<code>forward_reach</code> and <code>backward_reach</code>, or
-<code>forward_reach_count</code> and <code>backward_reach_count</code>.
+<p>The example calculates snapshot betweenness for fourteen vertices
+across 22 bins, giving 308 observations. Among the values printed for
+the first bin, only Iris and Kira have nonzero betweenness.</p>
+<p><code><a href="../reference/reachability.html">reachability()</a></code> calculates the number or proportion of
+other vertices connected to each vertex through time-respecting paths.
+<code>direction</code> selects forward or backward search, and
+<code>measure</code> selects <code>"reach"</code> or
+<code>"reach_count"</code>. Results are labelled
+<code>forward_reach</code>, <code>backward_reach</code>,
+<code>forward_reach_count</code>, or <code>backward_reach_count</code>.
 A vertex is excluded from its own reachable set.</p>
-<p><code><a href="../reference/metrics.html">metrics()</a></code> computes graph-level structure. It takes one
-or more of forty measure names in <code>measure</code> and returns one
-row per time point and measure. The measure <code>"triads"</code>
-contributes sixteen rows per time point, one per triad class. To measure
-density in each unit bin, we call it with <code>measure</code> set to
-<code>"density"</code>.</p>
+<p><code><a href="../reference/metrics.html">metrics()</a></code> calculates graph-level measures selected
+through <code>measure</code>. Results are indexed by measurement time
+and measure. Requesting <code>"triads"</code> returns counts for the
+sixteen directed triad classes at each time.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">dn</span>, measure <span class="op">=</span> <span class="st">"density"</span><span class="op">)</span></span>
 <span><span class="va">density</span></span>
@@ -430,56 +419,70 @@ density in each unit bin, we call it with <code>measure</code> set to
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">density</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   measure  n       mean         sd        min       max peak_time</span></span>
 <span><span class="co">#&gt; 1 density 22 0.08291708 0.03929021 0.03296703 0.1648352        14</span></span></code></pre></div>
-<p>Density is measured at 22 time points. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reduces
-the series to one row with its mean, spread, range and the time of its
-peak: the mean density is 0.083, and the peak of 0.165 falls in the bin
-that begins at 14.</p>
-<p><code><a href="../reference/mixing.html">mixing()</a></code> computes how much tie activity runs within and
-between vertex groups. It takes the name of a vertex attribute in
-<code>attribute</code> and returns one row per time point and ordered
-group pair, with <code>from_group</code> and <code>to_group</code>
-naming the pair and <code>value</code> counting the pairs of vertices
-with an active tie from the first group to the second.</p>
-<p><code><a href="../reference/pshifts.html">pshifts()</a></code> classifies consecutive turns into the thirteen
-participation-shift types of Gibson (2003). It takes a directed network
-and an <code>output</code> shape, and returns a
-<code>dynet_pshifts</code> data frame with columns <code>shift</code>,
-<code>family</code> and <code>count</code>. Under
-<code>output = "final"</code> it has thirteen rows, one per shift type,
-including the types that never occurred. Under
-<code>output = "cumulative"</code> it has one block of thirteen rows per
-classified turn, carrying the running count.</p>
-<p><code><a href="../reference/burstiness.html">burstiness()</a></code> measures how unevenly each vertex’s events
-are spaced. It takes a measure name in <code>measure</code>,
-<code>"burstiness"</code>, <code>"memory"</code> or
-<code>"events"</code>, and returns one row per vertex and measure, with
-no time column. The burstiness coefficient is 1 in the bursty limit, 0
-at the Poisson reference and -1 for perfectly regular activity (Goh and
-Barabási, 2008); memory is the lag-one correlation between consecutive
-inter-event gaps.</p>
-<p><code><a href="../reference/durations.html">durations()</a></code> measures how long relationships lasted. It
-takes a <code>unit</code> that selects the row identity and a
-<code>measure</code>, <code>"events"</code>, <code>"total"</code> or
-<code>"mean"</code>, and returns an edge-level table under
-<code>unit = "pair"</code> or <code>"spell"</code>, and a node-level
-table under <code>"vertex_activity"</code>, <code>"vertex_spell"</code>
-or <code>"node_ties"</code>. <code>censored</code> decides whether
-spells whose boundaries were never observed are retained.</p>
-<p><code><a href="../reference/similarity.html">similarity()</a></code> compares the network at each pair of time
-points. It takes a coefficient in <code>method</code>,
-<code>"jaccard"</code>, <code>"overlap"</code>, <code>"hamming"</code>,
-<code>"cosine"</code> or <code>"pearson"</code>, and returns a
-<code>dynet_similarity</code> data frame with one row per ordered pair
-of time bins and columns <code>time</code>, <code>other</code>,
-<code>measure</code> and <code>value</code>. The diagonal is included
-and is one for every coefficient except <code>"hamming"</code>, where
-identical layers differ in nothing and score zero.</p>
+<p>The example measures density in 22 bins. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>
+reports its mean, standard deviation, range, and peak time. Mean density
+is 0.083, and the maximum of 0.165 occurs in the bin beginning at time
+14.</p>
+<p><code><a href="../reference/mixing.html">mixing()</a></code> counts connections within and between groups
+defined by a vertex attribute. <code>attribute</code> selects the
+grouping variable. The result identifies ordered group pairs through
+<code>from_group</code> and <code>to_group</code>, with
+<code>value</code> counting distinct connected vertex pairs in each
+window. Connections in the same window need not be simultaneous, and
+these counts are not probabilities.</p>
+<p><code><a href="../reference/pshifts.html">pshifts()</a></code> classifies consecutive directed interactions
+into the thirteen participation-shift types of Gibson (2003). The
+returned <code>dynet_pshifts</code> contains <code>shift</code>,
+<code>family</code>, and <code>count</code>.
+<code>output = "final"</code> reports all thirteen types, including zero
+counts. <code>output = "cumulative"</code> reports running counts after
+each classified turn.</p>
+<p><code><a href="../reference/burstiness.html">burstiness()</a></code> describes the spacing of spell onsets
+involving each vertex. <code>measure</code> selects
+<code>"burstiness"</code>, <code>"memory"</code>, or
+<code>"events"</code>. Burstiness is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo>−</mo><mi>μ</mi><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mo stretchy="false" form="prefix">(</mo><mi>σ</mi><mo>+</mo><mi>μ</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\sigma-\mu)/(\sigma+\mu)</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>μ</mi><annotation encoding="application/x-tex">\mu</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>
+are the mean and population standard deviation of inter-event intervals.
+It equals −1 for equal positive intervals and approaches 1 with
+increasing relative variability. A value of 0 matches the theoretical
+exponential waiting-time reference but does not establish Poisson
+timing. Memory is the correlation between successive intervals.</p>
+<p><code><a href="../reference/durations.html">durations()</a></code> summarises observed spell durations.
+<code>unit</code> selects relational pairs (<code>"pair"</code>),
+individual spells (<code>"spell"</code>), vertex activity
+(<code>"vertex_activity"</code> or <code>"vertex_spell"</code>), or
+incident relational spells (<code>"node_ties"</code>). Available
+measures depend on this unit. Pair-level defaults are
+<code>"events"</code>, <code>"total"</code>, and <code>"mean"</code>;
+<code>"union"</code> and <code>"median"</code> are also available.
+Individual-spell output defaults to <code>"duration"</code>.
+<code>censored</code> controls inclusion of spells with unobserved
+boundaries.</p>
+<p><code><a href="../reference/similarity.html">similarity()</a></code> compares the connection sets of temporal
+snapshots using <code>"jaccard"</code>, <code>"overlap"</code>,
+<code>"hamming"</code>, <code>"cosine"</code>, or
+<code>"pearson"</code>. It returns a <code>dynet_similarity</code>
+indexed by <code>time</code> and <code>other</code>, with the selected
+coefficient in <code>measure</code> and its value in <code>value</code>.
+Self-comparisons are included. Hamming distance is zero for identical
+snapshots; the other coefficients express similarity. At least two
+measurement bins are required.</p>
 <div class="section level3">
 <h3 id="the-shared-grid">The shared grid<a class="anchor" aria-label="anchor" href="#the-shared-grid"></a>
 </h3>
-<p>Four arguments decide when the network is measured, following
-<code><a href="https://rdrr.io/pkg/tsna/man/tSnaStats.html" class="external-link">tsna::tSnaStats()</a></code>:</p>
+<p>For functions supporting window-based measurement, four arguments
+define the grid. Their relationship to <code><a href="https://rdrr.io/pkg/tsna/man/tSnaStats.html" class="external-link">tsna::tSnaStats()</a></code> is
+shown below.</p>
 <table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
 <thead><tr class="header">
 <th>Argument</th>
 <th>Meaning</th>
@@ -490,7 +493,7 @@ identical layers differ in nothing and score zero.</p>
 <td>
 <code>start</code>, <code>end</code>
 </td>
-<td>First and last measurement</td>
+<td>First and last measurement times</td>
 <td>
 <code>start</code>, <code>end</code>
 </td>
@@ -502,32 +505,37 @@ identical layers differ in nothing and score zero.</p>
 </tr>
 <tr class="odd">
 <td><code>window</code></td>
-<td>Length of time each measurement covers</td>
+<td>Duration covered from each measurement time</td>
 <td><code>aggregate.dur</code></td>
 </tr>
 </tbody>
 </table>
-<p><code>window</code> equal to <code>step</code> tiles the period,
-<code>window</code> larger than <code>step</code> slides,
-<code>window = 0</code> samples an instant, and
-<code>window = "all"</code> treats the whole observed period as one
-bin.</p>
+<p>By default, <code>step</code> uses the network’s construction
+interval and <code>window</code> equals <code>step</code>, producing
+non-overlapping windows. A larger <code>window</code> produces
+overlapping windows. <code>window = 0</code> evaluates individual time
+points, while <code>window = "all"</code> aggregates the observation
+period into a single window. The last option is unsuitable for
+<code><a href="../reference/similarity.html">similarity()</a></code>, which requires multiple snapshots.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="paths">Paths<a class="anchor" aria-label="anchor" href="#paths"></a>
 </h2>
-<p><code><a href="../reference/paths.html">paths()</a></code> finds time-respecting journeys from one vertex.
-It takes a network, a source vertex name in <code>from</code> and a
-<code>direction</code>, and returns a <code>dynet_paths</code> data
-frame with one row per vertex: <code>node</code>,
-<code>reachable</code>, <code>arrival_time</code>,
-<code>attained</code>, <code>latency</code>, <code>n_hops</code> and
-<code>n_paths</code>. A journey is time-respecting when each hop leaves
-no earlier than the previous hop arrived (Kempe, Kleinberg and Kumar,
-2002). The criterion is earliest arrival first and fewest contacts
-second. To find the journeys from one student, we call it with
-<code>from</code>.</p>
+<p><code><a href="../reference/paths.html">paths()</a></code> finds time-respecting paths from the vertex
+named in <code>from</code>. Each interaction must be available at or
+after arrival at its starting vertex. The default search selects
+earliest arrival first and then the fewest interactions among paths
+arriving at that time: the shortest foremost criterion.</p>
+<p>The returned <code>dynet_paths</code> describes each destination
+through <code>node</code>, <code>reachable</code>,
+<code>arrival_time</code>, <code>attained</code>, <code>latency</code>,
+<code>n_hops</code>, and <code>n_paths</code>. In a forward search,
+latency is elapsed time from the search start to arrival, including
+waiting. A backward search instead identifies the latest departure
+boundary from which the specified vertex can be reached by the deadline.
+<code>attained</code> distinguishes an achievable boundary time from a
+limiting time excluded by a spell’s termination.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span>
 <span><span class="va">routes</span></span>
@@ -547,64 +555,61 @@ second. To find the journeys from one student, we call it with
 <span><span class="co">#&gt;   Kira      TRUE         6.12     TRUE    6.12      2       2</span></span>
 <span><span class="co">#&gt;    Leo      TRUE         9.65     TRUE    9.65      3       1</span></span>
 <span><span class="co">#&gt; # 2 more rows. summary() aggregates them; plot() draws the tree.</span></span></code></pre></div>
-<p>Ana reaches all 13 other students. Jonas is reached at time 2.12 in
-one hop; Eve is reached at 11.66 in four hops, by three equally early
-routes.</p>
-<p><code><a href="../reference/pathways.html">pathways()</a></code> counts the routes those journeys take. It
-takes a network and, optionally, one source in <code>from</code>, and
-returns a <code>dynet_pathways</code> data frame with one row per
-distinct route, most frequent first: <code>route</code> as the vertex
-sequence joined by arrows, <code>endpoint</code>, <code>count</code>,
-<code>share</code> as the route’s fraction of all counted routes,
-<code>n_hops</code> and <code>arrival_time</code>.</p>
-<p><code><a href="../reference/path_network.html">path_network()</a></code> builds the union of the optimal routes.
-It takes a <code><a href="../reference/paths.html">paths()</a></code> result and returns a static
-<code>dynet_path_network</code>, whose tie table has one row per hop
-used by at least one optimal route and whose vertex table has one row
-per reached vertex. Unreachable vertices are absent rather than present
-with missing values.</p>
-<p><code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> arranges the routes as a counted
-prefix tree. It takes a <code><a href="../reference/paths.html">paths()</a></code> result and a
-<code>min_count</code> threshold, and returns a
-<code>dynet_path_trajectories</code> data frame with one row per tree
-node: <code>node</code> as the route prefix, <code>parent</code>,
-<code>depth</code>, <code>count</code>, <code>probability</code>,
-<code>vertex</code>, <code>time</code>, <code>session</code> and
-<code>branch</code>.</p>
-<p><code><a href="../reference/plot_path_trajectories.html">plot_path_trajectories()</a></code> draws that tree. It takes a
-<code><a href="../reference/paths.html">paths()</a></code> or <code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> result and a
-<code>measure</code> that decides what the fill encodes,
-<code>"frequency"</code>, <code>"time"</code> or
-<code>"predictability"</code>, and returns a <code>ggplot</code> object.
-Each vertex name is printed beside its value, so no distinction rests on
-colour alone.</p>
-<p>A vertex with declared spells begins its search at its own first
-presence inside the window rather than at the window edge. A vertex
-never present in the window reaches nothing.</p>
+<p>Ana reaches all thirteen other students. Jonas is reached at time
+2.12 in one hop; Eve is reached at time 11.66 in four hops through three
+shortest foremost paths.</p>
+<p><code><a href="../reference/pathways.html">pathways()</a></code> groups paths by their sequence of vertices.
+It accepts a network and an optional source in <code>from</code>, and
+returns a <code>dynet_pathways</code> containing <code>route</code>,
+<code>endpoint</code>, <code>count</code>, <code>share</code>,
+<code>n_hops</code>, and <code>arrival_time</code>. Routes correspond to
+leaves of the path tree, so an intermediate prefix is not listed
+separately. Paths following the same vertex sequence through different
+spells contribute to the same route count. <code>share</code> is the
+route’s proportion of counted paths, and routes are ordered by
+decreasing count.</p>
+<p><code><a href="../reference/path_network.html">path_network()</a></code> converts a <code><a href="../reference/paths.html">paths()</a></code> result to
+a static <code>dynet_path_network</code> containing the connections used
+by optimal paths and the vertices they reach. Unreachable vertices are
+omitted.</p>
+<p><code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> represents the paths as a tree whose
+branches share common initial steps. It accepts a <code><a href="../reference/paths.html">paths()</a></code>
+result and an optional <code>min_count</code> threshold. The returned
+<code>dynet_path_trajectories</code> contains <code>node</code>,
+<code>parent</code>, <code>depth</code>, <code>count</code>,
+<code>probability</code>, <code>vertex</code>, <code>time</code>,
+<code>session</code>, and <code>branch</code>. <code>probability</code>
+expresses a tree node’s count relative to its parent’s count, rather
+than an empirical probability of transmission.</p>
+<p><code><a href="../reference/plot_path_trajectories.html">plot_path_trajectories()</a></code> draws a <code><a href="../reference/paths.html">paths()</a></code> or
+<code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> result. <code>measure</code> selects
+<code>"frequency"</code>, <code>"time"</code>, or
+<code>"predictability"</code> for fill, and the function returns a
+<code>ggplot</code> object. Labels identify vertices and values.</p>
+<p>A vertex with declared activity begins its search at its first
+eligible time within the search period. A vertex absent throughout that
+period reaches no other vertex.</p>
 </div>
 <div class="section level2">
 <h2 id="structure-and-animation">Structure and animation<a class="anchor" aria-label="anchor" href="#structure-and-animation"></a>
 </h2>
-<p><code><a href="../reference/projection.html">projection()</a></code> expands the network into vertex-time
-states. It takes the grid arguments and an interlayer coupling weight
-<code>omega</code>, and returns a <code>dynet_projection</code> holding
-two tables, obtained with
-<code>as.data.frame(x, what = "vertices")</code> for the states and
-<code>as.data.frame(x, what = "edges")</code> for the directed arcs
-between them. Coupling is ordinal: each slice is joined to the next one
-only.</p>
-<p><code><a href="../reference/collapse_network.html">collapse_network()</a></code> reduces temporal activity to one
-static weighted network. It takes a <code>weight</code> rule that
-decides what a tie weight means, <code>"binary"</code>,
-<code>"union_duration"</code>, <code>"total_duration"</code>,
-<code>"duration_fraction"</code>, <code>"spell_count"</code>,
-<code>"weight_sum"</code>, <code>"weighted_duration"</code> or
-<code>"latest_weight"</code>, and returns a <code>dynet_collapsed</code>
-cograph network with a tie table and a vertex table. Under
-<code>sessions = "separate"</code> it returns a
-<code>dynet_collapsed_list</code> with one network per session. To
-collapse the classroom network, we call it with the network; the default
-rule is binary.</p>
+<p><code><a href="../reference/projection.html">projection()</a></code> constructs a network of vertex-time states.
+It accepts the grid arguments and interlayer coupling weight
+<code>omega</code>. The returned <code>dynet_projection</code> provides
+state and edge tables through
+<code>as.data.frame(x, what = "vertices")</code> and
+<code>as.data.frame(x, what = "edges")</code>. Interlayer connections
+join consecutive slices.</p>
+<p><code><a href="../reference/collapse_network.html">collapse_network()</a></code> aggregates temporal activity into a
+static weighted network. <code>weight</code> selects
+<code>"binary"</code>, <code>"union_duration"</code>,
+<code>"total_duration"</code>, <code>"duration_fraction"</code>,
+<code>"spell_count"</code>, <code>"weight_sum"</code>,
+<code>"weighted_duration"</code>, or <code>"latest_weight"</code>. The
+default is binary presence. The result is a
+<code>dynet_collapsed</code>; with <code>sessions = "separate"</code>, a
+<code>dynet_collapsed_list</code> contains a network for each
+session.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">static</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span>
 <span><span class="va">static</span></span>
@@ -631,40 +636,36 @@ rule is binary.</p>
 <span><span class="co">#&gt;               1</span></span>
 <span><span class="co">#&gt;               4</span></span>
 <span><span class="co">#&gt;               1</span></span></code></pre></div>
-<p>The collapsed network has 14 vertices and 110 ties, one per distinct
-pair, and its tie table carries every weight rule as a column alongside
-the first and last contact of the pair.</p>
-<p><code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> extracts a subgraph. It takes a
-condition over the vertex table in <code>nodes</code>, a condition over
-the spell table in <code>ties</code>, or both, and returns a network
-carrying only the selected spells, the vertices they touch, those
-vertices’ activity spells and all static attributes. Centralities are
-available as columns inside the <code>nodes</code> condition, computed
-over the whole observed period.</p>
-<p><code><a href="../reference/animate.html">animate()</a></code> renders the measurement grid as an animation.
-It takes the same four grid arguments as every measuring function, a
-<code>file</code> whose extension selects the encoder,
-<code>layout</code>, <code>measure</code> for vertex size,
-<code>tween</code> and <code>fps</code> for the motion, and
-<code>absent</code>, <code>isolates</code> and <code>ease</code> for how
-presence and transitions are drawn. It returns a
-<code>dynet_animation</code> data frame with one row per bin holding
-<code>bin</code>, <code>frame</code>, <code>time</code>,
-<code>window_start</code>, <code>window_end</code>, <code>nodes</code>,
-<code>idle</code>, <code>ties</code>, <code>forming</code>,
-<code>dissolving</code> and <code>file</code>. The table is returned
-invisibly, since writing the file is the purpose of the call. GIF output
-needs <code>gifski</code>; mp4 and webm output need <code>av</code>.</p>
+<p>The collapsed classroom network contains fourteen vertices and 110
+connected pairs. Its edge table includes the available weight summaries
+and the first and last observed contact times for each pair.</p>
+<p><code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> selects vertices through
+<code>nodes</code>, spells through <code>ties</code>, or both. It
+retains the selected network’s attributes and vertex activity.
+Centralities computed over the observation period are available within
+vertex-selection conditions.</p>
+<p><code><a href="../reference/animate.html">animate()</a></code> displays successive snapshots using
+<code>start</code>, <code>end</code>, <code>step</code>, and
+<code>window</code>. <code>file</code> selects the output path and
+encoder; <code>layout</code> controls positions, <code>measure</code>
+controls vertex size, and <code>tween</code> and <code>fps</code>
+control frame generation. <code>absent</code>, <code>isolates</code>,
+and <code>ease</code> govern presence and transitions.</p>
+<p>The function writes the animation and invisibly returns a
+<code>dynet_animation</code> containing <code>bin</code>,
+<code>frame</code>, <code>time</code>, <code>window_start</code>,
+<code>window_end</code>, <code>nodes</code>, <code>idle</code>,
+<code>ties</code>, <code>forming</code>, <code>dissolving</code>, and
+<code>file</code>. GIF output requires <code>gifski</code>; MP4 and WebM
+output require <code>av</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="result-classes">Result classes<a class="anchor" aria-label="anchor" href="#result-classes"></a>
 </h2>
-<p>Fifty S3 methods are registered across the result classes:
-<code>print</code>, <code>summary</code>, <code>plot</code>,
-<code>as.data.frame</code>, <code>head</code> and <code>tail</code>, and
-the two <code>as_dynet</code> methods. A secondary table always comes
-out through an argument of <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code>, never by
-reaching into the object with <code>$</code>.</p>
+<p>Result classes provide methods appropriate to their contents,
+including printing, summarising, plotting, and conversion to data
+frames. Use <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> with the documented
+<code>what</code> argument to extract secondary tables.</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -678,16 +679,16 @@ reaching into the object with <code>$</code>.</p>
 <tr class="odd">
 <td><code>dynet</code></td>
 <td>
-<code><a href="../reference/dynet.html">dynet()</a></code>, <code><a href="../reference/as_dynet.html">as_dynet()</a></code>, and every editing
-function</td>
+<code><a href="../reference/dynet.html">dynet()</a></code>, <code><a href="../reference/as_dynet.html">as_dynet()</a></code>, and editing
+functions</td>
 </tr>
 <tr class="even">
 <td><code>dynet_metric</code></td>
 <td>
-<code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code>, <code><a href="../reference/dyn_reachability.html">dyn_reachability()</a></code>,
-<code><a href="../reference/metrics.html">metrics()</a></code>, <code><a href="../reference/mixing.html">mixing()</a></code>,
-<code><a href="../reference/burstiness.html">burstiness()</a></code>, <code><a href="../reference/durations.html">durations()</a></code>,
-<code><a href="../reference/events.html">events()</a></code>
+<code><a href="../reference/centrality_series.html">centrality_series()</a></code>, <code><a href="../reference/path_centrality.html">path_centrality()</a></code>,
+<code><a href="../reference/reachability.html">reachability()</a></code>, <code><a href="../reference/metrics.html">metrics()</a></code>,
+<code><a href="../reference/mixing.html">mixing()</a></code>, <code><a href="../reference/burstiness.html">burstiness()</a></code>,
+<code><a href="../reference/durations.html">durations()</a></code>, <code><a href="../reference/events.html">events()</a></code>
 </td>
 </tr>
 <tr class="odd">
@@ -729,7 +730,7 @@ function</td>
 <tr class="even">
 <td><code>dynet_collapsed_list</code></td>
 <td>
-<code><a href="../reference/collapse_network.html">collapse_network()</a></code> under
+<code><a href="../reference/collapse_network.html">collapse_network()</a></code> with
 <code>sessions = "separate"</code>
 </td>
 </tr>
@@ -739,21 +740,20 @@ function</td>
 </tr>
 </tbody>
 </table>
-<p>Secondary tables are obtained as
-<code>as.data.frame(x, what = "steps")</code> for the hops of a
-<code><a href="../reference/paths.html">paths()</a></code> result,
-<code>as.data.frame(x, what = "vertex_spells")</code> for the declared
-activity of a network, <code>as.data.frame(x, session = "s1")</code> for
-one session, and the like.</p>
-<p>On a measuring function, <code>plot = TRUE</code> follows
-<code><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist()</a></code>: drawing is a side effect, and the tidy result is
-still returned, invisibly when it has been drawn.</p>
+<p>For example, <code>as.data.frame(x, what = "steps")</code> extracts
+individual path steps,
+<code>as.data.frame(x, what = "vertex_spells")</code> extracts declared
+vertex activity, and <code>as.data.frame(x, session = "s1")</code>
+selects a session where supported.</p>
+<p>For measurement functions supporting <code>plot = TRUE</code>,
+plotting is a side effect: the analytical result is still returned,
+invisibly after the plot is drawn.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>Gibson, D. R. (2003). Participation shifts and institutional change
-in relational systems. <em>Social Forces</em>, 81(4), 1335–1380.</p>
+<p>Gibson, D. R. (2003). Participation shifts: Order and differentiation
+in group conversation. <em>Social Forces</em>, 81(4), 1335–1380.</p>
 <p>Goh, K.-I., &amp; Barabási, A.-L. (2008). Burstiness and memory in
 complex systems. <em>EPL (Europhysics Letters)</em>, 81(4), 48002.</p>
 <p>Kempe, D., Kleinberg, J., &amp; Kumar, A. (2002). Connectivity and

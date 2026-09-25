@@ -94,6 +94,8 @@ plot(
   edge_width = NULL,
   edge_width_range = NULL,
   edge_style = NULL,
+  edge_start_style = NULL,
+  edge_start_length = NULL,
   curvature = NULL,
   curve_pivot = NULL,
   label_size = NULL,
@@ -224,6 +226,15 @@ plot(
   An `edge_color` overrides the source-to-target colour run with one
   colour.
 
+- edge_start_style, edge_start_length:
+
+  How the origin of each link is marked, named as in
+  [`cograph::splot()`](https://sonsoles.me/cograph/reference/splot.html).
+  For `"events"` the defaults follow cograph's TNA styling: the first
+  `0.2` of every link, from its source, is `"dotted"`; `"dashed"` is
+  also accepted and `"solid"` turns the mark off. `edge_start_length` is
+  a share between 0 and 0.5.
+
 - curvature, curve_pivot:
 
   Bow geometry, as in
@@ -245,7 +256,7 @@ plot(
 
   For the proximity view, the node-level measure that line thickness
   follows, `"degree"` by default. Any measure
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   accepts at snapshot scope; the temporal-scope-only measures `"reach"`
   and `"reach_count"` are not available here, because the view redraws
   the measure over many short slices.

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,34 +71,33 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pak.dynasite.org/Dynet">Dynet</a></span><span class="op">)</span></span></code></pre></div>
-<p>In this vignette we build temporal networks from the four kinds of
-relational log that <code><a href="../reference/dynet.html">dynet()</a></code> reads, inspect the objects, and
-qualify their clock with sessions, observation windows and vertex
-activity spells. <code><a href="../articles/dynet.html">vignette("dynet")</a></code> follows one network from
-construction through measurement.</p>
+<p>This vignette describes how to construct and inspect temporal
+networks with <code><a href="../reference/dynet.html">dynet()</a></code>. It covers four relational data
+formats, vertex attributes, sessions, observation periods, and vertex
+activity spells. It also introduces network editing and descriptive
+measures. <code><a href="../articles/dynet.html">vignette("dynet")</a></code> provides a worked analysis of a
+simulated classroom network.</p>
 <div class="section level2">
-<h2 id="the-four-log-formats">The four log formats<a class="anchor" aria-label="anchor" href="#the-four-log-formats"></a>
+<h2 id="the-four-input-formats">The four input formats<a class="anchor" aria-label="anchor" href="#the-four-input-formats"></a>
 </h2>
-<p><code>Dynet</code> provides a single constructor,
-<code><a href="../reference/dynet.html">dynet()</a></code>, for interval, contact, threaded, and co-presence
-logs. These formats represent different ways of observing interactions
-and their timing. Format selection depends on the constructor arguments
-and the identification of timing variables, as described below.</p>
+<p><code><a href="../reference/dynet.html">dynet()</a></code> accepts interval, contact, threaded, and
+co-presence data in tidy format. These formats differ in how relational
+endpoints and timing are recorded. The constructor selects a format from
+the supplied arguments and recognised timing columns, or uses the format
+specified explicitly by the user.</p>
 <div class="section level3">
-<h3 id="interval-logs">Interval logs<a class="anchor" aria-label="anchor" href="#interval-logs"></a>
+<h3 id="interval-data">Interval data<a class="anchor" aria-label="anchor" href="#interval-data"></a>
 </h3>
-<p>An interval log records the onset and termination of each observed
-relation. Each row defines a relational spell whose duration is the time
-for which the tie is active.</p>
-<p><code>school_contacts</code> is a simulated interval log of
-face-to-face interactions among fourteen named students over
-approximately three weeks. The supplied variables <code>from</code> and
-<code>to</code> identify the initiating and receiving students,
-respectively, and thus define directed relational endpoints. The
-supplied variables <code>start</code> and <code>end</code> record onset
-and termination in days elapsed since the beginning of the observation
-period. Time is continuous on this scale, so an interaction may begin
-and end within the same day.</p>
+<p>Interval data record the onset and termination of each relationship.
+Each relational spell identifies two endpoints and the period during
+which their connection is active.</p>
+<p><code>school_contacts</code> contains 240 simulated face-to-face
+contacts among fourteen students over approximately three weeks. The
+supplied variables <code>from</code> and <code>to</code> identify the
+initiating and receiving students. <code>start</code> and
+<code>end</code> record onset and termination in days since the
+beginning of observation. Decimal values allow contacts to begin and end
+within a day.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_contacts</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    from   to start  end</span></span>
@@ -106,11 +105,10 @@ and end within the same day.</p>
 <span><span class="co">#&gt; 2  Gita  Ana  0.14 0.98</span></span>
 <span><span class="co">#&gt; 3   Leo Mira  0.15 0.42</span></span>
 <span><span class="co">#&gt; 4   Leo Iris  0.15 0.96</span></span></code></pre></div>
-<p>The network is constructed by passing the log to
-<code><a href="../reference/dynet.html">dynet()</a></code>. The print method reports the format and direction
-of the network, the numbers of vertices, spells and distinct pairs, the
-observed range and the measurement grid, followed by the first
-spells.</p>
+<p><code><a href="../reference/dynet.html">dynet()</a></code> constructs the network directly from these data.
+Printing the result reports its format, direction, vertex and spell
+counts, distinct pairs, observation period, and measurement grid,
+followed by the first relational spells.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">school</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span>
 <span><span class="va">school</span></span>
@@ -126,48 +124,46 @@ spells.</p>
 <span><span class="co">#&gt;   Kira  Ben  0.33 0.69     0.36      1</span></span>
 <span><span class="co">#&gt;    Leo Iris  0.38 0.50     0.12      1</span></span>
 <span><span class="co">#&gt; # 234 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>Column names need not be specified explicitly unless they differ from
-the recognized aliases or are otherwise ambiguous. By default,
-<code><a href="../reference/dynet.html">dynet()</a></code> matches column names against a predefined alias
-table using case-insensitive comparison. Thus, <code>from</code> and
-<code>to</code>, <code>sender</code> and <code>receiver</code>, and
-<code>source</code> and <code>target</code> are interpreted equivalently
-as the two relational endpoints, while <code>start</code> and
-<code>end</code> may likewise be supplied as <code>onset</code> and
-<code>terminus</code>. A <code>duration</code> column can be provided in
-place of <code>end</code>.</p>
-<p>During construction, <code><a href="../reference/dynet.html">dynet()</a></code> standardizes these inputs
-and derives additional variables where necessary. For the present data,
-<code>duration</code> is computed as <code>end - start</code>. The
-constructor also assigns a <code>weight</code> of 1 to every spell
-because the input log contains no variable representing multiplicity or
-repeated occurrence.</p>
-<p>The 240 spells fall on 110 distinct ordered pairs. With
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>14</mn></mrow><annotation encoding="application/x-tex">n = 14</annotation></semantics></math>
-vertices there are
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>182</mn></mrow><annotation encoding="application/x-tex">n(n - 1) = 182</annotation></semantics></math>
-ordered pairs, so approximately 60% of the possible ties were realised
-at least once during the three-week observation period. The aggregated
-graph is therefore dense; the remainder of this vignette addresses how
-much of that connectivity is present at any given time.</p>
+<p>Column recognition is case-insensitive. The endpoint aliases
+<code>from</code>/<code>to</code>,
+<code>sender</code>/<code>receiver</code>, and
+<code>source</code>/<code>target</code> are equivalent, as are
+<code>start</code>/<code>end</code> and
+<code>onset</code>/<code>terminus</code> for interval boundaries.
+Explicit column specification is needed only when names do not match
+recognised aliases or their interpretation is ambiguous. A
+<code>duration</code> column may replace <code>end</code>; termination
+is then calculated as <code>start + duration</code>.</p>
+<p>The constructor standardises the supplied variables and derives
+additional quantities where needed. Here, it calculates
+<code>duration = end - start</code> and assigns <code>weight = 1</code>
+because no multiplicity variable is supplied or recognised.</p>
+<p>The 240 spells connect 110 distinct ordered pairs. With fourteen
+vertices and self-links excluded, there are
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>14</mn><mo>×</mo><mn>13</mn><mo>=</mo><mn>182</mn></mrow><annotation encoding="application/x-tex">14 \times 13 = 182</annotation></semantics></math>
+possible ordered pairs. Approximately 60% are connected at least once
+during observation. This aggregate proportion does not indicate how many
+pairs are connected within any particular interval.</p>
 </div>
 <div class="section level3">
-<h3 id="contact-logs">Contact logs<a class="anchor" aria-label="anchor" href="#contact-logs"></a>
+<h3 id="contact-data">Contact data<a class="anchor" aria-label="anchor" href="#contact-data"></a>
 </h3>
-<p>A contact log records a single timestamp per relation and no
-termination time. Each relation is an instantaneous event, so the
-network is a contact sequence in which every spell has zero duration.
-<code>forum_posts</code> is a simulated log of posts in a course forum.
-Each row records a sender, a receiver, a <code>POSIXct</code> timestamp
-and the thread to which the post belongs.</p>
+<p>Contact data record a timestamp for each interaction without a
+termination time. The resulting temporal network is a contact sequence:
+each spell is instantaneous, with equal onset and termination and zero
+duration.</p>
+<p><code>forum_posts</code> is a simulated course forum dataset
+containing sender and receiver identifiers, a <code>POSIXct</code>
+timestamp, and a thread identifier.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">forum_posts</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       sender   receiver           timestamp    thread</span></span>
 <span><span class="co">#&gt; 1 student_14 student_05 2024-09-02 19:59:20 thread_47</span></span>
 <span><span class="co">#&gt; 2 student_10 student_05 2024-09-03 13:24:23 thread_47</span></span>
 <span><span class="co">#&gt; 3  teacher_A student_09 2024-09-03 16:31:58 thread_11</span></span></code></pre></div>
-<p>To read the log as a contact sequence, <code><a href="../reference/dynet.html">dynet()</a></code> is called
-with <code>time</code> naming the timestamp column.</p>
+<p>The following call explicitly identifies the timestamp column. Its
+recognised name also allows the constructor to infer it when
+<code>time</code> is omitted.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clicks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, time <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span><span class="va">clicks</span></span>
@@ -183,32 +179,33 @@ with <code>time</code> naming the timestamp column.</p>
 <span><span class="co">#&gt;  student_02 student_09 1.2382611 1.2382611        0      1</span></span>
 <span><span class="co">#&gt;  student_06  teacher_A 1.9797595 1.9797595        0      1</span></span>
 <span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>The 241 posts become 241 instantaneous spells among 20 vertices on
-172 of the 380 possible ordered pairs. Calendar times are converted to
-elapsed time from the first event, in a unit chosen automatically to
-suit the span; here the span is approximately 55 days, so the unit is
-days and the default bin width is one day. Numeric input is left
-unchanged and reported in the unit <code>step</code>.</p>
+<p>The 241 posts produce 241 instantaneous spells among twenty vertices,
+connecting 172 of the 380 possible ordered pairs. Calendar times are
+converted to elapsed time from the first event, with the unit selected
+automatically from the temporal span. Here, the span is approximately 55
+days, so the unit and default measurement interval are days. Numeric
+times retain their supplied scale and are labelled
+<code>step</code>.</p>
 </div>
 <div class="section level3">
-<h3 id="threaded-logs">Threaded logs<a class="anchor" aria-label="anchor" href="#threaded-logs"></a>
+<h3 id="threaded-data">Threaded data<a class="anchor" aria-label="anchor" href="#threaded-data"></a>
 </h3>
-<p>Forum, chat and email logs likewise carry a timestamp and no
-termination time. Reading them as contact sequences discards the fact
-that a post remains part of the conversation for as long as the
-conversation continues. Saqr and Nouri (2020) proposed a rule for
-deriving a duration: a post is active from the moment it is written
-until the last post in its thread. Formally, a post at time
+<p>Threaded data contain timestamps and discussion identifiers. A
+discussion-based duration represents the period during which a post
+remains part of an ongoing exchange, as subsequent interactions respond
+to or address that discussion. Following the approach of Saqr and Nouri
+(2020), Dynet treats a post as active from its timestamp until the last
+retained post in the same thread. For a post at time
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>t</mi><mi>i</mi></msub><annotation encoding="application/x-tex">t_i</annotation></semantics></math>
 in thread
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>
-becomes the spell
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>,
+the relational spell is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><msub><mi>t</mi><mi>i</mi></msub><mo>,</mo><msub><mrow><mi mathvariant="normal">max</mi><mo>⁡</mo></mrow><mrow><mi>j</mi><mo>∈</mo><mi>T</mi></mrow></msub><msub><mi>t</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[t_i, \max_{j \in T} t_j)</annotation></semantics></math>.
-A post that provoked a long exchange therefore remains active longer
-than one that did not, and the last post of a thread has zero duration.
-This rule is applied by calling <code><a href="../reference/dynet.html">dynet()</a></code> with
-<code>thread</code> naming the thread column; <code>nodes</code>
-optionally supplies a table of vertex attributes.</p>
+A final post has zero duration. This is a modelling assumption about
+discussion activity, rather than a directly observed contact
+duration.</p>
+<p>Specifying <code>thread</code> selects this construction. The
+optional <code>nodes</code> argument supplies vertex attributes.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">forum</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>, nodes <span class="op">=</span> <span class="va">forum_people</span><span class="op">)</span></span>
 <span><span class="va">forum</span></span>
@@ -225,14 +222,16 @@ optionally supplies a table of vertex attributes.</p>
 <span><span class="co">#&gt;  student_02 student_09 1.2382611 3.235993 1.997732      1 thread_11</span></span>
 <span><span class="co">#&gt;  student_06  teacher_A 1.9797595 3.235993 1.256234      1 thread_11</span></span>
 <span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>The network has the same 241 spells, 20 vertices and 172 pairs as the
-contact reading, but each spell now has a positive duration, except for
-the 62 spells that close their 62 threads, and each carries its thread
-label. The two readings differ in the share of the observation period
-that ties occupy. To compare them, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> is called on
-both networks with <code>temporal_density</code> set to
-<code>TRUE</code>. This row is opt-in because it integrates over every
-ordered pair and its cost is quadratic in the number of vertices.</p>
+<p>The network retains the same 241 spells, twenty vertices, and 172
+ordered pairs as the contact representation. Each spell now carries its
+thread identifier and a derived termination time. The 62 thread-closing
+posts have zero duration; the remaining spells have positive
+duration.</p>
+<p><code>summary(..., temporal_density = TRUE)</code> compares the two
+representations using both mean snapshot density and temporal density.
+Temporal density is optional because its calculation integrates activity
+over eligible vertex pairs and can be more computationally
+demanding.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">clicks</span>, temporal_density <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property    value</span></span>
@@ -269,46 +268,44 @@ ordered pair and its cost is quadratic in the number of vertices.</p>
 <span><span class="co">#&gt; 13      temporal density            0.0139</span></span>
 <span><span class="co">#&gt; 14              sessions              none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes role, achievement</span></span></code></pre></div>
-<p>The two density rows measure different quantities. <strong>Mean
-snapshot density</strong> is the average, over bins, of the share of
-ordered pairs with at least one spell active at some time within the
-bin. <strong>Temporal density</strong> integrates over time: if
+<p><strong>Mean snapshot density</strong> averages the proportion of
+ordered pairs connected at some point within each measurement bin.
+<strong>Temporal density</strong> measures the proportion of available
+pair-time occupied by connections. For a fixed population of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+vertices observed continuously for duration
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>,
+with self-links excluded,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>T</mi></msub><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mi>r</mi></munder><msub><mi>U</mi><mi>r</mi></msub></mrow><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>τ</mi></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">D_T = \frac{\sum_r U_r}{n(n - 1)\,\tau},</annotation></semantics></math></p>
+<p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>U</mi><mi>r</mi></msub><annotation encoding="application/x-tex">U_r</annotation></semantics></math>
-denotes the total time during which ordered pair
+is the total duration for which ordered pair
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
-has at least one active spell,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n(n - 1)</annotation></semantics></math>
-the number of ordered pairs and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-the observed span,</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>T</mi></msub><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mi>r</mi></munder><msub><mi>U</mi><mi>r</mi></msub></mrow><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mspace width="0.167em"></mspace><mi>τ</mi></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">D_T = \frac{\sum_r U_r}{n(n - 1)\,\tau}.</annotation></semantics></math></p>
-<p>Under the contact reading the mean snapshot density is 0.0112 and the
-temporal density is 0: an instantaneous tie is present in a bin but
-occupies no time. Under the threaded reading the mean snapshot density
-rises to 0.0248, because a post now spans every bin between its writing
-and the end of its thread, and the temporal density is 0.0139: summed
-over the 172 pairs, ties are active for 290.8 pair-days out of the 380
-pairs times 54.96 days available. The thread rule is a modelling
-decision. It is the rule under which a forum can be analysed as a
-network of spells with positive duration, and it is applied only when
-<code>thread</code> is named.</p>
+has at least one active spell. Overlapping spells on the same pair
+contribute their union duration.</p>
+<p>The contact representation has mean snapshot density 0.0112 and
+temporal density 0: instantaneous contacts count within bins but occupy
+no positive duration. The threaded representation has mean snapshot
+density 0.0248 and temporal density 0.0139. Its connections occupy 290.8
+pair-days across 380 possible pairs and 54.96 observed days. These
+differences follow from the specified duration rule, which is applied
+when the threaded format is selected.</p>
 </div>
 <div class="section level3">
-<h3 id="co-presence-logs">Co-presence logs<a class="anchor" aria-label="anchor" href="#co-presence-logs"></a>
+<h3 id="co-presence-data">Co-presence data<a class="anchor" aria-label="anchor" href="#co-presence-data"></a>
 </h3>
-<p>A co-presence log is two-mode. It records actors against the
-occasions they attended rather than against one another, so ties between
-actors must be projected. <code>seminar_attendance</code> records which
-student attended which weekly seminar over one term.</p>
+<p>Co-presence data record actors’ participation in shared occasions
+rather than direct relationships between actors. A projection connects
+actors who attend the same occasion. <code>seminar_attendance</code>
+records attendance at weekly seminars over one term.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   student seminar       date</span></span>
 <span><span class="co">#&gt; 1     s12 week_01 2024-09-03</span></span>
 <span><span class="co">#&gt; 2     s22 week_01 2024-09-03</span></span>
 <span><span class="co">#&gt; 3     s23 week_01 2024-09-03</span></span></code></pre></div>
-<p>To project the log onto ties between actors, <code><a href="../reference/dynet.html">dynet()</a></code> is
-called with <code>actor</code> naming the actor column and
-<code>group</code> naming the occasion column.</p>
+<p>Specify <code>actor</code> and <code>group</code> to identify the
+participant and occasion columns.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">seminars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">seminar_attendance</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"seminar"</span><span class="op">)</span></span>
 <span><span class="va">seminars</span></span>
@@ -324,30 +321,33 @@ called with <code>actor</code> naming the actor column and
 <span><span class="co">#&gt;   s03 s23     0   0        0      1 week_01</span></span>
 <span><span class="co">#&gt;   s10 s12     0   0        0      1 week_01</span></span>
 <span><span class="co">#&gt; # 411 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>Every pair of students attending the same seminar becomes one spell,
-tagged with the seminar that produced it. An occasion with
+<p>Each seminar contributes a spell for every pair of attendees, tagged
+with that seminar’s identifier. A seminar with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>
-attendees contributes
+attendees therefore contributes
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mfrac linethickness="0"><mi>k</mi><mn>2</mn></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\binom{k}{2}</annotation></semantics></math>
-spells, and the 417 spells here are the sum of that quantity over the
-term’s seminars. Co-presence is symmetric, so the network is undirected
-and <code>directed = TRUE</code> is overridden; the 224 distinct pairs
-are 224 of the
+spells. Across all seminars, the resulting network contains 417 spells
+and 224 distinct pairs among 24 students. These pairs represent
+approximately 81% of the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mfrac linethickness="0"><mn>24</mn><mn>2</mn></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>276</mn></mrow><annotation encoding="application/x-tex">\binom{24}{2} = 276</annotation></semantics></math>
-unordered pairs, or 81%. The log carries a date and no termination time,
-so each seminar contributes instantaneous spells on its day.</p>
+possible unordered pairs.</p>
+<p>Co-presence is symmetric, so the constructor creates an undirected
+network even if <code>directed = TRUE</code> is supplied. Here, the
+input supplies a date without a termination time, so the projected
+spells are instantaneous contacts on the seminar date.</p>
 </div>
 <div class="section level3">
 <h3 id="choosing-the-format">Choosing the format<a class="anchor" aria-label="anchor" href="#choosing-the-format"></a>
 </h3>
-<p>The default <code>format = "auto"</code> selects the threaded reading
-when <code>thread</code> is named, the co-presence reading when
-<code>actor</code> and <code>group</code> are named, the interval
-reading when a termination or duration column is present, and the
-contact reading otherwise. The inference follows the arguments supplied,
-not the columns present in the data. <code>forum_posts</code> contains a
-<code>thread</code> column, but a call that does not name it yields a
-contact sequence.</p>
+<p>With the default <code>format = "auto"</code>, specifying both
+<code>actor</code> and <code>group</code> selects co-presence;
+otherwise, specifying <code>thread</code> selects threaded data. If
+neither condition applies, an explicitly specified or automatically
+recognised termination or duration column selects interval data.
+Otherwise, the constructor selects contact data.</p>
+<p>A thread column is not sufficient by itself to select threaded
+construction. Consequently, the following call interprets
+<code>forum_posts</code> as a contact sequence:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">auto</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span><span class="op">)</span></span>
 <span><span class="va">auto</span></span>
@@ -363,17 +363,18 @@ contact sequence.</p>
 <span><span class="co">#&gt;  student_02 student_09 1.2382611 1.2382611        0      1</span></span>
 <span><span class="co">#&gt;  student_06  teacher_A 1.9797595 1.9797595        0      1</span></span>
 <span><span class="co">#&gt; # 235 more spells. summary() describes the network; plot() draws it.</span></span></code></pre></div>
-<p>To fix the reading explicitly rather than infer it,
-<code>format</code> is set to one of <code>"interval"</code>,
-<code>"contact"</code>, <code>"threaded"</code> or
-<code>"copresence"</code>.</p>
+<p>Set <code>format</code> to <code>"interval"</code>,
+<code>"contact"</code>, <code>"threaded"</code>, or
+<code>"copresence"</code> to select the representation explicitly. The
+required variables must still be available through recognised aliases or
+explicit column arguments.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="inspecting-the-network">Inspecting the network<a class="anchor" aria-label="anchor" href="#inspecting-the-network"></a>
 </h2>
-<p>To describe a network in a single table, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> is
-called on it. The result has one row per property.</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> returns network properties in a tidy
+table.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property        value</span></span>
@@ -392,26 +393,24 @@ called on it. The result has one row per property.</p>
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p><code>vertices</code> is the fixed vertex set. Every result retains a
-row for every vertex, so a vertex with no ties in a window appears with
-a value of zero rather than being omitted. <code>edge spells</code>
-counts the derived spells, one per row of an interval log, and
-<code>distinct pairs</code> the ordered pairs on which they fall; 240
-spells on 110 pairs indicates that most pairs met more than once.
-<code>time unit</code> is <code>step</code> for numeric input and
-seconds, minutes, hours or days for calendar input. The observed range
-defaults to the first and last event. <code>bin width</code> is the
-measurement grid, set by the <code>interval</code> argument, and
-<code>time bins</code> is the number of bins covering the observed
-range: 22 bins of width 1 cover a span of 21.52.
-<code>mean snapshot density</code> is the average, over those 22 bins,
-of the share of the 182 ordered pairs in contact within the bin; at
-0.0829, approximately one pair in twelve is in contact on an average
-day, compared with 60% over the whole period.
-<code>temporal density</code> is computed only on request.</p>
-<p>To obtain the spell table, <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> is called on
-the network. It returns the spells as constructed, together with the
-derived <code>duration</code> and <code>weight</code> columns.</p>
+<p><code>vertices</code> reports the size of the vertex set,
+<code>edge spells</code> counts relational spells, and
+<code>distinct pairs</code> counts the endpoint pairs they connect. The
+classroom network has 240 spells on 110 ordered pairs, indicating
+repeated contact for at least some pairs.</p>
+<p><code>time unit</code> is <code>step</code> for numeric input or the
+selected calendar unit for date-time input. Without explicit observation
+bounds, the observed range extends from the earliest onset to the latest
+termination. <code>bin width</code> records the construction interval,
+and <code>time bins</code> counts the intervals covering that range.
+Here, 22 bins cover 21.52 days; the final bin is shorter than one
+day.</p>
+<p><code>mean snapshot density</code> is 0.0829: approximately 8.3% of
+possible ordered pairs are connected in an average daily bin, compared
+with about 60% across the full observation period.
+<code>temporal density</code> is calculated only when requested.</p>
+<p><code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> extracts the constructed relational
+spells, including <code>duration</code> and <code>weight</code>.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">spells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spells</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -420,9 +419,8 @@ derived <code>duration</code> and <code>weight</code> columns.</p>
 <span><span class="co">#&gt; 2  Gita  Ana  0.14 0.98     0.84      1</span></span>
 <span><span class="co">#&gt; 3   Leo Mira  0.15 0.42     0.27      1</span></span>
 <span><span class="co">#&gt; 4   Leo Iris  0.15 0.96     0.81      1</span></span></code></pre></div>
-<p>To obtain the vertex table, <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> is called
-with <code>what</code> set to <code>"nodes"</code>. For the forum
-network, this table carries the attributes supplied through
+<p>Use <code>what = "nodes"</code> to extract vertex attributes. For
+<code>forum</code>, these include the attributes supplied through
 <code>nodes</code>.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">forum_nodes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">forum</span>, what <span class="op">=</span> <span class="st">"nodes"</span><span class="op">)</span></span>
@@ -432,11 +430,11 @@ network, this table carries the attributes supplied through
 <span><span class="co">#&gt; 2  student_01     Student      Middle</span></span>
 <span><span class="co">#&gt; 3  student_02     Student         Low</span></span>
 <span><span class="co">#&gt; 4  student_03     Student        High</span></span></code></pre></div>
-<p><code>what</code> also accepts <code>"bins"</code> for the
-measurement grid, <code>"network"</code> for the aggregated edge list,
+<p>Other options are <code>"bins"</code> for the measurement grid,
+<code>"network"</code> for the aggregate edge list,
 <code>"observations"</code> for the observation calendar,
-<code>"observed_edges"</code> for the spells clipped to that calendar,
-and <code>"vertex_spells"</code> for declared vertex activity.</p>
+<code>"observed_edges"</code> for spells clipped to that calendar, and
+<code>"vertex_spells"</code> for declared vertex activity.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bins</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">school</span>, what <span class="op">=</span> <span class="st">"bins"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">bins</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -446,10 +444,9 @@ and <code>"vertex_spells"</code> for declared vertex activity.</p>
 <span><span class="co">#&gt; 3   3  2  3    2  FALSE</span></span>
 <span><span class="co">#&gt; 4   4  3  4    3  FALSE</span></span></code></pre></div>
 <p>Each bin extends from <code>lo</code> to <code>hi</code> and is
-labelled by its start <code>time</code>. Bins are half-open, as spells
-are, with the exception of the last bin, whose <code>closed</code> flag
-is <code>TRUE</code> so that an event at the final observed instant is
-counted rather than dropped.</p>
+labelled by its starting <code>time</code>. Bins are half-open except
+for the final bin, whose <code>closed</code> flag includes an event at
+the final observed instant.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pairs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">school</span>, what <span class="op">=</span> <span class="st">"network"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">pairs</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -458,18 +455,20 @@ counted rather than dropped.</p>
 <span><span class="co">#&gt; 2  Dan Ana      2</span></span>
 <span><span class="co">#&gt; 3 Gita Ana      3</span></span>
 <span><span class="co">#&gt; 4 Hugo Ana      2</span></span></code></pre></div>
-<p>The aggregated edge list has one row per ordered pair that was ever
-in contact, and its <code>weight</code> is the number of spells on that
-pair: Dan contacted Ana twice and Gita contacted Ana three times. This
-is the static graph on which a non-temporal analysis would operate.</p>
+<p>The aggregate edge list groups spells by their relational endpoints
+and sums their weights. Because every spell in <code>school</code> has
+weight 1, the aggregate <code>weight</code> equals the spell count: Dan
+contacted Ana twice and Gita contacted Ana three times. Aggregation
+summarises these relationships without retaining their temporal
+order.</p>
 </div>
 <div class="section level2">
 <h2 id="direction-loops-weights-and-attributes">Direction, loops, weights and attributes<a class="anchor" aria-label="anchor" href="#direction-loops-weights-and-attributes"></a>
 </h2>
-<p>A small hand-constructed log illustrates the remaining constructor
-arguments. It has five rows among three vertices, and its fifth row is a
-self-tie from <code>A</code> to <code>A</code>. The <code>posts</code>
-column records the number of messages each row represents.</p>
+<p>The following dataset contains five spells among three vertices,
+including a self-link from <code>A</code> to <code>A</code>. The
+supplied <code>posts</code> variable records the number of messages
+represented by each spell.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tiny</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  from  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"C"</span>, <span class="st">"A"</span><span class="op">)</span>,</span>
@@ -478,12 +477,11 @@ column records the number of messages each row represents.</p>
 <span>  end   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">5</span>, <span class="fl">4</span>, <span class="fl">6</span><span class="op">)</span>,</span>
 <span>  posts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">5</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>To build an undirected network with a weight per event,
-<code><a href="../reference/dynet.html">dynet()</a></code> is called with <code>directed</code> set to
-<code>FALSE</code> and <code>weight</code> naming the multiplicity
-column. A column named <code>weight</code>, <code>weights</code> or
-<code>strength</code> is detected without being named, and a message
-reports the choice.</p>
+<p>Set <code>directed = FALSE</code> to construct an undirected network
+and use <code>weight</code> to identify the multiplicity variable.
+Columns named <code>weight</code>, <code>weights</code>, or
+<code>strength</code> are recognised automatically; <code>posts</code>
+requires explicit specification.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">undirected</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, directed <span class="op">=</span> <span class="cn">FALSE</span>, weight <span class="op">=</span> <span class="st">"posts"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dropped 1 self-loop event(s). Use loops = TRUE to keep them.</span></span>
@@ -497,16 +495,16 @@ reports the choice.</p>
 <span><span class="co">#&gt;     A  B     1   3        2      1</span></span>
 <span><span class="co">#&gt;     A  C     2   5        3      2</span></span>
 <span><span class="co">#&gt;     A  C     3   4        1      5</span></span></code></pre></div>
-<p>The five rows become four spells on two pairs. In an undirected
-network the pair is unordered, so <code>B -&gt; A</code> is folded onto
-<code>A -&gt; B</code> while retaining its own onset and termination,
-and the two spells on that pair overlap in
+<p>The result contains four spells on two unordered pairs. The spells
+<code>A -&gt; B</code> and <code>B -&gt; A</code> connect the same
+undirected pair but retain their individual onset and termination times;
+they overlap during
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">[1, 2)</annotation></semantics></math>.
-The self-tie is dropped with a message, because a loop is not a relation
-between two actors. The <code>weight</code> column now carries the value
-of <code>posts</code>. To retain self-ties, <code>loops</code> is set to
-<code>TRUE</code>; a retained loop adds two to the degree of its vertex,
-once as sender and once as receiver.</p>
+The constructor removes the self-link because <code>loops = FALSE</code>
+by default and records the supplied <code>posts</code> values as
+<code>weight</code>.</p>
+<p>Set <code>loops = TRUE</code> to retain self-links. Under total
+degree, a retained loop contributes twice, once at each endpoint.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">with_loops</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, loops <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Keeping 1 self-loop event(s); each adds two to its vertex's degree.</span></span>
@@ -521,12 +519,13 @@ once as sender and once as receiver.</p>
 <span><span class="co">#&gt;     A  C     2   5        3      1     2</span></span>
 <span><span class="co">#&gt;     C  A     3   4        1      1     5</span></span>
 <span><span class="co">#&gt;     A  A     4   6        2      1     1</span></span></code></pre></div>
-<p>With direction retained and the loop kept, the same five rows are
-five spells on five distinct ordered pairs, and <code>posts</code> is
-carried as a spell attribute because no weight was named.</p>
-<p>Every measurement function tiles the observation period into bins of
-a default width. To set that width, <code>interval</code> is specified
-in the network’s time unit.</p>
+<p>This call retains direction and all five spells, producing five
+distinct ordered pairs. Because <code>weight</code> is not specified and
+<code>posts</code> is not a recognised weight alias, <code>posts</code>
+remains a spell attribute and the constructor assigns the default weight
+of 1.</p>
+<p><code>interval</code> sets the default spacing of measurements in the
+network’s time unit.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tiny_dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">tiny</span>, interval <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dropped 1 self-loop event(s). Use loops = TRUE to keep them.</span></span>
@@ -547,23 +546,15 @@ in the network’s time unit.</p>
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>The span of 5 is covered by three bins of width 2. The mean snapshot
-density of 0.3333 can be verified directly: the three bins contain two,
-three and one active ordered pairs out of the
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><mn>2</mn><mo>=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">3 \times 2 = 6</annotation></semantics></math>
-possible, and the mean of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>/</mi><mn>6</mn></mrow><annotation encoding="application/x-tex">2/6</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mi>/</mi><mn>6</mn></mrow><annotation encoding="application/x-tex">3/6</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>6</mn></mrow><annotation encoding="application/x-tex">1/6</annotation></semantics></math>
-is
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>.</p>
-<p>To attach vertex attributes, a table is passed to <code>nodes</code>;
-the key column is detected by name. To designate one attribute as the
-vertex partition, it is named in <code>groups</code>. The partition is
-stored as a <code>groups</code> column, and
-<code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code> colours by it without a further
-argument.</p>
+<p>An interval of 2 covers the five-unit observation period with three
+bins, the last of which is partial. Their active-pair counts are 2, 3,
+and 1 out of six possible ordered pairs. Mean snapshot density is
+therefore
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mi>/</mi><mn>6</mn><mo>+</mo><mn>3</mn><mi>/</mi><mn>6</mn><mo>+</mo><mn>1</mn><mi>/</mi><mn>6</mn><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mn>3</mn><mo>=</mo><mn>1</mn><mi>/</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">(2/6 + 3/6 + 1/6)/3 = 1/3</annotation></semantics></math>.</p>
+<p>The <code>nodes</code> argument supplies a vertex table whose
+identifier column is recognised by name. <code>groups</code> selects an
+attribute to store as the vertex grouping; <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>
+can then use it for vertex colours.</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">roles</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">forum_posts</span>, thread <span class="op">=</span> <span class="st">"thread"</span>,</span>
 <span>               nodes <span class="op">=</span> <span class="va">forum_people</span>, groups <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span>
@@ -574,12 +565,11 @@ argument.</p>
 <span><span class="co">#&gt; 2  student_01     Student      Middle     Student</span></span>
 <span><span class="co">#&gt; 3  student_02     Student         Low     Student</span></span>
 <span><span class="co">#&gt; 4  student_03     Student        High     Student</span></span></code></pre></div>
-<p>An attribute is what makes group-level questions possible. To count
-ties within and between the groups defined by an attribute,
-<code><a href="../reference/mixing.html">mixing()</a></code> is called with <code>attribute</code> naming the
-attribute. The result has one row per ordered pair of groups per bin,
-and its <code>value</code> is the number of ordered pairs of vertices in
-those two groups with an active tie in the bin.</p>
+<p><strong>Mixing</strong> describes connections within and between
+groups defined by a vertex attribute. <code><a href="../reference/mixing.html">mixing()</a></code> counts
+distinct connected vertex pairs for each ordered group pair and
+measurement bin. Connections counted in a bin need not be active
+simultaneously.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">role_mixing</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mixing.html">mixing</a></span><span class="op">(</span><span class="va">roles</span>, attribute <span class="op">=</span> <span class="st">"role"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">role_mixing</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -593,24 +583,22 @@ those two groups with an active tie in the bin.</p>
 <span><span class="co">#&gt;     0     Student -&gt; Facilitator     0     Student Facilitator</span></span>
 <span><span class="co">#&gt;     0     Teacher -&gt; Facilitator     0     Teacher Facilitator</span></span>
 <span><span class="co">#&gt;     0     Facilitator -&gt; Student     0 Facilitator     Student</span></span></code></pre></div>
-<p>Three roles give nine ordered group pairs, and 55 daily bins give the
-495 rows reported in the header. In the first bin no facilitator was yet
-involved.</p>
+<p>Three roles produce nine ordered group pairs in each of 55 daily
+bins, giving 495 observations. In the first bin, no connection involves
+a facilitator. These are connection counts, not probabilities or counts
+of simultaneous interactions.</p>
 </div>
 <div class="section level2">
 <h2 id="sessions">Sessions<a class="anchor" aria-label="anchor" href="#sessions"></a>
 </h2>
-<p>A session is a segment of the observation period that a
-time-respecting path may not cross, although the clock runs continuously
-through it: a course, a term, a class period, a day of a conference.
-Contacts in different sessions remain ordered in time, but a chain of
-contacts spanning two sessions is not treated as a path, because
-whatever passed along it would have had to persist across the break. To
-declare sessions, a column is named with <code>session</code>. When the
-log has no such column, we cut the time axis instead: to assign each
-contact to the week in which it started, we call
-<code><a href="../reference/set_tie_sessions.html">set_tie_sessions()</a></code> with <code>breaks</code> at days 7 and
-14 and <code>labels</code> for the three weeks.</p>
+<p>Sessions identify contexts within which time-respecting paths may be
+constrained, such as courses, terms, or class periods. By default, a
+path must use spells assigned to a single session. Session labels do not
+reset the clock.</p>
+<p>Use <code>session</code> during construction to identify an existing
+session column. Alternatively, <code><a href="../reference/set_tie_sessions.html">set_tie_sessions()</a></code> can
+assign sessions from spell onset times. The following call assigns
+spells to weeks using boundaries at days 7 and 14.</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sessioned</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/set_tie_sessions.html">set_tie_sessions</a></span><span class="op">(</span><span class="va">school</span>, breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">7</span>, <span class="fl">14</span><span class="op">)</span>,</span>
 <span>                              labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"week_1"</span>, <span class="st">"week_2"</span>, <span class="st">"week_3"</span><span class="op">)</span><span class="op">)</span></span>
@@ -631,14 +619,8 @@ contact to the week in which it started, we call
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions            3</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>The network is otherwise unchanged; the summary now reports three
-sessions. Every function that takes time also takes
-<code>sessions</code>, with three settings that change what is computed
-rather than how the result is laid out. To find the earliest
-time-respecting path from one student to every other (Kempe, Kleinberg
-and Kumar, 2002), <code><a href="../reference/paths.html">paths()</a></code> is called with <code>from</code>
-for the source and <code>sessions</code> for the setting, and the result
-is summarised.</p>
+<p>The summary now reports three sessions. The <code>sessions</code>
+argument controls how path searches use these assignments.</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">collapsed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"collapse"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">collapsed</span><span class="op">)</span></span>
@@ -651,10 +633,10 @@ is summarised.</p>
 <span><span class="co">#&gt; 6     max latency   11.66</span></span>
 <span><span class="co">#&gt; 7     median hops       2</span></span>
 <span><span class="co">#&gt; 8        max hops       4</span></span></code></pre></div>
-<p>With <code>"collapse"</code> the session labels are ignored and the
-period is treated as a single stream, which is equivalent to an
-unsessioned network. Ana reaches all thirteen other students, at a
-median latency of 7.51 days and within four hops.</p>
+<p>With <code>sessions = "collapse"</code>, session labels are ignored
+and the search uses the complete temporal sequence. Ana reaches all
+thirteen other students, with median latency 7.51 days and a maximum of
+four hops.</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">inside</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"bounded"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">inside</span><span class="op">)</span></span>
@@ -667,14 +649,12 @@ median latency of 7.51 days and within four hops.</p>
 <span><span class="co">#&gt; 6     max latency   13.21</span></span>
 <span><span class="co">#&gt; 7     median hops       2</span></span>
 <span><span class="co">#&gt; 8        max hops       5</span></span></code></pre></div>
-<p>With <code>"bounded"</code> every path must remain within one
-session: the search is run within each session and, for every
-destination, the best result across sessions is retained. Ana still
-reaches every student, but by routes that never cross a week boundary:
-the median latency rises from 7.51 to 8.21 days, the maximum from 11.66
-to 13.21 days, and the longest route from four hops to five. Some of the
-earliest routes in the collapsed search used contacts on both sides of a
-week boundary and are no longer admissible.</p>
+<p>With <code>sessions = "bounded"</code>, each path uses spells from a
+single session. The search compares session-specific results and retains
+the best result for each destination. Ana still reaches all thirteen
+students, but median latency increases to 8.21 days, maximum latency to
+13.21 days, and maximum hop count to five. Earlier paths that combined
+spells assigned to different weeks are no longer admissible.</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">per_session</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/paths.html">paths</a></span><span class="op">(</span><span class="va">sessioned</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, sessions <span class="op">=</span> <span class="st">"separate"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">per_session</span><span class="op">)</span></span>
@@ -703,30 +683,24 @@ week boundary and are no longer admissible.</p>
 <span><span class="co">#&gt; 22  week_3     max latency    6.67</span></span>
 <span><span class="co">#&gt; 23  week_3     median hops       2</span></span>
 <span><span class="co">#&gt; 24  week_3        max hops       3</span></span></code></pre></div>
-<p>With <code>"separate"</code> each session is searched and reported on
-its own rows. Within week 1 Ana reaches 6 of the 13 other students
-(share 0.462), within week 2 all 13, and within week 3 only 5 (share
-0.385). Week 2 is the week in which the class is most connected: two of
-the three densest days of the daily density series in
-<code><a href="../articles/dynet.html">vignette("dynet")</a></code>, days 13 and 14, fall within it, and its
-routes are also the longest, up to six hops. <code>"bounded"</code> is
-the default. On a network without sessions there is nothing to bound, so
-<code>"bounded"</code> and <code>"collapse"</code> coincide and the
-default incurs no cost. <code>"separate"</code> requires a session
-column and raises an error of class <code>dynet_bad_input</code> when
-none is present.</p>
+<p>With <code>sessions = "separate"</code>, results are reported
+separately for each session. Ana reaches six students in week 1,
+thirteen in week 2, and five in week 3, corresponding to proportions of
+0.462, 1, and 0.385. The longest path within week 2 uses six hops.</p>
+<p><code>"bounded"</code> is the default. Without session assignments,
+it gives the same result as <code>"collapse"</code>.
+<code>"separate"</code> requires session assignments and otherwise
+raises <code>dynet_bad_input</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="observation-windows">Observation windows<a class="anchor" aria-label="anchor" href="#observation-windows"></a>
 </h2>
-<p>The observed range defaults to the first and last event in the log.
-This default treats the data as if observation began with the first
-contact and ended with the last, which rarely corresponds to how a study
-was conducted. The observed range matters because it is the denominator
-of every rate and the horizon of every path search: a density is a share
-of pair-time, and a path search terminates at the end of observation.
-When the study period is known, it should be declared by setting
-<code>observation_start</code> and <code>observation_end</code>.</p>
+<p>Without explicit bounds, the observation period extends from the
+earliest spell onset to the latest termination. These event-derived
+limits may differ from the study’s actual observation period. Specifying
+<code>observation_start</code> and <code>observation_end</code> defines
+the measurement horizon, including periods when no interaction was
+recorded.</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bounded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span>, observation_start <span class="op">=</span> <span class="fl">0</span>, observation_end <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">bounded</span><span class="op">)</span></span>
@@ -746,20 +720,19 @@ When the study period is known, it should be declared by setting
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>The span is 14 rather than 21.52, giving 14 bins rather than 22, and
-the mean snapshot density is 0.0922 rather than 0.0829. The spells are
-unchanged; the first two weeks are simply denser than the third, and
-averaging over them alone yields a higher value. The bounds clip
-exposure and do not filter the data: <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> still
-returns every spell as supplied. A spell of positive duration
-contributes its half-open intersection with the window, and an
-instantaneous event on either limit is retained.</p>
-<p>Observation is often interrupted: a holiday, a system outage, a gap
-between data exports. To declare the observed periods, a table of their
-starts and ends is passed to <code>observation_spells</code>;
-overlapping and adjacent periods are merged. To read the calendar back,
-<code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> is called with <code>what</code> set to
-<code>"observations"</code>.</p>
+<p>Restricting observation to days 0–14 produces fourteen bins instead
+of 22. Mean snapshot density is 0.0922, compared with 0.0829 across the
+full period. This difference reflects the connections observed during
+the selected period.</p>
+<p>Observation bounds change the measurement period without deleting the
+original spells: <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> still returns them.
+Positive-duration spells contribute their intersection with the
+observation window, and instantaneous events on either observation
+boundary are retained.</p>
+<p>For interrupted observation, supply <code>observation_spells</code>
+with the start and end of each observed period. Overlapping or adjacent
+periods are merged. <code>what = "observations"</code> extracts the
+resulting calendar.</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gapped</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dynet.html">dynet</a></span><span class="op">(</span></span>
 <span>  <span class="va">school_contacts</span>,</span>
@@ -787,16 +760,15 @@ overlapping and adjacent periods are merged. To read the calendar back,
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>The two periods cover 8 and 9 days and give 17 bins rather than the
-21 that a hull from 0 to 21 would give: the grid restarts within each
-period and never places a bin in the gap. Exposure is the sum of the two
-durations rather than their hull, so the four unobserved days do not
-inflate any denominator, and an event falling in the gap is not
-counted.</p>
-<p>The calendar can be modified after construction. To replace it,
-<code><a href="../reference/set_observations.html">set_observations()</a></code> is called with <code>start</code> and
-<code>end</code>. To restore the implicit continuous window,
-<code><a href="../reference/clear_observations.html">clear_observations()</a></code> is called.</p>
+<p>The two periods contain eight and nine observed days. The measurement
+grid restarts within each period, yielding seventeen bins and none
+during the four-day gap. Exposure calculations use the seventeen
+observed days, and events within the gap are excluded from
+measurements.</p>
+<p><code><a href="../reference/set_observations.html">set_observations()</a></code> replaces the observation calendar
+after construction. <code><a href="../reference/clear_observations.html">clear_observations()</a></code> restores
+continuous observation from the earliest raw onset to the latest raw
+termination.</p>
 <div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">narrowed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/set_observations.html">set_observations</a></span><span class="op">(</span><span class="va">school</span>, start <span class="op">=</span> <span class="fl">2</span>, end <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">narrowed</span>, what <span class="op">=</span> <span class="st">"observations"</span><span class="op">)</span></span>
@@ -811,15 +783,15 @@ counted.</p>
 <div class="section level2">
 <h2 id="vertex-activity-spells">Vertex activity spells<a class="anchor" aria-label="anchor" href="#vertex-activity-spells"></a>
 </h2>
-<p>Observation windows state when the study was in progress. Vertex
-activity spells state when a vertex was eligible to have ties at all: a
-student who enrolled late, a participant who left, a member present only
-in some terms. The distinction matters for every per-vertex measure,
-because a vertex with no contacts in a bin should score zero only if it
-could have had contacts. To declare activity, a table with
-<code>node</code>, <code>start</code> and <code>end</code> is passed to
-<code>vertex_spells</code>. A vertex with no row in the table is
-eligible throughout.</p>
+<p>Observation periods describe when data collection occurred. Vertex
+activity spells describe when individual vertices were eligible to
+participate, for example after enrolment or before departure. This
+distinction separates an eligible participant with no connections from a
+participant who was absent.</p>
+<p>Supply <code>vertex_spells</code> as a table containing
+<code>node</code>, <code>start</code>, and <code>end</code>. A vertex
+without an explicit activity declaration is treated as eligible
+throughout observation.</p>
 <div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">arrivals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  node  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span><span class="op">)</span>,</span>
@@ -834,14 +806,11 @@ eligible throughout.</p>
 <span><span class="co">#&gt;   terminus_censored</span></span>
 <span><span class="co">#&gt; 1             FALSE</span></span>
 <span><span class="co">#&gt; 2             FALSE</span></span></code></pre></div>
-<p>Ben is now eligible from day 7. He retains a row in every bin, but
-the bins before his arrival report <code>NA</code> rather than zero,
-which distinguishes having had no contacts from not having been present.
-To observe this, <code><a href="../reference/dyn_centrality.html">dyn_centrality()</a></code> is called with
-<code>measure</code> set to <code>"degree"</code> on the two
-networks.</p>
+<p>Ben is declared eligible from day 7. His degree is <code>NA</code> in
+earlier bins, rather than zero. The following calls compare degree with
+and without this declaration.</p>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">school_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">school_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_degree</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Degree (node-level)</span></span>
 <span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
@@ -852,7 +821,7 @@ networks.</p>
 <span><span class="co">#&gt;     0 Cara  degree     1</span></span>
 <span><span class="co">#&gt;     0  Dan  degree     1</span></span></code></pre></div>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scheduled_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dyn_centrality.html">dyn_centrality</a></span><span class="op">(</span><span class="va">scheduled</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">scheduled_degree</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/centrality_series.html">centrality_series</a></span><span class="op">(</span><span class="va">scheduled</span>, measure <span class="op">=</span> <span class="st">"degree"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">scheduled_degree</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # Degree (node-level)</span></span>
 <span><span class="co">#&gt; # 14 vertices | 22 time points, 1 per bin | time in step</span></span>
@@ -862,9 +831,9 @@ networks.</p>
 <span><span class="co">#&gt;     0  Ben  degree    NA</span></span>
 <span><span class="co">#&gt;     0 Cara  degree     1</span></span>
 <span><span class="co">#&gt;     0  Dan  degree     1</span></span></code></pre></div>
-<p>The distinction affects every per-vertex summary, because the bins
-before arrival are no longer averaged in as zeros. To reduce each series
-to one row per vertex, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> is called on it.</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> excludes missing values when summarising the
+trajectories, so periods before declared arrival no longer contribute to
+the mean.</p>
 <div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">school_degree_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school_degree</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">school_degree_summary</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -879,16 +848,16 @@ to one row per vertex, <code><a href="https://rdrr.io/r/base/summary.html" class
 <span><span class="co">#&gt; 1  Ana  degree 22 2.181818 2.015095   0   7         6</span></span>
 <span><span class="co">#&gt; 2  Ben  degree 15 2.133333 1.125463   0   4        11</span></span>
 <span><span class="co">#&gt; 3 Cara  degree 22 2.227273 1.342770   0   5         4</span></span></code></pre></div>
-<p>Ana is unchanged at a mean degree of 2.18 over 22 bins. Ben’s mean
-rises from 2.00 over 22 bins to 2.13 over the 15 bins in which he was
-eligible, his standard deviation falls from 1.23 to 1.13, and his peak
-moves from day 4, which now precedes his arrival, to day 11. The eleven
-contacts recorded for Ben before day 7 remain in the spell table; the
-declaration states only that the days before his arrival were not
-opportunities for him.</p>
-<p>The declaration can be edited. To replace the table,
-<code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> is called; to extend it,
-<code><a href="../reference/add_vertex_spells.html">add_vertex_spells()</a></code> is called.</p>
+<p>Ana’s mean degree remains 2.18 across 22 bins. Ben’s mean changes
+from 2.00 across 22 bins to 2.13 across fifteen eligible bins. His
+standard deviation decreases from 1.23 to 1.13, and his peak moves from
+day 4 to day 11. The eleven spells recorded for Ben before day 7 remain
+in the raw data but are excluded from the eligible measurement period.
+This example illustrates the effect of an activity declaration; in an
+analysis, declarations should reflect the study’s participation
+criteria.</p>
+<p>Use <code><a href="../reference/set_vertex_spells.html">set_vertex_spells()</a></code> to replace declared activity and
+<code><a href="../reference/add_vertex_spells.html">add_vertex_spells()</a></code> to add periods of activity.</p>
 <div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">activity</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/set_vertex_spells.html">set_vertex_spells</a></span><span class="op">(</span><span class="va">school</span>, <span class="va">arrivals</span><span class="op">)</span></span>
 <span><span class="va">extended</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_vertex_spells.html">add_vertex_spells</a></span><span class="op">(</span><span class="va">activity</span>,</span>
@@ -906,15 +875,13 @@ opportunities for him.</p>
 <div class="section level2">
 <h2 id="editing-a-network">Editing a network<a class="anchor" aria-label="anchor" href="#editing-a-network"></a>
 </h2>
-<p>Every editing function returns a new network and leaves its input
-unchanged. Each edit rebuilds the spell table and the
-<code>cograph</code> projection together, so a temporal network is
-edited through these functions and not through <code>cograph</code>’s
-static setters, which carry no temporal information.</p>
-<p>To add a vertex, <code><a href="../reference/add_nodes.html">add_nodes()</a></code> is called with a table of
-names and attributes. To add a tie, <code><a href="../reference/add_ties.html">add_ties()</a></code> is called
-with a table of spells; each tie endpoint must already exist as a
-vertex.</p>
+<p>Editing functions return a new network and leave their input
+unchanged. They update the relational spells and associated network
+representation together. Use these functions for temporal edits so that
+timing and network structure remain consistent.</p>
+<p><code><a href="../reference/add_nodes.html">add_nodes()</a></code> adds vertices and attributes.
+<code><a href="../reference/add_ties.html">add_ties()</a></code> adds relational spells whose endpoints already
+exist in the vertex set.</p>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">step1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_nodes.html">add_nodes</a></span><span class="op">(</span><span class="va">school</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"Nova"</span>, role <span class="op">=</span> <span class="st">"exchange"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">step2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_ties.html">add_ties</a></span><span class="op">(</span><span class="va">step1</span>, <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -937,16 +904,13 @@ vertex.</p>
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         role</span></span></code></pre></div>
-<p>The edited network has 15 vertices, 241 spells, 111 distinct pairs
-and a <code>role</code> attribute, which every original vertex holds as
-<code>NA</code>. Its mean snapshot density is 0.0723, lower than the
-0.0829 of the original although a tie was added: the number of ordered
-pairs rose from 182 to
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>15</mn><mo>×</mo><mn>14</mn><mo>=</mo><mn>210</mn></mrow><annotation encoding="application/x-tex">15 \times 14 =
-210</annotation></semantics></math>, so the same ties are shares of a
-larger denominator. Adding a vertex changes every density in the
-network, which is why the vertex set is fixed at construction and edited
-deliberately. The original is unchanged.</p>
+<p>The edited network contains fifteen vertices, 241 spells, and 111
+distinct pairs. Original vertices have <code>NA</code> for the newly
+introduced <code>role</code> attribute. Mean snapshot density decreases
+from 0.0829 to 0.0723 despite the added connection: the additional
+vertex increases the number of possible ordered pairs from 182 to
+210.</p>
+<p>The original network remains unchanged.</p>
 <div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 property        value</span></span>
@@ -965,10 +929,9 @@ deliberately. The original is unchanged.</p>
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>To remove a tie, <code><a href="../reference/remove_ties.html">remove_ties()</a></code> is called with the
-endpoints and the onset time. To rename vertices,
-<code><a href="../reference/rename_nodes.html">rename_nodes()</a></code> is called with a named vector mapping old
-names to new.</p>
+<p><code><a href="../reference/remove_ties.html">remove_ties()</a></code> selects spells by their endpoints and
+onset, while <code><a href="../reference/rename_nodes.html">rename_nodes()</a></code> updates vertex names using a
+mapping from old to new names.</p>
 <div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">step3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/remove_ties.html">remove_ties</a></span><span class="op">(</span><span class="va">step2</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, to <span class="op">=</span> <span class="st">"Nova"</span>, start <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">step3</span><span class="op">)</span></span>
@@ -996,13 +959,13 @@ names to new.</p>
 <span><span class="co">#&gt; 13    Mira     &lt;NA&gt;</span></span>
 <span><span class="co">#&gt; 14    Nils     &lt;NA&gt;</span></span>
 <span><span class="co">#&gt; 15 Nova B. exchange</span></span></code></pre></div>
-<p>Removing the tie returns the spell and pair counts to 240 and 110
-while Nova remains as a vertex with no ties, and the density settles at
-0.0719, the original 15.09 mean edges per bin over 210 pairs. To
-restrict a network to a subset of its vertices,
-<code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> is called with <code>nodes</code> for the
-vertex names; <code>ties</code> instead accepts a condition on the spell
-table.</p>
+<p>Removing the added spell restores the original 240 spells and 110
+connected pairs, but Nova remains as an isolated vertex. Mean density is
+therefore 0.0719, using the enlarged denominator of 210 possible
+pairs.</p>
+<p><code><a href="../reference/induce_subgraph.html">induce_subgraph()</a></code> restricts the network to selected
+vertices or spells. <code>nodes</code> accepts vertex names, and
+<code>ties</code> can specify a condition over the spell table.</p>
 <div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">five</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/induce_subgraph.html">induce_subgraph</a></span><span class="op">(</span><span class="va">school</span>, nodes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Cara"</span>, <span class="st">"Dan"</span>, <span class="st">"Eve"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">five</span><span class="op">)</span></span>
@@ -1022,22 +985,24 @@ table.</p>
 <span><span class="co">#&gt; 13      temporal density not computed</span></span>
 <span><span class="co">#&gt; 14              sessions         none</span></span>
 <span><span class="co">#&gt; 15     vertex attributes         none</span></span></code></pre></div>
-<p>The five students share 18 spells on 11 of their 20 ordered pairs.
-The observed range narrows from 0 to 21.52 to 3.17 to 21.33, because the
-subgraph’s range defaults to its own first and last contact; to retain
-the original study period, it must be declared with
-<code>observation_start</code> and <code>observation_end</code>.</p>
+<p>The five selected students share eighteen spells on eleven of twenty
+possible ordered pairs. Without explicit observation bounds, the
+subgraph’s observation period follows its own spell boundaries, here
+days 3.17–21.33. Declare <code>observation_start</code> and
+<code>observation_end</code> when the original study period should be
+retained.</p>
 </div>
 <div class="section level2">
 <h2 id="descriptive-measures">Descriptive measures<a class="anchor" aria-label="anchor" href="#descriptive-measures"></a>
 </h2>
-<p>A temporal network is measured in windows. The observation period is
-divided into bins, the spells active in each bin are aggregated into a
-static snapshot, a static measure is computed on every snapshot, and the
-result is a time series. To measure graph-level structure in each bin,
-<code><a href="../reference/metrics.html">metrics()</a></code> is called with <code>measure</code> naming the
-statistics. Several measures are returned stacked in one data frame with
-a <code>measure</code> column.</p>
+<p>Dynet provides graph-level measures describing the network as a whole
+and vertex-level measures describing individual positions. For
+window-based calculations, spells active within each window form a
+snapshot on which the selected measures are computed. Graph-level
+trajectories are obtained with <code><a href="../reference/metrics.html">metrics()</a></code>; vertex centrality
+trajectories use <code><a href="../reference/centrality_series.html">centrality_series()</a></code>.</p>
+<p>The following call requests three graph-level measures in a tidy
+result identified by <code>time</code> and <code>measure</code>.</p>
 <div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">basics</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">basics</span>, <span class="fl">6</span><span class="op">)</span></span>
@@ -1052,15 +1017,14 @@ a <code>measure</code> column.</p>
 <span><span class="co">#&gt;     1      density  0.04395604</span></span>
 <span><span class="co">#&gt;     1        edges  8.00000000</span></span>
 <span><span class="co">#&gt;     1 active_nodes  8.00000000</span></span></code></pre></div>
-<p><code>edges</code> is the number of ordered pairs with at least one
-active spell in the bin, <code>density</code> divides it by the 182
-possible pairs, and <code>active_nodes</code> is the number of vertices
-with at least one tie. On day 0, 10 ties among 13 of the 14 students
-give a density of 0.055; on day 1, 8 ties among 8 students give
-0.044.</p>
-<p>To reduce each series to one row, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> is called on
-the result. The table reports the mean, standard deviation, range and
-peak time of each measure.</p>
+<p><code>edges</code> counts distinct connected ordered pairs,
+<code>density</code> divides that count by the possible pairs, and
+<code>active_nodes</code> counts vertices with at least one connection.
+On day 0, ten connections involve thirteen students, giving density
+0.055. On day 1, eight connections involve eight students, giving
+density 0.044.</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports the mean, standard deviation, range,
+and peak time for each measure.</p>
 <div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">six</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"density"</span>, <span class="st">"edges"</span>, <span class="st">"active_nodes"</span>,</span>
 <span>                                   <span class="st">"components"</span>, <span class="st">"transitivity"</span>,</span>
@@ -1073,35 +1037,30 @@ peak time of each measure.</p>
 <span><span class="co">#&gt; 4        edges 22 15.09090909 7.15081807 6.00000000 30.0000000        14</span></span>
 <span><span class="co">#&gt; 5  reciprocity 22  0.14503815 0.13886108 0.00000000  0.4666667        14</span></span>
 <span><span class="co">#&gt; 6 transitivity 22  0.11496262 0.12515367 0.00000000  0.4000000        11</span></span></code></pre></div>
-<p>Density averages 0.083 over the 22 daily bins and peaks at 0.165 on
-day 14, the day with the most ties (30). On an average day 12.1 of the
-14 students have at least one contact, and on every day at least 7 do.
-<code>components</code> counts the weakly connected components of the
-snapshot, ignoring direction and counting isolates as components of size
-one. It averages 3.6, equals 1 on day 14, when the 30 ties join the
-whole class into one connected snapshot, and peaks at 9 on day 21, the
-truncated final half-day, when 6 ties leave 7 students isolated.
-<code>reciprocity</code> is the edgewise measure, the share of arcs
+<p>Across 22 bins, mean density is 0.083 and reaches 0.165 on day 14,
+when thirty pairs are connected. An average of 12.1 students have a
+connection within a daily bin, with a minimum of seven.</p>
+<p><code>components</code> counts weakly connected components, ignoring
+direction and including isolated vertices. It averages 3.6 and equals 1
+on day 14. Its maximum of nine occurs in the final partial bin, when six
+connections leave seven students isolated.</p>
+<p><code>reciprocity</code> is the proportion of directed connections
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>→</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i \to j</annotation></semantics></math>
-in the bin for which
+for which
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>→</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j \to i</annotation></semantics></math>
-is also present; it averages 0.145 and reaches 0.467 on day 14, so even
-on the busiest day fewer than half the contacts were returned within the
-day. <code>transitivity</code> is the share of two-paths
+is also present in the window. It averages 0.145 and reaches 0.467 on
+day 14. <code>transitivity</code> is the proportion of two-paths
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>→</mo><mi>j</mi><mo>→</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">i \to j \to k</annotation></semantics></math>
-closed by an arc
+closed by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>→</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">i \to k</annotation></semantics></math>,
-the weak convention of <code><a href="https://rdrr.io/pkg/sna/man/gtrans.html" class="external-link">sna::gtrans()</a></code>; it averages 0.115 and
-peaks at 0.4 on day 11. Both cohesion measures are low because a daily
-snapshot of a classroom is sparse, and both are computed on the snapshot
-as a static graph.</p>
-<p><code>step</code> and <code>window</code> are separate arguments.
-<code>step</code> is the interval between measurements and
-<code>window</code> the length of time each measurement covers, counted
-forward from the measurement time. Equal values tile the period into
-disjoint bins, which is the default. A <code>window</code> wider than
-<code>step</code> yields a rolling series in which successive windows
-overlap.</p>
+following the weak convention of <code><a href="https://rdrr.io/pkg/sna/man/gtrans.html" class="external-link">sna::gtrans()</a></code>. It averages
+0.115 and peaks at 0.4 on day 11. Both measures describe snapshot
+structure; they do not establish the temporal order of the constituent
+interactions.</p>
+<p><code>step</code> specifies the interval between measurements, while
+<code>window</code> specifies the duration covered from each measurement
+time. Equal values produce non-overlapping windows. A larger
+<code>window</code> produces overlapping, rolling measurements.</p>
 <div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rolling</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span>, step <span class="op">=</span> <span class="fl">1</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">rolling</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -1113,26 +1072,23 @@ overlap.</p>
 <span><span class="co">#&gt;     1 density 0.3461538</span></span>
 <span><span class="co">#&gt;     2 density 0.3571429</span></span>
 <span><span class="co">#&gt;     3 density 0.3791209</span></span></code></pre></div>
-<p>The first rolling value, 0.324, is the share of the 182 ordered pairs
-in contact at any time during the seven days from day 0, namely 59
-pairs, compared with 10 pairs and 0.055 in the first day alone. A
-rolling window trades temporal resolution for a denser, less noisy
-snapshot. To plot a series, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> is called on it.</p>
+<p>The first seven-day window contains 59 connected pairs, giving
+density 0.324, compared with ten pairs and density 0.055 in the first
+day alone. Wider windows combine more relationships while providing less
+detail about changes within each interval.</p>
 <div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">school_density</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="st">"density"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">school_density</span><span class="op">)</span></span></code></pre></div>
 <p><img src="building-networks_files/figure-html/density-plot-1.png" class="r-plt" alt="" width="700"></p>
-<p>The measures above record presence within a bin: a pair counts once
-regardless of how briefly or how often it was in contact. Two measures
-integrate over time instead. <code>temporal_density</code> is the
-occupied share of pair-time within the window, the quantity
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>D</mi><mi>T</mi></msub><annotation encoding="application/x-tex">D_T</annotation></semantics></math>
-defined above but computed per window. <code>onset_intensity</code> is
-the number of spells starting in the window divided by the eligible
-pair-time,
+<p>Snapshot measures count a connected pair once within a window
+regardless of how long or how often it is connected.
+<code>temporal_density</code> instead measures the occupied proportion
+of eligible pair-time. <code>onset_intensity</code> divides the number
+of spell onsets by eligible pair-time, giving a rate of formation per
+unit of relational opportunity. For this fixed population, eligible
+pair-time is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo stretchy="false" form="prefix">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">n(n-1)</annotation></semantics></math>
-times the window length, and is therefore a rate of tie formation per
-unit of opportunity.</p>
+multiplied by observed duration.</p>
 <div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">integrated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metrics.html">metrics</a></span><span class="op">(</span><span class="va">school</span>, measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temporal_density"</span>, <span class="st">"onset_intensity"</span><span class="op">)</span>,</span>
 <span>                      step <span class="op">=</span> <span class="fl">7</span>, window <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
@@ -1140,30 +1096,28 @@ unit of opportunity.</p>
 <span><span class="co">#&gt; # Graph structure (graph-level)</span></span>
 <span><span class="co">#&gt; # 4 time points, 7 per bin | time in step</span></span>
 <span><span class="co">#&gt; # measures: temporal_density, onset_intensity</span></span>
-<span><span class="co">#&gt;  time          measure       value</span></span>
-<span><span class="co">#&gt;     0 temporal_density 0.024285714</span></span>
-<span><span class="co">#&gt;     0  onset_intensity 0.060439560</span></span>
-<span><span class="co">#&gt;     7 temporal_density 0.038602826</span></span>
-<span><span class="co">#&gt;     7  onset_intensity 0.083987441</span></span>
-<span><span class="co">#&gt;    14 temporal_density 0.023524333</span></span>
-<span><span class="co">#&gt;    14  onset_intensity 0.043956044</span></span>
-<span><span class="co">#&gt;    21 temporal_density 0.001342229</span></span>
-<span><span class="co">#&gt;    21  onset_intensity 0.000000000</span></span></code></pre></div>
-<p>In each full week the eligible pair-time is
+<span><span class="co">#&gt;  time          measure      value</span></span>
+<span><span class="co">#&gt;     0 temporal_density 0.02428571</span></span>
+<span><span class="co">#&gt;     0  onset_intensity 0.06043956</span></span>
+<span><span class="co">#&gt;     7 temporal_density 0.03860283</span></span>
+<span><span class="co">#&gt;     7  onset_intensity 0.08398744</span></span>
+<span><span class="co">#&gt;    14 temporal_density 0.02352433</span></span>
+<span><span class="co">#&gt;    14  onset_intensity 0.04395604</span></span>
+<span><span class="co">#&gt;    21 temporal_density 0.01806847</span></span>
+<span><span class="co">#&gt;    21  onset_intensity 0.00000000</span></span></code></pre></div>
+<p>Each complete week contains
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>182</mn><mo>×</mo><mn>7</mn><mo>=</mo><mn>1274</mn></mrow><annotation encoding="application/x-tex">182 \times 7 = 1274</annotation></semantics></math>
-pair-days. The onset intensities of 0.0604, 0.0840 and 0.0440 therefore
-correspond to 77, 107 and 56 spells starting in the three weeks, which
-sum to the 240 spells of the log; the final bin, from day 21 to 21.52,
-contains no new spell. Occupied pair-time is highest in the second week,
-at 0.0386, or 49.2 pair-days of contact out of 1274 available, and falls
-to 0.0013 in the final partial bin. Compared with the mean snapshot
-density of 0.083, the temporal density of approximately 0.03 indicates
-that a pair in contact at some time on a given day is, on average, in
-contact for only a fraction of that day.</p>
-<p>To list the ties present in one bin rather than a statistic
-summarising them, <code><a href="../reference/snapshots.html">snapshots()</a></code> is called with
-<code>at</code> for the time. Without <code>at</code> the whole grid is
-returned, one row per tie per bin.</p>
+eligible pair-days. Onset intensities of 0.0604, 0.0840, and 0.0440
+correspond to 77, 107, and 56 spell onsets, respectively. The final
+partial bin contains no onsets.</p>
+<p>Temporal density is highest in the second week at 0.0386,
+corresponding to 49.2 occupied pair-days. It decreases to 0.0181 in the
+final partial bin. These values account for connection duration, whereas
+snapshot density records whether a connection occurred at any point in a
+bin.</p>
+<p><code><a href="../reference/snapshots.html">snapshots()</a></code> lists the connections contributing to each
+snapshot. Supplying <code>at</code> selects a measurement time; omitting
+it returns the measurement grid.</p>
 <div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">at_five</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/snapshots.html">snapshots</a></span><span class="op">(</span><span class="va">school</span>, at <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="va">at_five</span></span>
@@ -1180,11 +1134,11 @@ returned, one row per tie per bin.</p>
 <span><span class="co">#&gt; 9     5  Ben Finn      1        1</span></span>
 <span><span class="co">#&gt; 10    5 Cara Kira      1        1</span></span>
 <span><span class="co">#&gt; # 6 more rows. summary() counts them by bin.</span></span></code></pre></div>
-<p>The 16 rows are the 16 ties counted by <code>edges</code> on day 5,
-each with its weight and the number of spells that produced it.</p>
-<p>To count the ties that formed and dissolved in each bin,
-<code><a href="../reference/events.html">events()</a></code> is called on the network. A formation is a spell
-onset and a dissolution a spell termination.</p>
+<p>At day 5, the result contains sixteen connected pairs, matching the
+<code>edges</code> measure for that bin. Each pair has a weight and a
+count of contributing spells.</p>
+<p><code><a href="../reference/events.html">events()</a></code> counts spell onsets and terminations within
+each bin.</p>
 <div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">changes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/events.html">events</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">changes</span>, <span class="fl">6</span><span class="op">)</span></span>
@@ -1199,18 +1153,18 @@ onset and a dissolution a spell termination.</p>
 <span><span class="co">#&gt;     1 dissolution     6</span></span>
 <span><span class="co">#&gt;     2   formation     8</span></span>
 <span><span class="co">#&gt;     2 dissolution     6</span></span></code></pre></div>
-<p>In the first bin 11 ties formed and 7 dissolved, so contact was
-accumulating; in the second, 4 formed and 6 dissolved.</p>
-<p>Duration is what distinguishes an interval log from a contact
-sequence. To measure how long ties lasted, <code><a href="../reference/durations.html">durations()</a></code> is
-called. The default <code>measure</code> reports, for each ordered pair,
-the number of spells (<code>events</code>), their summed duration
-(<code>total</code>) and their mean duration (<code>mean</code>).
-<code>unit</code> selects the entity to which a duration belongs:
-<code>"pair"</code> for a dyad’s whole history, <code>"spell"</code> for
-the individual episodes, <code>"vertex_activity"</code> and
-<code>"vertex_spell"</code> for vertex presence, and
-<code>"node_ties"</code> for the tie time incident to each vertex.</p>
+<p>The first bin contains eleven onsets and seven terminations; the
+second contains four onsets and six terminations. These are spell
+counts, which may include repeated relationships between the same
+endpoints.</p>
+<p><code><a href="../reference/durations.html">durations()</a></code> summarises the length of relational spells.
+By default, it returns the number of spells (<code>events</code>),
+summed duration (<code>total</code>), and mean duration
+(<code>mean</code>) for each ordered pair. <code>unit</code> selects
+pair-level histories (<code>"pair"</code>), individual relational spells
+(<code>"spell"</code>), vertex activity (<code>"vertex_activity"</code>
+or <code>"vertex_spell"</code>), or spells incident to vertices
+(<code>"node_ties"</code>).</p>
 <div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tie_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tie_durations</span>, <span class="fl">6</span><span class="op">)</span></span>
@@ -1225,9 +1179,9 @@ the individual episodes, <code>"vertex_activity"</code> and
 <span><span class="co">#&gt;   Ana  Iris  events     1</span></span>
 <span><span class="co">#&gt;   Ana Jonas  events     4</span></span>
 <span><span class="co">#&gt;   Ana  Kira  events     1</span></span></code></pre></div>
-<p>Ana contacted Gita five times and Jonas four times over the three
-weeks, and Cara, Iris and Kira once each. The 110 pairs times three
-measures give the 330 rows reported in the header.</p>
+<p>Ana contacted Gita five times and Jonas four times, and Cara, Iris,
+and Kira once each. The result contains three measures for each of 110
+pairs, giving 330 observations.</p>
 <div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">spell_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"spell"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spell_durations</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -1240,9 +1194,10 @@ measures give the 330 rows reported in the header.</p>
 <span><span class="co">#&gt;   Ana  Dan       143 duration  0.32</span></span>
 <span><span class="co">#&gt;   Ana  Dan       168 duration  0.51</span></span>
 <span><span class="co">#&gt;   Ana  Dan       228 duration  0.19</span></span></code></pre></div>
-<p>At the spell level there is one row per episode, 240 in all, each
-identified by its row in the source log. Ana’s three contacts with Dan
-lasted 0.32, 0.51 and 0.19 days.</p>
+<p>With <code>unit = "spell"</code>, the result describes the 240
+individual spells. Spell identifiers refer to the constructed spell
+table. Ana’s three contacts with Dan lasted 0.32, 0.51, and 0.19
+days.</p>
 <div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">node_durations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/durations.html">durations</a></span><span class="op">(</span><span class="va">school</span>, unit <span class="op">=</span> <span class="st">"node_ties"</span>, mode <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">node_durations</span>, <span class="fl">4</span><span class="op">)</span></span>
@@ -1255,20 +1210,17 @@ lasted 0.32, 0.51 and 0.19 days.</p>
 <span><span class="co">#&gt;   Ben  events    34</span></span>
 <span><span class="co">#&gt;  Cara  events    35</span></span>
 <span><span class="co">#&gt;   Dan  events    35</span></span></code></pre></div>
-<p>At the vertex level <code>events</code> counts the spells incident to
-each student in either direction: Ana took part in 36 contacts, Ben in
-34.</p>
+<p>With <code>unit = "node_ties"</code> and <code>mode = "all"</code>,
+<code>events</code> counts spells incident to each vertex in either
+direction. Ana participates in 36 spells and Ben in 34.</p>
 </div>
 <div class="section level2">
 <h2 id="collapsing-to-a-static-network">Collapsing to a static network<a class="anchor" aria-label="anchor" href="#collapsing-to-a-static-network"></a>
 </h2>
-<p>To reduce a period of the temporal network to a static weighted
-network, <code><a href="../reference/collapse_network.html">collapse_network()</a></code> is called with
-<code>start</code> and <code>end</code> delimiting the period. The
-result is a <code>cograph</code> network with one row per pair that was
-in contact during the period, carrying every weighting the package can
-compute, so the weighting is selected by name rather than
-recomputed.</p>
+<p><code><a href="../reference/collapse_network.html">collapse_network()</a></code> aggregates a selected observation
+period into a static weighted network. <code>start</code> and
+<code>end</code> delimit that period. The result contains connected
+pairs and their available weight summaries.</p>
 <div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">flat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">school</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span>
 <span><span class="va">flat</span></span>
@@ -1295,17 +1247,18 @@ recomputed.</p>
 <span><span class="co">#&gt;               1</span></span>
 <span><span class="co">#&gt;               2</span></span>
 <span><span class="co">#&gt;               1</span></span></code></pre></div>
-<p>The first week contains 59 pairs, the same 59 that gave the first
-rolling density of 0.324. For each pair the table gives the presence
-indicator (<code>binary</code>), the calendar time with at least one
-active spell (<code>union_duration</code>), the summed spell time
-(<code>total_duration</code>), the share of the seven days occupied
-(<code>duration_fraction</code>), the number of spells and the weight
-sums, and the times of the first and last contact. Ana and Jonas were in
-contact three times during the week, for 1.44 days in total, or 21% of
-the week, between days 2.12 and 7.00; the two durations coincide because
-their spells do not overlap. To select the weighting that
-<code>cograph</code> draws and measures, <code>weight</code> is set.</p>
+<p>The first week contains 59 connected pairs. For each pair, the result
+records binary presence (<code>binary</code>), duration with at least
+one active spell (<code>union_duration</code>), summed spell duration
+(<code>total_duration</code>), and the proportion of observed time
+connected (<code>duration_fraction</code>). It also records spell
+counts, weight summaries, and first and last contact times.</p>
+<p>Ana and Jonas have three spells within the first week, totalling 1.44
+days, or approximately 21% of the week. Their first and last observed
+boundaries are days 2.12 and 7.00. Union and total duration coincide
+because their spells do not overlap.</p>
+<p>Use <code>weight</code> to select the summary used as the static edge
+weight.</p>
 <div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">first_week</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collapse_network.html">collapse_network</a></span><span class="op">(</span><span class="va">school</span>, start <span class="op">=</span> <span class="fl">0</span>, end <span class="op">=</span> <span class="fl">7</span>,</span>
 <span>                               weight <span class="op">=</span> <span class="st">"union_duration"</span><span class="op">)</span></span>
@@ -1333,11 +1286,10 @@ their spells do not overlap. To select the weighting that
 <span><span class="co">#&gt;               1</span></span>
 <span><span class="co">#&gt;               2</span></span>
 <span><span class="co">#&gt;               1</span></span></code></pre></div>
-<p>A collapsed network is the appropriate object for a static method: a
-layout, a community detection, a comparison with a static reference.
-What it no longer retains is the order of events, the duration of each
-episode and the existence of a time-respecting path, which are available
-only in the temporal object.</p>
+<p>The collapsed network supports static analyses such as layouts and
+community detection. Its aggregate summaries do not retain the complete
+timing of individual spells, so time-respecting paths must be examined
+using the temporal network.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

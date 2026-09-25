@@ -1,0 +1,189 @@
+# Reachability of every vertex
+
+The number or share of other vertices each vertex can reach along
+time-respecting paths, and the number or share that can reach it.
+Reachability is the temporal replacement for component membership: in a
+static network two vertices in the same component reach each other by
+definition, whereas in a temporal network reach depends on whether the
+timing lines up.
+
+## Usage
+
+``` r
+reachability(
+  dn,
+  direction = c("both", "forward", "backward"),
+  at = NULL,
+  sessions = c("bounded", "collapse", "separate"),
+  start = NULL,
+  end = NULL,
+  traversal_time = 0,
+  measure = "reach",
+  plot = FALSE
+)
+```
+
+## Arguments
+
+- dn:
+
+  A temporal network from
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
+
+- direction:
+
+  `"both"` (the default, reporting each vertex's forward and backward
+  reach side by side), `"forward"` or `"backward"`.
+
+- at:
+
+  Forward source-availability time or backward arrival deadline,
+  defaulting to the beginning or end of each observed period
+  respectively. Unlike in
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) it sets
+  only the traversal window, because every vertex is then anchored at
+  its own presence inside that window: a vertex with declared spells
+  starts at the first instant it is present there, or at the last
+  instant searching backward, and one with no declared spells starts at
+  the window bound. Date and date-time values use the network's time
+  scale. It cannot be combined with `start` or `end`.
+
+- sessions:
+
+  How to treat sessions, as in
+  [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md).
+
+- start, end:
+
+  Inclusive lower and upper traversal-time bounds. Interval spells
+  remain terminus-exclusive.
+
+- traversal_time:
+
+  Nonnegative duration charged for every hop, in the network's time
+  unit. A calendar network also accepts a scalar `difftime`.
+
+- measure:
+
+  One or both of `"reach"`, the proportion of other vertices, and
+  `"reach_count"`, their number. The source vertex is excluded from
+  both. Defaults to `"reach"`.
+
+- plot:
+
+  Whether to draw the result as well as return it. Drawing is a side
+  effect in the manner of
+  [`graphics::hist()`](https://rdrr.io/r/graphics/hist.html): the verb
+  still returns its tidy table, invisibly when it has drawn, so
+  `plot = TRUE` saves the wrapping
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) call without
+  changing what comes back. Use
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on the result
+  when the figure needs arguments of its own.
+
+## Value
+
+A `dynet_metric` at node level: a tidy data frame with one row per
+vertex per requested measure, columns `node`, `measure` and `value`,
+preceded by `session` under `sessions = "separate"`. Proportion measures
+are named `forward_reach` and `backward_reach`; counts are named
+`forward_reach_count` and `backward_reach_count`.
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) returns
+the plain frame.
+
+## Details
+
+Reachability uses
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) traversal
+semantics: nondecreasing times, unlimited waiting, half-open interval
+spells, and a separate exact timestamp rule for point events. Positive
+`traversal_time` requires interval occupancy to finish within continuous
+pair activity and delays a point-trigger arrival. Declared vertex
+activity additionally requires active hop endpoints and a valid anchor,
+and every vertex is anchored at its own presence: each search starts at
+that vertex's first instant inside the window, or its last instant
+searching backward, rather than at the window bound. A vertex never
+present inside the window reaches nothing, which is reported as zero
+rather than as a missing row. Waiting after a valid anchor may cross
+vertex inactivity; interval traversal requires both endpoints
+continuously through completion, while a delayed point requires the
+receiver again at completion. For backward reachability, the resolved
+`end` is a common deadline and latest-departure suprema determine
+whether a vertex can reach the target. The canonical `start` and `end`
+bounds apply one closed traversal-time window to both forward and
+backward queries.
+
+The source is excluded: a count is the number of distinct other vertices
+in the reachable set, not the number of journeys. A proportion divides
+that count by the full network size minus one. It is defined as zero for
+a singleton network. In separate-session output the same full-network
+denominator is retained in every session block.
+
+In separate-session output, a session entirely outside a one-sided bound
+contributes zero-reach rows rather than aborting the complete result.
+Its missing implicit bound is clamped to the supplied bound, producing
+the empty journey at that boundary and no eligible hop.
+
+Failures are classed. An unrecognised `measure` raises
+`dynet_unknown_measure`; a malformed `measure`, a negative
+`traversal_time`, `at` combined with `start` or `end`, or a window that
+cannot hold a journey raises `dynet_bad_input`; and a window disjoint
+from explicit observation raises `dynet_outside_observation`.
+
+## References
+
+Holme, P. (2005). Network reachability of real-world contact sequences.
+*Physical Review E*, 71(4), 046119.
+
+Holme, P., & Saramaki, J. (2012). Temporal networks. *Physics Reports*,
+519(3), 97-125.
+
+## Examples
+
+``` r
+# Reachability searches every ordered pair, so the example uses a small
+# inline network to stay fast. The verb takes any `dynet`.
+dn <- dynet(data.frame(
+  from  = c("A", "B", "C", "A"),
+  to    = c("B", "C", "D", "D"),
+  start = c(0, 1, 2, 3),
+  end   = c(1, 2, 3, 4)
+))
+reachability(dn)
+#> # Reachability (node-level)
+#> # 4 vertices | time in step
+#> # measures: forward_reach, backward_reach
+#> # share of other vertices joined by a time-respecting path
+#>  node        measure     value
+#>     A  forward_reach 1.0000000
+#>     B  forward_reach 0.6666667
+#>     C  forward_reach 0.3333333
+#>     D  forward_reach 0.0000000
+#>     A backward_reach 0.0000000
+#>     B backward_reach 0.3333333
+#>     C backward_reach 0.6666667
+#>     D backward_reach 1.0000000
+reachability(dn, direction = "forward")
+#> # Reachability (node-level)
+#> # 4 vertices | time in step
+#> # share of other vertices joined by a time-respecting path
+#>  node       measure     value
+#>     A forward_reach 1.0000000
+#>     B forward_reach 0.6666667
+#>     C forward_reach 0.3333333
+#>     D forward_reach 0.0000000
+reachability(dn, start = 0, end = 2)
+#> # Reachability (node-level)
+#> # 4 vertices | time in step
+#> # measures: forward_reach, backward_reach
+#> # share of other vertices joined by a time-respecting path
+#>  node        measure     value
+#>     A  forward_reach 1.0000000
+#>     B  forward_reach 0.6666667
+#>     C  forward_reach 0.3333333
+#>     D  forward_reach 0.0000000
+#>     A backward_reach 0.0000000
+#>     B backward_reach 0.3333333
+#>     C backward_reach 0.6666667
+#>     D backward_reach 1.0000000
+```

@@ -1,34 +1,47 @@
 # Function catalogue
 
-Dynet exports 38 functions in six categories, and registers 50 S3
-methods across its result classes. Every function addresses vertices by
-name and returns a data frame with one row per observation. This page
-lists each function with what it takes and what it returns; the help
-page of each function gives the full contract.
+Dynet provides functions for temporal network construction, editing,
+measurement, path analysis, aggregation, and animation. Vertices are
+identified by name, and analytical results are returned in tidy formats
+with methods for printing, summarising, and plotting. This catalogue
+describes the principal inputs and outputs of the 39 exported functions.
+Individual help pages document their arguments and conditions in detail.
 
 | Category | Functions | Purpose |
 |----|---:|----|
-| Construction | 4 | Build a network from a relational log and read it back per time bin |
-| Editing | 17 | Rewrite spells and vertex activity without breaking time |
-| Measurement | 8 | Centrality, reachability, structure, mixing, turn-taking, burstiness, duration, similarity |
-| Paths | 5 | Time-respecting paths and four views of the result |
-| Structure | 3 | Turn the network into another object |
-| Animation | 1 | Render the measurement grid as an animation |
+| Construction | 4 | Construct or convert networks and inspect spells and snapshots |
+| Editing | 17 | Modify vertices, relational spells, sessions, and observation periods |
+| Measurement | 9 | Measure centrality, reachability, structure, mixing, turn-taking, timing, duration, and similarity |
+| Paths | 5 | Find time-respecting paths and summarise or visualise their routes |
+| Structure | 3 | Project, aggregate, or subset a network |
+| Animation | 1 | Animate successive temporal snapshots |
 
 ## Construction
 
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) builds a
-temporal network from a relational log. It takes a data frame of ties
-and a set of column selectors, infers one of four log formats from which
-selectors are named, and returns an object of class
-`c("dynet", "netobject", "cograph_network")` carrying the spell table,
-the vertex table and the construction metadata. The four formats are
-interval logs with a start and an end per tie, contact logs of
-instantaneous events, threaded logs in which a tie stays active until
-its thread falls silent, and co-presence logs in which actors sharing a
-group become connected. To build a network from an interval log, we call
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with the
-log; the columns are recognised by name.
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md)
+constructs a temporal network from relational data. It returns an object
+of class `c("dynet", "netobject", "cograph_network")`, containing
+relational spells, vertices, and construction metadata.
+
+Four input formats are supported. Interval data supply onset and
+termination, or onset and duration. Contact data supply instantaneous
+interaction timestamps. Threaded data derive termination from the last
+retained interaction in each thread. Co-presence data connect actors
+attending the same occasion.
+
+With `format = "auto"`, specifying `actor` and `group` selects
+co-presence; otherwise, specifying `thread` selects threaded
+construction. A specified or recognised termination or duration column
+selects interval data when neither preceding condition applies.
+Otherwise, contact data are selected. `format` can also be specified
+explicitly.
+
+Column matching is case-insensitive. Recognised endpoint aliases include
+`from`/`to`, `sender`/`receiver`, and `source`/`target`; interval
+boundaries include `start`/`end` and `onset`/`terminus`. Explicit column
+specification is needed only for unrecognised or ambiguous names. The
+constructor calculates `duration = end - start` and assigns `weight = 1`
+when no multiplicity variable is supplied or recognised.
 
 ``` r
 
@@ -48,35 +61,31 @@ dn
 #> # 234 more spells. summary() describes the network; plot() draws it.
 ```
 
-The network has 14 vertices and 240 spells over 110 distinct pairs,
-observed from 0 to 21.52 time units.
+The example contains fourteen vertices, 240 relational spells, and 110
+distinct ordered pairs, observed from time 0 to 21.52.
 
 [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md)
-converts an object of another class to a temporal network. It takes that
-object and returns a `dynet`. The method for `networkDynamic` imports
-edge spells, vertex spells, the observation period and per-edge
-attributes. The method for `dynet` returns its input unchanged, so the
-call is safe on an object that is already a temporal network.
+converts supported network objects to `dynet`. Its `networkDynamic`
+method imports edge spells, vertex activity spells, observation periods,
+and edge attributes. Applied to a `dynet` object, it returns the input
+unchanged.
 
-[`events()`](https://pak.dynasite.org/Dynet/reference/events.md) counts
-tie formation and dissolution over time. It takes a network, one or more
-measure names in `measure`, and the four grid arguments, and returns a
-`dynet_metric` at graph level with one row per time point and measure.
-Eight measures are available: `"formation"`, `"dissolution"`,
-`"active"`, `"new_pairs"`, `"formation_fraction"`,
-`"dissolution_fraction"`, `"formation_rate"` and `"dissolution_rate"`.
-The two rates divide the transitions by the exact eligible pair-time.
+[`events()`](https://pak.dynasite.org/Dynet/reference/events.md)
+measures spell formation, dissolution, and activity over time. It
+accepts `measure` and the measurement-grid arguments and returns a
+graph-level `dynet_metric`. Available measures are `"formation"`,
+`"dissolution"`, `"active"`, `"new_pairs"`, `"formation_fraction"`,
+`"dissolution_fraction"`, `"formation_rate"`, and `"dissolution_rate"`.
+Formation and dissolution rates divide transition counts by eligible
+pair-time.
 
 [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-lists the ties active in each time bin. It takes a network and the grid
-arguments, or a single time in `at`, and returns a `dynet_snapshot` data
-frame with one row per active tie per bin, holding `time`, `from`, `to`,
-`weight` and `n_spells`, preceded by `session` when the network has
-sessions. A pair joined by more than one spell inside one bin is one
-tie, and `n_spells` records how many spells produced it. To list the
-ties in four-unit bins, we call
-[`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-with `step` set to 4.
+returns the connections active within each measurement bin as a
+`dynet_snapshot`. Its tidy columns include `time`, `from`, `to`,
+`weight`, and `n_spells`, with session identifiers when applicable.
+Multiple spells on the same pair are combined within a bin: `weight`
+sums their weights and `n_spells` counts them. `at` selects a single
+measurement time.
 
 ``` r
 
@@ -97,130 +106,110 @@ bins
 #> # 206 more rows. summary() counts them by bin.
 ```
 
-Six bins hold 216 tie rows. In the first bin Ana and Jonas are joined by
-two spells, which `n_spells` records, and `weight` sums them.
+The six four-unit bins contain 216 pair-by-bin observations. In the
+first bin, two spells connect Ana and Jonas; `n_spells` records both and
+`weight` sums their contributions.
 
 ## Editing
 
-Seventeen functions rewrite the spell table, the vertex table or the
-vertex activity table. Each takes a network in `dn`, returns a new
-network of class `c("dynet", "netobject", "cograph_network")`, and
-leaves its input unchanged. Every edit goes through a rebuild, so the
-canonical spell identifiers can renumber after any of them.
+Editing functions return a new temporal network and leave their input
+unchanged. They update relational spells, vertex attributes, and
+associated network representations together. Rebuilding may change spell
+identifiers, so subsequent selections should refer to the updated
+object.
 
 ### Adding
 
 [`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md)
-adds vertices. It takes in `data` a character vector of names or a data
-frame with a `name` column and static attributes, and returns a network
-in which the new vertices are implicit always-active isolates until ties
-or vertex activity are supplied.
+adds vertices from a character vector or a data frame containing `name`
+and optional attributes. New vertices are treated as eligible throughout
+observation unless activity spells are declared.
 
 [`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md)
-adds tie spells. It takes in `data` a data frame of endpoints and times,
-and returns a network with the temporal ties and every flattened cograph
-field rebuilt together. Columns beyond the spell fields are carried as
-tie attributes. `loops` decides whether a self-tie is accepted.
-
+adds relational spells from a data frame of endpoints and times.
+Additional columns are retained as spell attributes, and `loops`
+controls whether self-links are accepted. The endpoints must already
+exist in the network.
 [`add_arcs()`](https://pak.dynasite.org/Dynet/reference/add_arcs.md) is
-the directed counterpart of
-[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md) and
-takes the same arguments.
+the directed counterpart with the same arguments.
 
 [`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md)
-declares periods in which a vertex is present. It takes in `data` a data
-frame with `node`, `start` and `end`, and returns a network in which the
-existing activity and the supplied spells are canonicalised together, so
-a spell that overlaps or abuts an existing one for the same vertex is
-merged into it.
+adds activity periods from a table containing `node`, `start`, and
+`end`. Overlapping or adjacent periods for the same vertex are merged
+with existing declarations.
 
 ### Removing
 
 [`remove_nodes()`](https://pak.dynasite.org/Dynet/reference/remove_nodes.md)
-removes vertices. It takes their names in `nodes` and a `cascade` flag,
-and returns a network without them and, under `cascade = TRUE`, without
-their ties and activity spells. A selection that leaves no vertex or no
-tie raises `dynet_empty_network`.
+removes vertices selected by name. With `cascade = TRUE`, it also
+removes their incident spells and activity declarations. A selection
+leaving no vertices or no ties raises `dynet_empty_network`.
 
 [`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md)
-removes tie spells. It takes row positions or a condition over the spell
-table in `ties`, or the endpoint and time selectors `from`, `to`,
-`start`, `end` and `session`, and returns a network without the matched
-spells. A request that matches nothing raises `dynet_tie_not_found`.
-
+selects spells through positions or a condition in `ties`, or through
+`from`, `to`, `start`, `end`, and `session`. A selection matching no
+spells raises `dynet_tie_not_found`.
 [`remove_arcs()`](https://pak.dynasite.org/Dynet/reference/remove_arcs.md)
-is the directed counterpart of
-[`remove_ties()`](https://pak.dynasite.org/Dynet/reference/remove_ties.md)
-and takes the same arguments.
+is the directed counterpart.
 
 [`remove_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/remove_vertex_spells.md)
-drops declared activity components. It takes integer positions or a
-logical mask in `spells` and returns a network with the rest
-canonicalised again, so the remaining spell identifiers renumber. A
-vertex left with no declaration becomes implicitly always active.
+removes declared activity components selected by integer positions or a
+logical mask in `spells`. Remaining components are merged where needed
+and assigned updated identifiers. A vertex with no remaining declaration
+becomes implicitly eligible throughout observation.
 
 ### Updating and renaming
 
 [`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md)
-adds or replaces static vertex attributes. It takes in `data` a data
-frame with a `name` key and one or more attribute columns, and returns a
-network with the same spells, activity and metadata, and the attributes
-written onto the named vertices. Vertices not named keep their values.
+adds or replaces vertex attributes from a table keyed by `name`.
+Vertices absent from the supplied table retain their existing
+attributes.
 
 [`update_ties()`](https://pak.dynasite.org/Dynet/reference/update_ties.md)
-edits selected spells. It takes a selection in `ties` and a data frame
-of replacement values in `data`, and returns a network holding the
-unselected spells unchanged and the selected ones with the supplied
-values substituted.
+replaces fields of spells selected through `ties`, using replacement
+values supplied in `data`. Unselected spells are retained.
 
 [`update_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/update_vertex_spells.md)
-edits selected activity components. It takes positions in `spells` and a
-data frame of replacement fields in `data`, and returns a network in
-which the updated components are canonicalised with the retained ones. A
-column outside the vertex-spell schema raises `dynet_unknown_column`.
+replaces fields of activity components selected through `spells`. The
+updated and retained periods are combined, merging overlaps and adjacent
+periods. Unrecognised fields raise `dynet_unknown_column`.
 
 [`rename_nodes()`](https://pak.dynasite.org/Dynet/reference/rename_nodes.md)
-renames vertices. It takes in `mapping` a named character vector, a
-two-column data frame named `old` and `new`, or the name of a vertex
-attribute whose values become the names, and returns a network with tie
-endpoints, vertex attributes, vertex activity, cograph labels and groups
-renamed together.
+updates vertex names throughout the network. `mapping` accepts a named
+character vector, a data frame with `old` and `new` columns, or a vertex
+attribute whose values provide the new names. Relational endpoints,
+vertex attributes, activity declarations, and associated labels are
+updated together.
 
 [`rename_sessions()`](https://pak.dynasite.org/Dynet/reference/rename_sessions.md)
-renames session labels. It takes the same mapping forms in `mapping` and
-returns a network with tie and vertex session labels renamed together
-and the session scheme in the metadata updated. Labels absent from the
-mapping are left alone.
+updates session identifiers using the supported mapping forms and
+updates the session metadata. Unmapped session labels are retained.
 
-### Declaring support
+### Observation periods and activity
 
 [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
-replaces the observation window. It takes either a two-column data frame
-of components in `data` or a `start` and `end` pair, and returns a
-network whose raw spells are unchanged and whose measurement view alone
-is replaced, so `as.data.frame(x)` still returns the originals.
+replaces the observation calendar using a table of intervals in `data`
+or a `start` and `end` pair. The original relational spells remain
+available through
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html);
+measurements use their intersections with the declared periods.
 
 [`clear_observations()`](https://pak.dynasite.org/Dynet/reference/clear_observations.md)
-restores implicit support. It takes a network and returns one observed
-continuously from its earliest raw start to its latest raw end, with
-every explicit observation field dropped from the metadata.
+removes the explicit calendar and restores continuous observation from
+the earliest raw onset to the latest raw termination.
 
 [`set_tie_sessions()`](https://pak.dynasite.org/Dynet/reference/set_tie_sessions.md)
-assigns or removes session walls. It takes in `session` a character
-vector of length one or of the raw tie count, and returns a network with
-a `session` column on the spell table and the scheme recorded in the
-metadata, or with both removed under `session = NULL`. A full-length
-vector is matched positionally against the sorted spell table, so labels
-should be derived from `as.data.frame(dn)`.
+assigns session labels through `session`, using either a single label or
+a vector matching the number of raw spells. A full-length vector follows
+the sorted spell-table order and should therefore be derived from
+`as.data.frame(dn)`. Setting `session = NULL` removes the assignments.
+The function also supports assigning sessions from onset-time boundaries
+through `breaks` and `labels`.
 
 [`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
-replaces declared vertex activity. It takes in `data` a vertex-spell
-data frame, or the string `"ties"` to declare each vertex present from
-its first tie to its last, and returns a network whose declared activity
-is exactly that. To declare presence from the ties, we call it with
-`"ties"`, and to read the declared activity we call
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) with
-`what` set to `"vertex_spells"`.
+replaces declared vertex activity using a table in `data`. The special
+value `"ties"` derives activity from each vertex’s first spell onset to
+its last termination.
 
 ``` r
 
@@ -256,47 +245,45 @@ head(activity)
 #> 6             FALSE
 ```
 
-The tie spells are unchanged, so the network prints as before. The
-activity table has one row per vertex, running from the vertex’s first
-contact to its last.
+The relational spells are unchanged. The extracted activity table
+records a derived participation period for each vertex; these boundaries
+need not represent independently observed arrival or departure times.
 
 ## Measurement
 
-Eight functions measure a network over time. Each returns a
-`dynet_metric`: a data frame whose columns are ordered `session`,
-`time`, the unit of observation, `measure` and `value`. The `session`
-column appears only under `sessions = "separate"`, the one mode that
-keeps session labels apart.
+Graph-level measures describe network structure as a whole. Vertex-level
+measures describe individual positions, while pair-level measures
+describe relationships between endpoints. Dynet returns these quantities
+in tidy results identified by the relevant vertices or pairs, `measure`,
+and `value`, with `time` and `session` where applicable.
 
-The grid arguments are not shared by all eight.
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md),
+The functions differ in their temporal arguments.
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md),
 [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md),
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) and
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md), and
 [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
-take all four;
-[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
+accept `start`, `end`, `step`, and `window`.
+[`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md),
+[`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md),
 and [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md)
-take `start` and `end` only;
+accept `start` and `end`.
 [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
 and
 [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
-take none and summarise the whole observed period.
+summarise the observation period without a measurement grid.
 
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-computes vertex centrality. It takes one or more measure names in
-`measure` and a `scope`, and returns one row per vertex, time point and
-measure. Nineteen measures are available at `scope = "snapshot"`, which
-treats each time bin as a static graph, and four at
-`scope = "temporal"`, `"closeness"`, `"betweenness"`, `"reach"` and
-`"reach_count"`, which are measured along time-respecting paths and
-report no `time` column because the whole window yields one value per
-vertex. On a directed network `mode` selects incoming, outgoing or all
-ties. To measure betweenness in each unit bin, we call it with `measure`
-set to `"betweenness"`.
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
+applies the selected centrality measures to successive snapshots. For
+measures supporting direction selection, `mode` selects incoming,
+outgoing, or all connections.
+[`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
+calculates `"closeness"` and `"betweenness"` using time-respecting
+paths; its results describe the selected search period and have no
+`time` column.
 
 ``` r
 
-between <- dyn_centrality(dn, measure = "betweenness")
+between <- centrality_series(dn, measure = "betweenness")
 between
 #> # Betweenness (node-level)
 #> # 14 vertices | 22 time points, 1 per bin | time in step
@@ -316,24 +303,22 @@ between
 #> # 296 more rows. summary() aggregates them; plot() draws them.
 ```
 
-The result has 14 vertices at 22 time points, 308 rows in all. Among the
-rows printed for the first bin, Iris and Kira are the only vertices with
-a nonzero value.
+The example calculates snapshot betweenness for fourteen vertices across
+22 bins, giving 308 observations. Among the values printed for the first
+bin, only Iris and Kira have nonzero betweenness.
 
-[`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md)
-computes how much of the network each vertex can reach. It takes a
-`direction` and a `measure`, `"reach"` for the proportion or
-`"reach_count"` for the count, and returns one row per vertex per
-measure at node level. The measures are labelled `forward_reach` and
-`backward_reach`, or `forward_reach_count` and `backward_reach_count`. A
-vertex is excluded from its own reachable set.
+[`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
+calculates the number or proportion of other vertices connected to each
+vertex through time-respecting paths. `direction` selects forward or
+backward search, and `measure` selects `"reach"` or `"reach_count"`.
+Results are labelled `forward_reach`, `backward_reach`,
+`forward_reach_count`, or `backward_reach_count`. A vertex is excluded
+from its own reachable set.
 
 [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
-computes graph-level structure. It takes one or more of forty measure
-names in `measure` and returns one row per time point and measure. The
-measure `"triads"` contributes sixteen rows per time point, one per
-triad class. To measure density in each unit bin, we call it with
-`measure` set to `"density"`.
+calculates graph-level measures selected through `measure`. Results are
+indexed by measurement time and measure. Requesting `"triads"` returns
+counts for the sixteen directed triad classes at each time.
 
 ``` r
 
@@ -360,80 +345,91 @@ summary(density)
 #> 1 density 22 0.08291708 0.03929021 0.03296703 0.1648352        14
 ```
 
-Density is measured at 22 time points.
-[`summary()`](https://rdrr.io/r/base/summary.html) reduces the series to
-one row with its mean, spread, range and the time of its peak: the mean
-density is 0.083, and the peak of 0.165 falls in the bin that begins at
-14.
+The example measures density in 22 bins.
+[`summary()`](https://rdrr.io/r/base/summary.html) reports its mean,
+standard deviation, range, and peak time. Mean density is 0.083, and the
+maximum of 0.165 occurs in the bin beginning at time 14.
 
-[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
-computes how much tie activity runs within and between vertex groups. It
-takes the name of a vertex attribute in `attribute` and returns one row
-per time point and ordered group pair, with `from_group` and `to_group`
-naming the pair and `value` counting the pairs of vertices with an
-active tie from the first group to the second.
+[`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md) counts
+connections within and between groups defined by a vertex attribute.
+`attribute` selects the grouping variable. The result identifies ordered
+group pairs through `from_group` and `to_group`, with `value` counting
+distinct connected vertex pairs in each window. Connections in the same
+window need not be simultaneous, and these counts are not probabilities.
 
 [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md)
-classifies consecutive turns into the thirteen participation-shift types
-of Gibson (2003). It takes a directed network and an `output` shape, and
-returns a `dynet_pshifts` data frame with columns `shift`, `family` and
-`count`. Under `output = "final"` it has thirteen rows, one per shift
-type, including the types that never occurred. Under
-`output = "cumulative"` it has one block of thirteen rows per classified
-turn, carrying the running count.
+classifies consecutive directed interactions into the thirteen
+participation-shift types of Gibson (2003). The returned `dynet_pshifts`
+contains `shift`, `family`, and `count`. `output = "final"` reports all
+thirteen types, including zero counts. `output = "cumulative"` reports
+running counts after each classified turn.
 
 [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
-measures how unevenly each vertex’s events are spaced. It takes a
-measure name in `measure`, `"burstiness"`, `"memory"` or `"events"`, and
-returns one row per vertex and measure, with no time column. The
-burstiness coefficient is 1 in the bursty limit, 0 at the Poisson
-reference and -1 for perfectly regular activity (Goh and Barabási,
-2008); memory is the lag-one correlation between consecutive inter-event
-gaps.
+describes the spacing of spell onsets involving each vertex. `measure`
+selects `"burstiness"`, `"memory"`, or `"events"`. Burstiness is
+$`(\sigma-\mu)/(\sigma+\mu)`$, where $`\mu`$ and $`\sigma`$ are the mean
+and population standard deviation of inter-event intervals. It equals −1
+for equal positive intervals and approaches 1 with increasing relative
+variability. A value of 0 matches the theoretical exponential
+waiting-time reference but does not establish Poisson timing. Memory is
+the correlation between successive intervals.
 
 [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
-measures how long relationships lasted. It takes a `unit` that selects
-the row identity and a `measure`, `"events"`, `"total"` or `"mean"`, and
-returns an edge-level table under `unit = "pair"` or `"spell"`, and a
-node-level table under `"vertex_activity"`, `"vertex_spell"` or
-`"node_ties"`. `censored` decides whether spells whose boundaries were
-never observed are retained.
+summarises observed spell durations. `unit` selects relational pairs
+(`"pair"`), individual spells (`"spell"`), vertex activity
+(`"vertex_activity"` or `"vertex_spell"`), or incident relational spells
+(`"node_ties"`). Available measures depend on this unit. Pair-level
+defaults are `"events"`, `"total"`, and `"mean"`; `"union"` and
+`"median"` are also available. Individual-spell output defaults to
+`"duration"`. `censored` controls inclusion of spells with unobserved
+boundaries.
 
 [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
-compares the network at each pair of time points. It takes a coefficient
-in `method`, `"jaccard"`, `"overlap"`, `"hamming"`, `"cosine"` or
-`"pearson"`, and returns a `dynet_similarity` data frame with one row
-per ordered pair of time bins and columns `time`, `other`, `measure` and
-`value`. The diagonal is included and is one for every coefficient
-except `"hamming"`, where identical layers differ in nothing and score
-zero.
+compares the connection sets of temporal snapshots using `"jaccard"`,
+`"overlap"`, `"hamming"`, `"cosine"`, or `"pearson"`. It returns a
+`dynet_similarity` indexed by `time` and `other`, with the selected
+coefficient in `measure` and its value in `value`. Self-comparisons are
+included. Hamming distance is zero for identical snapshots; the other
+coefficients express similarity. At least two measurement bins are
+required.
 
 ### The shared grid
 
-Four arguments decide when the network is measured, following
-[`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html):
+For functions supporting window-based measurement, four arguments define
+the grid. Their relationship to
+[`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html) is
+shown below.
 
-| Argument       | Meaning                                | tsna equivalent |
-|----------------|----------------------------------------|-----------------|
-| `start`, `end` | First and last measurement             | `start`, `end`  |
-| `step`         | Interval between measurements          | `time.interval` |
-| `window`       | Length of time each measurement covers | `aggregate.dur` |
+| Argument       | Meaning                                     | tsna equivalent |
+|----------------|---------------------------------------------|-----------------|
+| `start`, `end` | First and last measurement times            | `start`, `end`  |
+| `step`         | Interval between measurements               | `time.interval` |
+| `window`       | Duration covered from each measurement time | `aggregate.dur` |
 
-`window` equal to `step` tiles the period, `window` larger than `step`
-slides, `window = 0` samples an instant, and `window = "all"` treats the
-whole observed period as one bin.
+By default, `step` uses the network’s construction interval and `window`
+equals `step`, producing non-overlapping windows. A larger `window`
+produces overlapping windows. `window = 0` evaluates individual time
+points, while `window = "all"` aggregates the observation period into a
+single window. The last option is unsuitable for
+[`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md),
+which requires multiple snapshots.
 
 ## Paths
 
 [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) finds
-time-respecting journeys from one vertex. It takes a network, a source
-vertex name in `from` and a `direction`, and returns a `dynet_paths`
-data frame with one row per vertex: `node`, `reachable`, `arrival_time`,
-`attained`, `latency`, `n_hops` and `n_paths`. A journey is
-time-respecting when each hop leaves no earlier than the previous hop
-arrived (Kempe, Kleinberg and Kumar, 2002). The criterion is earliest
-arrival first and fewest contacts second. To find the journeys from one
-student, we call it with `from`.
+time-respecting paths from the vertex named in `from`. Each interaction
+must be available at or after arrival at its starting vertex. The
+default search selects earliest arrival first and then the fewest
+interactions among paths arriving at that time: the shortest foremost
+criterion.
+
+The returned `dynet_paths` describes each destination through `node`,
+`reachable`, `arrival_time`, `attained`, `latency`, `n_hops`, and
+`n_paths`. In a forward search, latency is elapsed time from the search
+start to arrival, including waiting. A backward search instead
+identifies the latest departure boundary from which the specified vertex
+can be reached by the deadline. `attained` distinguishes an achievable
+boundary time from a limiting time excluded by a spell’s termination.
 
 ``` r
 
@@ -457,66 +453,66 @@ routes
 #> # 2 more rows. summary() aggregates them; plot() draws the tree.
 ```
 
-Ana reaches all 13 other students. Jonas is reached at time 2.12 in one
-hop; Eve is reached at 11.66 in four hops, by three equally early
-routes.
+Ana reaches all thirteen other students. Jonas is reached at time 2.12
+in one hop; Eve is reached at time 11.66 in four hops through three
+shortest foremost paths.
 
 [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)
-counts the routes those journeys take. It takes a network and,
-optionally, one source in `from`, and returns a `dynet_pathways` data
-frame with one row per distinct route, most frequent first: `route` as
-the vertex sequence joined by arrows, `endpoint`, `count`, `share` as
-the route’s fraction of all counted routes, `n_hops` and `arrival_time`.
+groups paths by their sequence of vertices. It accepts a network and an
+optional source in `from`, and returns a `dynet_pathways` containing
+`route`, `endpoint`, `count`, `share`, `n_hops`, and `arrival_time`.
+Routes correspond to leaves of the path tree, so an intermediate prefix
+is not listed separately. Paths following the same vertex sequence
+through different spells contribute to the same route count. `share` is
+the route’s proportion of counted paths, and routes are ordered by
+decreasing count.
 
 [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md)
-builds the union of the optimal routes. It takes a
-[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) result
-and returns a static `dynet_path_network`, whose tie table has one row
-per hop used by at least one optimal route and whose vertex table has
-one row per reached vertex. Unreachable vertices are absent rather than
-present with missing values.
+converts a
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) result to
+a static `dynet_path_network` containing the connections used by optimal
+paths and the vertices they reach. Unreachable vertices are omitted.
 
 [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
-arranges the routes as a counted prefix tree. It takes a
+represents the paths as a tree whose branches share common initial
+steps. It accepts a
 [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) result
-and a `min_count` threshold, and returns a `dynet_path_trajectories`
-data frame with one row per tree node: `node` as the route prefix,
-`parent`, `depth`, `count`, `probability`, `vertex`, `time`, `session`
-and `branch`.
+and an optional `min_count` threshold. The returned
+`dynet_path_trajectories` contains `node`, `parent`, `depth`, `count`,
+`probability`, `vertex`, `time`, `session`, and `branch`. `probability`
+expresses a tree node’s count relative to its parent’s count, rather
+than an empirical probability of transmission.
 
 [`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md)
-draws that tree. It takes a
-[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) or
+draws a [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md)
+or
 [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
-result and a `measure` that decides what the fill encodes,
-`"frequency"`, `"time"` or `"predictability"`, and returns a `ggplot`
-object. Each vertex name is printed beside its value, so no distinction
-rests on colour alone.
+result. `measure` selects `"frequency"`, `"time"`, or `"predictability"`
+for fill, and the function returns a `ggplot` object. Labels identify
+vertices and values.
 
-A vertex with declared spells begins its search at its own first
-presence inside the window rather than at the window edge. A vertex
-never present in the window reaches nothing.
+A vertex with declared activity begins its search at its first eligible
+time within the search period. A vertex absent throughout that period
+reaches no other vertex.
 
 ## Structure and animation
 
 [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
-expands the network into vertex-time states. It takes the grid arguments
-and an interlayer coupling weight `omega`, and returns a
-`dynet_projection` holding two tables, obtained with
-`as.data.frame(x, what = "vertices")` for the states and
-`as.data.frame(x, what = "edges")` for the directed arcs between them.
-Coupling is ordinal: each slice is joined to the next one only.
+constructs a network of vertex-time states. It accepts the grid
+arguments and interlayer coupling weight `omega`. The returned
+`dynet_projection` provides state and edge tables through
+`as.data.frame(x, what = "vertices")` and
+`as.data.frame(x, what = "edges")`. Interlayer connections join
+consecutive slices.
 
 [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
-reduces temporal activity to one static weighted network. It takes a
-`weight` rule that decides what a tie weight means, `"binary"`,
-`"union_duration"`, `"total_duration"`, `"duration_fraction"`,
-`"spell_count"`, `"weight_sum"`, `"weighted_duration"` or
-`"latest_weight"`, and returns a `dynet_collapsed` cograph network with
-a tie table and a vertex table. Under `sessions = "separate"` it returns
-a `dynet_collapsed_list` with one network per session. To collapse the
-classroom network, we call it with the network; the default rule is
-binary.
+aggregates temporal activity into a static weighted network. `weight`
+selects `"binary"`, `"union_duration"`, `"total_duration"`,
+`"duration_fraction"`, `"spell_count"`, `"weight_sum"`,
+`"weighted_duration"`, or `"latest_weight"`. The default is binary
+presence. The result is a `dynet_collapsed`; with
+`sessions = "separate"`, a `dynet_collapsed_list` contains a network for
+each session.
 
 ``` r
 
@@ -547,43 +543,39 @@ static
 #>               1
 ```
 
-The collapsed network has 14 vertices and 110 ties, one per distinct
-pair, and its tie table carries every weight rule as a column alongside
-the first and last contact of the pair.
+The collapsed classroom network contains fourteen vertices and 110
+connected pairs. Its edge table includes the available weight summaries
+and the first and last observed contact times for each pair.
 
 [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
-extracts a subgraph. It takes a condition over the vertex table in
-`nodes`, a condition over the spell table in `ties`, or both, and
-returns a network carrying only the selected spells, the vertices they
-touch, those vertices’ activity spells and all static attributes.
-Centralities are available as columns inside the `nodes` condition,
-computed over the whole observed period.
+selects vertices through `nodes`, spells through `ties`, or both. It
+retains the selected network’s attributes and vertex activity.
+Centralities computed over the observation period are available within
+vertex-selection conditions.
 
 [`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
-renders the measurement grid as an animation. It takes the same four
-grid arguments as every measuring function, a `file` whose extension
-selects the encoder, `layout`, `measure` for vertex size, `tween` and
-`fps` for the motion, and `absent`, `isolates` and `ease` for how
-presence and transitions are drawn. It returns a `dynet_animation` data
-frame with one row per bin holding `bin`, `frame`, `time`,
-`window_start`, `window_end`, `nodes`, `idle`, `ties`, `forming`,
-`dissolving` and `file`. The table is returned invisibly, since writing
-the file is the purpose of the call. GIF output needs `gifski`; mp4 and
-webm output need `av`.
+displays successive snapshots using `start`, `end`, `step`, and
+`window`. `file` selects the output path and encoder; `layout` controls
+positions, `measure` controls vertex size, and `tween` and `fps` control
+frame generation. `absent`, `isolates`, and `ease` govern presence and
+transitions.
+
+The function writes the animation and invisibly returns a
+`dynet_animation` containing `bin`, `frame`, `time`, `window_start`,
+`window_end`, `nodes`, `idle`, `ties`, `forming`, `dissolving`, and
+`file`. GIF output requires `gifski`; MP4 and WebM output require `av`.
 
 ## Result classes
 
-Fifty S3 methods are registered across the result classes: `print`,
-`summary`, `plot`, `as.data.frame`, `head` and `tail`, and the two
-`as_dynet` methods. A secondary table always comes out through an
-argument of
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html), never by
-reaching into the object with `$`.
+Result classes provide methods appropriate to their contents, including
+printing, summarising, plotting, and conversion to data frames. Use
+[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) with the
+documented `what` argument to extract secondary tables.
 
 | Class | Returned by |
 |----|----|
-| `dynet` | [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md), [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md), and every editing function |
-| `dynet_metric` | [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md), [`dyn_reachability()`](https://pak.dynasite.org/Dynet/reference/dyn_reachability.md), [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md), [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md), [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md), [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md), [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) |
+| `dynet` | [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md), [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md), and editing functions |
+| `dynet_metric` | [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md), [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md), [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md), [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md), [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md), [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md), [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md), [`events()`](https://pak.dynasite.org/Dynet/reference/events.md) |
 | `dynet_paths` | [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) |
 | `dynet_pathways` | [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md) |
 | `dynet_path_network` | [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md) |
@@ -593,25 +585,22 @@ reaching into the object with `$`.
 | `dynet_pshifts` | [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md) |
 | `dynet_projection` | [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md) |
 | `dynet_collapsed` | [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md) |
-| `dynet_collapsed_list` | [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md) under `sessions = "separate"` |
+| `dynet_collapsed_list` | [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md) with `sessions = "separate"` |
 | `dynet_animation` | [`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) |
 
-Secondary tables are obtained as `as.data.frame(x, what = "steps")` for
-the hops of a
-[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) result,
-`as.data.frame(x, what = "vertex_spells")` for the declared activity of
-a network, `as.data.frame(x, session = "s1")` for one session, and the
-like.
+For example, `as.data.frame(x, what = "steps")` extracts individual path
+steps, `as.data.frame(x, what = "vertex_spells")` extracts declared
+vertex activity, and `as.data.frame(x, session = "s1")` selects a
+session where supported.
 
-On a measuring function, `plot = TRUE` follows
-[`hist()`](https://rdrr.io/r/graphics/hist.html): drawing is a side
-effect, and the tidy result is still returned, invisibly when it has
-been drawn.
+For measurement functions supporting `plot = TRUE`, plotting is a side
+effect: the analytical result is still returned, invisibly after the
+plot is drawn.
 
 ## References
 
-Gibson, D. R. (2003). Participation shifts and institutional change in
-relational systems. *Social Forces*, 81(4), 1335–1380.
+Gibson, D. R. (2003). Participation shifts: Order and differentiation in
+group conversation. *Social Forces*, 81(4), 1335–1380.
 
 Goh, K.-I., & Barabási, A.-L. (2008). Burstiness and memory in complex
 systems. *EPL (Europhysics Letters)*, 81(4), 48002.

@@ -40,7 +40,7 @@ snapshots(
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md):
+  [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md):
   `"bounded"` (the default), `"collapse"` or `"separate"`. `"separate"`
   needs a network built with a session column and raises
   `dynet_no_sessions` otherwise.
@@ -98,8 +98,14 @@ the plain table. A pair joined by more than one spell in the same bin is
 one edge, with `n_spells` recording how many spells were collapsed – so
 the edge counts here agree with those from
 [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md).
-Eligible isolates have no synthetic edge row; use
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
+`weight` is the sum of those spells' full weights: a spell counts its
+whole weight in every bin it touches, as
+[`networkDynamic::network.collapse()`](https://rdrr.io/pkg/networkDynamic/man/network.collapse.html)
+does. Snapshot `"strength"` in
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
+instead splits a spell's weight by the share of its duration inside the
+bin. Eligible isolates have no synthetic edge row; use
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
 or [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
 when the eligible population itself is required.
 

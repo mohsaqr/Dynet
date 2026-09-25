@@ -15,7 +15,7 @@ filmstrip, with the bins joined by motion.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -104,7 +104,7 @@ window and bin width.</p></dd>
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>: <code>"bounded"</code>
+<dd><p>How to treat sessions, as in <code><a href="centrality_series.html">centrality_series()</a></code>: <code>"bounded"</code>
 (the default) or <code>"collapse"</code>. An animation draws calendar bins, so
 <code>"separate"</code> is not offered.</p></dd>
 
@@ -117,9 +117,9 @@ or <code>"groups"</code>, or a data frame of coordinates. See details.</p></dd>
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
 <dd><p>What node size follows. <code>NULL</code>, the default, keeps every
 vertex the same size. The name of a snapshot node measure from
-<code><a href="dyn_centrality.html">dyn_centrality()</a></code>, such as <code>"degree"</code> or <code>"betweenness"</code>, computes it on
+<code><a href="centrality_series.html">centrality_series()</a></code>, such as <code>"degree"</code> or <code>"betweenness"</code>, computes it on
 the animation's own grid, so a vertex grows and shrinks bin by bin. A
-node-level result of <code><a href="dyn_centrality.html">dyn_centrality()</a></code> is matched by vertex and time;
+node-level result of <code><a href="centrality_series.html">centrality_series()</a></code> is matched by vertex and time;
 one computed with <code>window = "all"</code> holds a single value per vertex, so
 every vertex keeps one size for the whole film, for instance its degree
 over the whole period. The name of a numeric vertex attribute supplied
@@ -185,7 +185,7 @@ place, invisible.</p></dd>
 
 <dt id="arg-isolates">isolates<a class="anchor" aria-label="anchor" href="#arg-isolates"></a></dt>
 <dd><p>How a vertex that is present but has no tie in a bin is
-drawn. <code>"fade"</code>, the default, at a third of its opacity; <code>"show"</code> at
+drawn. <code>"fade"</code>, the default, at 35% of its opacity; <code>"show"</code> at
 full opacity; <code>"hide"</code> invisible.</p></dd>
 
 
@@ -321,9 +321,9 @@ drawn; <code>dynet_unknown_attribute</code> for <code>layout = "groups"</code> o
 without a partition or a <code>labels</code> naming no vertex attribute;
 <code>dynet_missing_column</code> and <code>dynet_unknown_node</code> for a
 coordinate table that is incomplete; <code>dynet_unknown_measure</code> for a
-<code>measure</code> that is neither a measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code> offers nor a
-numeric vertex attribute, and whatever <code><a href="dyn_centrality.html">dyn_centrality()</a></code> raises for one it
-refuses; <code>dynet_bad_input</code> for a <code><a href="dyn_centrality.html">dyn_centrality()</a></code> result that is not
+<code>measure</code> that is neither a measure <code><a href="centrality_series.html">centrality_series()</a></code> offers nor a
+numeric vertex attribute, and whatever <code><a href="centrality_series.html">centrality_series()</a></code> raises for one it
+refuses; <code>dynet_bad_input</code> for a <code><a href="centrality_series.html">centrality_series()</a></code> result that is not
 node-level or lands on none of the bins, and a warning of class
 <code>dynet_partial_measure</code> when it lands on only some; and <code>dynet_bad_input</code> for a non-positive
 <code>fps</code>, <code>tween</code>, <code>width</code>, <code>height</code> or <code>res</code>, an odd video size, a <code>loop</code>
@@ -333,7 +333,7 @@ that is neither logical nor a positive whole number, or a negative
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="snapshots.html">snapshots()</a></code> for the same grid as a table, <code><a href="plot.dynet.html">plot.dynet()</a></code> with
-<code>type = "snapshots"</code> for it as a static filmstrip, and <code><a href="dyn_centrality.html">dyn_centrality()</a></code>
+<code>type = "snapshots"</code> for it as a static filmstrip, and <code><a href="centrality_series.html">centrality_series()</a></code>
 for the measures node size can follow.</p></div>
     </div>
 
@@ -349,7 +349,7 @@ for the measures node size can follow.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   bins frames fps seconds tween  ease layout format measure first_time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1    6     12  12       1     2 dwell spring    gif    &lt;NA&gt;          0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   last_time min_ties max_ties  turnover                                 file</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1        20       17       51 0.5490196 /tmp/RtmpBEGvI6/file1d1e3b3294e1.gif</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        20       17       51 0.5490196 /tmp/RtmpnxMZ4i/file1c5e4a2b87b1.gif</span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"av"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"cograph"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -362,7 +362,7 @@ for the measures node size can follow.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   bins frames fps seconds tween  ease  layout format measure first_time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   11     66  12     5.5     6 dwell relaxed    mp4  degree          0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   last_time min_ties max_ties  turnover                                 file</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1        20       17       54 0.3074074 /tmp/RtmpBEGvI6/file1d1e72a7b361.mp4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        20       17       54 0.3074074 /tmp/RtmpnxMZ4i/file1c5e31943fff.mp4</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

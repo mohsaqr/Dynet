@@ -1,21 +1,17 @@
 # Animating a temporal network
 
-In this article we animate two temporal networks with
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md): a
-classroom of fourteen students whose contacts are brief, and a course
-forum whose participants arrive and leave over ten weeks.
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) takes
-the same grid as every measuring function, `start`, `end`, `step` and
-`window`, and writes a GIF or a video; a GIF needs the `gifski` package
-and a video needs `av`.
+[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
+displays changes in a temporal network across successive measurement
+windows. This article illustrates its use with simulated classroom
+contacts and a MOOC discussion forum. The arguments `start`, `end`,
+`step`, and `window` define the measurement grid. GIF output requires
+`gifski`; MP4 and WebM output require `av`.
 
 ## Data
 
-`school_contacts` is a simulated interval log of 240 face-to-face
-contacts among fourteen students, with a start and an end for each
-contact. To build the network, we call
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with the
-log.
+`school_contacts` contains 240 simulated face-to-face contacts among
+fourteen students, with onset and termination times. The constructor
+recognises its endpoint and interval columns automatically.
 
 ``` r
 
@@ -38,11 +34,10 @@ dn
 
 ## The bins
 
-To see the bins an animation will show, we call
 [`snapshots()`](https://pak.dynasite.org/Dynet/reference/snapshots.md)
-with `step` for the interval between bins and `window` for the length of
-time each bin covers, and
-[`summary()`](https://rdrr.io/r/base/summary.html) on the result.
+lists the connections represented in each animation window. Here,
+`step = 2` places measurements two time units apart, and `window = 4`
+includes connections active at any point within each four-unit interval.
 
 ``` r
 
@@ -62,18 +57,17 @@ summary(bins)
 #> 11   20   17    14     17
 ```
 
-A window of four units moved two units at a time gives eleven
-overlapping bins. The number of active ties rises from 29 in the first
-bin to 54 in the bins that begin at 6 and at 10, and falls to 17 in the
-last.
+The grid contains eleven overlapping windows. Connected-pair counts
+increase from 29 in the first window to 54 in the windows beginning at
+times 6 and 10, then decrease to seventeen in the final window.
+Connections displayed together within a window need not be active
+simultaneously.
 
 ## The animation
 
-To write the animation, we call
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) with
-the same grid and `file` for the output path; the extension selects the
-encoder, `.gif` here and `.mp4` or `.webm` for a video. The result is a
-table with one row per bin.
+`file` specifies the output path, and its extension selects the encoder:
+`.gif`, `.mp4`, or `.webm`. The returned tidy table describes each
+measurement bin.
 
 ``` r
 
@@ -97,22 +91,23 @@ film
 
 ![](animating_files/classroom.gif)
 
-The `ties` column agrees with the snapshot table. `forming` counts the
-ties of a bin that were not active in the bin before and `dissolving`
-the ties that are not active in the bin after; the first bin has no
-predecessor and the last no successor, so those cells are `NA`. The
-third bin, which begins at 4, holds 50 ties, 26 of them new and 9 gone
-by the next bin.
+`ties` records the connected-pair count, matching the corresponding
+snapshot. `forming` counts pairs present in the current bin but absent
+from the preceding bin. `dissolving` counts pairs present in the current
+bin but absent from the next. The first bin has no predecessor and the
+last has no successor, so these comparisons are `NA` at the respective
+boundaries. The bin beginning at time 4 contains fifty pairs, of which
+26 were absent from the preceding bin and nine are absent from the next.
 
-In every frame a forming tie is dotted and green, a persisting tie solid
-and grey, and a dissolving tie dashed and vermilion, so the state is
-carried by line type as well as colour. Tie width follows weight on one
-scale across the whole animation. Each bin is drawn `tween` times, six
-by default, forming ties fade in and dissolving ties fade out over the
-transition, and a timeline under the network marks the current bin.
+Forming ties are dotted and green, persisting ties are solid and grey,
+and dissolving ties are dashed and vermilion. Line type therefore
+distinguishes states as well as colour. Tie width represents weight on a
+common scale across frames. These states describe changes between
+snapshots, rather than individual spell onsets and terminations.
 
-To describe the animation in one row, we call
-[`summary()`](https://rdrr.io/r/base/summary.html) on the result.
+By default, each bin contributes six frames through `tween = 6`. Forming
+ties fade in and dissolving ties fade out during transitions, while a
+timeline marks the current interval.
 
 ``` r
 
@@ -123,17 +118,15 @@ summary(film)
 #> 1        20       17       54 0.3074074 animating_files/classroom.gif
 ```
 
-Eleven bins at six frames each give 66 frames, 5.5 seconds at 12 frames
-per second. `turnover` is the median share of a bin’s ties that were not
-active in the bin before; it is 0.31 here.
+Eleven bins produce 66 frames, lasting 5.5 seconds at twelve frames per
+second. `turnover` is the median proportion of a bin’s connections that
+were absent from the preceding bin; it is 0.31 here.
 
 ## Vertex size
 
-To let vertex size follow a centrality computed in each bin, we set
-`measure` to the name of any snapshot measure of
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
-The area of the circle is proportional to the measure, on one scale
-across every frame.
+Setting `measure` to a snapshot centrality name scales vertex area by
+the value computed within each bin. A common scale is used throughout
+the animation.
 
 ``` r
 
@@ -148,15 +141,13 @@ summary(per_bin)
 
 ![](animating_files/classroom-degree.gif)
 
-A size that changes from bin to bin shows who is active; a constant size
-shows who is central over the whole period and leaves the ties as the
-only moving element. To obtain whole-period degree, we call
-[`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md)
-with `window = "all"`, and pass the result to `measure`.
+With `measure = "degree"`, changing vertex sizes show changes in direct
+connectivity. Alternatively, supply a whole-period centrality result to
+keep vertex sizes constant while ties change.
 
 ``` r
 
-whole <- dyn_centrality(dn, measure = "degree", window = "all")
+whole <- centrality_series(dn, measure = "degree", window = "all")
 print(whole, n = 14)
 #> # Degree (node-level)
 #> # 14 vertices | 1 time points, 21.52 per bin | time in step
@@ -192,18 +183,22 @@ summary(fixed)
 
 ![](animating_files/classroom-whole.gif)
 
-Dan and Jonas have 18 distinct contacts over the period and Leo 12, so
-Dan and Jonas are the largest circles in every frame and Leo the
-smallest.
+Dan and Jonas have whole-period total degree eighteen, compared with
+twelve for Leo, so they appear larger in every frame. Because the
+network is directed and degree sums incoming and outgoing connections by
+default, these values do not necessarily equal the number of distinct
+partners.
 
 ## Layout
 
-Under `layout = "spring"`, the default, the union of every bin is laid
-out once and every frame reuses those positions, so only the ties move
-and frames are comparable. Under `layout = "relaxed"`, each bin is laid
-out again, seeded from the bin before and pulled back towards it, so
-groups gather and drift apart. No vertex moves further than
-`max_displacement` between bins, 0.08 layout units by default.
+The default `layout = "spring"` computes positions from the union of
+connections across bins and reuses them in every frame. Fixed positions
+make changes in connections easier to compare.
+
+With `layout = "relaxed"`, positions are recalculated for each bin using
+the preceding layout as a starting point and a positional constraint.
+`max_displacement`, which defaults to 0.08 layout units, limits movement
+between bins.
 
 ``` r
 
@@ -217,21 +212,24 @@ summary(drift)
 #> 1        20       17       54 0.3074074 animating_files/classroom-relaxed.mp4
 ```
 
-The relaxed layout suits a network whose structure changes; the fixed
-layout suits one whose structure holds while its activity changes, which
-is the case of the classroom.
+A relaxed layout can display changes in local grouping, although
+movement itself is part of the visualisation rather than an observed
+participant trajectory. A fixed layout provides stable reference
+positions across time.
 
 ## Presence
 
-The forum of `mooc_posts` is threaded: a reply stays active until its
-discussion falls silent, and participants join and leave over ten weeks.
-To build it, we call
-[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) with
-`min_thread_posts = 2` to drop threads that never became an exchange,
-`nodes` for the participant table and `groups` for the experience level
-that colours the vertices, and restrict it to the participants with more
-than 20 distinct contacts with
-[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md).
+The MOOC forum data contain reply timestamps and discussion identifiers.
+Threaded construction represents each reply relationship as active from
+its posting time until the last retained interaction in its discussion.
+
+The following call supplies participant attributes through `nodes` and
+uses experience level for vertex colours through `groups`.
+`min_thread_posts = 2` excludes discussions with fewer than two retained
+posts after self-reply removal.
+[`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
+then selects participants with whole-period total degree greater than
+twenty.
 
 ``` r
 
@@ -263,15 +261,15 @@ forum
 #> # 680 more spells. summary() describes the network; plot() draws it.
 ```
 
-The network has 45 vertices and 686 spells on 428 pairs, observed from
-day 0.11 to day 72.01. The log records when each participant posted but
-not when they joined or left, so all 45 are treated as present
-throughout. To declare each participant present from their first tie to
-their last, we call
-[`set_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/set_vertex_spells.md)
-with `"ties"`, and read the spells back with
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) and
-`what = "vertex_spells"`.
+The subgraph contains 45 vertices, 686 spells, and 428 distinct ordered
+pairs, spanning days 0.11–72.01. The data do not directly record
+enrolment or departure, so vertices are initially treated as eligible
+throughout observation.
+
+`set_vertex_spells(..., "ties")` derives an activity period from each
+participant’s first spell onset to their last spell termination. This is
+an inferred participation period, not a recorded arrival or departure
+time.
 
 ``` r
 
@@ -294,18 +292,17 @@ head(spans)
 #> 6             FALSE
 ```
 
-Participant 1 is present from day 4.12 to day 71.41, participant 13 from
-day 18.15 to day 72.01.
+The derived activity periods extend from day 4.12 to 71.41 for
+participant 1 and from day 18.15 to 72.01 for participant 13.
 
-`absent` decides how a participant is drawn in a bin where they are not
-present: `"fade"`, the default, keeps them in place at a quarter
-opacity; `"away"` parks them out of sight and moves them in over the
-transition in which they arrive and out over the one in which they
-leave. To write the animation with a seven-day window moved two days at
-a time, we call
-[`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md) with
-`absent = "away"`, `labels = FALSE` to omit the identifiers, and three
-Okabe-Ito colours for the three levels in `palette`.
+`absent` controls the display of vertices outside their declared
+activity periods. The default `"fade"` retains their positions at
+quarter opacity. `"away"` moves them out of view while absent, with
+animated transitions at arrival and departure.
+
+The following animation uses seven-day windows beginning every two days.
+`labels = FALSE` omits participant identifiers, and `palette` supplies
+colours for the three experience levels.
 
 ``` r
 
@@ -356,12 +353,12 @@ print(arrivals, n = 36)
 #>   36   211   70           70         77    34    0   70       0         NA
 ```
 
-With presence declared, `nodes` counts the participants present in each
-bin: 29 in the first, 45 from the bin that begins on day 22, and 44 from
-the bin that begins on day 34, when one participant’s last tie has
-passed. `idle` counts the participants present without an active tie and
-stays between 0 and 3. Active ties rise from 53 in the first bin to 276
-in the bins that begin on days 46 and 48 and fall to 70 in the last.
+`nodes` counts participants eligible within each window: 29 in the first
+window, 45 in the window beginning on day 22, and 44 in the window
+beginning on day 34. `idle` counts eligible participants without a
+connection in the window and ranges from zero to three. Connected-pair
+counts rise from 53 in the first window to 276 in the windows beginning
+on days 46 and 48, then decrease to seventy in the last.
 
 ``` r
 
@@ -372,17 +369,18 @@ summary(arrivals)
 #> 1        70       53      276 0.06735751 animating_files/forum.mp4
 ```
 
-Thirty-six bins at six frames each give 216 frames, 18 seconds, with a
-turnover of 0.07.
+The 36 bins produce 216 frames and an eighteen-second animation. Median
+turnover is 0.07.
 
 ## Smoothing
 
-An animation reads as separate pictures for two reasons, each with its
-own remedy. The first is the grid. With `window` equal to `step` the
-bins tile the period and a short tie appears and vanishes; with `window`
-larger than `step` the bins overlap and each frame carries part of the
-previous one. To compare, we write the forum with a two-day window that
-tiles.
+Both the measurement grid and the transition settings affect continuity
+between frames. Non-overlapping windows (`window = step`) represent
+successive intervals. Overlapping windows (`window > step`) share
+observations, which can make changes appear more gradual. Changing the
+window alters the underlying snapshots, not just their presentation.
+
+The following call uses non-overlapping two-day windows.
 
 ``` r
 
@@ -409,16 +407,16 @@ summary(tiled)
 #> 1        70       10      242 0.09504132 animating_files/forum-tiled.mp4
 ```
 
-The tiled animation opens with 7 participants and 10 ties where the
-sliding one opens with 29 and 53, and its turnover is 0.10 against 0.07.
-Both are low because a threaded tie lasts for the life of its
-discussion; the classroom, a contact network, has a turnover of 0.31 on
-a comparable grid.
+The first two-day window contains seven eligible participants and ten
+connected pairs, compared with 29 participants and 53 pairs in the first
+seven-day window. Median turnover increases from 0.07 to 0.10. The
+classroom example has turnover 0.31, but the datasets and grids differ,
+so these values are descriptive rather than a controlled comparison.
 
-The second reason is the easing. Under `ease = "dwell"`, the default,
-each bin holds still before it changes. Under `ease = "continuous"`
-nothing holds still: positions follow a spline through the bins (Catmull
-and Rom, 1974) and fades are linear.
+`ease` controls transitions between the selected snapshots. The default
+`"dwell"` holds each bin before transitioning. `"continuous"`
+interpolates positions using a spline (Catmull and Rom, 1974) and uses
+linear fades without a stationary interval.
 
 ``` r
 
@@ -434,26 +432,26 @@ summary(flowing)
 #> 1        70       53      276 0.06735751 animating_files/forum-continuous.mp4
 ```
 
-A relaxed layout under continuous easing gives the most continuous
-motion, and the animation in which no single bin can be read from a
-frame.
+Combining a relaxed layout with continuous easing produces gradual
+movement. Intermediate frames interpolate between snapshots and should
+not be interpreted as separately measured network states.
 
 ## Choosing the arguments
 
-| Argument | Value | Use when |
+| Argument | Value | Interpretation |
 |----|----|----|
-| `layout` | `"spring"` | the structure holds and the activity changes |
-|  | `"relaxed"` | groups form and dissolve |
-| `measure` | a measure name | vertex size should show who is active in each bin |
-|  | a whole-period result | vertex size should show who is central over the period |
-| `absent` | `"fade"` | the position of absent vertices should stay visible |
-|  | `"away"` | arrivals and departures are the subject |
-| `window` | equal to `step` | each frame should show one bin |
-|  | larger than `step` | ties should persist across frames |
-| `ease` | `"dwell"` | bins are to be read one by one |
-|  | `"continuous"` | motion is to be read |
-| `file` | `.gif` | a short animation that must play without a video player |
-|  | `.mp4` or `.webm` | a long animation |
+| `layout` | `"spring"` | Fixed vertex positions across bins |
+|  | `"relaxed"` | Positions adapt to each snapshot with constrained movement |
+| `measure` | A snapshot measure name | Vertex area represents centrality within each bin |
+|  | A whole-period result | Vertex area remains fixed at the supplied value |
+| `absent` | `"fade"` | Absent vertices remain visible at reduced opacity |
+|  | `"away"` | Absent vertices move out of view |
+| `window` | Equal to `step` | Non-overlapping measurement intervals |
+|  | Larger than `step` | Overlapping measurement intervals |
+| `ease` | `"dwell"` | Each snapshot is held before transition |
+|  | `"continuous"` | Continuous interpolation between snapshots |
+| `file` | `.gif` | GIF output using `gifski` |
+|  | `.mp4` or `.webm` | Video output using `av` |
 
 ## References
 

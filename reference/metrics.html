@@ -13,7 +13,7 @@ silent in week five."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -103,7 +103,7 @@ directed network, raising <code>dynet_needs_directed</code> on an undirected one
 
 
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
-<dd><p>How to treat sessions, as in <code><a href="dyn_centrality.html">dyn_centrality()</a></code>:
+<dd><p>How to treat sessions, as in <code><a href="centrality_series.html">centrality_series()</a></code>:
 <code>"bounded"</code> (the default) keeps each session apart while pooling the
 reported rows, <code>"collapse"</code> ignores session labels, and <code>"separate"</code>
 reports each session on its own rows and needs a network built with a
@@ -170,7 +170,11 @@ ledgers are <code>R = sum(r) integral(Y[r](t) dt)</code>,
 <code>O = sum(r) integral(Y[r](t) E[r](t) dt)</code>, and
 <code>R_H = sum(r in H) integral(Y[r](t) dt)</code>. The two occupancies are <code>O/R</code>
 and <code>O/R_H</code> and lie in <code>[0, 1]</code>. Loops, weights, duplicates, and censor
-flags cannot multiply occupancy.</p>
+flags cannot multiply occupancy. Integration stops at the observation
+period, which defaults to the span of the data, so a last window reaching
+past the final spell is measured over its observed part only, and tiled
+windows pool to the whole-period value. <code><a href="https://rdrr.io/pkg/tsna/man/density.html" class="external-link">tsna::tEdgeDensity()</a></code> uses the
+same observation-period rule.</p>
 <p><code>"onset_intensity"</code> and <code>"observed_pair_onset_intensity"</code> divide the
 number of known raw spell starts by <code>R</code> and <code>R_H</code>. Each nonloop raw row,
 including a point contact, contributes once when its start is observed,
@@ -220,8 +224,20 @@ this matches ERGM's <code>meandeg</code> statistic. <code>"indegree_1_5"</code> 
 <code>"outdegree_1_5"</code> sum the corresponding vertex degrees raised to 1.5.
 Directed <code>"triangles"</code> is the sum of cyclic and transitive triples, while
 an undirected triangle is counted once.
-A concurrent vertex has at least two distinct neighbours, so a reciprocal
-dyad still supplies only one neighbour. <code>"in_2stars"</code> and <code>"out_2stars"</code>
+A concurrent vertex has relations to at least two distinct neighbours
+active at the same instant, so a reciprocal dyad still supplies only one
+neighbour. Unlike the other structural selectors, concurrency is not read
+from the window's union snapshot: with a positive <code>window</code>, two ties that
+fall in the same window without overlapping in time do not make their
+shared vertex concurrent. A vertex counts in a window when it is
+concurrent at any instant inside it; <code>"concurrent_nodes"</code> is the number of
+such vertices and <code>"concurrent_share"</code> divides it by the window's eligible
+vertices. With <code>window = 0</code> the snapshot is itself an instant, so both
+readings coincide. Half-open spells that only meet at a boundary do not
+overlap, and a point contact is concurrent with every relation active at
+its timestamp. <code><a href="mixing.html">mixing()</a></code> answers a different question – which groups are
+connected somewhere in the window – and requires no simultaneity.
+<code>"in_2stars"</code> and <code>"out_2stars"</code>
 sum <code>choose(degree, 2)</code> over directed in- and out-degrees. Directed
 <code>"two_paths"</code> counts ordered <code>i -&gt; j -&gt; k</code> paths with <code>i != k</code>;
 undirected two-paths count each unordered wedge once. Empty eligible
@@ -263,6 +279,9 @@ organizations. In <em>Computational Organization Theory</em> (pp. 89-111).
 Lawrence Erlbaum.</p>
 <p>Newman, M. E. J. (2002). Assortative mixing in networks. <em>Physical Review
 Letters</em>, 89, 208701. <a href="https://doi.org/10.1103/PhysRevLett.89.208701" class="external-link">doi:10.1103/PhysRevLett.89.208701</a></p>
+<p>Morris, M., &amp; Kretzschmar, M. (1997). Concurrent partnerships and the
+spread of HIV. <em>AIDS</em>, 11(5), 641-648.
+<a href="https://doi.org/10.1097/00002030-199705000-00012" class="external-link">doi:10.1097/00002030-199705000-00012</a></p>
 <p>Holland, P. W., &amp; Leinhardt, S. (1976). Local structure in social networks.
 <em>Sociological Methodology</em>, 7, 1-45. <a href="https://doi.org/10.2307/270703" class="external-link">doi:10.2307/270703</a></p>
 <p>Wasserman, S., &amp; Faust, K. (1994). <em>Social Network Analysis: Methods and

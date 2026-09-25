@@ -113,7 +113,7 @@ rendering arguments is available here through ...."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.12</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -233,6 +233,8 @@ rendering arguments is available here through <code>...</code>.</p>
 <span>  edge_width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  edge_width_range <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  edge_style <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  edge_start_style <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  edge_start_length <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  curvature <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  curve_pivot <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label_size <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -361,6 +363,14 @@ aesthetics, named as in <code><a href="https://sonsoles.me/cograph/reference/spl
 source-to-target colour run with one colour.</p></dd>
 
 
+<dt id="arg-edge-start-style-edge-start-length">edge_start_style, edge_start_length<a class="anchor" aria-label="anchor" href="#arg-edge-start-style-edge-start-length"></a></dt>
+<dd><p>How the origin of each link is
+marked, named as in <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>. For <code>"events"</code> the defaults follow
+cograph's TNA styling: the first <code>0.2</code> of every link, from its source, is
+<code>"dotted"</code>; <code>"dashed"</code> is also accepted and <code>"solid"</code> turns the mark off.
+<code>edge_start_length</code> is a share between 0 and 0.5.</p></dd>
+
+
 <dt id="arg-curvature-curve-pivot">curvature, curve_pivot<a class="anchor" aria-label="anchor" href="#arg-curvature-curve-pivot"></a></dt>
 <dd><p>Bow geometry, as in <code><a href="https://sonsoles.me/cograph/reference/splot.html" class="external-link">cograph::splot()</a></code>.
 <code>curvature</code> is the base bow as a fraction of the column gap and <code>0</code> draws
@@ -380,7 +390,7 @@ reported.</p></dd>
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
 <dd><p>For the proximity view, the node-level measure that line
-thickness follows, <code>"degree"</code> by default. Any measure <code><a href="dyn_centrality.html">dyn_centrality()</a></code>
+thickness follows, <code>"degree"</code> by default. Any measure <code><a href="centrality_series.html">centrality_series()</a></code>
 accepts at snapshot scope; the temporal-scope-only measures <code>"reach"</code> and
 <code>"reach_count"</code> are not available here, because the view redraws the
 measure over many short slices.</p></dd>

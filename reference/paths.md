@@ -66,7 +66,7 @@ paths(
 - sessions:
 
   How to treat sessions, as in
-  [`dyn_centrality()`](https://pak.dynasite.org/Dynet/reference/dyn_centrality.md).
+  [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md).
 
 - start, end:
 
