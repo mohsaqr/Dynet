@@ -31,3 +31,5 @@
 ^TODO\.md$
 ^review$
 ^CRAN-SUBMISSION$
+^\.agents$
+^skills-lock\.json$

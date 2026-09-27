@@ -139,32 +139,22 @@
 #' dynet(synthdata, directed = TRUE, loops = TRUE, weight = "weight")
 "synthdata"
 
-#' Trees of Thought reply links, anonymised
+#' Trees of Thought reply links, augmented by simulation
 #'
 #' @description
-#' Each row is one link from the code of a discussion message to the code of
-#' the message it replies to, from the *Trees of Thought* study of coded
-#' asynchronous discussions. It is the study's own reply table with every
-#' identity removed and its shape trimmed, not a resampled or synthesised set:
-#' each row is a real link with its real weekday and time of day.
+#' A table of reply links between the codes of messages in coded
+#' asynchronous discussions, based on the *Trees of Thought* study. Each row
+#' is one link from the code of a message to the code of the message it
+#' replies to. About 20 percent of the study's records were removed, dates
+#' and rates were changed and anonymised, and the data were augmented by
+#' simulation, so the table is not the study's data, and the participant,
+#' group, course and time values do not identify anyone.
 #'
-#' Applied to the study table, in order: the two sparse weekdays (Thursday and
-#' Friday, under one percent of links) were dropped; the bottom 20 percent of
-#' authors by number of distinct messages were removed together with the
-#' links they authored (replies to them by others remain); author, message
-#' and description columns were dropped, courses became `A` to `E`, groups
-#' `A_01` and so on, discussions were renumbered and authors relabelled
-#' `P001` onward in random order; every timestamp was shifted back by one
-#' fixed random number of whole weeks, so the calendar is hidden and the
-#' weekday kept; and the codes were renamed, with the study's *Evaluation*
-#' and *Acceptance* merged into *Approving*.
-#'
-#' A reply carrying two codes that both map to one label yields two identical
-#' rows; the study counted such repeats as weight, and they are kept as rows.
-#' A code answering itself is a self-link (9,452 rows); [dynet()] drops these
-#' unless `loops = TRUE`. The `course` column is recognised as the session
-#' column, so the five courses become sessions unless `session = ` says
-#' otherwise.
+#' Thursdays and Fridays do not occur. Some rows repeat exactly (8,122
+#' duplicates); aggregating the log counts them as weight. A code answering
+#' itself is a self-link (9,452 rows); [dynet()] drops these unless
+#' `loops = TRUE`. The `course` column is recognised as the session column,
+#' so the five courses become sessions unless `session = ` says otherwise.
 #'
 #' @format A `data.frame` with 23,017 rows and 7 columns:
 #' \describe{
@@ -172,16 +162,22 @@
 #'     codes `Approving`, `Arguing`, `Coordinating`, `Drafting`, `Inquiring`,
 #'     `Objecting`, `Resourcing`, `Socialising`, `Tutoring`.}
 #'   \item{to}{Character. Code of the message replied to, same set.}
-#'   \item{time}{`POSIXct` (UTC) time of the replying message, shifted by
-#'     whole weeks; 2006-09-23 to 2011-11-02 after the shift.}
-#'   \item{participant}{Character. Anonymous author label, `P001` to `P240`.}
+#'   \item{time}{`POSIXct` (UTC) time of the replying message, 2006-09-23 to
+#'     2011-11-02; changed and anonymised, not the study's dates.}
+#'   \item{participant}{Character. Author label, `P001` to `P240`.}
 #'   \item{discussion}{Integer discussion (thread) id, 1 to 1169, all present.}
 #'   \item{group}{Character. Course group, `A_01` style; 29 groups.}
 #'   \item{course}{Character. Course, `A` to `E`.}
 #' }
-#' @source Derived from the *Trees of Thought* study reply table by the
-#'   procedure in `data-raw/thought_chains.R`, which needs the study's private
-#'   files and is not run at build time.
+#' @source Based on the *Trees of Thought* study of coded asynchronous
+#'   discussions, with about 20 percent of the records removed, dates and
+#'   rates changed and anonymised, and the data augmented by simulation:
+#'   Saqr, M., López-Pernas, S. and
+#'   Törmänen, T. (2026). A temporal network approach to reveal the
+#'   longitudinal dynamics of CSCL group regulation and productive
+#'   collaboration. *International Journal of Computer-Supported
+#'   Collaborative Learning*, 21, 237-270.
+#'   \doi{10.1007/s11412-025-09464-5}
 #' @examples
 #' dynet(thought_chains, time = "time", loops = TRUE)
 #' dynet(thought_chains, thread = "discussion")
@@ -216,9 +212,6 @@
 #' @seealso [mooc_people] for the participants, and
 #'   `vignette("ch17-temporal-networks")` for the chapter's analysis.
 #' @examples
-#' # summary() measures every graph-level statistic on all 74 daily bins and
-#' # takes about 28 seconds on this network; print() is immediate. The article
-#' # `vignette("mooc-posts")` walks through the data with stated grids.
 #' dn <- dynet(mooc_posts, from = "sender", to = "receiver",
 #'             time = "timestamp", thread = "discussion")
 #' dn
@@ -240,7 +233,7 @@
 #'   \item{expert_level}{Character. The same level as `Expert`, `Student`
 #'     or `Teacher`.}
 #' }
-#' @source As [mooc_posts].
+#' @source As [mooc_posts]: Saqr (2024), \doi{10.1007/978-3-031-54464-4_17}.
 #' @seealso [mooc_posts]; `vignette("ch17-temporal-networks")`.
 #' @examples
 #' participants <- dynet(mooc_posts, from = "sender", to = "receiver",

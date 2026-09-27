@@ -68,7 +68,7 @@ sequence necessarily share an arrival time, and a test asserts it.
 \examples{
 dn <- dynet(school_contacts)
 pathways(dn, from = "Ana")
-pathways(dn, top = 5)
+pathways(dn, from = c("Ana", "Ben", "Kira"), top = 5)
 
 }
 \seealso{

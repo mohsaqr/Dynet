@@ -239,7 +239,7 @@ that is neither logical nor a positive whole number, or a negative
 if (requireNamespace("gifski", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
   dn <- dynet(school_contacts)
-  frames <- animate(dn, step = 4, window = 4, tween = 2)
+  frames <- animate(dn = dn, end = 8, step = 4, window = 4, tween = 2)
   frames
   summary(frames)
 }
@@ -247,9 +247,8 @@ if (requireNamespace("gifski", quietly = TRUE) &&
 if (requireNamespace("av", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
   dn <- dynet(school_contacts)
-  video <- animate(dn, step = 2, window = 4, measure = "degree",
-    layout = "relaxed",
-    file = tempfile(fileext = ".mp4"))
+  file <- tempfile(fileext = ".mp4")
+  video <- animate(dn = dn, end = 8, step = 4, tween = 2, measure = "degree", file = file)
   summary(video)
 }
 }

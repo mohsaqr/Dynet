@@ -124,7 +124,7 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' pathways(dn, from = "Ana")
-#' pathways(dn, top = 5)
+#' pathways(dn, from = c("Ana", "Ben", "Kira"), top = 5)
 #'
 #' @export
 pathways <- function(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FALSE) {

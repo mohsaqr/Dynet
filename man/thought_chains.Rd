@@ -3,7 +3,7 @@
 \docType{data}
 \name{thought_chains}
 \alias{thought_chains}
-\title{Trees of Thought reply links, anonymised}
+\title{Trees of Thought reply links, augmented by simulation}
 \format{
 A \code{data.frame} with 23,017 rows and 7 columns:
 \describe{
@@ -11,46 +11,42 @@ A \code{data.frame} with 23,017 rows and 7 columns:
 codes \code{Approving}, \code{Arguing}, \code{Coordinating}, \code{Drafting}, \code{Inquiring},
 \code{Objecting}, \code{Resourcing}, \code{Socialising}, \code{Tutoring}.}
 \item{to}{Character. Code of the message replied to, same set.}
-\item{time}{\code{POSIXct} (UTC) time of the replying message, shifted by
-whole weeks; 2006-09-23 to 2011-11-02 after the shift.}
-\item{participant}{Character. Anonymous author label, \code{P001} to \code{P240}.}
+\item{time}{\code{POSIXct} (UTC) time of the replying message, 2006-09-23 to
+2011-11-02; changed and anonymised, not the study's dates.}
+\item{participant}{Character. Author label, \code{P001} to \code{P240}.}
 \item{discussion}{Integer discussion (thread) id, 1 to 1169, all present.}
 \item{group}{Character. Course group, \code{A_01} style; 29 groups.}
 \item{course}{Character. Course, \code{A} to \code{E}.}
 }
 }
 \source{
-Derived from the \emph{Trees of Thought} study reply table by the
-procedure in \code{data-raw/thought_chains.R}, which needs the study's private
-files and is not run at build time.
+Based on the \emph{Trees of Thought} study of coded asynchronous
+discussions, with about 20 percent of the records removed, dates and
+rates changed and anonymised, and the data augmented by simulation:
+Saqr, M., López-Pernas, S. and
+Törmänen, T. (2026). A temporal network approach to reveal the
+longitudinal dynamics of CSCL group regulation and productive
+collaboration. \emph{International Journal of Computer-Supported
+Collaborative Learning}, 21, 237-270.
+\doi{10.1007/s11412-025-09464-5}
 }
 \usage{
 thought_chains
 }
 \description{
-Each row is one link from the code of a discussion message to the code of
-the message it replies to, from the \emph{Trees of Thought} study of coded
-asynchronous discussions. It is the study's own reply table with every
-identity removed and its shape trimmed, not a resampled or synthesised set:
-each row is a real link with its real weekday and time of day.
+A table of reply links between the codes of messages in coded
+asynchronous discussions, based on the \emph{Trees of Thought} study. Each row
+is one link from the code of a message to the code of the message it
+replies to. About 20 percent of the study's records were removed, dates
+and rates were changed and anonymised, and the data were augmented by
+simulation, so the table is not the study's data, and the participant,
+group, course and time values do not identify anyone.
 
-Applied to the study table, in order: the two sparse weekdays (Thursday and
-Friday, under one percent of links) were dropped; the bottom 20 percent of
-authors by number of distinct messages were removed together with the
-links they authored (replies to them by others remain); author, message
-and description columns were dropped, courses became \code{A} to \code{E}, groups
-\code{A_01} and so on, discussions were renumbered and authors relabelled
-\code{P001} onward in random order; every timestamp was shifted back by one
-fixed random number of whole weeks, so the calendar is hidden and the
-weekday kept; and the codes were renamed, with the study's \emph{Evaluation}
-and \emph{Acceptance} merged into \emph{Approving}.
-
-A reply carrying two codes that both map to one label yields two identical
-rows; the study counted such repeats as weight, and they are kept as rows.
-A code answering itself is a self-link (9,452 rows); \code{\link[=dynet]{dynet()}} drops these
-unless \code{loops = TRUE}. The \code{course} column is recognised as the session
-column, so the five courses become sessions unless \verb{session = } says
-otherwise.
+Thursdays and Fridays do not occur. Some rows repeat exactly (8,122
+duplicates); aggregating the log counts them as weight. A code answering
+itself is a self-link (9,452 rows); \code{\link[=dynet]{dynet()}} drops these unless
+\code{loops = TRUE}. The \code{course} column is recognised as the session column,
+so the five courses become sessions unless \verb{session = } says otherwise.
 }
 \examples{
 dynet(thought_chains, time = "time", loops = TRUE)

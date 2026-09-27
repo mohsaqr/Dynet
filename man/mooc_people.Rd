@@ -16,7 +16,7 @@ or \code{Teacher}.}
 }
 }
 \source{
-As \link{mooc_posts}.
+As \link{mooc_posts}: Saqr (2024), \doi{10.1007/978-3-031-54464-4_17}.
 }
 \usage{
 mooc_people
