@@ -1,5 +1,22 @@
 # Changelog
 
+## Dynet 0.5.1
+
+- CRAN resubmission. The
+  [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)
+  example pools three named sources instead of all fourteen, and the
+  [`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
+  examples draw fewer frames, so every example runs in well under a
+  second.
+- `thought_chains` is documented as based on the *Trees of Thought*
+  study (Saqr, López-Pernas and Törmänen, 2026) with about 20 percent of
+  the records removed, dates and rates changed and anonymised, and the
+  data augmented by simulation.
+- `mooc_people` cites its source chapter directly; a stale reference to
+  a removed article is gone from the `mooc_posts` example.
+- The package help page carries the current Description, and a
+  local-only reproduction script no longer ships.
+
 ## Dynet 0.5.0
 
 - First CRAN release. CRAN preparation: the maintainer is recorded as

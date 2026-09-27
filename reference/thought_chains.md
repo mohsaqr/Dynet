@@ -1,25 +1,16 @@
-# Trees of Thought reply links, anonymised
+# Trees of Thought reply links, augmented by simulation
 
-Each row is one link from the code of a discussion message to the code
-of the message it replies to, from the *Trees of Thought* study of coded
-asynchronous discussions. It is the study's own reply table with every
-identity removed and its shape trimmed, not a resampled or synthesised
-set: each row is a real link with its real weekday and time of day.
+A table of reply links between the codes of messages in coded
+asynchronous discussions, based on the *Trees of Thought* study. Each
+row is one link from the code of a message to the code of the message it
+replies to. About 20 percent of the study's records were removed, dates
+and rates were changed and anonymised, and the data were augmented by
+simulation, so the table is not the study's data, and the participant,
+group, course and time values do not identify anyone.
 
-Applied to the study table, in order: the two sparse weekdays (Thursday
-and Friday, under one percent of links) were dropped; the bottom 20
-percent of authors by number of distinct messages were removed together
-with the links they authored (replies to them by others remain); author,
-message and description columns were dropped, courses became `A` to `E`,
-groups `A_01` and so on, discussions were renumbered and authors
-relabelled `P001` onward in random order; every timestamp was shifted
-back by one fixed random number of whole weeks, so the calendar is
-hidden and the weekday kept; and the codes were renamed, with the
-study's *Evaluation* and *Acceptance* merged into *Approving*.
-
-A reply carrying two codes that both map to one label yields two
-identical rows; the study counted such repeats as weight, and they are
-kept as rows. A code answering itself is a self-link (9,452 rows);
+Thursdays and Fridays do not occur. Some rows repeat exactly (8,122
+duplicates); aggregating the log counts them as weight. A code answering
+itself is a self-link (9,452 rows);
 [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) drops
 these unless `loops = TRUE`. The `course` column is recognised as the
 session column, so the five courses become sessions unless `session = `
@@ -47,12 +38,12 @@ A `data.frame` with 23,017 rows and 7 columns:
 
 - time:
 
-  `POSIXct` (UTC) time of the replying message, shifted by whole weeks;
-  2006-09-23 to 2011-11-02 after the shift.
+  `POSIXct` (UTC) time of the replying message, 2006-09-23 to
+  2011-11-02; changed and anonymised, not the study's dates.
 
 - participant:
 
-  Character. Anonymous author label, `P001` to `P240`.
+  Character. Author label, `P001` to `P240`.
 
 - discussion:
 
@@ -68,9 +59,14 @@ A `data.frame` with 23,017 rows and 7 columns:
 
 ## Source
 
-Derived from the *Trees of Thought* study reply table by the procedure
-in `data-raw/thought_chains.R`, which needs the study's private files
-and is not run at build time.
+Based on the *Trees of Thought* study of coded asynchronous discussions,
+with about 20 percent of the records removed, dates and rates changed
+and anonymised, and the data augmented by simulation: Saqr, M.,
+López-Pernas, S. and Törmänen, T. (2026). A temporal network approach to
+reveal the longitudinal dynamics of CSCL group regulation and productive
+collaboration. *International Journal of Computer-Supported
+Collaborative Learning*, 21, 237-270.
+[doi:10.1007/s11412-025-09464-5](https://doi.org/10.1007/s11412-025-09464-5)
 
 ## Examples
 

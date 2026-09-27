@@ -61,9 +61,6 @@ for the chapter's analysis.
 ## Examples
 
 ``` r
-# summary() measures every graph-level statistic on all 74 daily bins and
-# takes about 28 seconds on this network; print() is immediate. The article
-# `vignette("mooc-posts")` walks through the data with stated grids.
 dn <- dynet(mooc_posts, from = "sender", to = "receiver",
             time = "timestamp", thread = "discussion")
 #> Dropped 86 self-loop event(s). Use loops = TRUE to keep them.

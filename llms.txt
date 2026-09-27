@@ -1228,7 +1228,7 @@ Bundled logs used throughout the documentation and examples.
 - [`synthdata`](https://pak.dynasite.org/Dynet/reference/synthdata.md) :
   Synthetic code-transition network (Trees of Thought stand-in)
 - [`thought_chains`](https://pak.dynasite.org/Dynet/reference/thought_chains.md)
-  : Trees of Thought reply links, anonymised
+  : Trees of Thought reply links, augmented by simulation
 
 ## Methods
 

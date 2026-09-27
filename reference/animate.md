@@ -310,26 +310,25 @@ for the measures node size can follow.
 if (requireNamespace("gifski", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
   dn <- dynet(school_contacts)
-  frames <- animate(dn, step = 4, window = 4, tween = 2)
+  frames <- animate(dn = dn, end = 8, step = 4, window = 4, tween = 2)
   frames
   summary(frames)
 }
 #>   bins frames fps seconds tween  ease layout format measure first_time
-#> 1    6     12  12       1     2 dwell spring    gif    <NA>          0
+#> 1    3      6  12     0.5     2 dwell spring    gif    <NA>          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1        20       17       51 0.5490196 /tmp/RtmpLonlMq/file1d0f434baeda.gif
+#> 1         8       29       50 0.6133333 /tmp/RtmpUqCGks/file1d42197f9654.gif
 # \donttest{
 if (requireNamespace("av", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
   dn <- dynet(school_contacts)
-  video <- animate(dn, step = 2, window = 4, measure = "degree",
-    layout = "relaxed",
-    file = tempfile(fileext = ".mp4"))
+  file <- tempfile(fileext = ".mp4")
+  video <- animate(dn = dn, end = 8, step = 4, tween = 2, measure = "degree", file = file)
   summary(video)
 }
-#>   bins frames fps seconds tween  ease  layout format measure first_time
-#> 1   11     66  12     5.5     6 dwell relaxed    mp4  degree          0
+#>   bins frames fps seconds tween  ease layout format measure first_time
+#> 1    3      6  12     0.5     2 dwell spring    mp4  degree          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1        20       17       54 0.3074074 /tmp/RtmpLonlMq/file1d0f70fa2767.mp4
+#> 1         8       29       50 0.6133333 /tmp/RtmpUqCGks/file1d427e3541e1.mp4
 # }
 ```

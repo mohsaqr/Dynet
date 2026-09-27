@@ -118,19 +118,19 @@ pathways(dn, from = "Ana")
 #>         10.00
 #>          9.65
 #>          7.98
-pathways(dn, top = 5)
-#> # Time-respecting pathways (104 distinct routes, showing 5)
-#> # 128 optimal routes counted, pooled over 14 source vertices
-#>  from                                      route endpoint count     share
-#>  Kira                Kira -> Leo -> Finn -> Nils     Nils     3 0.0234375
-#>  Nils                 Nils -> Ben -> Hugo -> Dan      Dan     3 0.0234375
-#>   Ana         Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.0234375
-#>  Hugo Hugo -> Kira -> Leo -> Finn -> Nils -> Ben      Ben     3 0.0234375
-#>  Hugo Hugo -> Kira -> Leo -> Finn -> Nils -> Eve      Eve     3 0.0234375
-#>  n_hops arrival_time
-#>       3         6.31
-#>       3         7.79
-#>       4        11.66
-#>       5         6.31
-#>       5         6.31
+pathways(dn, from = c("Ana", "Ben", "Kira"), top = 5)
+#> # Time-respecting pathways (22 distinct routes, showing 5)
+#> # 30 optimal routes counted
+#>                               route endpoint count      share n_hops
+#>         Kira -> Leo -> Finn -> Nils     Nils     3 0.10000000      3
+#>  Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.10000000      4
+#>                 Kira -> Leo -> Iris     Iris     2 0.06666667      2
+#>          Kira -> Leo -> Hugo -> Dan      Dan     2 0.06666667      3
+#>   Ben -> Eve -> Kira -> Leo -> Hugo     Hugo     2 0.06666667      4
+#>  arrival_time
+#>          6.31
+#>         11.66
+#>          6.13
+#>          7.79
+#>          6.76
 ```

@@ -33,7 +33,10 @@ A data frame with 445 rows and 3 columns:
 
 ## Source
 
-As [mooc_posts](https://pak.dynasite.org/Dynet/reference/mooc_posts.md).
+As [mooc_posts](https://pak.dynasite.org/Dynet/reference/mooc_posts.md):
+Saqr (2024),
+[doi:10.1007/978-3-031-54464-4_17](https://doi.org/10.1007/978-3-031-54464-4_17)
+.
 
 ## See also
 
