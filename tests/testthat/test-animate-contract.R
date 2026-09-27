@@ -38,6 +38,7 @@ gif_loop_count <- function(path) {
 }
 
 test_that("animate writes a GIF and returns a tidy bin table", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   target <- out_path()
@@ -86,6 +87,7 @@ test_that("the animation bins are the snapshot grid", {
 })
 
 test_that("the rendered-frame schedule holds tween frames per bin", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   frames <- animate(dn, step = 6, window = 6, tween = 4,
@@ -131,6 +133,7 @@ test_that("a video is written when av is installed", {
 })
 
 test_that("a GIF loops for ever by default and once when asked", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   looping <- out_path()
@@ -225,6 +228,7 @@ test_that("node size follows the square root, so area follows the measure", {
 })
 
 test_that("fixed layouts never move a vertex and a relaxed one is bounded", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   frames <- grid_frames(dn, step = 2, window = 4)
@@ -451,6 +455,7 @@ test_that("an absent vertex can wait at the edge of the layout", {
 })
 
 test_that("absence and idleness are drawn as asked", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   spanned <- set_vertex_spells(dn, "ties")
@@ -471,6 +476,7 @@ test_that("absence and idleness are drawn as asked", {
 })
 
 test_that("continuous easing runs a spline through the bins", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   # Through the two inner points exactly, and straight when the points are
   # collinear and evenly spaced.
   line <- lapply(0:3, function(i) data.frame(x = i, y = 2 * i))
@@ -543,6 +549,7 @@ test_that("bins nobody is present in are skipped with a message", {
 })
 
 test_that("every named layout and drawing option renders", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   skip_if_no_gif()
   dn <- quiet_dynet(school_contacts)
   grouped <- quiet_dynet(

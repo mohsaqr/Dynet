@@ -229,6 +229,7 @@ test_that("separate sessions never merge into one branch", {
 })
 
 test_that("every measure and orientation builds", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   paths <- .school_paths()
   grid <- expand.grid(
     measure = c("frequency", "time", "predictability"),

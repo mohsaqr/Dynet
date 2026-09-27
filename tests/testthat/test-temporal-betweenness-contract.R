@@ -311,6 +311,7 @@ test_that("time scaling includes positive traversal duration", {
 })
 
 test_that("large dependency families remain compact and propagate overflow", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   compact <- quiet_dynet(p10_binary_diamonds(20L))
   value <- betweenness_values(compact, start = 0, end = 20)
   expect_true(all(is.finite(value)))

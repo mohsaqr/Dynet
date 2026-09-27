@@ -86,6 +86,7 @@ test_that("similarity, projection and trajectories summarise their own shape", {
 })
 
 test_that("plot = TRUE draws without changing what a verb returns", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   dn <- quiet_dynet(school_contacts)
   # The contract is base R's hist(): drawing is a side effect, the tidy result
   # still comes back. A verb whose return TYPE changed with an argument would

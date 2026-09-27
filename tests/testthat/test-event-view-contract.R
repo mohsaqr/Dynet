@@ -9,6 +9,7 @@
 }
 
 test_that("every glyph, axis and nesting combination builds", {
+  skip_on_cran() # rendering or stress test; runs locally and on CI
   dn <- .contact_net()
   grid <- expand.grid(
     link = c("hook", "arc", "chevron", "wave", "bracket"),
