@@ -307,8 +307,8 @@ test_that("default backward anchors still use the observed end", {
                                        direction = "backward")))
 })
 
-test_that("backward paths agree with an exhaustive original-time oracle", {
-  fixtures <- list(
+.backward_fixtures <- function() {
+  list(
     mixed = data.frame(
       from = c("A", "B", "A", "C"), to = c("B", "C", "C", "D"),
       start = c(0, 3, 4, 5), end = c(2, 3, 7, 8),
@@ -325,6 +325,10 @@ test_that("backward paths agree with an exhaustive original-time oracle", {
       stringsAsFactors = FALSE
     )
   )
+}
+
+test_that("backward paths agree with an exhaustive original-time oracle", {
+  fixtures <- .backward_fixtures()
   invisible(lapply(names(fixtures), function(name) {
     spells <- fixtures[[name]]
     vertices <- sort(unique(c(spells$from, spells$to)))
@@ -361,6 +365,41 @@ test_that("backward paths agree with an exhaustive original-time oracle", {
           expect_equal(kernel$arrival, unname(oracle$latest))
           expect_identical(kernel$attained, unname(oracle$attained))
         }))
+      }))
+    }))
+  }))
+})
+
+test_that("backward reach counts agree with the exhaustive oracle", {
+  # A vertex reaches the target when the oracle finds a finite latest
+  # departure from it; the target itself is excluded, and the proportion
+  # divides by the other vertices.
+  fixtures <- .backward_fixtures()
+  invisible(lapply(names(fixtures), function(name) {
+    spells <- fixtures[[name]]
+    vertices <- sort(unique(c(spells$from, spells$to)))
+    invisible(lapply(c(TRUE, FALSE), function(directed) {
+      dn <- quiet_dynet(spells, directed = directed)
+      invisible(lapply(c(0, 1, 5, 9), function(deadline) {
+        reach <- reachability(
+          dn, direction = "backward", at = deadline, sessions = "collapse",
+          measure = c("reach", "reach_count")
+        )
+        expected <- vapply(vertices, function(target) {
+          oracle <- .backward_oracle(
+            spells, vertices, target, deadline,
+            directed = directed, sessions = "collapse"
+          )
+          others <- setdiff(names(oracle$latest), target)
+          sum(is.finite(oracle$latest[others]))
+        }, numeric(1L))
+        label <- sprintf("%s/%s/%s", name,
+                         if (directed) "directed" else "undirected", deadline)
+        counts <- subset(as.data.frame(reach), measure == "backward_reach_count")
+        shares <- subset(as.data.frame(reach), measure == "backward_reach")
+        expect_equal(counts$value, unname(expected[counts$node]), info = label)
+        expect_equal(shares$value, unname(expected[shares$node]) /
+                       (length(vertices) - 1L), info = label)
       }))
     }))
   }))

@@ -1,3 +1,27 @@
+# Dynet 0.5.0
+
+* First CRAN release. CRAN preparation: the maintainer is recorded as copyright holder, the README
+  gives the CRAN installation line, and the animation article's GIFs carry
+  alternative text.
+
+* `durations()` is up to 37 times faster on large logs (about 20,000 spells:
+  26 s to under 1 s). A spell between two vertices without declared activity
+  is now built as its own fragment in one vectorised step, and each pair's
+  fragments are indexed once rather than matched against every pair. Results
+  are identical to 0.4.13.
+
+* The time-respecting path search behind `paths()`, `reachability()`,
+  `path_centrality()` and `pathways()` is much faster. A search state's
+  candidate entries are computed for all its ties at once, the ties leaving
+  each vertex are indexed once, and state keys are built in one call. Forward
+  searches also drop dominated states: a vertex reached no earlier than an
+  existing state with fewer hops. Such a state can never be, or lead to, a
+  shortest-foremost path, so arrival times, hop counts, path counts and
+  betweenness are identical to 0.4.13. On the `thought_chains` data (23,017
+  contacts), `path_centrality()` drops from 314 s to 5 s and one-source
+  `paths()` from 35 s to under 1 s. Backward searches are vectorised but not
+  pruned.
+
 # Dynet 0.4.13
 
 ## Breaking changes

@@ -734,7 +734,26 @@ events <- function(dn,
     start = numeric(), end = numeric(), instant = logical(),
     stringsAsFactors = FALSE
   )
-  pieces <- lapply(rows, function(row) {
+  # A spell between two vertices without declared activity is its own
+  # fragment (their components are (-Inf, Inf)), so that common case is
+  # built in one vectorised step; only declared endpoints are clipped row by
+  # row below.
+  activity <- enc$path_activity
+  free <- if (is.null(activity)) rep(TRUE, length(rows)) else
+    !activity$declared[enc$from[rows]] & !activity$declared[enc$to[rows]]
+  free_rows <- rows[free]
+  free_rows <- free_rows[
+    enc$instant[free_rows] | enc$end[free_rows] > enc$start[free_rows]
+  ]
+  free_frame <- data.frame(
+    from = enc$names[enc$from[free_rows]], to = enc$names[enc$to[free_rows]],
+    raw_spell = enc$raw_spell[free_rows], start = enc$start[free_rows],
+    end = ifelse(enc$instant[free_rows], enc$start[free_rows],
+                 enc$end[free_rows]),
+    instant = enc$instant[free_rows], stringsAsFactors = FALSE
+  )
+  clipped_rows <- rows[!free]
+  pieces <- lapply(clipped_rows, function(row) {
     from <- enc$from[[row]]
     to <- enc$to[[row]]
     common <- data.frame(
@@ -761,8 +780,12 @@ events <- function(dn,
       end = end[keep], instant = FALSE, stringsAsFactors = FALSE
     )
   })
-  out <- do.call(rbind, pieces)
-  if (is.null(out) || !nrow(out)) return(empty)
+  out <- rbind(free_frame, do.call(rbind, pieces))
+  if (!nrow(out)) return(empty)
+  # Restore raw-row order; order() is stable, so a row's own fragments keep
+  # their sequence.
+  source_row <- c(free_rows, rep(clipped_rows, vapply(pieces, nrow, integer(1L))))
+  out <- out[order(source_row), , drop = FALSE]
   rownames(out) <- NULL
   out
 }
@@ -1271,14 +1294,17 @@ durations <- function(dn, measure = c("events", "total", "mean"),
       ))
     }
     raw_groups <- split(seq_len(nrow(fragments)), fragments$raw_spell)
-    raw_stats <- lapply(raw_groups, function(i) data.frame(
-      from = fragments$from[i[1L]], to = fragments$to[i[1L]],
-      raw_spell = fragments$raw_spell[i[1L]],
-      duration = sum(fragments$end[i] - fragments$start[i]),
-      first = min(fragments$start[i]), last = max(fragments$end[i]),
+    lead <- vapply(raw_groups, `[[`, integer(1L), 1L)
+    raw_stats <- data.frame(
+      from = fragments$from[lead], to = fragments$to[lead],
+      raw_spell = fragments$raw_spell[lead],
+      duration = vapply(raw_groups, function(i) {
+        sum(fragments$end[i] - fragments$start[i])
+      }, numeric(1L)),
+      first = vapply(raw_groups, function(i) min(fragments$start[i]), numeric(1L)),
+      last = vapply(raw_groups, function(i) max(fragments$end[i]), numeric(1L)),
       stringsAsFactors = FALSE
-    ))
-    raw_stats <- do.call(rbind, raw_stats)
+    )
     if (identical(unit, "spell")) return(do.call(rbind, lapply(
       measure, function(m) data.frame(
         session = label, from = raw_stats$from, to = raw_stats$to,
@@ -1288,15 +1314,18 @@ durations <- function(dn, measure = c("events", "total", "mean"),
     )))
     key <- paste(raw_stats$from, raw_stats$to, sep = "\r")
     idx <- split(seq_len(nrow(raw_stats)), key)
+    # Index each pair's positive fragments once; matching every fragment key
+    # against every pair was quadratic in the number of spells.
+    positive <- which(!fragments$instant)
+    fragment_rows <- split(
+      positive, paste(fragments$from, fragments$to, sep = "\r")[positive]
+    )
     stats_tbl <- Map(function(i, pair_key) {
-      pair_fragments <- fragments[
-        paste(fragments$from, fragments$to, sep = "\r") == pair_key &
-          !fragments$instant, , drop = FALSE
-      ]
+      rows <- fragment_rows[[pair_key]]
       c(
         events = length(i), total = sum(raw_stats$duration[i]),
-        union = if (nrow(pair_fragments)) .union_duration(
-          pair_fragments$start, pair_fragments$end
+        union = if (length(rows)) .union_duration(
+          fragments$start[rows], fragments$end[rows]
         ) else 0,
         mean = mean(raw_stats$duration[i]),
         median = stats::median(raw_stats$duration[i]),

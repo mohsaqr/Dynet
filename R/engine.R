@@ -86,6 +86,35 @@
 #' @noRd
 .time_geq <- function(a, b) a >= b - .time_tol(a, b)
 
+#' Element-wise tolerance for comparing paired times
+#'
+#' `.time_tol()` pools every value it is given into one scale. This gives each
+#' pair `a[i]`, `b[i]` the tolerance `.time_tol(a[i], b[i])` would give it
+#' alone, so a vectorised comparison agrees with a loop of scalar ones.
+#'
+#' @param a,b Numeric times of equal length (or length one).
+#' @return A numeric vector of non-negative tolerances.
+#' @noRd
+.time_tol_each <- function(a, b) {
+  a <- abs(a)
+  b <- abs(b)
+  a[!is.finite(a)] <- 0
+  b[!is.finite(b)] <- 0
+  128 * .Machine$double.eps * pmax(1, a, b)
+}
+
+#' Element-wise tolerant equality, matching scalar `.time_eq()` per pair
+#' @param a,b Numeric times.
+#' @return A logical vector.
+#' @noRd
+.time_eq_each <- function(a, b) abs(a - b) <= .time_tol_each(a, b)
+
+#' Element-wise tolerant "at or before", matching scalar `.time_leq()` per pair
+#' @param a,b Numeric times.
+#' @return A logical vector.
+#' @noRd
+.time_leq_each <- function(a, b) a <= b + .time_tol_each(a, b)
+
 # ===========================================================================
 # Internal compute engine: encoding, time bins, activity, adjacency
 # ===========================================================================

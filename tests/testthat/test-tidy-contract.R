@@ -15,8 +15,9 @@ all_verbs <- function(dn) {
 
 test_that("every measurement verb returns a tidy data frame, never a matrix or list", {
   dn <- quiet_dynet(random_edges())
-  for (nm in names(all_verbs(dn))) {
-    res <- all_verbs(dn)[[nm]]
+  verbs <- all_verbs(dn)
+  for (nm in names(verbs)) {
+    res <- verbs[[nm]]
     expect_s3_class(res, "dynet_metric", exact = FALSE)
     expect_s3_class(res, "data.frame")
     expect_true(is.data.frame(as.data.frame(res)), info = nm)

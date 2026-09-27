@@ -44,7 +44,7 @@ film <- animate(dn, step = 2, window = 4, file = "animating_files/classroom.gif"
 film
 ```
 
-![](animating_files/classroom.gif)
+![](animating_files/classroom.gif){alt="Animated classroom contact network across eleven windows; forming ties dotted green, persisting ties solid grey, dissolving ties dashed vermilion."}
 
 `ties` records the connected-pair count, matching the corresponding snapshot. `forming` counts pairs present in the current bin but absent from the preceding bin. `dissolving` counts pairs present in the current bin but absent from the next. The first bin has no predecessor and the last has no successor, so these comparisons are `NA` at the respective boundaries. The bin beginning at time 4 contains fifty pairs, of which 26 were absent from the preceding bin and nine are absent from the next.
 
@@ -68,7 +68,7 @@ per_bin <- animate(dn, step = 2, window = 4, measure = "degree",
 summary(per_bin)
 ```
 
-![](animating_files/classroom-degree.gif)
+![](animating_files/classroom-degree.gif){alt="Animated classroom network with vertex size scaled by degree within each window."}
 
 With `measure = "degree"`, changing vertex sizes show changes in direct connectivity. Alternatively, supply a whole-period centrality result to keep vertex sizes constant while ties change.
 
@@ -83,7 +83,7 @@ fixed <- animate(dn, step = 2, window = 4, measure = whole,
 summary(fixed)
 ```
 
-![](animating_files/classroom-whole.gif)
+![](animating_files/classroom-whole.gif){alt="Animated classroom network with vertex size fixed by whole-period degree; Dan and Jonas are largest."}
 
 Dan and Jonas have whole-period total degree eighteen, compared with twelve for Leo, so they appear larger in every frame. Because the network is directed and degree sums incoming and outgoing connections by default, these values do not necessarily equal the number of distinct partners.
 

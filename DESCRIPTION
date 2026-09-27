@@ -1,7 +1,7 @@
 Package: Dynet
 Title: Tidy Temporal Network Analysis
-Version: 0.4.13
-Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre"),
+Version: 0.5.0
+Authors@R: person("Mohammed", "Saqr", role = c("aut", "cre", "cph"),
     email = "saqr@saqr.me")
 Description: Construction, measurement and visualisation of temporal
     networks. Networks are built from four kinds of relational log with a

@@ -568,14 +568,15 @@
   pred_atom <- list(integer(0))
   state_index <- new.env(hash = TRUE, parent = emptyenv())
 
+  # Vectorised: a parent's candidate keys are built in one call. Negative
+  # zero is folded into zero so both spell the same key.
   state_key <- function(v, value, is_attained) {
-    if (value == 0) value <- 0
+    value[value == 0] <- 0
     paste(v, sprintf("%.17g", value), as.integer(is_attained), sep = "\r")
   }
   assign(state_key(source, origin, TRUE), 1L, envir = state_index)
 
-  add_candidate <- function(v, value, is_attained, depth, parent, atom) {
-    key <- state_key(v, value, is_attained)
+  add_candidate <- function(v, value, is_attained, depth, parent, atom, key) {
     if (exists(key, envir = state_index, inherits = FALSE)) {
       id <- get(key, envir = state_index, inherits = FALSE)
       if (hops[[id]] < depth) return(FALSE)
@@ -599,44 +600,126 @@
     TRUE
   }
 
+  # The atoms leaving (forward) or entering (backward) each vertex, indexed
+  # once rather than rescanned for every parent state.
+  forward <- identical(direction, "forward")
+  endpoint <- if (forward) atoms$from else atoms$to
+  rows_by_vertex <- split(
+    seq_along(endpoint), factor(endpoint, levels = seq_len(n))
+  )
+  # Most atoms have a single entry domain; its bounds are held as vectors so
+  # a parent's entries are computed in one step. Atoms with several domains
+  # keep the per-atom `.path_forward_entry()` / `.path_backward_entry()`.
+  n_domains <- vapply(domains, nrow, integer(1L))
+  single <- n_domains == 1L
+  single_start <- single_end <- rep(NA_real_, length(domains))
+  single_closed <- rep(FALSE, length(domains))
+  single_start[single] <- vapply(domains[single], function(d) d$start[[1L]], numeric(1L))
+  single_end[single] <- vapply(domains[single], function(d) d$end[[1L]], numeric(1L))
+  single_closed[single] <- vapply(domains[single], function(d) d$end_closed[[1L]], logical(1L))
+  forward_entries <- function(rows, ready) {
+    entry <- rep(NA_real_, length(rows))
+    one <- single[rows]
+    if (any(one)) {
+      r <- rows[one]
+      candidate <- pmax(ready, single_start[r])
+      usable <- candidate < single_end[r] |
+        (.time_eq_each(candidate, single_end[r]) & single_closed[r])
+      candidate[is.na(usable) | !usable] <- NA_real_
+      entry[one] <- candidate
+    }
+    several <- which(n_domains[rows] > 1L)
+    if (length(several)) entry[several] <- vapply(
+      rows[several], function(row) .path_forward_entry(domains[[row]], ready),
+      numeric(1L)
+    )
+    entry
+  }
+  # Element-wise `.path_backward_entry()` for single-domain atoms. The
+  # candidate is the value whenever it is possible, so "realised" reduces to
+  # membership, downstream feasibility and possibility.
+  backward_entries <- function(rows, bound, bound_attained) {
+    value <- rep(-Inf, length(rows))
+    realised <- rep(FALSE, length(rows))
+    if (!is.finite(bound)) return(list(value = value, attained = realised))
+    one <- single[rows]
+    if (any(one)) {
+      r <- rows[one]
+      s <- single_start[r]
+      e <- single_end[r]
+      candidate <- pmin(e, bound - traversal_time)
+      membership <- candidate >= s &
+        (candidate < e | (.time_eq_each(candidate, e) & single_closed[r]))
+      downstream <- candidate + traversal_time < bound |
+        (.time_eq_each(candidate + traversal_time, bound) & bound_attained)
+      possible <- candidate > s |
+        (.time_eq_each(candidate, s) & membership & downstream)
+      possible <- !is.na(possible) & possible
+      value[one] <- ifelse(possible, candidate, -Inf)
+      realised[one] <- possible & (membership & downstream) %in% TRUE
+    }
+    several <- which(n_domains[rows] > 1L)
+    if (length(several)) {
+      entries <- lapply(rows[several], function(row) .path_backward_entry(
+        domains[[row]], bound, bound_attained, traversal_time
+      ))
+      value[several] <- vapply(entries, function(x) unname(x[["value"]]), numeric(1L))
+      realised[several] <- vapply(entries, function(x) as.logical(x[["attained"]]), logical(1L))
+    }
+    list(value = value, attained = realised)
+  }
+
   # Hop layers are sequential: layer h depends on the complete h - 1 layer.
   for (depth in seq_len(max(0L, n - 1L))) {
     parents <- which(hops == depth - 1L)
     added <- FALSE
+    # Earliest time each vertex was reached with fewer than `depth` hops. A
+    # forward state no earlier than that, with more hops, is dominated: by
+    # waiting, the earlier state reaches everything it reaches no later and in
+    # fewer hops, so it can never be, or lead to, a shortest-foremost state,
+    # and it never adds to a winning state's path count. Backward searches
+    # are not pruned: there a tie on the supremum can be decided by
+    # `attained` in favour of the state with more hops.
+    if (forward) {
+      reached_before <- vapply(
+        split(time, factor(vertex, levels = seq_len(n))),
+        function(t) if (length(t)) min(t) else Inf, numeric(1L)
+      )
+    }
     for (parent in parents) {
-      rows <- if (identical(direction, "forward")) {
-        which(atoms$from == vertex[[parent]])
-      } else {
-        which(atoms$to == vertex[[parent]])
-      }
+      rows <- rows_by_vertex[[vertex[[parent]]]]
       if (length(rows) == 0L) next
-      for (row in rows) {
-        if (identical(direction, "forward")) {
-          ready <- time[[parent]]
-          entry <- .path_forward_entry(domains[[row]], ready)
-          candidate <- entry + traversal_time
-          usable <- !is.na(entry) && .time_leq(candidate, upper)
-          if (!usable) next
+      if (forward) {
+        # Surviving states are added in atom order, exactly as a per-atom
+        # loop would, so predecessor order and path counts are unchanged.
+        entry <- forward_entries(rows, time[[parent]])
+        candidate <- entry + traversal_time
+        usable <- which(!is.na(entry) & .time_leq_each(candidate, upper) &
+          candidate < reached_before[atoms$to[rows]])
+        next_vertex <- atoms$to[rows[usable]]
+        keys <- state_key(next_vertex, candidate[usable], TRUE)
+        for (k in seq_along(usable)) {
+          i <- usable[[k]]
           added <- add_candidate(
-            atoms$to[[row]], candidate, TRUE, depth, parent, row
-          ) || added
-        } else {
-          bound <- time[[parent]]
-          bound_attained <- attained[[parent]]
-          entry <- .path_backward_entry(
-            domains[[row]], bound, bound_attained, traversal_time
-          )
-          candidate <- unname(entry[["value"]])
-          candidate_attained <- as.logical(entry[["attained"]])
-          usable <- is.finite(candidate)
-          usable <- usable && (candidate > lower ||
-            (candidate == lower && candidate_attained))
-          if (!usable) next
-          added <- add_candidate(
-            atoms$from[[row]], candidate, candidate_attained,
-            depth, parent, row
+            next_vertex[[k]], candidate[[i]], TRUE, depth, parent, rows[[i]],
+            keys[[k]]
           ) || added
         }
+        next
+      }
+      entry <- backward_entries(rows, time[[parent]], attained[[parent]])
+      candidate <- entry$value
+      candidate_attained <- entry$attained
+      usable <- which(is.finite(candidate) & (candidate > lower |
+        (candidate == lower & candidate_attained)))
+      next_vertex <- atoms$from[rows[usable]]
+      keys <- state_key(next_vertex, candidate[usable], candidate_attained[usable])
+      for (k in seq_along(usable)) {
+        i <- usable[[k]]
+        added <- add_candidate(
+          next_vertex[[k]], candidate[[i]], candidate_attained[[i]],
+          depth, parent, rows[[i]], keys[[k]]
+        ) || added
       }
     }
     if (!added && !any(hops == depth)) break
