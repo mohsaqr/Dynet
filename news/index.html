@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,12 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0" id="dynet-050">Dynet 0.5.0<a class="anchor" aria-label="anchor" href="#dynet-050"></a></h2>
+<ul><li><p>First CRAN release. CRAN preparation: the maintainer is recorded as copyright holder, the README gives the CRAN installation line, and the animation article’s GIFs carry alternative text.</p></li>
+<li><p><code><a href="../reference/durations.html">durations()</a></code> is up to 37 times faster on large logs (about 20,000 spells: 26 s to under 1 s). A spell between two vertices without declared activity is now built as its own fragment in one vectorised step, and each pair’s fragments are indexed once rather than matched against every pair. Results are identical to 0.4.13.</p></li>
+<li><p>The time-respecting path search behind <code><a href="../reference/paths.html">paths()</a></code>, <code><a href="../reference/reachability.html">reachability()</a></code>, <code><a href="../reference/path_centrality.html">path_centrality()</a></code> and <code><a href="../reference/pathways.html">pathways()</a></code> is much faster. A search state’s candidate entries are computed for all its ties at once, the ties leaving each vertex are indexed once, and state keys are built in one call. Forward searches also drop dominated states: a vertex reached no earlier than an existing state with fewer hops. Such a state can never be, or lead to, a shortest-foremost path, so arrival times, hop counts, path counts and betweenness are identical to 0.4.13. On the <code>thought_chains</code> data (23,017 contacts), <code><a href="../reference/path_centrality.html">path_centrality()</a></code> drops from 314 s to 5 s and one-source <code><a href="../reference/paths.html">paths()</a></code> from 35 s to under 1 s. Backward searches are vectorised but not pruned.</p></li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.13" id="dynet-0413">Dynet 0.4.13<a class="anchor" aria-label="anchor" href="#dynet-0413"></a></h2>
 <div class="section level3">

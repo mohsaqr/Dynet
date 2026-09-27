@@ -89,7 +89,9 @@ film
 #>   11    61   20           20         24    14    0   17       0         NA
 ```
 
-![](animating_files/classroom.gif)
+![Animated classroom contact network across eleven windows; forming ties
+dotted green, persisting ties solid grey, dissolving ties dashed
+vermilion.](animating_files/classroom.gif)
 
 `ties` records the connected-pair count, matching the corresponding
 snapshot. `forming` counts pairs present in the current bin but absent
@@ -139,7 +141,8 @@ summary(per_bin)
 #> 1        20       17       54 0.3074074 animating_files/classroom-degree.gif
 ```
 
-![](animating_files/classroom-degree.gif)
+![Animated classroom network with vertex size scaled by degree within
+each window.](animating_files/classroom-degree.gif)
 
 With `measure = "degree"`, changing vertex sizes show changes in direct
 connectivity. Alternatively, supply a whole-period centrality result to
@@ -181,7 +184,8 @@ summary(fixed)
 #> 1 animating_files/classroom-whole.gif
 ```
 
-![](animating_files/classroom-whole.gif)
+![Animated classroom network with vertex size fixed by whole-period
+degree; Dan and Jonas are largest.](animating_files/classroom-whole.gif)
 
 Dan and Jonas have whole-period total degree eighteen, compared with
 twelve for Leo, so they appear larger in every frame. Because the

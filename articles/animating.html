@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -151,7 +151,7 @@ bin.</p>
 <span><span class="co">#&gt;    9    49   16           16         20    14    0   24       9          9</span></span>
 <span><span class="co">#&gt;   10    55   18           18         22    14    0   25      10          8</span></span>
 <span><span class="co">#&gt;   11    61   20           20         24    14    0   17       0         NA</span></span></code></pre></div>
-<p><img src="animating_files/classroom.gif"></p>
+<p><img src="animating_files/classroom.gif" alt="Animated classroom contact network across eleven windows; forming ties dotted green, persisting ties solid grey, dissolving ties dashed vermilion."></p>
 <p><code>ties</code> records the connected-pair count, matching the
 corresponding snapshot. <code>forming</code> counts pairs present in the
 current bin but absent from the preceding bin. <code>dissolving</code>
@@ -193,7 +193,7 @@ used throughout the animation.</p>
 <span><span class="co">#&gt; 1   11     66  12     5.5     6 dwell spring    gif  degree          0</span></span>
 <span><span class="co">#&gt;   last_time min_ties max_ties  turnover                                 file</span></span>
 <span><span class="co">#&gt; 1        20       17       54 0.3074074 animating_files/classroom-degree.gif</span></span></code></pre></div>
-<p><img src="animating_files/classroom-degree.gif"></p>
+<p><img src="animating_files/classroom-degree.gif" alt="Animated classroom network with vertex size scaled by degree within each window."></p>
 <p>With <code>measure = "degree"</code>, changing vertex sizes show
 changes in direct connectivity. Alternatively, supply a whole-period
 centrality result to keep vertex sizes constant while ties change.</p>
@@ -227,7 +227,7 @@ centrality result to keep vertex sizes constant while ties change.</p>
 <span><span class="co">#&gt; 1 Degree over the whole period          0        20       17       54 0.3074074</span></span>
 <span><span class="co">#&gt;                                  file</span></span>
 <span><span class="co">#&gt; 1 animating_files/classroom-whole.gif</span></span></code></pre></div>
-<p><img src="animating_files/classroom-whole.gif"></p>
+<p><img src="animating_files/classroom-whole.gif" alt="Animated classroom network with vertex size fixed by whole-period degree; Dan and Jonas are largest."></p>
 <p>Dan and Jonas have whole-period total degree eighteen, compared with
 twelve for Leo, so they appear larger in every frame. Because the
 network is directed and degree sums incoming and outgoing connections by

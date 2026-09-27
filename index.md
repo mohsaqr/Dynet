@@ -66,13 +66,15 @@ attendance at the same event.
 
 ## Installation
 
-The development version can be installed from the author’s R-universe
-repository, which also provides the `cograph` dependency, or from
-GitHub. The installation commands are not evaluated when this page is
-rendered.
+The released version can be installed from CRAN. The development version
+can be installed from the author’s R-universe repository or from GitHub.
+The installation commands are not evaluated when this page is rendered.
 
 ``` r
 
+install.packages("Dynet")
+
+# development version
 install.packages("Dynet",
                  repos = c("https://mohsaqr.r-universe.dev",
                            "https://cloud.r-project.org"))
