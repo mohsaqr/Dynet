@@ -25,14 +25,11 @@ Imports:
 Suggests:
     av,
     gifski,
-    igraph,
     knitr,
     network,
     networkDynamic,
     rmarkdown,
-    sna,
-    testthat (>= 3.0.0),
-    tsna
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
