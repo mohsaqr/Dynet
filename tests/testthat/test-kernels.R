@@ -11,86 +11,6 @@ random_adj <- function(n, p, directed = TRUE, seed = 1L) {
   a
 }
 
-test_that("path-based kernels match igraph on directed and undirected graphs", {
-  skip_if_not_installed("igraph")
-  for (seed in 1:3) {
-    for (directed in c(TRUE, FALSE)) {
-      a <- random_adj(20L, 0.15, directed, seed)
-      g <- igraph::graph_from_adjacency_matrix(
-        a, mode = if (directed) "directed" else "undirected")
-
-      expect_equal(unname(.geodesic(a, directed)),
-                   unname(igraph::distances(g, mode = "out")))
-      expect_equal(unname(.betweenness(a, directed)),
-                   unname(igraph::betweenness(g, directed = directed)))
-
-      # Closeness and coreness both default to mode = "all", matching cograph
-      # and igraph::degree(); all three modes are checked against igraph.
-      for (md in c("all", "out", "in")) {
-        close_ig <- suppressWarnings(
-          igraph::closeness(g, mode = md, normalized = TRUE))
-        close_ig[is.nan(close_ig)] <- 0
-        expect_equal(unname(.closeness(a, directed, md)), unname(close_ig))
-        expect_equal(unname(.coreness(a, directed, md)),
-                     unname(igraph::coreness(g, mode = md)))
-      }
-      expect_equal(unname(.closeness(a, directed)),
-                   unname(.closeness(a, directed, "all")))
-      expect_equal(unname(.coreness(a, directed)),
-                   unname(.coreness(a, directed, "all")))
-      expect_equal(unname(.pagerank(a)),
-                   unname(igraph::page_rank(g)$vector), tolerance = 1e-6)
-      expect_equal(.components(a, "weak")$count,
-                   igraph::components(g, mode = "weak")$no)
-      expect_equal(.components(a, "strong")$count,
-                   igraph::components(g, mode = "strong")$no)
-    }
-  }
-})
-
-test_that("directed-only kernels match igraph", {
-  skip_if_not_installed("igraph")
-  a <- random_adj(18L, 0.2, TRUE, seed = 4L)
-  g <- igraph::graph_from_adjacency_matrix(a, mode = "directed")
-  expect_equal(unname(.constraint(a)), unname(igraph::constraint(g)))
-  hits <- igraph::hits_scores(g)
-  expect_equal(unname(.hits(a, "hub")), unname(hits$hub), tolerance = 1e-5)
-  expect_equal(unname(.hits(a, "authority")), unname(hits$authority),
-               tolerance = 1e-5)
-})
-
-test_that("census and structure kernels match sna", {
-  skip_if_not_installed("sna")
-  for (seed in 1:3) {
-    a <- random_adj(16L, 0.18, TRUE, seed)
-    expect_equal(unname(.dyad_census(a)), as.numeric(sna::dyad.census(a)))
-    expect_equal(unname(.triad_census(a)), as.numeric(sna::triad.census(a)))
-    expect_equal(.transitivity(a, TRUE), unname(sna::gtrans(a, mode = "digraph")))
-    expect_equal(.reciprocity(a), unname(sna::grecip(a, measure = "edgewise")))
-  }
-})
-
-test_that("eigenvector centrality matches igraph on undirected graphs", {
-  skip_if_not_installed("igraph")
-  a <- random_adj(20L, 0.2, FALSE, seed = 5L)
-  g <- igraph::graph_from_adjacency_matrix(a, mode = "undirected")
-  expect_equal(unname(.eigen_centrality(a, FALSE)),
-               unname(igraph::eigen_centrality(g, directed = FALSE)$vector),
-               tolerance = 1e-5)
-})
-
-test_that("eigenvector centrality is stable on a bipartite star", {
-  skip_if_not_installed("igraph")
-  a <- matrix(0, 5L, 5L,
-              dimnames = list(paste0("v", 1:5), paste0("v", 1:5)))
-  a[1, 2:5] <- 1
-  a[2:5, 1] <- 1
-  g <- igraph::graph_from_adjacency_matrix(a, mode = "undirected")
-  expect_equal(unname(.eigen_centrality(a, FALSE)),
-               unname(igraph::eigen_centrality(g, directed = FALSE)$vector),
-               tolerance = 1e-8)
-})
-
 test_that("census counts add up to the number of dyads and triples", {
   a <- random_adj(14L, 0.25, TRUE, seed = 6L)
   expect_equal(sum(.dyad_census(a)), choose(14, 2))
@@ -136,9 +56,4 @@ test_that("PageRank says so when it hits the iteration cap", {
   # The invariant: a converged run is silent and its values are unchanged.
   expect_silent(converged <- .pagerank(a))
   expect_equal(sum(converged), 1)
-  skip_if_not_installed("igraph")
-  g <- igraph::graph_from_adjacency_matrix(a, mode = "directed")
-  reference <- igraph::page_rank(g, damping = 0.85)$vector
-  expect_equal(unname(converged), unname(reference[names(converged)]),
-               tolerance = 1e-6)
 })

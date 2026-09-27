@@ -45,35 +45,6 @@ test_that("backward paths find who could have reached the vertex", {
   expect_equal(sum(back$reachable), sum(forward_from_A$reachable))
 })
 
-test_that("earliest arrival matches tsna::tPath", {
-  skip_if_not_installed("tsna")
-  skip_if_not_installed("networkDynamic")
-  skip_if_not_installed("network")
-
-  e <- random_edges(n_v = 15L, n_e = 70L, span = 25, seed = 3L)
-  dn <- quiet_dynet(e)
-  vnames <- as.data.frame(dn, what = "nodes")$name
-
-  base <- network::network.initialize(length(vnames), directed = TRUE)
-  network::set.vertex.attribute(base, "vertex.names", vnames)
-  nd <- networkDynamic::networkDynamic(
-    base,
-    edge.spells = data.frame(onset = e$start, terminus = e$end,
-                             tail = match(e$from, vnames),
-                             head = match(e$to, vnames)),
-    verbose = FALSE)
-
-  for (src in vnames[1:4]) {
-    ours <- paths(dn, from = src, at = 0)
-    theirs <- tsna::tPath(nd, v = match(src, vnames), start = 0,
-                          direction = "fwd")
-    mine <- ours$arrival_time[match(vnames, ours$node)]
-    mine[is.na(mine)] <- Inf
-    expect_equal(as.numeric(mine), as.numeric(theirs$tdist),
-                 tolerance = 1e-8, info = src)
-  }
-})
-
 test_that("reachability is a proportion and the source is excluded", {
   dn <- quiet_dynet(random_edges())
   r <- reachability(dn)

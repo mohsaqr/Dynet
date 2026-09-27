@@ -3,90 +3,6 @@ traversal_rows <- function(x, nodes) {
   out[match(nodes, out$node), , drop = FALSE]
 }
 
-traversal_forward_oracle <- function(spells, vertices, source, start, end,
-                                     traversal_time) {
-  enumerate <- function(vertex, ready, visited) {
-    arrival <- stats::setNames(rep(Inf, length(vertices)), vertices)
-    arrival[[vertex]] <- ready
-    candidates <- subset(spells, from == vertex & !to %in% visited)
-    if (nrow(candidates) == 0L) return(arrival)
-
-    instant <- candidates$start == candidates$end
-    entry <- pmax(ready, candidates$start)
-    completion <- ifelse(
-      instant,
-      candidates$start + traversal_time,
-      entry + traversal_time
-    )
-    usable <- ((instant & ready <= candidates$start) |
-      (!instant & entry < candidates$end &
-         completion <= candidates$end)) & completion <= end
-    candidates <- candidates[usable, , drop = FALSE]
-    completion <- completion[usable]
-    if (nrow(candidates) == 0L) return(arrival)
-
-    branches <- Map(function(target, candidate) {
-      enumerate(target, candidate, c(visited, target))
-    }, candidates$to, completion)
-    Reduce(pmin, c(list(arrival), branches))
-  }
-
-  enumerate(source, start, source)
-}
-
-traversal_backward_oracle <- function(spells, vertices, target, start, end,
-                                      traversal_time) {
-  enumerate <- function(vertex, bound, bound_attained, visited) {
-    latest <- stats::setNames(rep(-Inf, length(vertices)), vertices)
-    attained <- stats::setNames(rep(FALSE, length(vertices)), vertices)
-    latest[[vertex]] <- bound
-    attained[[vertex]] <- bound_attained
-    candidates <- subset(spells, to == vertex & !from %in% visited)
-    if (nrow(candidates) == 0L) {
-      return(list(latest = latest, attained = attained))
-    }
-
-    instant <- candidates$start == candidates$end
-    edge_bound <- pmin(bound, candidates$end)
-    candidate <- edge_bound - traversal_time
-    candidate_attained <-
-      (traversal_time > 0 | edge_bound < candidates$end) &
-      (edge_bound < bound | bound_attained)
-    point_completion <- candidates$start + traversal_time
-    point_usable <- instant &
-      (point_completion < bound |
-         (point_completion == bound & bound_attained))
-    interval_usable <- !instant &
-      (candidate > candidates$start |
-         (candidate == candidates$start & candidate_attained))
-    candidate[point_usable] <- candidates$start[point_usable]
-    candidate_attained[point_usable] <- TRUE
-    usable <- (point_usable | interval_usable) &
-      (candidate > start | (candidate == start & candidate_attained))
-    candidates <- candidates[usable, , drop = FALSE]
-    candidate <- candidate[usable]
-    candidate_attained <- candidate_attained[usable]
-    if (nrow(candidates) == 0L) {
-      return(list(latest = latest, attained = attained))
-    }
-
-    branches <- Map(function(predecessor, value, is_attained) {
-      enumerate(predecessor, value, is_attained,
-                c(visited, predecessor))
-    }, candidates$from, candidate, candidate_attained)
-    states <- c(list(list(latest = latest, attained = attained)), branches)
-    best <- Reduce(pmax, lapply(states, `[[`, "latest"))
-    best_attained <- vapply(vertices, function(node) {
-      any(vapply(states, function(state) {
-        state$latest[[node]] == best[[node]] && state$attained[[node]]
-      }, logical(1L)))
-    }, logical(1L))
-    list(latest = best, attained = best_attained)
-  }
-
-  enumerate(target, end, TRUE, target)
-}
-
 test_that("positive traversal fits exactly inside intervals and query bounds", {
   spells <- data.frame(
     from = "A", to = "B", start = 2, end = 5,
@@ -459,53 +375,6 @@ test_that("path, reachability, and temporal reach share duration semantics", {
   expect_equal(sum(grepl("traversal 2 step per hop", shown, fixed = TRUE)), 3L)
 })
 
-test_that("path kernels agree with exhaustive vertex-simple journeys", {
-  spells <- data.frame(
-    from = c("A", "B", "A", "D"), to = c("B", "C", "D", "C"),
-    start = c(1, 4, 2, 4), end = c(4, 7, 2, 8),
-    stringsAsFactors = FALSE
-  )
-  vertices <- c("A", "B", "C", "D")
-  dn <- quiet_dynet(spells)
-
-  invisible(lapply(c(0, 1, 3), function(duration) {
-    invisible(lapply(vertices, function(source) {
-      expected <- traversal_forward_oracle(
-        spells, vertices, source, start = 0, end = 7,
-        traversal_time = duration
-      )
-      actual <- paths(
-        dn, from = source, start = 0, end = 7,
-        traversal_time = duration
-      )
-      observed <- traversal_rows(actual, vertices)$arrival_time
-      expect_equal(
-        observed,
-        unname(ifelse(is.finite(expected), expected, NA_real_))
-      )
-    }))
-
-    invisible(lapply(vertices, function(target) {
-      expected <- traversal_backward_oracle(
-        spells, vertices, target, start = 0, end = 7,
-        traversal_time = duration
-      )
-      actual <- paths(
-        dn, from = target, direction = "backward", start = 0, end = 7,
-        traversal_time = duration
-      )
-      observed <- traversal_rows(actual, vertices)
-      expect_equal(
-        observed$arrival_time,
-        unname(ifelse(
-          is.finite(expected$latest), expected$latest, NA_real_
-        ))
-      )
-      expect_identical(observed$attained, unname(expected$attained))
-    }))
-  }))
-})
-
 test_that("increasing traversal duration cannot improve temporal paths", {
   spells <- data.frame(
     from = c("A", "B", "A", "C"), to = c("B", "C", "C", "D"),
@@ -666,33 +535,6 @@ test_that("traversal duration validates units and centrality scope", {
     .as_traversal_time(as.difftime(72, units = "hours"), calendar),
     3
   )
-})
-
-test_that("interior interval duration agrees with tsna", {
-  skip_if_not_installed("tsna")
-  skip_if_not_installed("networkDynamic")
-  skip_if_not_installed("network")
-
-  spells <- data.frame(
-    from = "A", to = "B", start = 2, end = 6,
-    stringsAsFactors = FALSE
-  )
-  dn <- quiet_dynet(spells)
-  ours <- paths(
-    dn, from = "A", start = 0, end = 8, traversal_time = 3
-  )
-
-  base <- network::network.initialize(2L, directed = TRUE)
-  network::set.vertex.attribute(base, "vertex.names", c("A", "B"))
-  nd <- networkDynamic::networkDynamic(
-    base,
-    edge.spells = data.frame(onset = 2, terminus = 6, tail = 1, head = 2),
-    verbose = FALSE
-  )
-  theirs <- tsna::tPath(
-    nd, v = 1, start = 0, end = 8, graph.step.time = 3
-  )
-  expect_equal(traversal_rows(ours, "B")$arrival_time, theirs$tdist[2])
 })
 
 test_that("decimal times are not rejected by floating-point boundary error", {

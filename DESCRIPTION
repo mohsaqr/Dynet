@@ -32,7 +32,6 @@ Suggests:
     rmarkdown,
     sna,
     testthat (>= 3.0.0),
-    transitiontrees,
     tsna
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

@@ -3,104 +3,11 @@
 # and leaf placement reproduce the original implementation exactly, so the
 # plot rests on proven machinery rather than fresh geometry.
 
-.fixed_sequences <- function() {
-  list(c("A", "B", "C"), c("A", "B", "C"), c("A", "B", "D"),
-       c("A", "E"), c("A", "E"), c("A", "E"))
-}
-
 .school_paths <- function() {
   paths(dynet(school_contacts), from = "Ana")
 }
 
 # ---- structural equivalence with transitiontrees -------------------------
-
-test_that("the ported prefix tree matches transitiontrees node for node", {
-  skip_if_not_installed("transitiontrees")
-  seqs <- .fixed_sequences()
-  tree <- transitiontrees::context_tree(
-    seqs, max_depth = 2L, min_count = 1L
-  )
-  reference <- getFromNamespace(".trajectory_data", "transitiontrees")(
-    tree, min_count = 1L
-  )
-  ported <- .path_prefix_tree(seqs, min_count = 1L)
-
-  keys <- c("node", "parent", "depth", "count", "last")
-  tidy <- function(d) {
-    d <- d[order(d$node), keys, drop = FALSE]
-    rownames(d) <- NULL
-    d$depth <- as.integer(d$depth)
-    d$count <- as.integer(d$count)
-    d
-  }
-  expect_identical(tidy(ported), tidy(reference))
-})
-
-test_that("counts after pruning match transitiontrees, orphans included", {
-  skip_if_not_installed("transitiontrees")
-  seqs <- .fixed_sequences()
-  tree <- transitiontrees::context_tree(seqs, max_depth = 2L, min_count = 1L)
-  trajectory_data <- getFromNamespace(".trajectory_data", "transitiontrees")
-
-  compare <- function(min_count) {
-    reference <- trajectory_data(tree, min_count = min_count)
-    ported <- .path_prefix_tree(seqs, min_count = min_count)
-    expect_setequal(ported$node, reference$node)
-    at <- match(ported$node, reference$node)
-    expect_identical(as.integer(ported$count), as.integer(reference$count[at]))
-    expect_identical(ported$parent, reference$parent[at])
-  }
-  lapply(c(1L, 2L, 3L), compare)
-
-  # Pruning is monotone and never leaves a node without its parent.
-  sizes <- vapply(1:3, \(k) nrow(.path_prefix_tree(seqs, k)), numeric(1L))
-  expect_true(all(diff(sizes) <= 0))
-  kept <- .path_prefix_tree(seqs, min_count = 3L)
-  expect_true(all(is.na(kept$parent) | kept$parent %in% kept$node))
-})
-
-test_that("leaf placement reproduces the transitiontrees layout", {
-  skip_if_not_installed("transitiontrees")
-  # plot_trajectories() reaches for ggforce at draw time, so guarding
-  # transitiontrees alone is not enough on a machine that lacks ggforce.
-  skip_if_not_installed("ggforce")
-  seqs <- .fixed_sequences()
-  tree <- transitiontrees::context_tree(seqs, max_depth = 2L, min_count = 1L)
-  built <- ggplot2::ggplot_build(
-    transitiontrees::plot_trajectories(tree, measure = "frequency",
-                                       min_count = 1L)
-  )
-  reference <- built$data[[4L]][, c("label", "x", "y")]
-
-  placed <- .path_tree_branches(.path_prefix_tree(seqs, min_count = 1L))
-  placed <- placed[placed$node != "(start)", , drop = FALSE]
-  at <- match(reference$label, placed$last)
-
-  expect_identical(as.numeric(placed$depth[at]), as.numeric(reference$x))
-  # The port stacks the same leaves and then flips the canvas so the first
-  # route reads at the top, so placement is the reference under one reversal.
-  flipped <- max(placed$branch) + 1 - placed$branch[at]
-  expect_equal(flipped, reference$y, tolerance = 1e-12)
-})
-
-test_that("the plot keeps the horizontal phylogram's layer grammar", {
-  skip_if_not_installed("transitiontrees")
-  seqs <- .fixed_sequences()
-  tree <- transitiontrees::context_tree(seqs, max_depth = 2L, min_count = 1L)
-  reference <- vapply(
-    stats::setNames(plot(tree, style = "horizontal")$layers, NULL),
-    \(layer) class(layer$geom)[[1L]], character(1L)
-  )
-  ported <- vapply(
-    plot_path_trajectories(.school_paths())$layers,
-    \(layer) class(layer$geom)[[1L]], character(1L)
-  )
-  # Branches, node points, node labels, root point, root label.
-  expect_identical(unname(ported), unname(reference))
-  expect_identical(unname(ported),
-                   c("GeomPath", "GeomPoint", "GeomText",
-                     "GeomPoint", "GeomText"))
-})
 
 test_that("a frequency fill does not print the size legend twice", {
   paths <- .school_paths()

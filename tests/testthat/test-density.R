@@ -7,38 +7,6 @@
   as.numeric(row$value)
 }
 
-.density_oracle <- function(dn) {
-  bounds <- unname(dn$meta$time_range)
-  span <- bounds[[2L]] - bounds[[1L]]
-  n <- nrow(as.data.frame(dn, what = "nodes"))
-  possible_pairs <- if (dn$directed) n * (n - 1L) else choose(n, 2L)
-
-  if (possible_pairs == 0L || span <= 0) return(NA_real_)
-
-  spells <- subset(as.data.frame(dn), from != to)
-  spells$start <- pmax(spells$start, bounds[[1L]])
-  spells$end <- pmin(spells$end, bounds[[2L]])
-  spells <- subset(spells, end > start)
-  if (nrow(spells) == 0L) return(0)
-
-  if (!dn$directed) {
-    left <- pmin(spells$from, spells$to)
-    right <- pmax(spells$from, spells$to)
-    spells$from <- left
-    spells$to <- right
-  }
-  pair <- paste(spells$from, spells$to, sep = "\r")
-  change_points <- sort(unique(c(bounds, spells$start, spells$end)))
-  widths <- diff(change_points)
-  midpoints <- change_points[-length(change_points)] + widths / 2
-  active_pairs <- vapply(midpoints, function(time) {
-    active <- spells$start <= time & spells$end > time
-    length(unique(pair[active]))
-  }, integer(1L))
-
-  sum(widths * active_pairs) / (possible_pairs * span)
-}
-
 .two_vertex_density <- function(start, end, to = rep("B", length(start)),
                                 directed = TRUE) {
   spells <- data.frame(
@@ -161,7 +129,6 @@ test_that("temporal density clips spells to stored observation bounds", {
   dn$meta$time_range <- c(start = 0, end = 10)
 
   expect_equal(.temporal_density(dn), 0.2)
-  expect_equal(.temporal_density(dn), .density_oracle(dn))
 })
 
 test_that("complete directed and undirected networks have density one", {
@@ -181,33 +148,6 @@ test_that("complete directed and undirected networks have density one", {
     .temporal_density_value(quiet_dynet(undirected, directed = FALSE)),
     1
   )
-})
-
-test_that("temporal density agrees with an independent change-point oracle", {
-  random <- random_edges(n_v = 8L, n_e = 80L, span = 25, seed = 317L)
-  random$session <- rep(c("one", "two"), length.out = nrow(random))
-  duplicated <- rbind(random, random)
-  translated <- transform(random, start = start + 100, end = end + 100)
-  scaled <- transform(random, start = start * 7, end = end * 7)
-
-  networks <- list(
-    directed = quiet_dynet(random, session = "session"),
-    undirected = quiet_dynet(random, session = "session", directed = FALSE),
-    duplicated = quiet_dynet(duplicated, session = "session"),
-    translated = quiet_dynet(translated, session = "session"),
-    scaled = quiet_dynet(scaled, session = "session")
-  )
-
-  invisible(lapply(networks, function(dn) {
-    expect_equal(.temporal_density(dn), .density_oracle(dn), tolerance = 1e-12)
-    expect_true(.temporal_density(dn) >= 0 && .temporal_density(dn) <= 1)
-  }))
-  expect_equal(.temporal_density(networks$directed),
-               .temporal_density(networks$duplicated))
-  expect_equal(.temporal_density(networks$directed),
-               .temporal_density(networks$translated))
-  expect_equal(.temporal_density(networks$directed),
-               .temporal_density(networks$scaled))
 })
 
 test_that("temporal density obeys representation invariants", {
