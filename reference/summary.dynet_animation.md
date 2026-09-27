@@ -42,5 +42,5 @@ if (requireNamespace("gifski", quietly = TRUE) &&
 #>   bins frames fps   seconds tween  ease layout format measure first_time
 #> 1    4      8  12 0.6666667     2 dwell spring    gif    <NA>          0
 #>   last_time min_ties max_ties turnover                                 file
-#> 1        18       25       65     0.56 /tmp/RtmpWJK4L3/file1d2357c7533a.gif
+#> 1        18       25       65     0.56 /tmp/RtmpbBLqmU/file1cca4e1987c3.gif
 ```
