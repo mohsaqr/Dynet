@@ -2706,15 +2706,16 @@
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
-#' paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
 #'
-#' # Every earliest-arrival journey, not only the shortest ones
+#' # Every earliest-arrival journey, not only the shortest ones. The other
+#' # criteria search exhaustively, so they are shown on a small network.
 #' few <- dynet(data.frame(from = c("A", "A", "B", "C"),
 #'                         to = c("D", "B", "C", "D"),
 #'                         time = c(4, 1, 2, 4)),
 #'              format = "contact", directed = TRUE)
 #' paths(few, from = "A", criterion = "foremost")
 #' paths(few, from = "A", criterion = "fastest")
+#' paths(few, from = "A", criterion = "latest_departure", end = 4)
 #' routes <- paths(dn, from = "Ana")
 #' routes
 #' summary(routes)

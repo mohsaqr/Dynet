@@ -140,12 +140,12 @@ test_that("temporal betweenness follows the criterion's optimal family", {
   expect_true(all(b >= 0))
 })
 
-test_that("reach is identical under every criterion, in centrality too", {
+test_that("reach is identical under every criterion, in reachability too", {
   dn <- dynet(school_contacts, format = "contact")
   for (m in c("reach", "reach_count")) {
-    a <- as.data.frame(path_centrality(dn, measure = m))$value
-    b <- as.data.frame(path_centrality(dn, measure = m,
-                                      criterion = "min_hops"))$value
+    a <- as.data.frame(reachability(dn, measure = m))$value
+    b <- as.data.frame(reachability(dn, measure = m,
+                                    criterion = "min_hops"))$value
     expect_identical(a, b, info = m)
   }
 })

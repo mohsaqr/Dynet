@@ -1,3 +1,12 @@
+# Dynet 0.7.1
+
+* The `paths()` example shows `criterion = "latest_departure"` on the small
+  example network rather than the school data, so every example again runs
+  in under five seconds.
+* A test of reach under every path criterion calls `reachability()`, where
+  reach has lived since 0.4.13; it failed on every platform after the 0.6.0
+  merge.
+
 # Dynet 0.7.0
 
 * `event_graph()` builds the event graph of a temporal network: every spell
