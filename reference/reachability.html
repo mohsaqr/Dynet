@@ -17,7 +17,7 @@ timing lines up."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,6 +71,7 @@ timing lines up.</p>
 <span>  end <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  traversal_time <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  measure <span class="op">=</span> <span class="st">"reach"</span>,</span>
+<span>  criterion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"foremost_then_shortest"</span>, <span class="st">"min_hops"</span><span class="op">)</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -114,9 +115,19 @@ network's time unit. A calendar network also accepts a scalar <code>difftime</co
 
 
 <dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
-<dd><p>One or both of <code>"reach"</code>, the proportion of other vertices,
-and <code>"reach_count"</code>, their number. The source vertex is excluded from
-both. Defaults to <code>"reach"</code>.</p></dd>
+<dd><p>One or more of <code>"reach"</code>, the share of other vertices joined
+by a time-respecting path; <code>"reach_count"</code>, their number; <code>"latency"</code>, the
+mean elapsed time to reach them; and <code>"hops"</code>, the mean number of contacts
+taken. The source vertex is excluded from all four. Defaults to
+<code>"reach"</code>. The two cost measures
+are <code>NaN</code> when nothing is reachable, since the mean is then 0/0.</p></dd>
+
+
+<dt id="arg-criterion">criterion<a class="anchor" aria-label="anchor" href="#arg-criterion"></a></dt>
+<dd><p>Which optimisation problem the journeys solve. Reach and
+reach count are identical under every criterion, because they depend on
+the feasible set rather than on which journey wins; <code>latency</code> and <code>hops</code>
+summarise the selected journeys and do depend on it.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>

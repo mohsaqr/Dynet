@@ -24,10 +24,14 @@ paths(
   from,
   at = NULL,
   direction = c("forward", "backward"),
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest",
+    "latest_departure", "shortest"),
+  cost = c("hops", "weight"),
   sessions = c("bounded", "collapse", "separate"),
   start = NULL,
   end = NULL,
   traversal_time = 0,
+  max_states = 1e+05,
   plot = FALSE
 )
 ```
@@ -63,6 +67,47 @@ paths(
   `"forward"` traces where the vertex can reach; `"backward"` traces who
   could have reached it.
 
+- criterion:
+
+  Which optimisation problem to solve. `"foremost_then_shortest"` (the
+  default, and what every earlier release computed) takes the earliest
+  arrival and, among journeys attaining it, the fewest hops.
+  `"min_hops"` takes the fewest time-respecting contacts and, among
+  those, the earliest arrival. `"foremost"` is pure earliest arrival
+  with no tie-break: the whole family of vertex-simple journeys
+  attaining it, so `n_paths` counts every one and `n_hops` is `NA` when
+  they differ in length. Counting foremost paths is \#P-hard in general
+  (Buss et al., 2024), so the family is enumerated exactly, keeping only
+  prefixes that can still attain some endpoint's optimum; the search
+  raises `dynet_path_family_too_large` if it exceeds `max_states`.
+  `"fastest"` minimises journey duration, arrival minus departure, the
+  one criterion that measures transit rather than clock position; among
+  equally fast journeys it takes the earliest departure, then the fewest
+  hops. Its minimum can be an infimum with no minimising journey (a
+  departure that approaches an interval's excluded terminus), reported
+  with `attained = FALSE` and an empty family. `"latest_departure"` asks
+  the planning question: leaving `from`, how late can one set off and
+  still reach each vertex by `end`? It is a forward query and needs a
+  finite deadline, so `end` (or `at`) must be given unless the network
+  has an explicit observation window; combining it with
+  `direction = "backward"` is an error, because the target-pivoted
+  latest departure is what a backward query already reports. These are
+  different problems and can select different journeys; only
+  reachability is identical across criteria.
+
+- cost:
+
+  For `criterion = "shortest"` only: what a contact costs. `"hops"` (the
+  default) charges one per contact, which is exactly
+  `criterion = "min_hops"`. `"weight"` charges each contact its tie
+  weight, so the shortest journey is the one with the least summed
+  weight, and the table gains a `path_cost` column holding that sum.
+  Every weight must be positive and finite (`dynet_bad_weight`
+  otherwise): a zero-cost cycle would re-admit non-simple journeys. The
+  weight is a cost only; when a contact can be entered, and how long a
+  hop takes, is unchanged. Two overlapping spells of one pair are one
+  contact, at the weight of the earlier spell.
+
 - sessions:
 
   How to treat sessions, as in
@@ -78,6 +123,12 @@ paths(
 
   Nonnegative duration charged for every hop, in the network's time
   unit. A calendar network also accepts a scalar `difftime`.
+
+- max_states:
+
+  For `criterion = "foremost"` only: the largest number of search states
+  one source may expand before the family is declared too large.
+  Supplying it with any other criterion is an error.
 
 - plot:
 
@@ -97,11 +148,22 @@ An object of class `"dynet_paths"`: a tidy data frame with one row per
 vertex and columns `node`, `reachable`, `arrival_time`, `attained`
 (whether that optimum itself is realised), `latency` (elapsed time
 between the origin and `arrival_time`, in either direction), `n_hops`,
-and the exact count `n_paths`. Bounded mode adds `path_session` and
-`n_best_sessions`; separate mode adds `session` and `origin`, one
-complete vertex block per session. Use
-`as.data.frame(x, what = "steps")` for every reconstructed optimal
-route: one row per vertex visited, with `endpoint`, `path_id`
+and the exact count `n_paths`. Under `criterion = "latest_departure"` a
+`departure_time` column follows `arrival_time`, holding the latest
+departure supremum from `from`, and a `duration` column; `arrival_time`,
+`n_hops` and `n_paths` then describe the journeys that depart exactly
+then (earliest arrival, then fewest hops, within that family). Under
+`criterion = "fastest"` the same two columns hold the fastest journey's
+departure and its duration. In both cases an unattained optimum keeps
+its limiting departure, arrival and duration but has `n_hops = NA` and
+`n_paths = 0`. Under `criterion = "shortest"` a `path_cost` column
+follows `n_paths`: the summed cost of the cheapest journey, `n_hops` is
+the fewest hops among the cheapest journeys (`NA` when they differ), and
+`arrival_time` and `n_paths` describe the cheapest journeys that arrive
+earliest. Bounded mode adds `path_session` and `n_best_sessions`;
+separate mode adds `session` and `origin`, one complete vertex block per
+session. Use `as.data.frame(x, what = "steps")` for every reconstructed
+optimal route: one row per vertex visited, with `endpoint`, `path_id`
 (endpoint-local, distinguishing tied atom sequences), `path_session`,
 `step`, `node`, `time` and `attained`, preceded by `session` in separate
 mode.
@@ -163,6 +225,31 @@ endpoint is still reachable and still reports its route family:
 supremum are those of the family, and `attained = FALSE` records that
 the instant itself is not realised.
 
+A latest-departure query is solved by time reversal: the latest
+departure from `from` into a vertex `z` by `end` is the label a backward
+search rooted at `z` assigns to `from`, so one backward search per
+vertex answers it with every session, activity and attainment rule
+inherited unchanged. In particular each target inherits the backward
+anchor rule and must be active at `end`; the empty journey departs from
+`from` at `end` itself. The `optimality` attribute records `"maximum"`
+for this criterion and `"minimum"` for the others, and `deadline`
+records the resolved `end`.
+
+A shortest query with weight costs is solved by settling vertex
+appearances in order of accumulated cost (Wu et al., 2016): every cost
+is positive, so the cheapest open appearance is final when it is settled
+and every predecessor of an appearance is settled before it, which is
+what makes the journey count exact. Two journeys tie when their summed
+weights agree within a relative tolerance of
+`sqrt(.Machine$double.eps)`.
+
+A fastest query is a sweep over candidate departures: for a fixed
+source-ready time the problem is prefix-optimal again, so the minimum
+duration is the minimum over departures `d` of the earliest arrival from
+`d` minus `d`. The candidates are the atom-domain endpoints (shifted by
+whole multiples of `traversal_time`), each taken exactly and from below,
+at which the source can depart; one forward search runs per candidate.
+
 With `sessions = "bounded"`, each endpoint is optimised across complete
 session-specific searches. A unique winner is named in `path_session`;
 ties leave it missing and are counted in `n_best_sessions`. No merged
@@ -223,10 +310,78 @@ Casteigts, A., Corsini, A., & Sarkar, W. (2024). Simple, strict, proper,
 happy: A study of reachability in temporal graphs. *Theoretical Computer
 Science*, 991, 114434.
 
+Buss, S., Molter, H., Niedermeier, R., & Rymar, M. (2024). Algorithmic
+aspects of temporal betweenness. *Network Science*, 12(2), 160-188.
+
+Wu, H., Cheng, J., Huang, S., Ke, Y., Lu, Y., & Xu, Y. (2014). Path
+problems in temporal graphs. *Proceedings of the VLDB Endowment*, 7(9),
+721-732.
+
+Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest,
+fastest, and foremost journeys in dynamic networks. *International
+Journal of Foundations of Computer Science*, 14(2), 267-285.
+
 ## Examples
 
 ``` r
 dn <- dynet(school_contacts)
+paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
+#> # Latest departures from ‘Ana’ reaching each vertex by t = 10
+#> # reaches 12 of 13 other vertices | time in step
+#>   node reachable arrival_time departure_time duration attained latency n_hops
+#>    Ana      TRUE        10.00          10.00     0.00     TRUE   10.00      0
+#>    Ben      TRUE         9.59           7.07     2.52    FALSE    9.59     NA
+#>   Cara      TRUE         6.77           6.77     0.00    FALSE    6.77     NA
+#>    Dan      TRUE         9.49           9.13     0.36    FALSE    9.49     NA
+#>    Eve     FALSE           NA             NA       NA    FALSE      NA     NA
+#>   Finn      TRUE         6.96           6.77     0.19    FALSE    6.96     NA
+#>   Gita      TRUE         9.35           9.13     0.22    FALSE    9.35     NA
+#>   Hugo      TRUE         9.93           9.13     0.80    FALSE    9.93     NA
+#>   Iris      TRUE        10.00           6.77     3.23    FALSE   10.00     NA
+#>  Jonas      TRUE         9.13           9.13     0.00    FALSE    9.13     NA
+#>   Kira      TRUE         7.07           7.07     0.00    FALSE    7.07     NA
+#>    Leo      TRUE         9.65           6.77     2.88    FALSE    9.65     NA
+#>  n_paths
+#>        1
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#>        0
+#> # 2 more rows. summary() aggregates them; plot() draws the tree.
+
+# Every earliest-arrival journey, not only the shortest ones
+few <- dynet(data.frame(from = c("A", "A", "B", "C"),
+                        to = c("D", "B", "C", "D"),
+                        time = c(4, 1, 2, 4)),
+             format = "contact", directed = TRUE)
+paths(few, from = "A", criterion = "foremost")
+#> # Time-respecting paths from ‘A’, from t = 1
+#> # reaches 3 of 3 other vertices | time in step
+#>  node reachable arrival_time attained latency n_hops n_paths
+#>     A      TRUE            1     TRUE       0      0       1
+#>     B      TRUE            1     TRUE       0      1       1
+#>     C      TRUE            2     TRUE       1      2       1
+#>     D      TRUE            4     TRUE       3     NA       2
+paths(few, from = "A", criterion = "fastest")
+#> # Time-respecting paths from ‘A’, from t = 1
+#> # reaches 3 of 3 other vertices | time in step
+#>  node reachable arrival_time departure_time duration attained latency n_hops
+#>     A      TRUE            1              1        0     TRUE       0      0
+#>     B      TRUE            1              1        0     TRUE       0      1
+#>     C      TRUE            2              1        1     TRUE       1      2
+#>     D      TRUE            4              4        0     TRUE       3      1
+#>  n_paths
+#>        1
+#>        1
+#>        1
+#>        1
 routes <- paths(dn, from = "Ana")
 routes
 #> # Time-respecting paths from ‘Ana’, from t = 0

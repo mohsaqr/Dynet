@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -233,7 +233,14 @@
           <code><a href="path_centrality.html">path_centrality()</a></code>
 
         </dt>
-        <dd>Closeness and betweenness on time-respecting paths</dd>
+        <dd>Centrality on time-respecting paths and temporal walks</dd>
+
+        <dt>
+
+          <code><a href="edge_centrality.html">edge_centrality()</a></code>
+
+        </dt>
+        <dd>Temporal centrality of the contacts themselves</dd>
 
         <dt>
 
@@ -279,10 +286,126 @@
 
         <dt>
 
+          <code><a href="gaps.html">gaps()</a></code>
+
+        </dt>
+        <dd>Inter-event gaps</dd>
+
+        <dt>
+
+          <code><a href="persistence.html">persistence()</a></code>
+
+        </dt>
+        <dd>Neighbourhood persistence between consecutive time bins</dd>
+
+        <dt>
+
+          <code><a href="turnover.html">turnover()</a></code>
+
+        </dt>
+        <dd>Network turnover: volatility and fluctuability</dd>
+
+        <dt>
+
+          <code><a href="segregation.html">segregation()</a></code>
+
+        </dt>
+        <dd>Segregation-integration difference over time</dd>
+
+        <dt>
+
+          <code><a href="motifs.html">motifs()</a></code>
+
+        </dt>
+        <dd>Delta-temporal three-node motif census</dd>
+
+        <dt>
+
           <code><a href="similarity.html">similarity()</a></code>
 
         </dt>
         <dd>Similarity between the networks at each pair of time points</dd>
+      </dl></div><div class="section level2">
+      <h2 id="null-models">Null models<a class="anchor" aria-label="anchor" href="#null-models"></a></h2>
+
+      <div class="section-desc"><p>Surrogate and simulated temporal networks, and the comparison of any measure against them.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="randomise.html">randomise()</a></code>
+
+        </dt>
+        <dd>Surrogate temporal networks from a null model</dd>
+
+        <dt>
+
+          <code><a href="random_dynet.html">random_dynet()</a></code>
+
+        </dt>
+        <dd>Simulate a random temporal network</dd>
+
+        <dt>
+
+          <code><a href="significance.html">significance()</a></code>
+
+        </dt>
+        <dd>Compare a measure against a temporal null model</dd>
+      </dl></div><div class="section level2">
+      <h2 id="communities-and-phases">Communities and phases<a class="anchor" aria-label="anchor" href="#communities-and-phases"></a></h2>
+
+      <div class="section-desc"><p>Communities that persist and change across time, and the phases a network passes through.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="temporal_communities.html">temporal_communities()</a></code>
+
+        </dt>
+        <dd>Temporal community detection by generalized Louvain</dd>
+
+        <dt>
+
+          <code><a href="multislice_modularity.html">multislice_modularity()</a></code>
+
+        </dt>
+        <dd>Multislice modularity of a partition of a temporal network</dd>
+
+        <dt>
+
+          <code><a href="match_communities.html">match_communities()</a></code>
+
+        </dt>
+        <dd>Give community labels a meaning that carries across time</dd>
+
+        <dt>
+
+          <code><a href="community_change.html">community_change()</a></code>
+
+        </dt>
+        <dd>How much the community structure moved between bins</dd>
+
+        <dt>
+
+          <code><a href="community_trajectory.html">community_trajectory()</a></code>
+
+        </dt>
+        <dd>What each vertex did across the community structure</dd>
+
+        <dt>
+
+          <code><a href="phases.html">phases()</a></code>
+
+        </dt>
+        <dd>Detect temporal phases by clustering the between-bin similarity</dd>
       </dl></div><div class="section level2">
       <h2 id="paths">Paths<a class="anchor" aria-label="anchor" href="#paths"></a></h2>
 
@@ -330,7 +453,7 @@
       </dl></div><div class="section level2">
       <h2 id="structure">Structure<a class="anchor" aria-label="anchor" href="#structure"></a></h2>
 
-      <div class="section-desc"><p>Turn a temporal network into another object: a time-expanded projection, a static weighted network, or a subgraph.</p></div>
+      <div class="section-desc"><p>Turn a temporal network into another object: a time-expanded projection, an event graph, a static weighted network, or a subgraph.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -343,6 +466,13 @@
 
         </dt>
         <dd>Project a temporal network into directed vertex-time states</dd>
+
+        <dt>
+
+          <code><a href="event_graph.html">event_graph()</a></code>
+
+        </dt>
+        <dd>The event graph of a temporal network</dd>
 
         <dt>
 
@@ -499,10 +629,38 @@
 
         <dt>
 
+          <code><a href="print.dynet_communities.html">print(<i>&lt;dynet_communities&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a temporal community partition</dd>
+
+        <dt>
+
+          <code><a href="print.dynet_event_graph.html">print(<i>&lt;dynet_event_graph&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print an event graph</dd>
+
+        <dt>
+
           <code><a href="print.dynet_metric.html">print(<i>&lt;dynet_metric&gt;</i>)</a></code>
 
         </dt>
         <dd>Print a temporal measure</dd>
+
+        <dt>
+
+          <code><a href="print.dynet_motifs.html">print(<i>&lt;dynet_motifs&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a temporal motif census</dd>
+
+        <dt>
+
+          <code><a href="print.dynet_null.html">print(<i>&lt;dynet_null&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print surrogate networks</dd>
 
         <dt>
 
@@ -527,6 +685,13 @@
 
         <dt>
 
+          <code><a href="print.dynet_phases.html">print(<i>&lt;dynet_phases&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print detected temporal phases</dd>
+
+        <dt>
+
           <code><a href="print.dynet_projection.html">print(<i>&lt;dynet_projection&gt;</i>)</a></code>
 
         </dt>
@@ -538,6 +703,13 @@
 
         </dt>
         <dd>Print participation shift counts</dd>
+
+        <dt>
+
+          <code><a href="print.dynet_significance.html">print(<i>&lt;dynet_significance&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a permutation test</dd>
 
         <dt>
 
@@ -576,10 +748,38 @@
 
         <dt>
 
+          <code><a href="summary.dynet_communities.html">summary(<i>&lt;dynet_communities&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarize a temporal community partition</dd>
+
+        <dt>
+
+          <code><a href="summary.dynet_event_graph.html">summary(<i>&lt;dynet_event_graph&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise an event graph</dd>
+
+        <dt>
+
           <code><a href="summary.dynet_metric.html">summary(<i>&lt;dynet_metric&gt;</i>)</a></code>
 
         </dt>
         <dd>Summarise a temporal measure</dd>
+
+        <dt>
+
+          <code><a href="summary.dynet_motifs.html">summary(<i>&lt;dynet_motifs&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise a temporal motif census by family</dd>
+
+        <dt>
+
+          <code><a href="summary.dynet_null.html">summary(<i>&lt;dynet_null&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise surrogate networks</dd>
 
         <dt>
 
@@ -618,6 +818,13 @@
 
         <dt>
 
+          <code><a href="summary.dynet_significance.html">summary(<i>&lt;dynet_significance&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise a permutation test</dd>
+
+        <dt>
+
           <code><a href="summary.dynet_similarity.html">summary(<i>&lt;dynet_similarity&gt;</i>)</a></code>
 
         </dt>
@@ -646,10 +853,38 @@
 
         <dt>
 
+          <code><a href="plot.dynet_communities.html">plot(<i>&lt;dynet_communities&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Draw community membership as ribbons over time</dd>
+
+        <dt>
+
+          <code><a href="plot.dynet_event_graph.html">plot(<i>&lt;dynet_event_graph&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot an event graph as a storyline</dd>
+
+        <dt>
+
           <code><a href="plot.dynet_metric.html">plot(<i>&lt;dynet_metric&gt;</i>)</a></code>
 
         </dt>
         <dd>Plot a temporal measure</dd>
+
+        <dt>
+
+          <code><a href="plot.dynet_motifs.html">plot(<i>&lt;dynet_motifs&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot a temporal motif census</dd>
+
+        <dt>
+
+          <code><a href="plot.dynet_null.html">plot(<i>&lt;dynet_null&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot the surrogate activity profile against the observed one</dd>
 
         <dt>
 
@@ -681,10 +916,24 @@
 
         <dt>
 
+          <code><a href="plot.dynet_phases.html">plot(<i>&lt;dynet_phases&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Draw detected phases over the between-bin similarity heatmap</dd>
+
+        <dt>
+
           <code><a href="plot.dynet_pshifts.html">plot(<i>&lt;dynet_pshifts&gt;</i>)</a></code>
 
         </dt>
         <dd>Plot participation shift counts</dd>
+
+        <dt>
+
+          <code><a href="plot.dynet_significance.html">plot(<i>&lt;dynet_significance&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot a permutation test</dd>
 
         <dt>
 
@@ -751,10 +1000,45 @@
 
         <dt>
 
+          <code><a href="as.data.frame.dynet_communities.html">as.data.frame(<i>&lt;dynet_communities&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy data frame of a temporal community partition</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.dynet_event_graph.html">as.data.frame(<i>&lt;dynet_event_graph&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy tables from an event graph</dd>
+
+        <dt>
+
           <code><a href="as.data.frame.dynet_metric.html">as.data.frame(<i>&lt;dynet_metric&gt;</i>)</a></code>
 
         </dt>
         <dd>Tidy data frame of a temporal measure</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.dynet_modularity.html">as.data.frame(<i>&lt;dynet_modularity&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy data frame of a multislice modularity result</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.dynet_motifs.html">as.data.frame(<i>&lt;dynet_motifs&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy frame of a temporal motif census</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.dynet_null.html">as.data.frame(<i>&lt;dynet_null&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Coerce surrogate networks to a data frame</dd>
 
         <dt>
 
@@ -786,6 +1070,13 @@
 
         <dt>
 
+          <code><a href="as.data.frame.dynet_phases.html">as.data.frame(<i>&lt;dynet_phases&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy data frame of detected temporal phases</dd>
+
+        <dt>
+
           <code><a href="as.data.frame.dynet_projection.html">as.data.frame(<i>&lt;dynet_projection&gt;</i>)</a></code>
 
         </dt>
@@ -800,6 +1091,13 @@
 
         <dt>
 
+          <code><a href="as.data.frame.dynet_significance.html">as.data.frame(<i>&lt;dynet_significance&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Coerce a permutation test to a data frame</dd>
+
+        <dt>
+
           <code><a href="as.data.frame.dynet_similarity.html">as.data.frame(<i>&lt;dynet_similarity&gt;</i>)</a></code>
 
         </dt>
@@ -811,6 +1109,13 @@
 
         </dt>
         <dd>Tidy table of snapshot edges</dd>
+
+        <dt>
+
+          <code><a href="as.data.frame.dynet_trajectory.html">as.data.frame(<i>&lt;dynet_trajectory&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Tidy data frame of community trajectories</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

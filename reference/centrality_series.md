@@ -28,6 +28,7 @@ centrality_series(
   prestige = "indegree",
   rescale = FALSE,
   lambda = 1,
+  groups = NULL,
   plot = FALSE
 )
 ```
@@ -44,14 +45,14 @@ centrality_series(
   One or more of `"degree"`, `"strength"`, `"prestige"`, `"closeness"`,
   `"betweenness"`, `"eigenvector"`, `"pagerank"`, `"hub"`,
   `"authority"`, `"coreness"`, `"constraint"`, `"power"`, `"harary"`,
-  `"information"`, `"load"`, `"flow_betweenness"`, or `"diffusion"`. The
-  deprecated names `"indegree"` and `"outdegree"`, which warn with class
-  `dynet_deprecated` and are replaced by `measure = "degree"` with
-  `mode = "in"` or `mode = "out"`. Defaults to `"degree"`. Any other
-  name raises an error of class `dynet_unknown_measure`; the
-  directed-only measures `"prestige"`, `"hub"`, `"authority"` and the
-  two deprecated names `"indegree"` and `"outdegree"` raise
-  `dynet_needs_directed` on an undirected network.
+  `"information"`, `"load"`, `"flow_betweenness"`, `"participation"` or
+  `"diffusion"`. The deprecated names `"indegree"` and `"outdegree"`,
+  which warn with class `dynet_deprecated` and are replaced by
+  `measure = "degree"` with `mode = "in"` or `mode = "out"`. Defaults to
+  `"degree"`. Any other name raises an error of class
+  `dynet_unknown_measure`; the directed-only measures `"prestige"`,
+  `"hub"`, `"authority"` and the two deprecated names `"indegree"` and
+  `"outdegree"` raise `dynet_needs_directed` on an undirected network.
 
 - sessions:
 
@@ -80,11 +81,11 @@ centrality_series(
   labelled `degree_in` and `degree_out` in the `measure` column, while a
   call naming one direction keeps the plain measure name. Applies to
   `"degree"`, `"strength"`, `"closeness"`, `"coreness"`, `"harary"`,
-  `"eigenvector"` and `"diffusion"`; the remaining measures have a
-  single directional definition and ignore it. Ignored entirely on an
-  undirected network. In-degree is therefore `mode = "in"`. The old
-  `"indegree"` and `"outdegree"` measure names remain as deprecated
-  aliases.
+  `"eigenvector"`, `"diffusion"` and `"participation"`; the remaining
+  measures have a single directional definition and ignore it. Ignored
+  entirely on an undirected network. In-degree is therefore
+  `mode = "in"`. The old `"indegree"` and `"outdegree"` measure names
+  remain as deprecated aliases.
 
 - start, end:
 
@@ -145,6 +146,12 @@ centrality_series(
   Nonnegative multiplier for `"diffusion"`, `1` by default. Diffusion
   degree is the sum of the selected degree of a vertex and all of its
   one-step neighbours, multiplied by `lambda`.
+
+- groups:
+
+  For `measure = "participation"` only: the name of a node attribute, or
+  one group label per vertex. Required for that measure and rejected for
+  every other.
 
 - plot:
 

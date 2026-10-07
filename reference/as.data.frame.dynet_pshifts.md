@@ -43,18 +43,18 @@ thirteen rows per classified turn, adding `sequence`, `event`, `time`,
 dn <- dynet(school_contacts)
 shifts <- pshifts(dn)
 as.data.frame(shifts)
-#>    shift          family count
-#> 1  AB-BA  turn_receiving     0
-#> 2  AB-B0  turn_receiving     0
-#> 3  AB-BY  turn_receiving    18
-#> 4  A0-X0   turn_claiming     0
-#> 5  A0-XA   turn_claiming     1
-#> 6  A0-XY   turn_claiming     2
-#> 7  AB-X0   turn_usurping     3
-#> 8  AB-XA   turn_usurping    14
-#> 9  AB-XB   turn_usurping    20
-#> 10 AB-XY   turn_usurping   169
-#> 11 A0-AY turn_continuing     0
-#> 12 AB-A0 turn_continuing     0
-#> 13 AB-AY turn_continuing     8
+#>    shift          family measure value
+#> 1  AB-BA  turn_receiving   count     0
+#> 2  AB-B0  turn_receiving   count     0
+#> 3  AB-BY  turn_receiving   count    18
+#> 4  A0-X0   turn_claiming   count     0
+#> 5  A0-XA   turn_claiming   count     1
+#> 6  A0-XY   turn_claiming   count     2
+#> 7  AB-X0   turn_usurping   count     3
+#> 8  AB-XA   turn_usurping   count    14
+#> 9  AB-XB   turn_usurping   count    20
+#> 10 AB-XY   turn_usurping   count   169
+#> 11 A0-AY turn_continuing   count     0
+#> 12 AB-A0 turn_continuing   count     0
+#> 13 AB-AY turn_continuing   count     8
 ```

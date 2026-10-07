@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,7 +41,65 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.5.1" id="dynet-051">Dynet 0.5.1<a class="anchor" aria-label="anchor" href="#dynet-051"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.7.0" id="dynet-070">Dynet 0.7.0<a class="anchor" aria-label="anchor" href="#dynet-070"></a></h2>
+<ul><li>
+<code><a href="../reference/event_graph.html">event_graph()</a></code> builds the event graph of a temporal network: every spell is a vertex, and an arc joins two events that share a vertex when the later one starts after the earlier one ends, within <code>delta</code> (Kivela et al., 2018). A path in it is a chain of events taken one after another, so on contact data its reachability is that of <code><a href="../reference/paths.html">paths()</a></code> with a short traversal time. <code>adjacency = "next"</code> keeps only the earliest successors (Kovanen et al., 2011); <code>direction</code> and <code>sessions</code> decide which shared vertices and which session blocks may join two events. The result has <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> and <code>as.data.frame(what = "events" | "adjacencies")</code> methods.</li>
+<li>The reference index lists every exported verb again, including the measurement, null-model and community verbs that arrived in 0.6.0.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.0" id="dynet-060">Dynet 0.6.0<a class="anchor" aria-label="anchor" href="#dynet-060"></a></h2>
+<p>The measurement work developed on the <code><a href="https://rdrr.io/r/base/Control.html" class="external-link">next</a></code> branch joins the released line. Every addition is available under the 0.5 names: snapshot centrality is <code><a href="../reference/centrality_series.html">centrality_series()</a></code>, centrality on time-respecting paths is <code><a href="../reference/path_centrality.html">path_centrality()</a></code>, and temporal reach is <code><a href="../reference/reachability.html">reachability()</a></code>.</p>
+<div class="section level3">
+<h3 id="null-models-and-significance-0-6-0">Null models and significance<a class="anchor" aria-label="anchor" href="#null-models-and-significance-0-6-0"></a></h3>
+<ul><li>
+<code><a href="../reference/randomise.html">randomise()</a></code> draws surrogate temporal networks from a null model, and <code><a href="../reference/random_dynet.html">random_dynet()</a></code> simulates a temporal network from a binomial, Poisson, block or activation model.</li>
+<li>
+<code><a href="../reference/significance.html">significance()</a></code> compares any verb that returns <code>measure</code> and <code>value</code> against a null model, with a percentile interval and a permutation p-value for every row, corrected for multiplicity.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="paths-and-centrality-0-6-0">Paths and centrality<a class="anchor" aria-label="anchor" href="#paths-and-centrality-0-6-0"></a></h3>
+<ul><li>
+<code><a href="../reference/paths.html">paths()</a></code> takes a <code>criterion</code>: <code>"foremost_then_shortest"</code> (the default and the earlier behaviour), <code>"min_hops"</code>, <code>"foremost"</code>, <code>"fastest"</code>, <code>"latest_departure"</code> and <code>"shortest"</code>. With <code>"shortest"</code>, <code>cost = "weight"</code> finds the journeys of least summed tie weight and reports <code>path_cost</code>.</li>
+<li>
+<code><a href="../reference/path_centrality.html">path_centrality()</a></code> takes the same <code>criterion</code> and <code>cost</code>, and gains <code>"efficiency"</code> and the stream measures <code>"katz"</code> (Beres et al., 2018), <code>"pagerank"</code> (Rozenshtein and Gionis, 2016) and <code>"walk"</code> (Oettershagen, Mutzel and Kriege, 2022). <code>top = k</code> returns the <code>k</code> most central vertices by closeness under <code>"min_hops"</code> or <code>"shortest"</code>, computing only the searches that ranking needs.</li>
+<li>
+<code><a href="../reference/reachability.html">reachability()</a></code> takes <code>criterion = "min_hops"</code>.</li>
+<li>
+<code><a href="../reference/edge_centrality.html">edge_centrality()</a></code> scores the contacts themselves; the scores of the contacts arriving at a vertex reconcile exactly with its temporal betweenness.</li>
+<li>
+<code><a href="../reference/centrality_series.html">centrality_series()</a></code> gains the participation coefficient, <code>measure = "participation"</code> with <code>groups</code>.</li>
+<li>
+<code><a href="../reference/metrics.html">metrics()</a></code> gains <code>"temporal_efficiency"</code> and <code>"temporal_diameter"</code>, with <code>basis</code> and <code>traversal_time</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="global-measures-inter-event-times-and-motifs-0-6-0">Global measures, inter-event times and motifs<a class="anchor" aria-label="anchor" href="#global-measures-inter-event-times-and-motifs-0-6-0"></a></h3>
+<ul><li>
+<code><a href="../reference/gaps.html">gaps()</a></code> returns inter-event gaps per vertex or per pair.</li>
+<li>
+<code><a href="../reference/persistence.html">persistence()</a></code> measures neighbourhood persistence between consecutive bins, and <code><a href="../reference/turnover.html">turnover()</a></code> reports volatility and fluctuability.</li>
+<li>
+<code><a href="../reference/segregation.html">segregation()</a></code> is the segregation-integration difference over time.</li>
+<li>
+<code><a href="../reference/motifs.html">motifs()</a></code> is the delta-temporal three-node motif census (Paranjape, Benson and Leskovec, 2017).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="temporal-communities-and-phases-0-6-0">Temporal communities and phases<a class="anchor" aria-label="anchor" href="#temporal-communities-and-phases-0-6-0"></a></h3>
+<ul><li>
+<code><a href="../reference/temporal_communities.html">temporal_communities()</a></code> detects communities by generalised Louvain on ordinally coupled slices, and <code><a href="../reference/multislice_modularity.html">multislice_modularity()</a></code> scores a partition.</li>
+<li>
+<code><a href="../reference/match_communities.html">match_communities()</a></code> gives community labels a meaning that carries across time; <code><a href="../reference/community_change.html">community_change()</a></code> measures how much the structure moved between bins, and <code><a href="../reference/community_trajectory.html">community_trajectory()</a></code> what each vertex did across it.</li>
+<li>
+<code><a href="../reference/phases.html">phases()</a></code> detects temporal phases by clustering the between-bin similarity.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="internal-0-6-0">Internal<a class="anchor" aria-label="anchor" href="#internal-0-6-0"></a></h3>
+<ul><li>The path search keeps the 0.5.0 speed-up for the default criterion and falls back to exhaustive search only where a criterion needs it: the pure foremost family, and searches from an unattained origin.</li>
+<li>
+<code>aricode</code>, <code>clue</code>, <code>cluster</code> and <code>multinet</code> are not suggested: they served only as test oracles, and equivalence tests do not ship.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.1" id="dynet-051">Dynet 0.5.1<a class="anchor" aria-label="anchor" href="#dynet-051"></a></h2><p class="text-muted">CRAN release: 2026-10-07</p>
 <ul><li>CRAN resubmission. The <code><a href="../reference/pathways.html">pathways()</a></code> example pools three named sources instead of all fourteen, and the <code><a href="../reference/animate.html">animate()</a></code> examples draw fewer frames, so every example runs in well under a second.</li>
 <li>
 <code>thought_chains</code> is documented as based on the <em>Trees of Thought</em> study (Saqr, López-Pernas and Törmänen, 2026) with about 20 percent of the records removed, dates and rates changed and anonymised, and the data augmented by simulation.</li>

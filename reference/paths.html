@@ -31,7 +31,7 @@ edge-row order or duplicate spell rows."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,10 +88,14 @@ edge-row order or duplicate spell rows.</p>
 <span>  <span class="va">from</span>,</span>
 <span>  at <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"forward"</span>, <span class="st">"backward"</span><span class="op">)</span>,</span>
+<span>  criterion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"foremost_then_shortest"</span>, <span class="st">"min_hops"</span>, <span class="st">"foremost"</span>, <span class="st">"fastest"</span>,</span>
+<span>    <span class="st">"latest_departure"</span>, <span class="st">"shortest"</span><span class="op">)</span>,</span>
+<span>  cost <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hops"</span>, <span class="st">"weight"</span><span class="op">)</span>,</span>
 <span>  sessions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bounded"</span>, <span class="st">"collapse"</span>, <span class="st">"separate"</span><span class="op">)</span>,</span>
 <span>  start <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  end <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  traversal_time <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  max_states <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -127,6 +131,46 @@ scale. It cannot be combined with <code>start</code> or <code>end</code>.</p></d
 <code>"backward"</code> traces who could have reached it.</p></dd>
 
 
+<dt id="arg-criterion">criterion<a class="anchor" aria-label="anchor" href="#arg-criterion"></a></dt>
+<dd><p>Which optimisation problem to solve.
+<code>"foremost_then_shortest"</code> (the default, and what every earlier release
+computed) takes the earliest arrival and, among journeys attaining it, the
+fewest hops. <code>"min_hops"</code> takes the fewest time-respecting contacts and,
+among those, the earliest arrival. <code>"foremost"</code> is pure earliest arrival
+with no tie-break: the whole family of vertex-simple journeys attaining
+it, so <code>n_paths</code> counts every one and <code>n_hops</code> is <code>NA</code> when they differ
+in length. Counting foremost paths is #P-hard in general (Buss et al.,
+2024), so the family is enumerated exactly, keeping only prefixes that
+can still attain some endpoint's optimum; the search raises
+<code>dynet_path_family_too_large</code> if it exceeds <code>max_states</code>. <code>"fastest"</code>
+minimises journey duration, arrival minus departure, the one criterion
+that measures transit rather than clock position; among equally fast
+journeys it takes the earliest departure, then the fewest hops. Its
+minimum can be an infimum with no minimising journey (a departure that
+approaches an interval's excluded terminus), reported with
+<code>attained = FALSE</code> and an empty family. <code>"latest_departure"</code> asks the planning
+question: leaving <code>from</code>, how late can one set off and still reach each
+vertex by <code>end</code>? It is a forward query and needs a finite deadline, so
+<code>end</code> (or <code>at</code>) must be given unless the network has an explicit
+observation window; combining it with <code>direction = "backward"</code> is an
+error, because the target-pivoted latest departure is what a backward
+query already reports. These are different problems and can select
+different journeys; only reachability is identical across criteria.</p></dd>
+
+
+<dt id="arg-cost">cost<a class="anchor" aria-label="anchor" href="#arg-cost"></a></dt>
+<dd><p>For <code>criterion = "shortest"</code> only: what a contact costs.
+<code>"hops"</code> (the default) charges one per contact, which is exactly
+<code>criterion = "min_hops"</code>. <code>"weight"</code> charges each contact its tie weight,
+so the shortest journey is the one with the least summed weight, and the
+table gains a <code>path_cost</code> column holding that sum. Every weight must be
+positive and finite (<code>dynet_bad_weight</code> otherwise): a zero-cost cycle
+would re-admit non-simple journeys. The weight is a cost only; when a
+contact can be entered, and how long a hop takes, is unchanged. Two
+overlapping spells of one pair are one contact, at the weight of the
+earlier spell.</p></dd>
+
+
 <dt id="arg-sessions">sessions<a class="anchor" aria-label="anchor" href="#arg-sessions"></a></dt>
 <dd><p>How to treat sessions, as in <code><a href="path_centrality.html">path_centrality()</a></code>.</p></dd>
 
@@ -140,6 +184,12 @@ instead of <code>at</code>.</p></dd>
 <dt id="arg-traversal-time">traversal_time<a class="anchor" aria-label="anchor" href="#arg-traversal-time"></a></dt>
 <dd><p>Nonnegative duration charged for every hop, in the
 network's time unit. A calendar network also accepts a scalar <code>difftime</code>.</p></dd>
+
+
+<dt id="arg-max-states">max_states<a class="anchor" aria-label="anchor" href="#arg-max-states"></a></dt>
+<dd><p>For <code>criterion = "foremost"</code> only: the largest number of
+search states one source may expand before the family is declared too
+large. Supplying it with any other criterion is an error.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>
@@ -156,8 +206,20 @@ the result when the figure needs arguments of its own.</p></dd>
 per vertex and columns <code>node</code>, <code>reachable</code>, <code>arrival_time</code>, <code>attained</code>
 (whether that optimum itself is realised), <code>latency</code> (elapsed time
 between the origin and <code>arrival_time</code>, in either direction), <code>n_hops</code>,
-and the exact count <code>n_paths</code>. Bounded mode adds
-<code>path_session</code> and <code>n_best_sessions</code>; separate mode adds <code>session</code> and
+and the exact count <code>n_paths</code>. Under
+<code>criterion = "latest_departure"</code> a <code>departure_time</code> column follows
+<code>arrival_time</code>, holding the latest departure supremum from <code>from</code>, and a
+<code>duration</code> column; <code>arrival_time</code>, <code>n_hops</code> and <code>n_paths</code> then describe
+the journeys that depart exactly then (earliest arrival, then fewest
+hops, within that family). Under <code>criterion = "fastest"</code> the same two
+columns hold the fastest journey's departure and its duration. In both
+cases an unattained optimum keeps its limiting departure, arrival and
+duration but has <code>n_hops = NA</code> and <code>n_paths = 0</code>. Under
+<code>criterion = "shortest"</code> a <code>path_cost</code> column follows <code>n_paths</code>: the
+summed cost of the cheapest journey, <code>n_hops</code> is the fewest hops among
+the cheapest journeys (<code>NA</code> when they differ), and <code>arrival_time</code> and
+<code>n_paths</code> describe the cheapest journeys that arrive earliest. Bounded
+mode adds <code>path_session</code> and <code>n_best_sessions</code>; separate mode adds <code>session</code> and
 <code>origin</code>, one complete vertex block per session. Use
 <code>as.data.frame(x, what = "steps")</code> for every reconstructed optimal route:
 one row per vertex visited, with <code>endpoint</code>, <code>path_id</code> (endpoint-local,
@@ -213,6 +275,26 @@ not itself be an attainable departure. Such an endpoint is still reachable
 and still reports its route family: <code>n_hops</code>, <code>n_paths</code> and the steps of
 the routes that approach the supremum are those of the family, and
 <code>attained = FALSE</code> records that the instant itself is not realised.</p>
+<p>A latest-departure query is solved by time reversal: the latest departure
+from <code>from</code> into a vertex <code>z</code> by <code>end</code> is the label a backward search rooted
+at <code>z</code> assigns to <code>from</code>, so one backward search per vertex answers it with
+every session, activity and attainment rule inherited unchanged. In
+particular each target inherits the backward anchor rule and must be active
+at <code>end</code>; the empty journey departs from <code>from</code> at <code>end</code> itself. The
+<code>optimality</code> attribute records <code>"maximum"</code> for this criterion and
+<code>"minimum"</code> for the others, and <code>deadline</code> records the resolved <code>end</code>.</p>
+<p>A shortest query with weight costs is solved by settling vertex
+appearances in order of accumulated cost (Wu et al., 2016): every cost is
+positive, so the cheapest open appearance is final when it is settled and
+every predecessor of an appearance is settled before it, which is what
+makes the journey count exact. Two journeys tie when their summed weights
+agree within a relative tolerance of <code>sqrt(.Machine$double.eps)</code>.</p>
+<p>A fastest query is a sweep over candidate departures: for a fixed
+source-ready time the problem is prefix-optimal again, so the minimum
+duration is the minimum over departures <code>d</code> of the earliest arrival from
+<code>d</code> minus <code>d</code>. The candidates are the atom-domain endpoints (shifted by
+whole multiples of <code>traversal_time</code>), each taken exactly and from below,
+at which the source can depart; one forward search runs per candidate.</p>
 <p>With <code>sessions = "bounded"</code>, each endpoint is optimised across complete
 session-specific searches. A unique winner is named in <code>path_session</code>; ties
 leave it missing and are counted in <code>n_best_sessions</code>. No merged predecessor
@@ -264,11 +346,76 @@ Foundations of Computer Science</em>, 14(2), 267-285.</p>
 <p>Casteigts, A., Corsini, A., &amp; Sarkar, W. (2024). Simple, strict, proper,
 happy: A study of reachability in temporal graphs. <em>Theoretical Computer
 Science</em>, 991, 114434.</p>
+<p>Buss, S., Molter, H., Niedermeier, R., &amp; Rymar, M. (2024). Algorithmic
+aspects of temporal betweenness. <em>Network Science</em>, 12(2), 160-188.</p>
+<p>Wu, H., Cheng, J., Huang, S., Ke, Y., Lu, Y., &amp; Xu, Y. (2014). Path
+problems in temporal graphs. <em>Proceedings of the VLDB Endowment</em>, 7(9),
+721-732.</p>
+<p>Bui-Xuan, B., Ferreira, A., &amp; Jarry, A. (2003). Computing shortest, fastest,
+and foremost journeys in dynamic networks. <em>International Journal of
+Foundations of Computer Science</em>, 14(2), 267-285.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span>, criterion <span class="op">=</span> <span class="st">"latest_departure"</span>, end <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Latest departures from ‘Ana’ reaching each vertex by t = 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 12 of 13 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   node reachable arrival_time departure_time duration attained latency n_hops</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ana      TRUE        10.00          10.00     0.00     TRUE   10.00      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Ben      TRUE         9.59           7.07     2.52    FALSE    9.59     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cara      TRUE         6.77           6.77     0.00    FALSE    6.77     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Dan      TRUE         9.49           9.13     0.36    FALSE    9.49     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Eve     FALSE           NA             NA       NA    FALSE      NA     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Finn      TRUE         6.96           6.77     0.19    FALSE    6.96     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Gita      TRUE         9.35           9.13     0.22    FALSE    9.35     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Hugo      TRUE         9.93           9.13     0.80    FALSE    9.93     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Iris      TRUE        10.00           6.77     3.23    FALSE   10.00     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Jonas      TRUE         9.13           9.13     0.00    FALSE    9.13     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Kira      TRUE         7.07           7.07     0.00    FALSE    7.07     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Leo      TRUE         9.65           6.77     2.88    FALSE    9.65     NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 2 more rows. summary() aggregates them; plot() draws the tree.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Every earliest-arrival journey, not only the shortest ones</span></span></span>
+<span class="r-in"><span><span class="va">few</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>from <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                        to <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"D"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>, <span class="st">"D"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                        time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             format <span class="op">=</span> <span class="st">"contact"</span>, directed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">few</span>, from <span class="op">=</span> <span class="st">"A"</span>, criterion <span class="op">=</span> <span class="st">"foremost"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘A’, from t = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 3 of 3 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  node reachable arrival_time attained latency n_hops n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     A      TRUE            1     TRUE       0      0       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     B      TRUE            1     TRUE       0      1       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C      TRUE            2     TRUE       1      2       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     D      TRUE            4     TRUE       3     NA       2</span>
+<span class="r-in"><span><span class="fu">paths</span><span class="op">(</span><span class="va">few</span>, from <span class="op">=</span> <span class="st">"A"</span>, criterion <span class="op">=</span> <span class="st">"fastest"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘A’, from t = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # reaches 3 of 3 other vertices | time in step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  node reachable arrival_time departure_time duration attained latency n_hops</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     A      TRUE            1              1        0     TRUE       0      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     B      TRUE            1              1        0     TRUE       0      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C      TRUE            2              1        1     TRUE       1      2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     D      TRUE            4              4        0     TRUE       3      1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  n_paths</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        1</span>
 <span class="r-in"><span><span class="va">routes</span> <span class="op">&lt;-</span> <span class="fu">paths</span><span class="op">(</span><span class="va">dn</span>, from <span class="op">=</span> <span class="st">"Ana"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">routes</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Time-respecting paths from ‘Ana’, from t = 0</span>

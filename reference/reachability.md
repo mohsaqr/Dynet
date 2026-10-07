@@ -19,6 +19,7 @@ reachability(
   end = NULL,
   traversal_time = 0,
   measure = "reach",
+  criterion = c("foremost_then_shortest", "min_hops"),
   plot = FALSE
 )
 ```
@@ -65,9 +66,19 @@ reachability(
 
 - measure:
 
-  One or both of `"reach"`, the proportion of other vertices, and
-  `"reach_count"`, their number. The source vertex is excluded from
-  both. Defaults to `"reach"`.
+  One or more of `"reach"`, the share of other vertices joined by a
+  time-respecting path; `"reach_count"`, their number; `"latency"`, the
+  mean elapsed time to reach them; and `"hops"`, the mean number of
+  contacts taken. The source vertex is excluded from all four. Defaults
+  to `"reach"`. The two cost measures are `NaN` when nothing is
+  reachable, since the mean is then 0/0.
+
+- criterion:
+
+  Which optimisation problem the journeys solve. Reach and reach count
+  are identical under every criterion, because they depend on the
+  feasible set rather than on which journey wins; `latency` and `hops`
+  summarise the selected journeys and do depend on it.
 
 - plot:
 

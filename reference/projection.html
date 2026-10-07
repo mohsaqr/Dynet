@@ -17,7 +17,7 @@ matrix."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,8 @@ matrix.</p>
 <span>  end <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  step <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  window <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  omega <span class="op">=</span> <span class="fl">1</span></span>
+<span>  omega <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  coupling <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ordinal"</span>, <span class="st">"categorical"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -109,6 +110,16 @@ to the next, that is, the interlayer coupling of the time-expanded
 network. One, the default, keeps an identity arc as heavy as a unit
 contact; zero leaves the slices uncoupled. Must be a single finite
 non-negative number, or a <code>dynet_bad_input</code> error is raised.</p></dd>
+
+
+<dt id="arg-coupling">coupling<a class="anchor" aria-label="anchor" href="#arg-coupling"></a></dt>
+<dd><p>Which slices an identity arc may join. <code>"ordinal"</code>, the
+default and the only temporally meaningful choice, joins each slice to
+the next one only, so a vertex is tied to its immediate past and future.
+<code>"categorical"</code> joins every pair of slices, which is the convention for
+unordered aspect-layers such as phone, email and face-to-face; it is
+offered so a multiplex analysis can be reproduced and compared, and it
+asserts that time has no order. See Mucha et al. (2010), Figure 1.</p></dd>
 
 </dl></div>
     <div class="section level2">

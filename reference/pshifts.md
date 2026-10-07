@@ -68,17 +68,21 @@ pshifts(
 
 ## Value
 
-A `dynet_pshifts` data frame whose shape follows `output`. `"final"`
-gives one row per shift class – thirteen rows, always all thirteen even
-when a class never occurred – with columns `shift` (the Gibson label),
-`family` (the label's group) and `count`. `"cumulative"` gives one row
-per turn and class, that is thirteen rows per classified turn, with
-`sequence` and `event` locating the turn in its sequence, `time`,
-`speaker`, `target` and `group` describing the turn, and `shift`,
-`family` and `count` carrying the running total of that class up to and
-including the turn. Either shape gains a leading `session` column under
-`sessions = "separate"`, which reports each session on its own rows;
-`"bounded"` and `"collapse"` carry no session column. Print it,
+A `dynet_pshifts` data frame whose shape follows `output`, carrying the
+`measure`/`value` pair every other measurement verb returns, so a
+participation-shift census composes with the verbs that consume one;
+`measure` is the constant `"count"` and `value` is the integer count.
+`"final"` gives one row per shift class – thirteen rows, always all
+thirteen even when a class never occurred – with columns `shift` (the
+Gibson label), `family` (the label's group), `measure` and `value`.
+`"cumulative"` gives one row per turn and class, that is thirteen rows
+per classified turn, with `sequence` and `event` locating the turn in
+its sequence, `time`, `speaker`, `target` and `group` describing the
+turn, and `shift`, `family`, `measure` and `value` carrying the running
+total of that class up to and including the turn. Either shape gains a
+leading `session` column under `sessions = "separate"`, which reports
+each session on its own rows; `"bounded"` and `"collapse"` carry no
+session column. Print it,
 [`summary()`](https://rdrr.io/r/base/summary.html) it,
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) it, or take the
 plain frame with
@@ -123,18 +127,18 @@ dn <- dynet(data.frame(
 pshifts(dn)
 #> # Participation shifts (Gibson 2003, 13 types)
 #> # 1 classified turn transition across 4 families
-#>  shift          family count
-#>  AB-BA  turn_receiving     1
-#>  AB-B0  turn_receiving     0
-#>  AB-BY  turn_receiving     0
-#>  A0-X0   turn_claiming     0
-#>  A0-XA   turn_claiming     0
-#>  A0-XY   turn_claiming     0
-#>  AB-X0   turn_usurping     0
-#>  AB-XA   turn_usurping     0
-#>  AB-XB   turn_usurping     0
-#>  AB-XY   turn_usurping     0
-#>  A0-AY turn_continuing     0
-#>  AB-A0 turn_continuing     0
-#>  AB-AY turn_continuing     0
+#>  shift          family measure value
+#>  AB-BA  turn_receiving   count     1
+#>  AB-B0  turn_receiving   count     0
+#>  AB-BY  turn_receiving   count     0
+#>  A0-X0   turn_claiming   count     0
+#>  A0-XA   turn_claiming   count     0
+#>  A0-XY   turn_claiming   count     0
+#>  AB-X0   turn_usurping   count     0
+#>  AB-XA   turn_usurping   count     0
+#>  AB-XB   turn_usurping   count     0
+#>  AB-XY   turn_usurping   count     0
+#>  A0-AY turn_continuing   count     0
+#>  AB-A0 turn_continuing   count     0
+#>  AB-AY turn_continuing   count     0
 ```

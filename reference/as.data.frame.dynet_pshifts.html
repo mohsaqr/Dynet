@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,20 +87,20 @@ thirteen rows per classified turn, adding <code>sequence</code>, <code>event</co
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">shifts</span> <span class="op">&lt;-</span> <span class="fu"><a href="pshifts.html">pshifts</a></span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">shifts</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    shift          family count</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  AB-BA  turn_receiving     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  AB-B0  turn_receiving     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  AB-BY  turn_receiving    18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  A0-X0   turn_claiming     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  A0-XA   turn_claiming     1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  A0-XY   turn_claiming     2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7  AB-X0   turn_usurping     3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8  AB-XA   turn_usurping    14</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9  AB-XB   turn_usurping    20</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10 AB-XY   turn_usurping   169</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11 A0-AY turn_continuing     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12 AB-A0 turn_continuing     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13 AB-AY turn_continuing     8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    shift          family measure value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  AB-BA  turn_receiving   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  AB-B0  turn_receiving   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  AB-BY  turn_receiving   count    18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  A0-X0   turn_claiming   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  A0-XA   turn_claiming   count     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  A0-XY   turn_claiming   count     2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7  AB-X0   turn_usurping   count     3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  AB-XA   turn_usurping   count    14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9  AB-XB   turn_usurping   count    20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 AB-XY   turn_usurping   count   169</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11 A0-AY turn_continuing   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 AB-A0 turn_continuing   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13 AB-AY turn_continuing   count     8</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

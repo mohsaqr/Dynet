@@ -13,7 +13,7 @@ silent in week five."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,6 +65,8 @@ silent in week five.</p>
 <span>  end <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  step <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  window <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hops"</span>, <span class="st">"latency"</span><span class="op">)</span>,</span>
+<span>  traversal_time <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -133,6 +135,25 @@ overlapping window; <code>0</code> samples the network at each point in time.
 right so an event at the final instant is inside it; it cannot be combined
 with <code>step</code>, and under <code>sessions = "separate"</code> or discontinuous
 observation it gives one window per session or observed component.</p></dd>
+
+
+<dt id="arg-basis">basis<a class="anchor" aria-label="anchor" href="#arg-basis"></a></dt>
+<dd><p>For <code>"temporal_efficiency"</code> and <code>"temporal_diameter"</code> only:
+what a temporal distance counts. <code>"hops"</code>, the default, counts contacts,
+so a reciprocal is always in <code>(0, 1]</code> and efficiency is finite.
+<code>"latency"</code> counts elapsed time from the source, which at
+<code>traversal_time = 0</code> can be exactly zero for a journey completed within
+one instant; efficiency is then infinite, and a <code>dynet_zero_latency</code>
+warning says so rather than the value being clamped away. Naming it
+without a path measure raises <code>dynet_bad_input</code>.</p></dd>
+
+
+<dt id="arg-traversal-time">traversal_time<a class="anchor" aria-label="anchor" href="#arg-traversal-time"></a></dt>
+<dd><p>For <code>"temporal_efficiency"</code> and
+<code>"temporal_diameter"</code> only: nonnegative duration charged for every
+temporal-path hop, in the network's time unit; <code>0</code> by default. A calendar
+network also accepts a scalar <code>difftime</code>. Naming it without a path
+measure raises <code>dynet_bad_input</code>.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>

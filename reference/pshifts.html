@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,15 +107,18 @@ the result when the figure needs arguments of its own.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>dynet_pshifts</code> data frame whose shape follows <code>output</code>.
+    <p>A <code>dynet_pshifts</code> data frame whose shape follows <code>output</code>, carrying
+the <code>measure</code>/<code>value</code> pair every other measurement verb returns, so a
+participation-shift census composes with the verbs that consume one;
+<code>measure</code> is the constant <code>"count"</code> and <code>value</code> is the integer count.
 <code>"final"</code> gives one row per shift class – thirteen rows, always all
 thirteen even when a class never occurred – with columns <code>shift</code> (the
-Gibson label), <code>family</code> (the label's group) and <code>count</code>.
+Gibson label), <code>family</code> (the label's group), <code>measure</code> and <code>value</code>.
 <code>"cumulative"</code> gives one row per turn and class, that is thirteen rows
 per classified turn, with <code>sequence</code> and <code>event</code> locating the turn in its
 sequence, <code>time</code>, <code>speaker</code>, <code>target</code> and <code>group</code> describing the turn,
-and <code>shift</code>, <code>family</code> and <code>count</code> carrying the running total of that
-class up to and including the turn. Either shape gains a leading
+and <code>shift</code>, <code>family</code>, <code>measure</code> and <code>value</code> carrying the running total
+of that class up to and including the turn. Either shape gains a leading
 <code>session</code> column under <code>sessions = "separate"</code>, which reports each
 session on its own rows; <code>"bounded"</code> and <code>"collapse"</code> carry no session
 column. Print it, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> it, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> it, or take the plain frame
@@ -160,20 +163,20 @@ differentiation in group conversation. <em>Social Forces</em>, 81, 1335–1380.
 <span class="r-in"><span><span class="fu">pshifts</span><span class="op">(</span><span class="va">dn</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # Participation shifts (Gibson 2003, 13 types)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 1 classified turn transition across 4 families</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  shift          family count</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-BA  turn_receiving     1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-B0  turn_receiving     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-BY  turn_receiving     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-X0   turn_claiming     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-XA   turn_claiming     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-XY   turn_claiming     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-X0   turn_usurping     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XA   turn_usurping     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XB   turn_usurping     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XY   turn_usurping     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-AY turn_continuing     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-A0 turn_continuing     0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-AY turn_continuing     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  shift          family measure value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-BA  turn_receiving   count     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-B0  turn_receiving   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-BY  turn_receiving   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-X0   turn_claiming   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-XA   turn_claiming   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-XY   turn_claiming   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-X0   turn_usurping   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XA   turn_usurping   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XB   turn_usurping   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-XY   turn_usurping   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  A0-AY turn_continuing   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-A0 turn_continuing   count     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  AB-AY turn_continuing   count     0</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

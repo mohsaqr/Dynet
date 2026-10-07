@@ -64,7 +64,9 @@ step, window - and return a tidy one-row-per-observation table.
 - [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
   : Time-varying vertex centrality
 - [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
-  : Closeness and betweenness on time-respecting paths
+  : Centrality on time-respecting paths and temporal walks
+- [`edge_centrality()`](https://pak.dynasite.org/Dynet/reference/edge_centrality.md)
+  : Temporal centrality of the contacts themselves
 - [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
   : Reachability of every vertex
 - [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md) :
@@ -77,8 +79,48 @@ step, window - and return a tidy one-row-per-observation table.
   : Burstiness and memory of each vertex's activity
 - [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
   : How long each relationship lasted
+- [`gaps()`](https://pak.dynasite.org/Dynet/reference/gaps.md) :
+  Inter-event gaps
+- [`persistence()`](https://pak.dynasite.org/Dynet/reference/persistence.md)
+  : Neighbourhood persistence between consecutive time bins
+- [`turnover()`](https://pak.dynasite.org/Dynet/reference/turnover.md) :
+  Network turnover: volatility and fluctuability
+- [`segregation()`](https://pak.dynasite.org/Dynet/reference/segregation.md)
+  : Segregation-integration difference over time
+- [`motifs()`](https://pak.dynasite.org/Dynet/reference/motifs.md) :
+  Delta-temporal three-node motif census
 - [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
   : Similarity between the networks at each pair of time points
+
+## Null models
+
+Surrogate and simulated temporal networks, and the comparison of any
+measure against them.
+
+- [`randomise()`](https://pak.dynasite.org/Dynet/reference/randomise.md)
+  : Surrogate temporal networks from a null model
+- [`random_dynet()`](https://pak.dynasite.org/Dynet/reference/random_dynet.md)
+  : Simulate a random temporal network
+- [`significance()`](https://pak.dynasite.org/Dynet/reference/significance.md)
+  : Compare a measure against a temporal null model
+
+## Communities and phases
+
+Communities that persist and change across time, and the phases a
+network passes through.
+
+- [`temporal_communities()`](https://pak.dynasite.org/Dynet/reference/temporal_communities.md)
+  : Temporal community detection by generalized Louvain
+- [`multislice_modularity()`](https://pak.dynasite.org/Dynet/reference/multislice_modularity.md)
+  : Multislice modularity of a partition of a temporal network
+- [`match_communities()`](https://pak.dynasite.org/Dynet/reference/match_communities.md)
+  : Give community labels a meaning that carries across time
+- [`community_change()`](https://pak.dynasite.org/Dynet/reference/community_change.md)
+  : How much the community structure moved between bins
+- [`community_trajectory()`](https://pak.dynasite.org/Dynet/reference/community_trajectory.md)
+  : What each vertex did across the community structure
+- [`phases()`](https://pak.dynasite.org/Dynet/reference/phases.md) :
+  Detect temporal phases by clustering the between-bin similarity
 
 ## Paths
 
@@ -98,10 +140,12 @@ Time-respecting paths, and the four ways of looking at what they found.
 ## Structure
 
 Turn a temporal network into another object: a time-expanded projection,
-a static weighted network, or a subgraph.
+an event graph, a static weighted network, or a subgraph.
 
 - [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
   : Project a temporal network into directed vertex-time states
+- [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  : The event graph of a temporal network
 - [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)
   : Collapse temporal activity to a static weighted network
 - [`induce_subgraph()`](https://pak.dynasite.org/Dynet/reference/induce_subgraph.md)
@@ -167,8 +211,20 @@ Print, summary, plot and as.data.frame for every result class.
 - [`print(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_collapsed_list.md)
   : Print session-specific collapsed networks
 
+- [`print(`*`<dynet_communities>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_communities.md)
+  : Print a temporal community partition
+
+- [`print(`*`<dynet_event_graph>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_event_graph.md)
+  : Print an event graph
+
 - [`print(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_metric.md)
   : Print a temporal measure
+
+- [`print(`*`<dynet_motifs>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_motifs.md)
+  : Print a temporal motif census
+
+- [`print(`*`<dynet_null>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_null.md)
+  : Print surrogate networks
 
 - [`print(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_path_trajectories.md)
   : Print a temporal trajectory tree
@@ -179,11 +235,17 @@ Print, summary, plot and as.data.frame for every result class.
 - [`print(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_pathways.md)
   : Print ranked pathways
 
+- [`print(`*`<dynet_phases>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_phases.md)
+  : Print detected temporal phases
+
 - [`print(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_projection.md)
   : Print a time-projected network
 
 - [`print(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_pshifts.md)
   : Print participation shift counts
+
+- [`print(`*`<dynet_significance>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_significance.md)
+  : Print a permutation test
 
 - [`print(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/print.dynet_similarity.md)
   : Print time-bin similarity
@@ -200,8 +262,20 @@ Print, summary, plot and as.data.frame for every result class.
 - [`summary(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed_list.md)
   : Summarise session-specific collapsed networks
 
+- [`summary(`*`<dynet_communities>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_communities.md)
+  : Summarize a temporal community partition
+
+- [`summary(`*`<dynet_event_graph>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_event_graph.md)
+  : Summarise an event graph
+
 - [`summary(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_metric.md)
   : Summarise a temporal measure
+
+- [`summary(`*`<dynet_motifs>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_motifs.md)
+  : Summarise a temporal motif census by family
+
+- [`summary(`*`<dynet_null>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_null.md)
+  : Summarise surrogate networks
 
 - [`summary(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_path_trajectories.md)
   : Summarise path trajectories
@@ -218,6 +292,9 @@ Print, summary, plot and as.data.frame for every result class.
 - [`summary(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_pshifts.md)
   : Summarise participation shifts by family
 
+- [`summary(`*`<dynet_significance>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_significance.md)
+  : Summarise a permutation test
+
 - [`summary(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_similarity.md)
   : Summarise snapshot similarity
 
@@ -230,8 +307,20 @@ Print, summary, plot and as.data.frame for every result class.
 - [`plot(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed.md)
   : Draw a collapsed temporal network
 
+- [`plot(`*`<dynet_communities>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_communities.md)
+  : Draw community membership as ribbons over time
+
+- [`plot(`*`<dynet_event_graph>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_event_graph.md)
+  : Plot an event graph as a storyline
+
 - [`plot(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_metric.md)
   : Plot a temporal measure
+
+- [`plot(`*`<dynet_motifs>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_motifs.md)
+  : Plot a temporal motif census
+
+- [`plot(`*`<dynet_null>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_null.md)
+  : Plot the surrogate activity profile against the observed one
 
 - [`plot(`*`<dynet_path_network>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_path_network.md)
   : Draw a path network
@@ -245,8 +334,14 @@ Print, summary, plot and as.data.frame for every result class.
 - [`plot(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_pathways.md)
   : Plot pathways on a time axis
 
+- [`plot(`*`<dynet_phases>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_phases.md)
+  : Draw detected phases over the between-bin similarity heatmap
+
 - [`plot(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_pshifts.md)
   : Plot participation shift counts
+
+- [`plot(`*`<dynet_significance>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_significance.md)
+  : Plot a permutation test
 
 - [`plot(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_similarity.md)
   : Draw time-bin similarity as a heatmap
@@ -275,8 +370,23 @@ Print, summary, plot and as.data.frame for every result class.
 - [`as.data.frame(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_collapsed_list.md)
   : Tidy data frame of session-specific collapsed networks
 
+- [`as.data.frame(`*`<dynet_communities>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_communities.md)
+  : Tidy data frame of a temporal community partition
+
+- [`as.data.frame(`*`<dynet_event_graph>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_event_graph.md)
+  : Tidy tables from an event graph
+
 - [`as.data.frame(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_metric.md)
   : Tidy data frame of a temporal measure
+
+- [`as.data.frame(`*`<dynet_modularity>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_modularity.md)
+  : Tidy data frame of a multislice modularity result
+
+- [`as.data.frame(`*`<dynet_motifs>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_motifs.md)
+  : Tidy frame of a temporal motif census
+
+- [`as.data.frame(`*`<dynet_null>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_null.md)
+  : Coerce surrogate networks to a data frame
 
 - [`as.data.frame(`*`<dynet_path_network>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_path_network.md)
   : Tidy tables from a temporal path-union network
@@ -290,14 +400,23 @@ Print, summary, plot and as.data.frame for every result class.
 - [`as.data.frame(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_pathways.md)
   : Tidy data frame of ranked pathways
 
+- [`as.data.frame(`*`<dynet_phases>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_phases.md)
+  : Tidy data frame of detected temporal phases
+
 - [`as.data.frame(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_projection.md)
   : Tidy tables from a time-projected network
 
 - [`as.data.frame(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_pshifts.md)
   : Tidy data frame of participation shift counts
 
+- [`as.data.frame(`*`<dynet_significance>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_significance.md)
+  : Coerce a permutation test to a data frame
+
 - [`as.data.frame(`*`<dynet_similarity>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_similarity.md)
   : Tidy table of time-bin similarity
 
 - [`as.data.frame(`*`<dynet_snapshot>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_snapshot.md)
   : Tidy table of snapshot edges
+
+- [`as.data.frame(`*`<dynet_trajectory>`*`)`](https://pak.dynasite.org/Dynet/reference/as.data.frame.dynet_trajectory.md)
+  : Tidy data frame of community trajectories

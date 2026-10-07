@@ -1,6 +1,116 @@
 # Changelog
 
+## Dynet 0.7.0
+
+- [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  builds the event graph of a temporal network: every spell is a vertex,
+  and an arc joins two events that share a vertex when the later one
+  starts after the earlier one ends, within `delta` (Kivela et al.,
+  2018). A path in it is a chain of events taken one after another, so
+  on contact data its reachability is that of
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) with a
+  short traversal time. `adjacency = "next"` keeps only the earliest
+  successors (Kovanen et al., 2011); `direction` and `sessions` decide
+  which shared vertices and which session blocks may join two events.
+  The result has [`print()`](https://rdrr.io/r/base/print.html),
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
+  `as.data.frame(what = "events" | "adjacencies")` methods.
+- The reference index lists every exported verb again, including the
+  measurement, null-model and community verbs that arrived in 0.6.0.
+
+## Dynet 0.6.0
+
+The measurement work developed on the
+[`next`](https://rdrr.io/r/base/Control.html) branch joins the released
+line. Every addition is available under the 0.5 names: snapshot
+centrality is
+[`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md),
+centrality on time-respecting paths is
+[`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md),
+and temporal reach is
+[`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md).
+
+### Null models and significance
+
+- [`randomise()`](https://pak.dynasite.org/Dynet/reference/randomise.md)
+  draws surrogate temporal networks from a null model, and
+  [`random_dynet()`](https://pak.dynasite.org/Dynet/reference/random_dynet.md)
+  simulates a temporal network from a binomial, Poisson, block or
+  activation model.
+- [`significance()`](https://pak.dynasite.org/Dynet/reference/significance.md)
+  compares any verb that returns `measure` and `value` against a null
+  model, with a percentile interval and a permutation p-value for every
+  row, corrected for multiplicity.
+
+### Paths and centrality
+
+- [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) takes a
+  `criterion`: `"foremost_then_shortest"` (the default and the earlier
+  behaviour), `"min_hops"`, `"foremost"`, `"fastest"`,
+  `"latest_departure"` and `"shortest"`. With `"shortest"`,
+  `cost = "weight"` finds the journeys of least summed tie weight and
+  reports `path_cost`.
+- [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md)
+  takes the same `criterion` and `cost`, and gains `"efficiency"` and
+  the stream measures `"katz"` (Beres et al., 2018), `"pagerank"`
+  (Rozenshtein and Gionis, 2016) and `"walk"` (Oettershagen, Mutzel and
+  Kriege, 2022). `top = k` returns the `k` most central vertices by
+  closeness under `"min_hops"` or `"shortest"`, computing only the
+  searches that ranking needs.
+- [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md)
+  takes `criterion = "min_hops"`.
+- [`edge_centrality()`](https://pak.dynasite.org/Dynet/reference/edge_centrality.md)
+  scores the contacts themselves; the scores of the contacts arriving at
+  a vertex reconcile exactly with its temporal betweenness.
+- [`centrality_series()`](https://pak.dynasite.org/Dynet/reference/centrality_series.md)
+  gains the participation coefficient, `measure = "participation"` with
+  `groups`.
+- [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md)
+  gains `"temporal_efficiency"` and `"temporal_diameter"`, with `basis`
+  and `traversal_time`.
+
+### Global measures, inter-event times and motifs
+
+- [`gaps()`](https://pak.dynasite.org/Dynet/reference/gaps.md) returns
+  inter-event gaps per vertex or per pair.
+- [`persistence()`](https://pak.dynasite.org/Dynet/reference/persistence.md)
+  measures neighbourhood persistence between consecutive bins, and
+  [`turnover()`](https://pak.dynasite.org/Dynet/reference/turnover.md)
+  reports volatility and fluctuability.
+- [`segregation()`](https://pak.dynasite.org/Dynet/reference/segregation.md)
+  is the segregation-integration difference over time.
+- [`motifs()`](https://pak.dynasite.org/Dynet/reference/motifs.md) is
+  the delta-temporal three-node motif census (Paranjape, Benson and
+  Leskovec, 2017).
+
+### Temporal communities and phases
+
+- [`temporal_communities()`](https://pak.dynasite.org/Dynet/reference/temporal_communities.md)
+  detects communities by generalised Louvain on ordinally coupled
+  slices, and
+  [`multislice_modularity()`](https://pak.dynasite.org/Dynet/reference/multislice_modularity.md)
+  scores a partition.
+- [`match_communities()`](https://pak.dynasite.org/Dynet/reference/match_communities.md)
+  gives community labels a meaning that carries across time;
+  [`community_change()`](https://pak.dynasite.org/Dynet/reference/community_change.md)
+  measures how much the structure moved between bins, and
+  [`community_trajectory()`](https://pak.dynasite.org/Dynet/reference/community_trajectory.md)
+  what each vertex did across it.
+- [`phases()`](https://pak.dynasite.org/Dynet/reference/phases.md)
+  detects temporal phases by clustering the between-bin similarity.
+
+### Internal
+
+- The path search keeps the 0.5.0 speed-up for the default criterion and
+  falls back to exhaustive search only where a criterion needs it: the
+  pure foremost family, and searches from an unattained origin.
+- `aricode`, `clue`, `cluster` and `multinet` are not suggested: they
+  served only as test oracles, and equivalence tests do not ship.
+
 ## Dynet 0.5.1
+
+CRAN release: 2026-10-07
 
 - CRAN resubmission. The
   [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)

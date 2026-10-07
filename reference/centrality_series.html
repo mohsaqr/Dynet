@@ -19,7 +19,7 @@ from time-respecting paths across the whole period is path_centrality()."></head
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,6 +80,7 @@ from time-respecting paths across the whole period is <code><a href="path_centra
 <span>  prestige <span class="op">=</span> <span class="st">"indegree"</span>,</span>
 <span>  rescale <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  lambda <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  groups <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -96,7 +97,7 @@ from time-respecting paths across the whole period is <code><a href="path_centra
 <dd><p>One or more of <code>"degree"</code>, <code>"strength"</code>, <code>"prestige"</code>, <code>"closeness"</code>,
 <code>"betweenness"</code>, <code>"eigenvector"</code>, <code>"pagerank"</code>, <code>"hub"</code>, <code>"authority"</code>,
 <code>"coreness"</code>, <code>"constraint"</code>, <code>"power"</code>, <code>"harary"</code>, <code>"information"</code>,
-<code>"load"</code>, <code>"flow_betweenness"</code>, or <code>"diffusion"</code>.
+<code>"load"</code>, <code>"flow_betweenness"</code>, <code>"participation"</code> or <code>"diffusion"</code>.
 The deprecated names <code>"indegree"</code> and
 <code>"outdegree"</code>, which warn with class <code>dynet_deprecated</code> and are replaced
 by <code>measure = "degree"</code> with <code>mode = "in"</code> or <code>mode = "out"</code>. Defaults to
@@ -135,8 +136,8 @@ out-degree from a single call; the extra directions are then labelled
 <code>degree_in</code> and <code>degree_out</code> in the <code>measure</code> column, while a call naming
 one direction keeps the plain measure name. Applies to
 <code>"degree"</code>, <code>"strength"</code>, <code>"closeness"</code>, <code>"coreness"</code>, <code>"harary"</code>,
-<code>"eigenvector"</code> and <code>"diffusion"</code>; the remaining measures have a single
-directional definition and ignore it. Ignored
+<code>"eigenvector"</code>, <code>"diffusion"</code> and <code>"participation"</code>; the remaining
+measures have a single directional definition and ignore it. Ignored
 entirely on an undirected network. In-degree is therefore
 <code>mode = "in"</code>. The old <code>"indegree"</code> and <code>"outdegree"</code> measure names
 remain as deprecated aliases.</p></dd>
@@ -203,6 +204,12 @@ return <code>NA</code>. This argument requires <code>measure = "prestige"</code>
 Diffusion degree is
 the sum of the selected degree of a vertex and all of its one-step
 neighbours, multiplied by <code>lambda</code>.</p></dd>
+
+
+<dt id="arg-groups">groups<a class="anchor" aria-label="anchor" href="#arg-groups"></a></dt>
+<dd><p>For <code>measure = "participation"</code> only: the name of a node
+attribute, or one group label per vertex. Required for that measure and
+rejected for every other.</p></dd>
 
 
 <dt id="arg-plot">plot<a class="anchor" aria-label="anchor" href="#arg-plot"></a></dt>

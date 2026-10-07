@@ -19,7 +19,8 @@ projection(
   end = NULL,
   step = NULL,
   window = NULL,
-  omega = 1
+  omega = 1,
+  coupling = c("ordinal", "categorical")
 )
 ```
 
@@ -58,6 +59,16 @@ projection(
   One, the default, keeps an identity arc as heavy as a unit contact;
   zero leaves the slices uncoupled. Must be a single finite non-negative
   number, or a `dynet_bad_input` error is raised.
+
+- coupling:
+
+  Which slices an identity arc may join. `"ordinal"`, the default and
+  the only temporally meaningful choice, joins each slice to the next
+  one only, so a vertex is tied to its immediate past and future.
+  `"categorical"` joins every pair of slices, which is the convention
+  for unordered aspect-layers such as phone, email and face-to-face; it
+  is offered so a multiplex analysis can be reproduced and compared, and
+  it asserts that time has no order. See Mucha et al. (2010), Figure 1.
 
 ## Value
 

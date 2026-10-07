@@ -1042,20 +1042,20 @@ shifts
 
     ## # Participation shifts (Gibson 2003, 13 types)
     ## # 3423 classified turn transitions across 4 families
-    ##  shift          family count
-    ##  AB-BA  turn_receiving   391
-    ##  AB-B0  turn_receiving    51
-    ##  AB-BY  turn_receiving   101
-    ##  A0-X0   turn_claiming   592
-    ##  A0-XA   turn_claiming   105
-    ##  A0-XY   turn_claiming   559
-    ##  AB-X0   turn_usurping   426
-    ##  AB-XA   turn_usurping   135
-    ##  AB-XB   turn_usurping   642
-    ##  AB-XY   turn_usurping   170
-    ##  A0-AY turn_continuing    94
-    ##  AB-A0 turn_continuing    52
-    ##  AB-AY turn_continuing   105
+    ##  shift          family measure value
+    ##  AB-BA  turn_receiving   count   391
+    ##  AB-B0  turn_receiving   count    51
+    ##  AB-BY  turn_receiving   count   101
+    ##  A0-X0   turn_claiming   count   592
+    ##  A0-XA   turn_claiming   count   105
+    ##  A0-XY   turn_claiming   count   559
+    ##  AB-X0   turn_usurping   count   426
+    ##  AB-XA   turn_usurping   count   135
+    ##  AB-XB   turn_usurping   count   642
+    ##  AB-XY   turn_usurping   count   170
+    ##  A0-AY turn_continuing   count    94
+    ##  AB-A0 turn_continuing   count    52
+    ##  AB-AY turn_continuing   count   105
 
 ``` r
 

@@ -166,9 +166,7 @@ At least one plausible mutant is caught.
 Path features catch boundary, direction/anchor, equal-predecessor,
 duplicate-state, and cross-session mutants whenever those risks apply.
 
-The focused
-[`testthat::test_file()`](https://testthat.r-lib.org/reference/test_file.html)
-run passes.
+The focused `testthat::test_file()` run passes.
 
 Every new or changed function, including an internal helper, has a
 direct test.
