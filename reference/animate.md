@@ -317,7 +317,7 @@ if (requireNamespace("gifski", quietly = TRUE) &&
 #>   bins frames fps seconds tween  ease layout format measure first_time
 #> 1    3      6  12     0.5     2 dwell spring    gif    <NA>          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1         8       29       50 0.6133333 /tmp/RtmpY4sgVM/file1f4d1d3e23a0.gif
+#> 1         8       29       50 0.6133333 /tmp/RtmpO1ijJE/file1c757653e5a4.gif
 # \donttest{
 if (requireNamespace("av", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
@@ -329,6 +329,6 @@ if (requireNamespace("av", quietly = TRUE) &&
 #>   bins frames fps seconds tween  ease layout format measure first_time
 #> 1    3      6  12     0.5     2 dwell spring    mp4  degree          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1         8       29       50 0.6133333 /tmp/RtmpY4sgVM/file1f4d1d92e9d8.mp4
+#> 1         8       29       50 0.6133333 /tmp/RtmpO1ijJE/file1c7515a84025.mp4
 # }
 ```

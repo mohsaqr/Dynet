@@ -325,38 +325,9 @@ Journal of Foundations of Computer Science*, 14(2), 267-285.
 
 ``` r
 dn <- dynet(school_contacts)
-paths(dn, from = "Ana", criterion = "latest_departure", end = 10)
-#> # Latest departures from ‘Ana’ reaching each vertex by t = 10
-#> # reaches 12 of 13 other vertices | time in step
-#>   node reachable arrival_time departure_time duration attained latency n_hops
-#>    Ana      TRUE        10.00          10.00     0.00     TRUE   10.00      0
-#>    Ben      TRUE         9.59           7.07     2.52    FALSE    9.59     NA
-#>   Cara      TRUE         6.77           6.77     0.00    FALSE    6.77     NA
-#>    Dan      TRUE         9.49           9.13     0.36    FALSE    9.49     NA
-#>    Eve     FALSE           NA             NA       NA    FALSE      NA     NA
-#>   Finn      TRUE         6.96           6.77     0.19    FALSE    6.96     NA
-#>   Gita      TRUE         9.35           9.13     0.22    FALSE    9.35     NA
-#>   Hugo      TRUE         9.93           9.13     0.80    FALSE    9.93     NA
-#>   Iris      TRUE        10.00           6.77     3.23    FALSE   10.00     NA
-#>  Jonas      TRUE         9.13           9.13     0.00    FALSE    9.13     NA
-#>   Kira      TRUE         7.07           7.07     0.00    FALSE    7.07     NA
-#>    Leo      TRUE         9.65           6.77     2.88    FALSE    9.65     NA
-#>  n_paths
-#>        1
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#>        0
-#> # 2 more rows. summary() aggregates them; plot() draws the tree.
 
-# Every earliest-arrival journey, not only the shortest ones
+# Every earliest-arrival journey, not only the shortest ones. The other
+# criteria search exhaustively, so they are shown on a small network.
 few <- dynet(data.frame(from = c("A", "A", "B", "C"),
                         to = c("D", "B", "C", "D"),
                         time = c(4, 1, 2, 4)),
@@ -374,6 +345,19 @@ paths(few, from = "A", criterion = "fastest")
 #> # reaches 3 of 3 other vertices | time in step
 #>  node reachable arrival_time departure_time duration attained latency n_hops
 #>     A      TRUE            1              1        0     TRUE       0      0
+#>     B      TRUE            1              1        0     TRUE       0      1
+#>     C      TRUE            2              1        1     TRUE       1      2
+#>     D      TRUE            4              4        0     TRUE       3      1
+#>  n_paths
+#>        1
+#>        1
+#>        1
+#>        1
+paths(few, from = "A", criterion = "latest_departure", end = 4)
+#> # Latest departures from ‘A’ reaching each vertex by t = 4
+#> # reaches 3 of 3 other vertices | time in step
+#>  node reachable arrival_time departure_time duration attained latency n_hops
+#>     A      TRUE            4              4        0     TRUE       3      0
 #>     B      TRUE            1              1        0     TRUE       0      1
 #>     C      TRUE            2              1        1     TRUE       1      2
 #>     D      TRUE            4              4        0     TRUE       3      1

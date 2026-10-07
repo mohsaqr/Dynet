@@ -1,5 +1,16 @@
 # Changelog
 
+## Dynet 0.7.1
+
+- The [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md)
+  example shows `criterion = "latest_departure"` on the small example
+  network rather than the school data, so every example again runs in
+  under five seconds.
+- A test of reach under every path criterion calls
+  [`reachability()`](https://pak.dynasite.org/Dynet/reference/reachability.md),
+  where reach has lived since 0.4.13; it failed on every platform after
+  the 0.6.0 merge.
+
 ## Dynet 0.7.0
 
 - [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
