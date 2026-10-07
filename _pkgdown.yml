@@ -68,13 +68,40 @@ reference:
   contents:
   - centrality_series
   - path_centrality
+  - edge_centrality
   - reachability
   - metrics
   - mixing
   - pshifts
   - burstiness
   - durations
+  - gaps
+  - persistence
+  - turnover
+  - segregation
+  - motifs
   - similarity
+
+- title: Null models
+  desc: >
+    Surrogate and simulated temporal networks, and the comparison of any
+    measure against them.
+  contents:
+  - randomise
+  - random_dynet
+  - significance
+
+- title: Communities and phases
+  desc: >
+    Communities that persist and change across time, and the phases a network
+    passes through.
+  contents:
+  - temporal_communities
+  - multislice_modularity
+  - match_communities
+  - community_change
+  - community_trajectory
+  - phases
 
 - title: Paths
   desc: >
@@ -88,10 +115,11 @@ reference:
 
 - title: Structure
   desc: >
-    Turn a temporal network into another object: a time-expanded projection, a
-    static weighted network, or a subgraph.
+    Turn a temporal network into another object: a time-expanded projection,
+    an event graph, a static weighted network, or a subgraph.
   contents:
   - projection
+  - event_graph
   - collapse_network
   - induce_subgraph
 

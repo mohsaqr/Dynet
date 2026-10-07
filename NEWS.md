@@ -1,4 +1,18 @@
-# Dynet 0.5.2
+# Dynet 0.7.0
+
+* `event_graph()` builds the event graph of a temporal network: every spell
+  is a vertex, and an arc joins two events that share a vertex when the later
+  one starts after the earlier one ends, within `delta` (Kivela et al., 2018).
+  A path in it is a chain of events taken one after another, so on contact
+  data its reachability is that of `paths()` with a short traversal time.
+  `adjacency = "next"` keeps only the earliest successors (Kovanen et al.,
+  2011); `direction` and `sessions` decide which shared vertices and which
+  session blocks may join two events. The result has `print()`, `summary()`,
+  `plot()` and `as.data.frame(what = "events" | "adjacencies")` methods.
+* The reference index lists every exported verb again, including the
+  measurement, null-model and community verbs that arrived in 0.6.0.
+
+# Dynet 0.6.0
 
 The measurement work developed on the `next` branch joins the released line.
 Every addition is available under the 0.5 names: snapshot centrality is
