@@ -731,9 +731,14 @@ print.dynet_paths <- function(x, n = 12L, ...) {
                 sum(x$reachable & eligible), sum(eligible),
                 attr(x, "time_unit")))
   } else {
-    cat(sprintf("# Time-respecting paths %s %s, from t = %s\n",
-                if (identical(attr(x, "direction"), "forward")) "from" else "into",
-                sQuote(attr(x, "source")), format(attr(x, "origin"))))
+    if (identical(attr(x, "criterion"), "latest_departure")) {
+      cat(sprintf("# Latest departures from %s reaching each vertex by t = %s\n",
+                  sQuote(attr(x, "source")), format(attr(x, "deadline"))))
+    } else {
+      cat(sprintf("# Time-respecting paths %s %s, from t = %s\n",
+                  if (identical(attr(x, "direction"), "forward")) "from" else "into",
+                  sQuote(attr(x, "source")), format(attr(x, "origin"))))
+    }
     cat(sprintf("# reaches %d of %d other vertices | time in %s\n",
                 sum(x$reachable) - 1L, nrow(x) - 1L,
                 attr(x, "time_unit")))
@@ -745,6 +750,10 @@ print.dynet_paths <- function(x, n = 12L, ...) {
   if (traversal_time > 0) {
     cat(sprintf("# traversal %s %s per hop\n",
                 format(traversal_time), attr(x, "time_unit")))
+  }
+  if (identical(attr(x, "criterion"), "shortest")) {
+    cat(sprintf("# shortest by summed %s; path_cost is that sum\n",
+                if (identical(attr(x, "cost"), "weight")) "tie weight" else "hop count"))
   }
   print(utils::head(as.data.frame(x), n), row.names = FALSE)
   if (nrow(x) > n) {

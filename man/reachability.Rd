@@ -13,6 +13,7 @@ reachability(
   end = NULL,
   traversal_time = 0,
   measure = "reach",
+  criterion = c("foremost_then_shortest", "min_hops"),
   plot = FALSE
 )
 }
@@ -39,9 +40,17 @@ spells remain terminus-exclusive.}
 \item{traversal_time}{Nonnegative duration charged for every hop, in the
 network's time unit. A calendar network also accepts a scalar \code{difftime}.}
 
-\item{measure}{One or both of \code{"reach"}, the proportion of other vertices,
-and \code{"reach_count"}, their number. The source vertex is excluded from
-both. Defaults to \code{"reach"}.}
+\item{measure}{One or more of \code{"reach"}, the share of other vertices joined
+by a time-respecting path; \code{"reach_count"}, their number; \code{"latency"}, the
+mean elapsed time to reach them; and \code{"hops"}, the mean number of contacts
+taken. The source vertex is excluded from all four. Defaults to
+\code{"reach"}. The two cost measures
+are \code{NaN} when nothing is reachable, since the mean is then 0/0.}
+
+\item{criterion}{Which optimisation problem the journeys solve. Reach and
+reach count are identical under every criterion, because they depend on
+the feasible set rather than on which journey wins; \code{latency} and \code{hops}
+summarise the selected journeys and do depend on it.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns

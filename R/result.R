@@ -25,7 +25,7 @@
     df$session <- NULL
   }
   front <- intersect(c("session", "time", "node", "vertex_spell", "implicit",
-                       "from", "to", "raw_spell", "measure", "value"),
+                       "from", "to", "raw_spell", "index", "measure", "value"),
                      names(df))
   df <- df[, c(front, setdiff(names(df), front)), drop = FALSE]
   rownames(df) <- NULL

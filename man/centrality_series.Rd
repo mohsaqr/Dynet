@@ -19,6 +19,7 @@ centrality_series(
   prestige = "indegree",
   rescale = FALSE,
   lambda = 1,
+  groups = NULL,
   plot = FALSE
 )
 }
@@ -28,7 +29,7 @@ centrality_series(
 \item{measure}{One or more of \code{"degree"}, \code{"strength"}, \code{"prestige"}, \code{"closeness"},
 \code{"betweenness"}, \code{"eigenvector"}, \code{"pagerank"}, \code{"hub"}, \code{"authority"},
 \code{"coreness"}, \code{"constraint"}, \code{"power"}, \code{"harary"}, \code{"information"},
-\code{"load"}, \code{"flow_betweenness"}, or \code{"diffusion"}.
+\code{"load"}, \code{"flow_betweenness"}, \code{"participation"} or \code{"diffusion"}.
 The deprecated names \code{"indegree"} and
 \code{"outdegree"}, which warn with class \code{dynet_deprecated} and are replaced
 by \code{measure = "degree"} with \code{mode = "in"} or \code{mode = "out"}. Defaults to
@@ -59,8 +60,8 @@ out-degree from a single call; the extra directions are then labelled
 \code{degree_in} and \code{degree_out} in the \code{measure} column, while a call naming
 one direction keeps the plain measure name. Applies to
 \code{"degree"}, \code{"strength"}, \code{"closeness"}, \code{"coreness"}, \code{"harary"},
-\code{"eigenvector"} and \code{"diffusion"}; the remaining measures have a single
-directional definition and ignore it. Ignored
+\code{"eigenvector"}, \code{"diffusion"} and \code{"participation"}; the remaining
+measures have a single directional definition and ignore it. Ignored
 entirely on an undirected network. In-degree is therefore
 \code{mode = "in"}. The old \code{"indegree"} and \code{"outdegree"} measure names
 remain as deprecated aliases.}
@@ -113,6 +114,10 @@ return \code{NA}. This argument requires \code{measure = "prestige"}, and raises
 Diffusion degree is
 the sum of the selected degree of a vertex and all of its one-step
 neighbours, multiplied by \code{lambda}.}
+
+\item{groups}{For \code{measure = "participation"} only: the name of a node
+attribute, or one group label per vertex. Required for that measure and
+rejected for every other.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns

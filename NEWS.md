@@ -1,3 +1,67 @@
+# Dynet 0.5.2
+
+The measurement work developed on the `next` branch joins the released line.
+Every addition is available under the 0.5 names: snapshot centrality is
+`centrality_series()`, centrality on time-respecting paths is
+`path_centrality()`, and temporal reach is `reachability()`.
+
+## Null models and significance
+
+* `randomise()` draws surrogate temporal networks from a null model, and
+  `random_dynet()` simulates a temporal network from a binomial, Poisson,
+  block or activation model.
+* `significance()` compares any verb that returns `measure` and `value`
+  against a null model, with a percentile interval and a permutation p-value
+  for every row, corrected for multiplicity.
+
+## Paths and centrality
+
+* `paths()` takes a `criterion`: `"foremost_then_shortest"` (the default and
+  the earlier behaviour), `"min_hops"`, `"foremost"`, `"fastest"`,
+  `"latest_departure"` and `"shortest"`. With `"shortest"`, `cost = "weight"`
+  finds the journeys of least summed tie weight and reports `path_cost`.
+* `path_centrality()` takes the same `criterion` and `cost`, and gains
+  `"efficiency"` and the stream measures `"katz"` (Beres et al., 2018),
+  `"pagerank"` (Rozenshtein and Gionis, 2016) and `"walk"` (Oettershagen,
+  Mutzel and Kriege, 2022). `top = k` returns the `k` most central vertices
+  by closeness under `"min_hops"` or `"shortest"`, computing only the
+  searches that ranking needs.
+* `reachability()` takes `criterion = "min_hops"`.
+* `edge_centrality()` scores the contacts themselves; the scores of the
+  contacts arriving at a vertex reconcile exactly with its temporal
+  betweenness.
+* `centrality_series()` gains the participation coefficient,
+  `measure = "participation"` with `groups`.
+* `metrics()` gains `"temporal_efficiency"` and `"temporal_diameter"`, with
+  `basis` and `traversal_time`.
+
+## Global measures, inter-event times and motifs
+
+* `gaps()` returns inter-event gaps per vertex or per pair.
+* `persistence()` measures neighbourhood persistence between consecutive
+  bins, and `turnover()` reports volatility and fluctuability.
+* `segregation()` is the segregation-integration difference over time.
+* `motifs()` is the delta-temporal three-node motif census (Paranjape,
+  Benson and Leskovec, 2017).
+
+## Temporal communities and phases
+
+* `temporal_communities()` detects communities by generalised Louvain on
+  ordinally coupled slices, and `multislice_modularity()` scores a partition.
+* `match_communities()` gives community labels a meaning that carries across
+  time; `community_change()` measures how much the structure moved between
+  bins, and `community_trajectory()` what each vertex did across it.
+* `phases()` detects temporal phases by clustering the between-bin
+  similarity.
+
+## Internal
+
+* The path search keeps the 0.5.0 speed-up for the default criterion and
+  falls back to exhaustive search only where a criterion needs it: the pure
+  foremost family, and searches from an unattained origin.
+* `aricode`, `clue`, `cluster` and `multinet` are not suggested: they served
+  only as test oracles, and equivalence tests do not ship.
+
 # Dynet 0.5.1
 
 * CRAN resubmission. The `pathways()` example pools three named sources

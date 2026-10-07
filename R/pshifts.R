@@ -157,15 +157,18 @@
 #'   its tidy table, invisibly when it has drawn, so `plot = TRUE` saves the
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
-#' @return A `dynet_pshifts` data frame whose shape follows `output`.
+#' @return A `dynet_pshifts` data frame whose shape follows `output`, carrying
+#'   the `measure`/`value` pair every other measurement verb returns, so a
+#'   participation-shift census composes with the verbs that consume one;
+#'   `measure` is the constant `"count"` and `value` is the integer count.
 #'   `"final"` gives one row per shift class -- thirteen rows, always all
 #'   thirteen even when a class never occurred -- with columns `shift` (the
-#'   Gibson label), `family` (the label's group) and `count`.
+#'   Gibson label), `family` (the label's group), `measure` and `value`.
 #'   `"cumulative"` gives one row per turn and class, that is thirteen rows
 #'   per classified turn, with `sequence` and `event` locating the turn in its
 #'   sequence, `time`, `speaker`, `target` and `group` describing the turn,
-#'   and `shift`, `family` and `count` carrying the running total of that
-#'   class up to and including the turn. Either shape gains a leading
+#'   and `shift`, `family`, `measure` and `value` carrying the running total
+#'   of that class up to and including the turn. Either shape gains a leading
 #'   `session` column under `sessions = "separate"`, which reports each
 #'   session on its own rows; `"bounded"` and `"collapse"` carry no session
 #'   column. Print it, [summary()] it, [plot()] it, or take the plain frame
@@ -226,13 +229,13 @@ pshifts <- function(
   if (identical(output, "final")) {
     out <- data.frame(
       shift = .pshift_labels, family = .pshift_families,
-      count = as.integer(counts), stringsAsFactors = FALSE
+      measure = "count", value = as.integer(counts), stringsAsFactors = FALSE
     )
     if (identical(sessions, "separate")) {
       rows <- lapply(names(sequences), function(label) {
         data.frame(session = label, shift = .pshift_labels,
-                   family = .pshift_families,
-                   count = as.integer(sequences[[label]]$counts),
+                   family = .pshift_families, measure = "count",
+                   value = as.integer(sequences[[label]]$counts),
                    stringsAsFactors = FALSE)
       })
       out <- do.call(rbind, rows)
@@ -257,8 +260,8 @@ pshifts <- function(
             dn$nodes$name[[state$turn$target]]
           },
           group = state$turn$group, shift = .pshift_labels,
-          family = .pshift_families, count = as.integer(shown_counts),
-          stringsAsFactors = FALSE
+          family = .pshift_families, measure = "count",
+          value = as.integer(shown_counts), stringsAsFactors = FALSE
         )
       }))
       if (!identical(sessions, "separate")) {
@@ -274,7 +277,7 @@ pshifts <- function(
         session = character(), sequence = integer(), event = integer(),
         time = numeric(), speaker = character(), target = character(),
         group = logical(), shift = character(), family = character(),
-        count = integer(), stringsAsFactors = FALSE
+        measure = character(), value = integer(), stringsAsFactors = FALSE
       )
       if (!identical(sessions, "separate")) out$session <- NULL
     }
@@ -339,12 +342,12 @@ as.data.frame.dynet_pshifts <- function(x, row.names = NULL, optional = FALSE,
 #' @return One non-negative number.
 #' @noRd
 .pshift_observed <- function(x) {
-  if (!"event" %in% names(x)) return(sum(x$count))
+  if (!"event" %in% names(x)) return(sum(x$value))
   key <- if ("session" %in% names(x)) x$session else rep("all", nrow(x))
   blocks <- vapply(split(seq_len(nrow(x)), key), function(rows) {
     latest <- rows[x$sequence[rows] == max(x$sequence[rows])]
     latest <- latest[x$event[latest] == max(x$event[latest])]
-    sum(x$count[latest])
+    sum(x$value[latest])
   }, numeric(1L))
   sum(blocks)
 }
@@ -361,7 +364,8 @@ as.data.frame.dynet_pshifts <- function(x, row.names = NULL, optional = FALSE,
 #' @export
 print.dynet_pshifts <- function(x, ...) {
   observed <- .pshift_observed(x)
-  cat(sprintf("# Participation shifts (Gibson 2003, %d types)\n",
+  cat(sprintf("# Participation shifts (Gibson 2003, %d types)
+",
               length(unique(x$shift))))
   cat(sprintf("# %d classified turn transition%s across %d famil%s\n",
               observed, if (isTRUE(all.equal(observed, 1))) "" else "s",
@@ -388,13 +392,13 @@ print.dynet_pshifts <- function(x, ...) {
 #' @export
 summary.dynet_pshifts <- function(object, ...) {
   flat <- as.data.frame(object)
-  total <- sum(flat$count)
+  total <- sum(flat$value)
   by_family <- lapply(split(flat, flat$family), function(part) {
-    best <- part$shift[which.max(part$count)]
+    best <- part$shift[which.max(part$value)]
     data.frame(
-      family = part$family[[1L]], count = sum(part$count),
-      share = sum(part$count) / total,
-      top_shift = if (sum(part$count) > 0) best else NA_character_,
+      family = part$family[[1L]], count = sum(part$value),
+      share = sum(part$value) / total,
+      top_shift = if (sum(part$value) > 0) best else NA_character_,
       stringsAsFactors = FALSE
     )
   })
@@ -421,10 +425,10 @@ summary.dynet_pshifts <- function(object, ...) {
 plot.dynet_pshifts <- function(x, ...) {
   flat <- as.data.frame(x)
   if ("session" %in% names(flat)) {
-    flat <- stats::aggregate(count ~ shift + family, data = flat, FUN = sum)
+    flat <- stats::aggregate(value ~ shift + family, data = flat, FUN = sum)
   }
   flat$shift <- factor(flat$shift, levels = rev(unique(flat$shift)))
-  ggplot2::ggplot(flat, ggplot2::aes(x = count, y = shift, fill = family)) +
+  ggplot2::ggplot(flat, ggplot2::aes(x = value, y = shift, fill = family)) +
     ggplot2::geom_col(width = 0.7) +
     ggplot2::facet_grid(rows = ggplot2::vars(family), scales = "free_y",
                         space = "free_y", switch = "y") +

@@ -2,7 +2,7 @@
 % Please edit documentation in R/centrality.R
 \name{path_centrality}
 \alias{path_centrality}
-\title{Closeness and betweenness on time-respecting paths}
+\title{Centrality on time-respecting paths and temporal walks}
 \usage{
 path_centrality(
   dn,
@@ -11,14 +11,25 @@ path_centrality(
   start = NULL,
   end = NULL,
   traversal_time = 0,
+  criterion = c("foremost_then_shortest", "min_hops", "foremost", "fastest", "shortest"),
+  cost = c("hops", "weight"),
+  top = NULL,
+  mode = c("out", "in"),
+  beta = 0.1,
+  decay = 0,
+  damping = 0.85,
+  transition = 1,
+  rescale = TRUE,
   plot = FALSE
 )
 }
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{measure}{One or both of \code{"closeness"} (the default) and
-\code{"betweenness"}. Any other name raises \code{dynet_unknown_measure}.}
+\item{measure}{One or more of the path measures \code{"closeness"} (the
+default), \code{"betweenness"} and \code{"efficiency"}, and the stream measures
+\code{"katz"}, \code{"pagerank"} and \code{"walk"}. Any other name raises
+\code{dynet_unknown_measure}.}
 
 \item{sessions}{How to treat sessions: \code{"bounded"} (the default) keeps
 paths inside a session, \code{"collapse"} ignores sessions, \code{"separate"}
@@ -31,6 +42,74 @@ range. A network built from dates may be addressed with dates.}
 \item{traversal_time}{Nonnegative duration charged for every hop, in the
 network's time unit; \code{0} by default. A calendar network also accepts a
 scalar \code{difftime}.}
+
+\item{criterion}{Which optimisation problem
+the journeys solve. \code{"foremost_then_shortest"} is the default and what
+every earlier release computed; \code{"min_hops"} counts fewest contacts, which
+makes closeness dimensionless and comparable with its static counterpart.
+\code{"foremost"} (pure earliest arrival) is accepted for closeness, where it
+equals the default because closeness reads only the arrival, and refused
+for betweenness with \code{dynet_intractable_criterion}, because that needs
+the count of every vertex-simple foremost journey, which is #P-hard
+(Buss et al., 2024). \code{"fastest"} measures closeness by journey duration
+rather than arrival, so a vertex that is reached late but quickly is
+close; betweenness under it is not implemented. \code{"shortest"} minimises
+a summed cost per contact, \code{cost}: with hop costs it is \code{"min_hops"},
+with weight costs closeness is the inverse mean summed weight of the
+cheapest journeys and betweenness counts those journeys. Reach and reach
+count are identical under all.}
+
+\item{cost}{For \code{criterion = "shortest"} only: \code{"hops"} (one per contact)
+or \code{"weight"} (the tie weight, which must be positive and finite). See
+\code{\link[=paths]{paths()}}.}
+
+\item{top}{For \code{measure = "closeness"} under
+\code{criterion = "min_hops"} or \code{"shortest"} only: return the \code{top} most central vertices,
+plus every vertex tied at the \code{top}-th value, computing only the searches
+that ranking needs. Temporal closeness costs one full path search per
+vertex; a source is dropped as soon as the closeness of what it has
+reached so far, which can only fall as the search continues, is below
+the \code{top}-th best value found. The answer is exact, the same rows and
+values the full computation gives, and the result records how many
+sources ran to completion as \code{sources_evaluated}. Under
+\code{sessions = "separate"} the ranking is within each session; under
+\code{sessions = "bounded"} on a network with sessions no source can be
+dropped early, and the count says so. The remaining vertices are absent,
+not \code{NA}, and the print header says they were not computed.}
+
+\item{mode}{For \code{measure = "efficiency"} only: \code{"out"} (the default) averages
+over the targets a vertex reaches, \code{"in"} over the sources that reach it.
+Every other measure follows the network's recorded direction, and
+naming \code{mode} with one raises \code{dynet_bad_input}.}
+
+\item{beta}{For \code{measure = "katz"} and \code{"walk"} only: walk attenuation in
+\verb{(0, 1]}. Under \code{"katz"} a walk of \code{l} contacts weighs \code{beta^l}; under
+\code{"walk"} it weighs \code{beta^(l - 1)}, so a contact alone weighs one and
+each further contact multiplies by \code{beta} (Oettershagen, Mutzel and
+Kriege, 2022, Definition 4.1).}
+
+\item{decay}{For \code{measure = "katz"} and \code{"walk"} only: exponential
+time-decay rate. Under \code{"katz"} it discounts every past walk by the time
+elapsed; under \code{"walk"} it discounts each pairing of an arrival with a
+later departure by the waiting time between them. Zero weights every
+walk, or every pairing, equally.}
+
+\item{damping}{For \code{measure = "pagerank"} only: the jumping probability,
+a single number strictly between zero and one, \code{0.85} by default. Each
+extra step of a temporal walk is worth \code{damping} times the last.}
+
+\item{transition}{For temporal \code{measure = "pagerank"} only: the transition
+probability in \verb{(0, 1]}. A walk waiting at a vertex declines each passing
+outgoing contact with probability \code{transition} and takes it otherwise, so
+a smaller value spreads a walk's next step further into the future. The
+boundary value \code{1} is a separate rule, not a limit: the walk takes the
+first contact that passes.}
+
+\item{rescale}{For \code{measure = "pagerank"} only: whether to divide the
+scores by their total in each block, \code{TRUE} by default. The raw score
+grows with the length of the stream, so only the rescaled one compares
+across windows. Naming it with any other measure raises
+\code{dynet_bad_input}.}
 
 \item{plot}{Whether to draw the result as well as return it. Drawing is a
 side effect in the manner of \code{\link[graphics:hist]{graphics::hist()}}: the verb still returns
@@ -46,13 +125,13 @@ attributes; a two-measure result stores named records under
 }
 \description{
 Centrality computed from the time-respecting paths that \code{\link[=paths]{paths()}} finds,
-taken across the whole observation period (or the \code{start}-to-\code{end}
-window). A path may only continue along a tie that is available after it
-arrives, so these values cannot be inflated by ties that occur in the
-wrong order, as a flattened network is. The result is one value per
-vertex, not a series: for centrality that changes from window to window,
-use \code{\link[=centrality_series]{centrality_series()}}; for the number of vertices a vertex can reach,
-use \code{\link[=reachability]{reachability()}}.
+or from the temporal walks of the contact stream, taken across the whole
+observation period (or the \code{start}-to-\code{end} window). A path may only
+continue along a tie that is available after it arrives, so these values
+cannot be inflated by ties that occur in the wrong order, as a flattened
+network is. The result is one value per vertex, not a series: for
+centrality that changes from window to window, use \code{\link[=centrality_series]{centrality_series()}};
+for the number of vertices a vertex can reach, use \code{\link[=reachability]{reachability()}}.
 }
 \details{
 Betweenness is the raw dependency sum over reachable forward
@@ -86,6 +165,70 @@ triggers at its timestamp and reaches its endpoint after that duration.
 \code{start} and \code{end} bound every measure. In separate-session output, a
 session outside a one-sided bound contributes zero rows.
 
+Efficiency is the mean reciprocal temporal distance from a vertex to every
+other vertex (\code{mode = "out"}), or to it from every other (\code{mode = "in"}),
+with the distance the \code{criterion} optimises. Unreachable vertices
+contribute zero rather than being dropped, so it is defined on a
+disconnected network; it is therefore not the reciprocal of closeness,
+which averages over reachable vertices only.
+
+Temporal Katz centrality is the attenuated, time-decayed count of temporal
+walks ending at each vertex (Beres et al., 2018): each contact \verb{(u, v, t)}
+passes \code{beta} times whatever had reached \code{u}, plus one for the walk that
+is that contact alone.
+
+Temporal PageRank scores a vertex by the damped, transition-weighted count
+of temporal walks that end at it, following Rozenshtein and Gionis (2016).
+It is computed by their Algorithm 1 in one pass over the contact stream: a
+contact \verb{(u, v, t)} starts a fresh walk at \code{u} worth \code{1 - damping}, then
+carries \code{damping} times whatever mass is waiting at \code{u} across to \code{v}. With
+\code{transition < 1} the mass left behind at \code{u} is multiplied by \code{transition}
+for each contact it declines, so a walk\'s next step follows a geometric
+distribution over the outgoing contacts that pass. \code{transition = 1} is a
+distinct rule rather than the limit of that one: the waiting mass leaves
+entirely on the first passing contact.
+
+Two consequences are worth stating plainly. The raw score grows linearly
+with the number of contacts, so it is comparable only within one window;
+\code{rescale = TRUE}, the default for this measure, divides by the total and is
+what makes two windows comparable. And the walk does not restart uniformly:
+a walk begins at \code{u} once per outgoing contact of \code{u}, so the implied
+personalization is the out-degree distribution. Under repeated uniform
+sampling from a fixed digraph and \code{transition = 1}, the rescaled scores
+converge to static PageRank personalized by weighted out-degree; on a
+digraph of constant out-degree that is exactly the uniform-teleport
+PageRank reported at snapshot scope. There is no teleportation matrix and so
+no dangling-mass correction: a vertex with no outgoing contact simply holds
+its mass. A vertex that never appears as a contact endpoint scores exactly
+zero, and a block with no eligible contact at all scores \code{NaN} throughout
+once rescaled.
+
+\code{"walk"} is temporal walk centrality (Oettershagen, Mutzel and Kriege,
+2022): a vertex scores by the walks that arrive at it and the walks that
+leave it afterwards, \verb{sum over t1 < t2 of W_in(v, t1) * W_out(v, t2) * exp(-decay * (t2 - t1))},
+where \code{W_in(v, t)} is the summed weight of temporal walks ending at \code{v}
+at \code{t} and \code{W_out(v, t)} of those starting there. It is the one measure
+of the family that scores brokerage in time, obtaining then
+distributing, rather than accumulated arrivals; it costs two passes over
+the contact stream. The pairing is strict: an arrival and a departure at
+the same instant are two contacts that cannot chain, so they are not
+paired. A vertex with no incoming or no outgoing contact scores zero. On
+an undirected network every contact runs both ways. The result records
+\code{attenuation}, \code{decay}, \code{walk_weight}, \code{waiting_weight}, \code{walk_rule} and
+\code{pairing}.
+
+Simultaneous contacts are batched strictly for the stream measures,
+\code{"katz"}, \code{"pagerank"} and \code{"walk"}: every contact sharing a timestamp reads the
+active mass as it stood before that instant, and the arrivals it produces
+are only available afterwards. This deliberately differs from \code{\link[=paths]{paths()}},
+which composes equal-time contacts at \code{traversal_time = 0}, and from a
+literal reading of Algorithm 1, which would let one contact continue a walk
+another contact delivered in the same instant. Without the batch rule the
+answer would depend on the arbitrary order of rows inside one instant, and
+therefore on the vertex labelling. On a stream whose timestamps are
+distinct and which carries no self-contact, the batched recurrence reduces
+to Algorithm 1 exactly.
+
 Declared vertex activity gates the exact source anchor and every hop.
 Waiting after a valid anchor may cross inactivity; interval traversal
 requires both endpoints through completion, while a point trigger requires
@@ -94,12 +237,16 @@ full-network denominators are retained.
 }
 \section{Conditions}{
 
-Errors: \code{dynet_unknown_measure} (a measure other than \code{"closeness"} or
-\code{"betweenness"}), \code{dynet_no_sessions} (\code{sessions = "separate"} without a
+Errors: \code{dynet_unknown_measure} (a measure not listed under \code{measure}),
+\code{dynet_intractable_criterion} (betweenness under \code{criterion = "foremost"};
+it also carries \code{dynet_bad_input}), \code{dynet_no_sessions} (\code{sessions = "separate"} without a
 session column), \code{dynet_outside_observation} (the requested range misses
 observed support; it also carries \code{dynet_bad_input}), and
 \code{dynet_bad_input} for every other broken contract -- \code{dn} not a \code{dynet}, a
-malformed \code{measure}, an out-of-range \code{start}, \code{end} or \code{traversal_time}.
+malformed \code{measure}, an out-of-range \code{start}, \code{end} or \code{traversal_time},
+an argument named with a measure it does not apply to, betweenness under
+\code{criterion = "fastest"}, and \code{top} outside closeness under \code{"min_hops"} or
+\code{"shortest"}.
 }
 
 \examples{
@@ -111,6 +258,14 @@ few <- induce_subgraph(dn, nodes = c("Ana", "Ben", "Cara", "Dan", "Eve",
 path_centrality(few)
 path_centrality(few, measure = c("closeness", "betweenness"),
                 start = 0, end = 10)
+
+# The leaders only, searching just what the ranking needs
+path_centrality(few, criterion = "min_hops", top = 3)
+
+# Stream measures need no path search, so they run on the whole network.
+path_centrality(dn, measure = "katz")
+path_centrality(dn, measure = "walk", decay = 0.1)
+path_centrality(dn, measure = "pagerank", transition = 0.5)
 }
 \references{
 Pan, R. K., & Saramaki, J. (2011). Path lengths, correlations, and
@@ -126,6 +281,17 @@ aspects of temporal betweenness. \emph{Network Science}, 12(2), 160-188.
 Nicosia, V., Tang, J., Mascolo, C., Musolesi, M., Russo, G., & Latora, V.
 (2013). Graph metrics for temporal networks. In \emph{Temporal Networks}
 (pp. 15-40). Springer.
+
+Beres, F., Palovics, R., Olah, A., & Benczur, A. A. (2018). Temporal walk
+based centrality metric for graph streams. \emph{Applied Network Science}, 3, 32.
+
+Oettershagen, L., Mutzel, P., and Kriege, N. M. (2022). Temporal walk
+centrality: ranking nodes in evolving networks. \emph{Proceedings of the ACM
+Web Conference 2022}, 1640-1650. \doi{10.1145/3485447.3512210}
+
+Rozenshtein, P., & Gionis, A. (2016). Temporal PageRank. In \emph{Machine
+Learning and Knowledge Discovery in Databases (ECML PKDD 2016)}, LNCS 9852,
+674-689.
 }
 \seealso{
 \code{\link[=paths]{paths()}}, \code{\link[=reachability]{reachability()}}, \code{\link[=centrality_series]{centrality_series()}}.

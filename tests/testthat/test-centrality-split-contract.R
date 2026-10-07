@@ -60,3 +60,28 @@ test_that("path_centrality draws on request and still returns the table", {
   expect_false(drawn$visible)
   expect_s3_class(drawn$value, "dynet_metric")
 })
+
+test_that("path_centrality rejects mode and rescale only when they are named", {
+  # Regression for the 0.5.2 merge: `mode` was tested with missing() after
+  # match.arg() had reassigned it, so every call without efficiency failed.
+  dn <- quiet_dynet(random_edges(seed = 3L))
+  measures <- c("closeness", "betweenness", "efficiency", "katz",
+                "pagerank", "walk")
+  ran <- vapply(measures, function(m) {
+    out <- path_centrality(dn, measure = m)
+    inherits(out, "dynet_metric")
+  }, logical(1L))
+  expect_true(all(ran))
+  expect_error(path_centrality(dn, measure = "closeness", mode = "in"),
+               class = "dynet_bad_input")
+  expect_error(path_centrality(dn, measure = "katz", rescale = FALSE),
+               class = "dynet_bad_input")
+  expect_error(path_centrality(dn, measure = "reach"),
+               class = "dynet_unknown_measure")
+})
+
+test_that("rescaled temporal pagerank sums to one in every block", {
+  dn <- quiet_dynet(random_edges(seed = 4L))
+  scores <- as.data.frame(path_centrality(dn, measure = "pagerank"))
+  expect_equal(sum(scores$value), 1)
+})

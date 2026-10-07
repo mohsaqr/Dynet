@@ -47,15 +47,18 @@ wrapping \code{plot()} call without changing what comes back. Use \code{plot()} 
 the result when the figure needs arguments of its own.}
 }
 \value{
-A \code{dynet_pshifts} data frame whose shape follows \code{output}.
+A \code{dynet_pshifts} data frame whose shape follows \code{output}, carrying
+the \code{measure}/\code{value} pair every other measurement verb returns, so a
+participation-shift census composes with the verbs that consume one;
+\code{measure} is the constant \code{"count"} and \code{value} is the integer count.
 \code{"final"} gives one row per shift class -- thirteen rows, always all
 thirteen even when a class never occurred -- with columns \code{shift} (the
-Gibson label), \code{family} (the label's group) and \code{count}.
+Gibson label), \code{family} (the label's group), \code{measure} and \code{value}.
 \code{"cumulative"} gives one row per turn and class, that is thirteen rows
 per classified turn, with \code{sequence} and \code{event} locating the turn in its
 sequence, \code{time}, \code{speaker}, \code{target} and \code{group} describing the turn,
-and \code{shift}, \code{family} and \code{count} carrying the running total of that
-class up to and including the turn. Either shape gains a leading
+and \code{shift}, \code{family}, \code{measure} and \code{value} carrying the running total
+of that class up to and including the turn. Either shape gains a leading
 \code{session} column under \code{sessions = "separate"}, which reports each
 session on its own rows; \code{"bounded"} and \code{"collapse"} carry no session
 column. Print it, \code{\link[=summary]{summary()}} it, \code{\link[=plot]{plot()}} it, or take the plain frame

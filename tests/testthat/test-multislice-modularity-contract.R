@@ -1,0 +1,221 @@
+# Item 2: the Mucha et al. (2010) quality function. Its whole point is that
+# the null is slice-local and that no null is subtracted from the coupling;
+# the two calibrations below are what pin that.
+
+crossover_network <- function() {
+  nm <- LETTERS[1:8]
+  clique <- function(v, t) {
+    p <- t(utils::combn(v, 2L))
+    data.frame(from = p[, 1L], to = p[, 2L], time = t, stringsAsFactors = FALSE)
+  }
+  dynet(rbind(clique(nm[1:4], 0), clique(nm[5:8], 0),
+              clique(nm[1:3], 1), clique(nm[4:8], 1)),
+        format = "contact", directed = FALSE,
+        nodes = data.frame(name = nm),
+        observation_start = 0, observation_end = 2)
+}
+
+crossover_partition <- function(labels) {
+  data.frame(time = rep(0:1, each = 8L), node = rep(LETTERS[1:8], 2L),
+             community = labels, stringsAsFactors = FALSE)
+}
+
+q_of <- function(dn, membership, ...) {
+  out <- as.data.frame(multislice_modularity(dn, membership = membership,
+                                             step = 1, window = 1, ...))
+  stats::setNames(out$value, out$measure)
+}
+
+test_that("a membership frame missing its contract is refused", {
+  dn <- crossover_network()
+  expect_error(multislice_modularity(dn, membership = data.frame(node = "A")),
+               class = "dynet_bad_input")
+  expect_error(multislice_modularity(dn, gamma = -1), class = "dynet_bad_input")
+  expect_error(multislice_modularity(dn, omega = -1), class = "dynet_bad_input")
+  expect_error(multislice_modularity(dn, coupling = "chain"))
+})
+
+test_that("a membership naming a vertex the network does not have is refused", {
+  # Vertices are addressed by name, so a typo must be caught rather than
+  # silently dropping that vertex from the partition.
+  dn <- crossover_network()
+  bad <- crossover_partition(rep(1L, 16L))
+  bad$node[[1L]] <- "Zebra"
+  expect_error(multislice_modularity(dn, membership = bad, step = 1,
+                                     window = 1),
+               class = "dynet_unknown_node")
+})
+
+test_that("a membership that does not cover every state is refused", {
+  dn <- crossover_network()
+  partial <- crossover_partition(rep(1L, 16L))[1:8, ]
+  expect_error(multislice_modularity(dn, membership = partial, step = 1,
+                                     window = 1),
+               class = "dynet_bad_input")
+})
+
+test_that("the parts of the decomposition sum to the whole", {
+  dn <- crossover_network()
+  for (omega in c(0, 0.5, 3)) {
+    parts <- q_of(dn, crossover_partition(rep(c(1, 1, 1, 1, 2, 2, 2, 2), 2L)),
+                  omega = omega)
+    expect_equal(parts[["q_intra"]] + parts[["q_inter"]], parts[["q"]],
+                 tolerance = sqrt(.Machine$double.eps))
+  }
+})
+
+test_that("Q reads the partition, not the names its communities happen to carry", {
+  dn <- crossover_network()
+  base <- rep(c(1, 1, 1, 1, 2, 2, 2, 2), 2L)
+  renamed <- ifelse(base == 1, 9, 3)
+  expect_equal(q_of(dn, crossover_partition(base), omega = 1)[["q"]],
+               q_of(dn, crossover_partition(renamed), omega = 1)[["q"]])
+  lettered <- ifelse(base == 1, "left", "right")
+  expect_equal(q_of(dn, crossover_partition(base), omega = 1)[["q"]],
+               q_of(dn, crossover_partition(lettered), omega = 1)[["q"]])
+})
+
+test_that("one community for everything and no coupling scores exactly zero", {
+  # With gamma = 1 the observed edges and their expectation cancel term for
+  # term, which is the definition of the baseline.
+  dn <- crossover_network()
+  expect_equal(q_of(dn, crossover_partition(rep(1L, 16L)), omega = 0)[["q"]], 0,
+               tolerance = sqrt(.Machine$double.eps))
+  expect_equal(q_of(dn, NULL, omega = 0)[["q"]], 0,
+               tolerance = sqrt(.Machine$double.eps))
+})
+
+test_that("omega decides whether persistence beats tracking, at a fixed point", {
+  # Eight vertices, two slices: two four-cliques, then a three-clique and a
+  # five-clique as D defects. The persistent partition ignores the defection;
+  # the switching one follows it. Which wins is the whole meaning of omega,
+  # and the crossover sits between 2 and 2.5. Any change to the null or the
+  # normaliser moves these numbers.
+  dn <- crossover_network()
+  persistent <- crossover_partition(rep(c(1, 1, 1, 1, 2, 2, 2, 2), 2L))
+  switching <- crossover_partition(c(1, 1, 1, 1, 2, 2, 2, 2,
+                                     1, 1, 1, 2, 2, 2, 2, 2))
+  single <- crossover_partition(rep(1L, 16L))
+  # Quoted to five decimals from an independent prototype written before this
+  # implementation existed, so the tolerance is the fixture's precision.
+  frozen <- data.frame(
+    omega = c(0, 0.25, 1, 2, 2.5, 5),
+    persistent = c(0.32615, 0.37607, 0.48951, 0.58912, 0.62564, 0.74083),
+    switching = c(0.42462, 0.45798, 0.53380, 0.60038, 0.62479, 0.70178),
+    single = c(0.00000, 0.07407, 0.24242, 0.39024, 0.44444, 0.61538))
+  for (row in seq_len(nrow(frozen))) {
+    omega <- frozen$omega[[row]]
+    expect_equal(q_of(dn, persistent, omega = omega)[["q"]],
+                 frozen$persistent[[row]], tolerance = 1e-4)
+    expect_equal(q_of(dn, switching, omega = omega)[["q"]],
+                 frozen$switching[[row]], tolerance = 1e-4)
+    expect_equal(q_of(dn, single, omega = omega)[["q"]],
+                 frozen$single[[row]], tolerance = 1e-4)
+  }
+  # Persistence is monotone in omega and overtakes tracking exactly once.
+  expect_true(all(diff(frozen$persistent) > 0))
+  ahead <- frozen$persistent > frozen$switching
+  expect_identical(ahead, c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE))
+})
+
+test_that("an edgeless slice is counted, not divided by", {
+  nm <- LETTERS[1:4]
+  dn <- dynet(data.frame(from = c("A", "C"), to = c("B", "D"),
+                         time = c(0, 0)),
+              format = "contact", directed = FALSE,
+              nodes = data.frame(name = nm),
+              observation_start = 0, observation_end = 3)
+  parts <- q_of(dn, NULL, omega = 1)
+  expect_true(is.finite(parts[["q"]]))
+  expect_false(is.nan(parts[["q"]]))
+  expect_gte(parts[["n_empty_slices"]], 1)
+})
+
+test_that("a network with no edges and no coupling has no Q at all", {
+  nm <- LETTERS[1:4]
+  dn <- dynet(data.frame(from = "A", to = "B", time = 0), format = "contact",
+              directed = FALSE, nodes = data.frame(name = nm),
+              observation_start = 0, observation_end = 6)
+  expect_error(
+    multislice_modularity(dn, omega = 0, start = 3, end = 5, step = 1,
+                          window = 1),
+    class = "dynet_empty_result")
+})
+
+test_that("metadata records the choices Q depends on", {
+  dn <- crossover_network()
+  out <- multislice_modularity(dn, gamma = 1.5, omega = 0.25, step = 1,
+                               window = 1)
+  expect_identical(attr(out, "gamma"), 1.5)
+  expect_identical(attr(out, "omega"), 0.25)
+  expect_identical(attr(out, "coupling"), "ordinal")
+  expect_false(attr(out, "symmetrised"))
+})
+
+test_that("the per-bin table has one row per slice and reports the slice itself", {
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  out <- multislice_modularity(dn, membership = as.data.frame(found),
+                               step = 5, window = 5)
+  bins <- as.data.frame(out, what = "bins")
+  expect_identical(nrow(bins), length(unique(found$time)))
+  expect_identical(bins$time, sort(unique(found$time)))
+  expect_true(all(c("q", "two_m", "n_communities") %in% names(bins)))
+  # Each slice's own edge total, which the supra assembly can confirm.
+  supra <- Dynet:::.supra(projection(dn, step = 5, window = 5))
+  expect_equal(bins$two_m,
+               vapply(supra$blocks[[1L]]$layers, sum, numeric(1L)))
+  expect_true(all(bins$n_communities >= 1))
+})
+
+test_that("with no coupling the whole series is the weighted mean of its bins", {
+  # The identity that gives the per-bin numbers their meaning, and the same
+  # one the igraph calibration above pins from the other side.
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  out <- multislice_modularity(dn, membership = as.data.frame(found),
+                               omega = 0, step = 5, window = 5)
+  bins <- as.data.frame(out, what = "bins")
+  total <- as.data.frame(out)$value[as.data.frame(out)$measure == "q"]
+  expect_equal(sum(bins$q * bins$two_m) / sum(bins$two_m), total,
+               tolerance = sqrt(.Machine$double.eps))
+})
+
+test_that("a slice's own modularity does not depend on the coupling", {
+  # omega ties the slices together but adds nothing inside one, so the
+  # per-bin values must be identical across omega even as the total moves.
+  dn <- dynet(school_contacts, format = "contact")
+  found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
+  membership <- as.data.frame(found)
+  loose <- multislice_modularity(dn, membership = membership, omega = 0,
+                                 step = 5, window = 5)
+  tight <- multislice_modularity(dn, membership = membership, omega = 2,
+                                 step = 5, window = 5)
+  expect_equal(as.data.frame(loose, what = "bins")$q,
+               as.data.frame(tight, what = "bins")$q)
+  expect_false(isTRUE(all.equal(as.data.frame(loose)$value,
+                               as.data.frame(tight)$value)))
+})
+
+test_that("an edgeless slice has no modularity of its own, and says so", {
+  nm <- LETTERS[1:4]
+  dn <- dynet(data.frame(from = c("A", "C"), to = c("B", "D"),
+                         time = c(0, 0)),
+              format = "contact", directed = FALSE,
+              nodes = data.frame(name = nm),
+              observation_start = 0, observation_end = 3)
+  bins <- as.data.frame(multislice_modularity(dn, omega = 1, step = 1,
+                                              window = 1), what = "bins")
+  expect_true(any(is.na(bins$q)))
+  expect_false(any(is.nan(bins$q[!is.na(bins$q)])))
+  expect_true(all(bins$two_m[is.na(bins$q)] == 0))
+})
+
+test_that("the accessor refuses a table it does not have", {
+  dn <- crossover_network()
+  out <- multislice_modularity(dn, step = 1, window = 1)
+  expect_error(as.data.frame(out, what = "slices"))
+  expect_s3_class(out, "dynet_modularity")
+  expect_s3_class(out, "dynet_metric")
+  expect_identical(nrow(as.data.frame(out)), 6L)
+})

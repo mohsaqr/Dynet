@@ -17,12 +17,12 @@ test_that("pshifts answers all four generics itself", {
 
   flat <- as.data.frame(shifts)
   expect_identical(class(flat), "data.frame")
-  expect_identical(names(flat), c("shift", "family", "count"))
+  expect_identical(names(flat), c("shift", "family", "measure", "value"))
   expect_identical(nrow(flat), 13L)
 
   # Families partition the shifts, so their counts must total the whole.
   digest <- summary(shifts)
-  expect_identical(sum(digest$count), sum(flat$count))
+  expect_identical(sum(digest$count), sum(flat$value))
   expect_equal(sum(digest$share), 1)
   expect_setequal(digest$family, unique(flat$family))
   expect_identical(digest$count, sort(digest$count, decreasing = TRUE))

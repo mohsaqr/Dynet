@@ -25,6 +25,11 @@ inst/reproduction/**/*.html
 
 # Submission notes, local-only
 cran-comments.md
+
+# Stray plotting artifacts from running examples and tests
+Rplots.pdf
+tests/testthat/Rplots.pdf
+tests/testthat/_problems/
 # Rendered pkgdown articles and the files their chunks write
 vignettes/articles/*.html
 vignettes/articles/animating_files/

@@ -16,25 +16,10 @@
 .tie_state_styles <- c(forming = "dotted", persisting = "solid",
   dissolving = "dashed")
 
-#' Evaluate an expression under a seed, leaving the caller's RNG untouched
-#' @param seed A seed, or `NULL` to draw from the current random state.
-#' @param expr Expression to evaluate.
-#' @return The value of `expr`.
-#' @noRd
-.with_seed <- function(seed, expr) {
-  if (is.null(seed)) return(expr)
-  had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
-  old_seed <- if (had_seed) get(".Random.seed", envir = globalenv()) else NULL
-  on.exit({
-    if (had_seed) {
-      assign(".Random.seed", old_seed, envir = globalenv())
-    } else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
-      rm(".Random.seed", envir = globalenv())
-    }
-  }, add = TRUE, after = FALSE)
-  set.seed(seed)
-  expr
-}
+# `.with_seed()` lives in R/random.R, where the null models need it. That
+# version also validates `seed` and restores an absent `.Random.seed` by
+# removing it rather than assigning NULL, so it is the one to keep.
+
 
 #' Edge table of a weight matrix, in the order cograph draws it
 #'

@@ -30,10 +30,11 @@ test_that("the default reachability call remains proportion-only", {
   expect_equal(out$value, c(1, 1 / 3, 1 / 3, 0,
                             0, 1 / 3, 1 / 3, 1))
   expect_s3_class(default, "dynet_metric")
-  # `measure` and `plot` were both appended after the original arguments, so a
-  # positional call written before either existed still means what it did.
-  expect_identical(tail(names(formals(reachability)), 2L),
-                   c("measure", "plot"))
+  # New arguments are appended, so a positional call cannot shift: `measure`
+  # was added after the original arguments, `criterion` after it, and `plot`
+  # last.
+  expect_identical(tail(names(formals(reachability)), 3L),
+                   c("measure", "criterion", "plot"))
 })
 
 test_that("reach counts and proportions are distinct ordered measures", {
