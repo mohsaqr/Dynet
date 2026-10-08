@@ -21,7 +21,8 @@
 #' @param delta The longest admissible wait at the shared vertex, in the
 #'   network's time unit: an arc requires the later event to start no more
 #'   than `delta` after the earlier one ends. `Inf`, the default, admits any
-#'   wait. A single non-negative number, or `dynet_bad_input` is raised.
+#'   wait; zero admits none, since a wait is always positive. A single
+#'   non-negative number, or `dynet_bad_input` is raised.
 #' @param adjacency `"all"` (the default) joins an event to every admissible
 #'   successor; `"next"` joins it only to the earliest admissible successors
 #'   at each shared vertex (every successor starting at that earliest time).
@@ -49,13 +50,15 @@
 #' @details
 #' Events are ordered by `start`, then `end`, `from` and `to`, and numbered in
 #' that order. Event `e1` precedes `e2` at a shared vertex `v` when `e2`
-#' starts at or after `e1` ends and no more than `delta` later, and strictly
-#' after `e1` starts. An event therefore occupies its whole spell, as in the
-#' event graphs of Kivela et al. (2018): something carried by it is available
-#' at its endpoints from its end. The strict start rule means that two
-#' instantaneous events at the same instant are never adjacent, because
-#' nothing orders them; this also makes the graph acyclic, and numbering
-#' events by start is a topological order.
+#' starts strictly after `e1` ends, and no more than `delta` later. An event
+#' therefore occupies its whole spell, as in the event graphs of Kivela et
+#' al. (2018): something carried by it is available at its endpoints once it
+#' has ended. Because the later event must start strictly after, two
+#' instantaneous events at the same instant are never adjacent, nor is an
+#' event that starts at the very instant another ends; every wait is
+#' positive, the graph is acyclic, and numbering events by start is a
+#' topological order. This is the rule of Reticula (Badie-Modiri and
+#' Kivela, 2023), the reference implementation of the construct.
 #'
 #' Two events that share both endpoints are joined once per shared vertex,
 #' so they produce two adjacency rows with different `via`. This is correct:
@@ -94,6 +97,10 @@
 #'
 #' Mellor, A. (2018). The temporal event graph. *Journal of Complex Networks*,
 #' 6(4), 639-659. \doi{10.1093/comnet/cnx048}
+#'
+#' Badie-Modiri, A., & Kivela, M. (2023). Reticula: A temporal network and
+#' hypergraph analysis software package. *SoftwareX*, 21, 101301.
+#' \doi{10.1016/j.softx.2022.101301}
 #'
 #' Kovanen, L., Karsai, M., Kaski, K., Kertesz, J., & Saramaki, J. (2011).
 #' Temporal motifs in time-dependent networks. *Journal of Statistical
@@ -188,8 +195,6 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
   from_time <- spells$end[adjacencies$from_event]
   to_time <- spells$start[adjacencies$to_event]
   wait <- to_time - from_time
-  # A wait inside time tolerance of zero is zero, not a rounding residue.
-  wait[.time_eq_each(to_time, from_time)] <- 0
   adjacencies$from_time <- from_time
   adjacencies$to_time <- to_time
   adjacencies$wait <- wait
@@ -197,8 +202,8 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
     adjacencies$session <- spells$session[adjacencies$from_event]
   }
   rownames(adjacencies) <- NULL
-  .check("Internal event graph produced a negative wait." =
-           all(adjacencies$wait >= 0))
+  .check("Internal event graph produced a wait that is not positive." =
+           all(adjacencies$wait > 0))
 
   meta <- list(
     n_events = n, n_adjacencies = nrow(adjacencies), delta = delta,
@@ -230,16 +235,9 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
                               adjacency, vertex) {
   s <- start[leaving]
   a_end <- end[arriving]
-  a_start <- start[arriving]
-  tol <- .time_tol_each(a_end, a_start)
-  # Earliest admissible start: at or after the arrival's end, and strictly
-  # after its start. The two coincide unless the arrival is instantaneous.
-  instant <- .time_eq_each(a_end, a_start)
-  first <- ifelse(
-    instant,
-    findInterval(a_start + tol, s) + 1L,
-    findInterval(a_end - tol, s, left.open = TRUE) + 1L
-  )
+  # Earliest admissible start: strictly after the arrival's end, beyond
+  # time tolerance of it.
+  first <- findInterval(a_end + .time_tol_each(a_end, a_end), s) + 1L
   last <- if (is.finite(delta)) {
     findInterval(a_end + delta + .time_tol_each(a_end + delta, a_end), s)
   } else rep(length(s), length(arriving))

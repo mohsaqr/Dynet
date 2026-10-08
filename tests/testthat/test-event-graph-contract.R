@@ -78,20 +78,23 @@ test_that("simultaneous events at a shared vertex are never adjacent", {
 })
 
 test_that("an interval event is followed only once it has ended", {
-  dn <- quiet_dynet(data.frame(from = c("A", "B", "B"), to = c("B", "C", "D"),
-                               start = c(0, 2, 5), end = c(5, 3, 6)))
+  dn <- quiet_dynet(data.frame(from = c("A", "B", "B", "B"),
+                               to = c("B", "C", "D", "E"),
+                               start = c(0, 2, 5, 6), end = c(5, 3, 6, 7)))
   adj <- as.data.frame(event_graph(dn), what = "adjacencies")
-  # B->C starts at 2, before A->B ends at 5; B->D starts exactly at 5.
-  expect_identical(adj$to_event, 3L)
-  expect_equal(adj$wait, 0)
+  # B->C starts at 2, while A->B is still running until 5; B->D starts at the
+  # very instant A->B ends, which is not after it; B->E starts at 6.
+  expect_identical(adj$from_event[adj$via == "B"], 1L)
+  expect_identical(adj$to_event[adj$from_event == 1L], 4L)
+  expect_equal(adj$wait[adj$from_event == 1L], 1)
 })
 
-test_that("every wait is non-negative and every via is a real shared vertex", {
+test_that("every wait is positive and every via is a real shared vertex", {
   dn <- quiet_dynet(random_edges(seed = 5L))
   eg <- event_graph(dn)
   ev <- as.data.frame(eg)
   adj <- as.data.frame(eg, what = "adjacencies")
-  expect_true(all(adj$wait >= 0))
+  expect_true(all(adj$wait > 0))
   expect_true(all(adj$via %in% dn$nodes$name))
   # Under "respect" the via is the earlier event's target and the later
   # event's source.

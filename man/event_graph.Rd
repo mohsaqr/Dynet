@@ -24,7 +24,8 @@ a network built without a session column it raises \code{dynet_no_sessions}.}
 \item{delta}{The longest admissible wait at the shared vertex, in the
 network's time unit: an arc requires the later event to start no more
 than \code{delta} after the earlier one ends. \code{Inf}, the default, admits any
-wait. A single non-negative number, or \code{dynet_bad_input} is raised.}
+wait; zero admits none, since a wait is always positive. A single
+non-negative number, or \code{dynet_bad_input} is raised.}
 
 \item{adjacency}{\code{"all"} (the default) joins an event to every admissible
 successor; \code{"next"} joins it only to the earliest admissible successors
@@ -65,13 +66,15 @@ representation; it has one vertex per vertex and time slice instead.
 \details{
 Events are ordered by \code{start}, then \code{end}, \code{from} and \code{to}, and numbered in
 that order. Event \code{e1} precedes \code{e2} at a shared vertex \code{v} when \code{e2}
-starts at or after \code{e1} ends and no more than \code{delta} later, and strictly
-after \code{e1} starts. An event therefore occupies its whole spell, as in the
-event graphs of Kivela et al. (2018): something carried by it is available
-at its endpoints from its end. The strict start rule means that two
-instantaneous events at the same instant are never adjacent, because
-nothing orders them; this also makes the graph acyclic, and numbering
-events by start is a topological order.
+starts strictly after \code{e1} ends, and no more than \code{delta} later. An event
+therefore occupies its whole spell, as in the event graphs of Kivela et
+al. (2018): something carried by it is available at its endpoints once it
+has ended. Because the later event must start strictly after, two
+instantaneous events at the same instant are never adjacent, nor is an
+event that starts at the very instant another ends; every wait is
+positive, the graph is acyclic, and numbering events by start is a
+topological order. This is the rule of Reticula (Badie-Modiri and
+Kivela, 2023), the reference implementation of the construct.
 
 Two events that share both endpoints are joined once per shared vertex,
 so they produce two adjacency rows with different \code{via}. This is correct:
@@ -123,6 +126,10 @@ Reports}, 8, 12357. \doi{10.1038/s41598-018-29577-2}
 
 Mellor, A. (2018). The temporal event graph. \emph{Journal of Complex Networks},
 6(4), 639-659. \doi{10.1093/comnet/cnx048}
+
+Badie-Modiri, A., & Kivela, M. (2023). Reticula: A temporal network and
+hypergraph analysis software package. \emph{SoftwareX}, 21, 101301.
+\doi{10.1016/j.softx.2022.101301}
 
 Kovanen, L., Karsai, M., Kaski, K., Kertesz, J., & Saramaki, J. (2011).
 Temporal motifs in time-dependent networks. \emph{Journal of Statistical
