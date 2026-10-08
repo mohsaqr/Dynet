@@ -19,6 +19,17 @@
 #'     Saqr and Nouri (2020). Name the `thread` argument to select this.}
 #'   \item{copresence}{Two-mode attendance data. Actors sharing a group become
 #'     connected for the span of that group. Name `actor` and `group`.}
+#'   \item{turns}{A log of who acted when, with no recipient, such as coded
+#'     chat or collaboration actions. Within each group, every action takes
+#'     up the one before it: a directed contact from the previous actor to
+#'     the current one, at the current action's time. Name `actor`, `time`
+#'     and (optionally) `group`, and set `format = "turns"`.}
+#'   \item{broadcast}{The same kind of log, read as every action being
+#'     addressed to the whole group: a directed contact from the actor to
+#'     every other member of the group (every actor with an action in it), at
+#'     the action's time. Name `actor`, `group` and `time`, and set
+#'     `format = "broadcast"`. `event_graph(events = "messages")` then treats
+#'     each action as one event.}
 #' }
 #'
 #' Every other column of `data` is kept as a tie attribute: it appears in
@@ -75,7 +86,12 @@
 #' @param thread Column name identifying a conversation thread. Naming it
 #'   selects the threaded format.
 #' @param actor,group Column names for the actor and the shared group. Naming
-#'   both selects the co-presence format.
+#'   both selects the co-presence format, unless `format = "turns"` or
+#'   `"broadcast"`, where `group` names the conversation each action belongs
+#'   to and becomes the session unless `session` is named (a turns log
+#'   without a group is one conversation; a broadcast log needs one). In
+#'   these logs, ties never cross groups, and the other columns of an
+#'   action's row are the tie attributes of the ties it makes.
 #' @param session Column name for a session or period grouping. Sessions act
 #'   as walls that time-respecting paths do not cross.
 #' @param weight Column name for event multiplicity. `NULL` auto-detects a
@@ -93,8 +109,9 @@
 #'   colours and groups by it without further argument. A name that is not a
 #'   column of `nodes` raises a condition of class `dynet_unknown_attribute`.
 #' @param format One of `"auto"` (the default), `"interval"`, `"contact"`,
-#'   `"threaded"`, `"copresence"`. `"auto"` infers the format from the
-#'   arguments you name and the columns present.
+#'   `"threaded"`, `"copresence"`, `"turns"`, `"broadcast"`. `"auto"`
+#'   infers the format from the arguments you name and the columns present;
+#'   `"turns"` and `"broadcast"` are never inferred and must be named.
 #' @param directed Whether edges are directed, `TRUE` by default. Co-presence
 #'   networks are always undirected.
 #' @param interval Width of one time bin, in the network's time unit. Defaults
@@ -171,6 +188,20 @@
 #' # A co-presence log: actors sharing a group become connected
 #' dynet(seminar_attendance, actor = "student", group = "seminar")
 #'
+#' # A turns log: each action takes up the one before it in its group
+#' chat <- data.frame(
+#'   student = c("Ana", "Ben", "Ana", "Cy", "Dee", "Eli"),
+#'   team = c("t1", "t1", "t1", "t1", "t2", "t2"),
+#'   minute = c(1, 2, 4, 5, 1, 3),
+#'   action = c("plan", "monitor", "discuss", "plan", "plan", "adapt")
+#' )
+#' dynet(chat, actor = "student", group = "team", time = "minute",
+#'       format = "turns")
+#'
+#' # The same log as broadcasts: each action reaches the whole team
+#' dynet(chat, actor = "student", group = "team", time = "minute",
+#'       format = "broadcast")
+#'
 #' # Declare observation time without rewriting the source spell.
 #' bounded <- dynet(data.frame(
 #'   from = "A", to = "B", start = -2, end = 8
@@ -192,7 +223,7 @@ dynet <- function(data,
                   thread = NULL, actor = NULL, group = NULL,
                   session = NULL, weight = NULL, nodes = NULL, groups = NULL,
                   format = c("auto", "interval", "contact", "threaded",
-                             "copresence"),
+                             "copresence", "turns", "broadcast"),
                   thread_clock = c("absolute", "relative"),
                   directed = TRUE, interval = 1, time_unit = "auto",
                   observation_start = NULL, observation_end = NULL,
@@ -258,6 +289,9 @@ dynet <- function(data,
                                  loops = loops,
                                  min_thread_posts = as.integer(min_thread_posts)),
     contact    = .build_contact(data, from, to, time, session, time_unit),
+    turns      = .build_turns(data, actor, group, time, session, time_unit),
+    broadcast  = .build_broadcast(data, actor, group, time, session,
+                                  time_unit),
     interval   = .build_interval(data, from, to, start, end, duration, session,
                                  time_unit)
   )
@@ -1079,6 +1113,152 @@ dynet <- function(data,
   )
 }
 
+#' Build a turn-taking edge table from a log of actions with no recipient
+#'
+#' Within each group, rows are put in time order (ties keep the log's order)
+#' and every action becomes a contact from the actor of the action before it
+#' to its own actor. The first action of a group takes up nothing and makes
+#' no tie; an actor following themself makes a self-loop, which `dynet()`
+#' drops unless `loops = TRUE`.
+#'
+#' @param data Data frame.
+#' @param actor,group,time,session User-supplied column names.
+#' @param time_unit Requested time unit.
+#' @return A list with `edges`, `time_unit`, `origin`, `row_index` (the row
+#'   of the taking-up action), `node_pool` and `used`.
+#' @noRd
+.build_turns <- function(data, actor, group, time, session, time_unit) {
+  a_col <- .resolve_column(data, actor, "actor", arg = "actor")
+  if (is.null(a_col)) {
+    stop(errorCondition(
+      "Could not find an actor column. Name it with `actor = `.",
+      class = "dynet_missing_column", call = NULL))
+  }
+  g_col <- .resolve_column(data, group, "group", exclude = a_col, arg = "group")
+  t_col <- .resolve_column(data, time, "time", exclude = c(a_col, g_col),
+                           arg = "time")
+  if (is.null(t_col)) {
+    stop(errorCondition(
+      sprintf("Could not find an action-time column. Name it with `time = `. Available: %s",
+              paste(names(data), collapse = ", ")),
+      class = "dynet_missing_column", call = NULL))
+  }
+  actors <- as.character(data[[a_col]])
+  groups <- if (is.null(g_col)) rep("", nrow(data)) else
+    as.character(data[[g_col]])
+  if (anyNA(actors) || anyNA(groups)) {
+    stop(errorCondition("Actor and group columns must not contain NA values.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  parsed <- .parse_time(data[[t_col]], time_unit)
+  if (anyNA(parsed$values)) {
+    stop(errorCondition("The action-time column must not contain NA values.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  # The group is the conversation, so it is the session unless one is named;
+  # a column that merely looks like a session (a course, say) stays a tie
+  # attribute.
+  sessions <- if (!is.null(session)) .resolve_session(data, session) else
+    if (!is.null(g_col)) groups else rep(NA_character_, nrow(data))
+
+  ord <- order(groups, parsed$values, seq_len(nrow(data)))
+  same_group <- c(FALSE, groups[ord][-1L] == groups[ord][-length(ord)])
+  taker <- ord[same_group]
+  taken <- ord[c(same_group[-1L], FALSE)]
+  .check("Internal turn pairing lost its alignment." =
+           length(taker) == length(taken) &&
+           all(groups[taker] == groups[taken]))
+  if (!length(taker)) {
+    stop(errorCondition(
+      "No group has two or more actions, so no action takes up another.",
+      class = "dynet_empty_network", call = NULL))
+  }
+  list(
+    edges = data.frame(from = actors[taken], to = actors[taker],
+                       start = parsed$values[taker],
+                       end = parsed$values[taker],
+                       session = sessions[taker],
+                       stringsAsFactors = FALSE),
+    time_unit = parsed$unit,
+    origin    = parsed$origin,
+    row_index = taker,
+    node_pool = unique(actors),
+    used      = c(a_col, g_col, t_col),
+    session_named_only = TRUE
+  )
+}
+
+#' Build a broadcast edge table: every action addressed to its whole group
+#'
+#' The members of a group are the actors with at least one action in it.
+#' Each action becomes one tie from its actor to every other member, at the
+#' action's time, so an action in a group of ten makes nine ties that share
+#' their source and time and form one message.
+#'
+#' @param data Data frame.
+#' @param actor,group,time,session User-supplied column names.
+#' @param time_unit Requested time unit.
+#' @return A list with `edges`, `time_unit`, `origin`, `row_index` (the row
+#'   of the action each tie came from), `node_pool` and `used`.
+#' @noRd
+.build_broadcast <- function(data, actor, group, time, session, time_unit) {
+  a_col <- .resolve_column(data, actor, "actor", arg = "actor")
+  g_col <- if (is.null(a_col)) NULL else
+    .resolve_column(data, group, "group", exclude = a_col, arg = "group")
+  if (is.null(a_col) || is.null(g_col)) {
+    stop(errorCondition(
+      "A broadcast log needs an actor and a group column. Name them with `actor = ` and `group = `.",
+      class = "dynet_missing_column", call = NULL))
+  }
+  t_col <- .resolve_column(data, time, "time", exclude = c(a_col, g_col),
+                           arg = "time")
+  if (is.null(t_col)) {
+    stop(errorCondition(
+      sprintf("Could not find an action-time column. Name it with `time = `. Available: %s",
+              paste(names(data), collapse = ", ")),
+      class = "dynet_missing_column", call = NULL))
+  }
+  actors <- as.character(data[[a_col]])
+  groups <- as.character(data[[g_col]])
+  if (anyNA(actors) || anyNA(groups)) {
+    stop(errorCondition("Actor and group columns must not contain NA values.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  parsed <- .parse_time(data[[t_col]], time_unit)
+  if (anyNA(parsed$values)) {
+    stop(errorCondition("The action-time column must not contain NA values.",
+                        class = "dynet_bad_input", call = NULL))
+  }
+  # As in a turns log, the group is the session unless one is named.
+  sessions <- if (!is.null(session)) .resolve_session(data, session) else groups
+
+  members <- unique(data.frame(group = groups, member = actors,
+                               stringsAsFactors = FALSE))
+  actions <- data.frame(row = seq_len(nrow(data)), group = groups,
+                        actor = actors, stringsAsFactors = FALSE)
+  reach <- merge(actions, members, by = "group", sort = FALSE)
+  reach <- reach[reach$member != reach$actor, , drop = FALSE]
+  reach <- reach[order(reach$row, reach$member), , drop = FALSE]
+  if (!nrow(reach)) {
+    stop(errorCondition(
+      "No group has two or more actors, so no action reaches anyone.",
+      class = "dynet_empty_network", call = NULL))
+  }
+  list(
+    edges = data.frame(from = reach$actor, to = reach$member,
+                       start = parsed$values[reach$row],
+                       end = parsed$values[reach$row],
+                       session = sessions[reach$row],
+                       stringsAsFactors = FALSE),
+    time_unit = parsed$unit,
+    origin    = parsed$origin,
+    row_index = reach$row,
+    node_pool = unique(actors),
+    used      = c(a_col, g_col, t_col),
+    session_named_only = TRUE
+  )
+}
+
 #' Build a threaded-format edge table
 #'
 #' A post is treated as active from the moment it appears until the last post
@@ -1275,7 +1455,9 @@ dynet <- function(data,
 #' @noRd
 .attach_tie_attributes <- function(e, data, built, session, weight,
                                    onset_censored, terminus_censored) {
-  session_col <- .resolve_column(data, session, "session", arg = "session")
+  session_col <- if (isTRUE(built$session_named_only) && is.null(session)) {
+    NULL
+  } else .resolve_column(data, session, "session", arg = "session")
   weight_col <- if (is.null(weight)) NULL else
     .resolve_column(data, weight, "duration", arg = "weight")
   consumed <- c(built$used, session_col, weight_col, onset_censored,

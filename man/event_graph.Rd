@@ -10,7 +10,8 @@ event_graph(
   delta = Inf,
   adjacency = c("all", "next"),
   direction = c("respect", "ignore"),
-  loops = FALSE
+  loops = FALSE,
+  events = c("ties", "messages")
 )
 }
 \arguments{
@@ -41,17 +42,32 @@ network is read as \code{"ignore"} either way.}
 \item{loops}{Whether self-loop spells take part. \code{FALSE}, the default,
 drops them before adjacency is computed; a kept self-loop is adjacent at
 its one vertex.}
+
+\item{events}{\code{"ties"} (the default) makes every spell an event.
+\code{"messages"} merges the spells that share their source, start, end and
+session into one event, a message from one source to several targets,
+such as an email to several recipients or an action addressed to a whole
+group (\code{dynet(format = "broadcast")}). A message arrives at all its
+targets and leaves from its source, so a later event follows it when it
+leaves any one of the targets.}
 }
 \value{
 An object of class \code{dynet_event_graph}. Take its tables with
-\code{as.data.frame(x)} for the events, one row per spell, with \code{event},
-\code{session} (under \code{sessions = "separate"}), \code{from}, \code{to}, \code{start}, \code{end},
-\code{duration}, \code{weight} and \code{spell} (the row of \code{as.data.frame(dn)} the
-event came from); and \code{as.data.frame(x, what = "adjacencies")} for the
+\code{as.data.frame(x)} for the events, one row per spell (or per message),
+with \code{event}, \code{session} (under \code{sessions = "separate"}), \code{from}, \code{to}
+(for a message, its targets joined by commas), \code{n_targets} (messages
+only), \code{start}, \code{end}, \code{duration}, \code{weight}, \code{spell} (the spell the
+event came from, or a message's first spell, numbered in the order
+\code{\link[=dynet]{dynet()}} built them) and the tie attributes of that spell, except one
+whose name is already among these columns; and \code{as.data.frame(x, what = "adjacencies")} for the
 arcs, one row per pair of events and shared vertex, with \code{from_event},
-\code{to_event}, \code{via} (the shared vertex), \code{from_time} (when the earlier event
-ends), \code{to_time} (when the later one starts), \code{wait} and, under
-\code{sessions = "separate"}, \code{session}. \code{\link[=summary]{summary()}} gives one row per event
+\code{to_event} (the numbers of the two events in the event table), \code{via}
+(the shared vertex), \code{first} and \code{second} (the two events written as
+\code{from->to}, or \code{from--to} on an undirected network; a message to
+several targets as \verb{from->9 targets}), \code{from_time} (when
+the earlier event ends), \code{to_time} (when the later one starts), \code{wait},
+under \code{sessions = "separate"} \code{session}, and each tie attribute of the
+two events as \verb{first_<name>} and \verb{second_<name>}. \code{\link[=summary]{summary()}} gives one row per event
 and \code{\link[=plot]{plot()}} draws the graph.
 }
 \description{

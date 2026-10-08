@@ -51,6 +51,8 @@ test_that("a contact chain gives the hand-computed adjacencies", {
   expect_identical(adj$from_event, c(1L, 1L, 2L))
   expect_identical(adj$to_event, c(2L, 5L, 3L))
   expect_identical(adj$via, c("B", "B", "C"))
+  expect_identical(adj$first, c("A->B", "A->B", "B->C"))
+  expect_identical(adj$second, c("B->C", "B->D", "C->D"))
   expect_equal(adj$wait, c(1, 4, 1))
   expect_identical(nrow(as.data.frame(eg)), 5L)
 })
@@ -203,12 +205,32 @@ test_that("summary has one row per event and degrees that balance", {
   eg <- event_graph(quiet_dynet(random_edges(seed = 10L)))
   s <- summary(eg)
   expect_s3_class(s, "data.frame")
-  expect_identical(names(s), c("event", "time", "in_degree", "out_degree",
-                               "mean_wait"))
+  expect_identical(names(s), c("event", "time", "from", "to", "in_degree",
+                               "out_degree", "mean_wait"))
   expect_identical(nrow(s), nrow(as.data.frame(eg)))
   expect_identical(sum(s$in_degree), sum(s$out_degree))
   expect_true(all(is.na(s$mean_wait[s$out_degree == 0L])))
   expect_true(all(s$mean_wait[s$out_degree > 0L] >= 0))
+})
+
+test_that("events and summary carry the tie attributes of their spells", {
+  log <- data.frame(
+    from = c("A", "B", "C"), to = c("B", "C", "A"), time = c(3, 1, 2),
+    act = c("plan", "monitor", "discuss"), spell = c("x", "y", "z")
+  )
+  eg <- event_graph(quiet_dynet(log))
+  ev <- as.data.frame(eg)
+  # Each event keeps the attribute of the row it came from, whatever order
+  # the events were numbered in; `spell` keeps its event-graph meaning.
+  expect_identical(ev$act, log$act[ev$spell])
+  expect_identical(ev$spell, c(2L, 3L, 1L))
+  adj <- as.data.frame(eg, what = "adjacencies")
+  expect_identical(adj$first_act, ev$act[adj$from_event])
+  expect_identical(adj$second_act, ev$act[adj$to_event])
+  s <- summary(eg)
+  expect_identical(s$act, ev$act)
+  expect_identical(names(s), c("event", "time", "from", "to", "in_degree",
+                               "out_degree", "mean_wait", "act"))
 })
 
 test_that("print returns its input invisibly", {
@@ -266,3 +288,112 @@ test_that("styling arguments reach the layers they name", {
   expect_identical(length(plot(eg, arrows = FALSE)$layers),
                    length(plot(eg)$layers) - 1L)
 })
+
+test_that("the events view puts each relay chain on its own row", {
+  # At delta 1.5 the chain has adjacencies 1 -> 2 and 2 -> 3 only, so the
+  # chains are {1, 2, 3}, {4} and {5}.
+  eg <- event_graph(contact_chain(), delta = 1.5)
+  p <- plot(eg, type = "events", rows = "chain", labels = TRUE)
+  expect_s3_class(p, "ggplot")
+  layers <- ggplot2::ggplot_build(p)$data
+  points <- Filter(function(l) "shape" %in% names(l) && !"label" %in% names(l),
+                   layers)[[1L]]
+  points <- points[order(points$x), ]
+  expect_identical(points$y[1:3], rep(points$y[[1L]], 3L))
+  expect_length(unique(points$y), 3L)
+  arcs <- Filter(function(l) "group" %in% names(l) && !"shape" %in% names(l) &&
+                   !"label" %in% names(l), layers)[[1L]]
+  expect_length(unique(arcs$group), 2L)
+  # Arcs rise above their row and stay within half a row of it.
+  expect_true(all(arcs$y >= points$y[[1L]] - 1e-9))
+  expect_true(all(arcs$y <= points$y[[1L]] + 0.5))
+})
+
+test_that("labels of close events step down instead of overprinting", {
+  dn <- quiet_dynet(data.frame(
+    from = c("A", "B", "C", "D"), to = c("B", "C", "D", "E"),
+    time = c(0, 0.01, 0.02, 10)
+  ))
+  p <- plot(event_graph(dn, delta = 20), type = "events", rows = "chain",
+            labels = TRUE)
+  text <- Filter(function(l) "label" %in% names(l),
+                 ggplot2::ggplot_build(p)$data)[[1L]]
+  text <- text[order(text$x), ]
+  # Three events within a hundredth of a unit take three tiers; the fourth,
+  # far away, returns to the first.
+  expect_length(unique(text$y[1:3]), 3L)
+  expect_equal(text$y[[4L]], text$y[[1L]])
+})
+
+test_that("relay chains are the weakly connected components", {
+  chains <- Dynet:::.event_chains
+  expect_identical(chains(4L, integer(), integer()), 1:4)
+  expect_identical(chains(6L, c(5L, 3L, 1L), c(6L, 6L, 3L)),
+                   c(1L, 2L, 1L, 4L, 1L, 1L))
+})
+
+test_that("the events view rejects a bad color_by or labels", {
+  eg <- event_graph(contact_chain(), delta = 1.5)
+  expect_error(plot(eg, type = "events", color_by = "nope"),
+               class = "dynet_bad_input")
+  expect_error(plot(eg, type = "events", labels = NA),
+               class = "dynet_bad_input")
+  expect_error(plot(eg, type = "bars"))
+})
+
+test_that("the events view can give each source its own row", {
+  eg <- event_graph(contact_chain(), delta = 1.5)
+  p <- plot(eg, type = "events", rows = "actor")
+  built <- ggplot2::ggplot_build(p)
+  # Sources in order of first event: A (events 1, 4), B (2, 5), C (3).
+  expect_identical(built$layout$panel_params[[1L]]$y$get_labels(),
+                   c("A", "B", "C"))
+  expect_error(plot(eg, type = "events", rows = "nope"))
+})
+
+test_that("messages merge the ties of one action into one event", {
+  chat <- data.frame(
+    student = c("Ana", "Ben", "Ana", "Cy", "Dee", "Eli"),
+    team = c("t1", "t1", "t1", "t1", "t2", "t2"),
+    minute = c(1, 2, 4, 5, 1, 3),
+    action = c("plan", "monitor", "discuss", "plan", "plan", "adapt")
+  )
+  dn <- quiet_dynet(chat, actor = "student", group = "team", time = "minute",
+                    format = "broadcast")
+  eg <- event_graph(dn, events = "messages", delta = 2)
+  ev <- as.data.frame(eg)
+  # One event per action, reaching every other member of its team.
+  expect_identical(nrow(ev), nrow(chat))
+  expect_identical(sum(ev$n_targets), nrow(as.data.frame(dn)))
+  adj <- as.data.frame(eg, what = "adjacencies")
+  # Hand-computed at delta 2: Ana@1 -> Ben@2, Dee@1 -> Eli@3, Ben@2 -> Ana@4,
+  # Ana@4 -> Cy@5; Cy@5 is 4 after Ana@1 and 3 after Ben@2, too late.
+  expect_identical(paste(ev$from[adj$from_event], ev$start[adj$from_event],
+                         ev$from[adj$to_event], ev$start[adj$to_event]),
+                   c("Ana 1 Ben 2", "Dee 1 Eli 3", "Ben 2 Ana 4", "Ana 4 Cy 5"))
+  expect_identical(adj$first_action, c("plan", "plan", "monitor", "discuss"))
+  # On ties, messages change nothing when every action has one target.
+  tie_graph <- event_graph(contact_chain())
+  expect_identical(as.data.frame(event_graph(contact_chain(), events = "messages"),
+                                 what = "adjacencies"),
+                   as.data.frame(tie_graph, what = "adjacencies"))
+  expect_error(plot(eg, type = "storyline"), class = "dynet_bad_input")
+  expect_s3_class(plot(eg), "ggplot")
+})
+
+test_that("an attribute keeps its colour across periods", {
+  dn <- quiet_dynet(data.frame(
+    from = c("A", "B", "C", "D"), to = c("B", "C", "D", "A"),
+    time = c(1, 2, 3, 4), act = c("plan", "monitor", "discuss", "adapt")
+  ))
+  eg <- event_graph(dn, delta = 2)
+  colour_of <- function(p) {
+    d <- Filter(function(l) "shape" %in% names(l) && !"label" %in% names(l),
+                ggplot2::ggplot_build(p)$data)[[1L]]
+    stats::setNames(d$colour, d$x)
+  }
+  whole <- colour_of(plot(eg, type = "events", color_by = "act"))
+  late <- colour_of(plot(eg, type = "events", color_by = "act", start = 3))
+  expect_identical(late, whole[c("3", "4")])
+})
+

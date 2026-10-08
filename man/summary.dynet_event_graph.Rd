@@ -12,10 +12,11 @@
 \item{...}{Ignored.}
 }
 \value{
-A plain \code{data.frame}, one row per event: \code{event}, its start
-\code{time}, \code{in_degree} (the distinct events it follows), \code{out_degree} (the
-distinct events that follow it), and \code{mean_wait}, the mean wait before
-those successors start. \code{mean_wait} is \code{NA} for an event with no
+A plain \code{data.frame}, one row per event: \code{event}, its \code{session}
+(under \code{sessions = "separate"}), its start \code{time}, its endpoints \code{from} and \code{to}, \code{in_degree} (the distinct events
+it follows), \code{out_degree} (the distinct events that follow it), and
+\code{mean_wait}, the mean wait before those successors start, followed by the
+event's tie attributes. \code{mean_wait} is \code{NA} for an event with no
 successor, where no wait is defined.
 }
 \description{

@@ -32,19 +32,33 @@
 #'   later event's source, so an arc is a hop that could pass something
 #'   along. `"ignore"` joins through any shared endpoint. An undirected
 #'   network is read as `"ignore"` either way.
+#' @param events `"ties"` (the default) makes every spell an event.
+#'   `"messages"` merges the spells that share their source, start, end and
+#'   session into one event, a message from one source to several targets,
+#'   such as an email to several recipients or an action addressed to a whole
+#'   group (`dynet(format = "broadcast")`). A message arrives at all its
+#'   targets and leaves from its source, so a later event follows it when it
+#'   leaves any one of the targets.
 #' @param loops Whether self-loop spells take part. `FALSE`, the default,
 #'   drops them before adjacency is computed; a kept self-loop is adjacent at
 #'   its one vertex.
 #'
 #' @return An object of class `dynet_event_graph`. Take its tables with
-#'   `as.data.frame(x)` for the events, one row per spell, with `event`,
-#'   `session` (under `sessions = "separate"`), `from`, `to`, `start`, `end`,
-#'   `duration`, `weight` and `spell` (the row of `as.data.frame(dn)` the
-#'   event came from); and `as.data.frame(x, what = "adjacencies")` for the
+#'   `as.data.frame(x)` for the events, one row per spell (or per message),
+#'   with `event`, `session` (under `sessions = "separate"`), `from`, `to`
+#'   (for a message, its targets joined by commas), `n_targets` (messages
+#'   only), `start`, `end`, `duration`, `weight`, `spell` (the spell the
+#'   event came from, or a message's first spell, numbered in the order
+#'   [dynet()] built them) and the tie attributes of that spell, except one
+#'   whose name is already among these columns; and `as.data.frame(x, what = "adjacencies")` for the
 #'   arcs, one row per pair of events and shared vertex, with `from_event`,
-#'   `to_event`, `via` (the shared vertex), `from_time` (when the earlier event
-#'   ends), `to_time` (when the later one starts), `wait` and, under
-#'   `sessions = "separate"`, `session`. [summary()] gives one row per event
+#'   `to_event` (the numbers of the two events in the event table), `via`
+#'   (the shared vertex), `first` and `second` (the two events written as
+#'   `from->to`, or `from--to` on an undirected network; a message to
+#'   several targets as `from->9 targets`), `from_time` (when
+#'   the earlier event ends), `to_time` (when the later one starts), `wait`,
+#'   under `sessions = "separate"` `session`, and each tie attribute of the
+#'   two events as `first_<name>` and `second_<name>`. [summary()] gives one row per event
 #'   and [plot()] draws the graph.
 #'
 #' @details
@@ -122,10 +136,12 @@
 #' @export
 event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
                         delta = Inf, adjacency = c("all", "next"),
-                        direction = c("respect", "ignore"), loops = FALSE) {
+                        direction = c("respect", "ignore"), loops = FALSE,
+                        events = c("ties", "messages")) {
   sessions <- match.arg(sessions)
   adjacency <- match.arg(adjacency)
   direction <- match.arg(direction)
+  unit <- match.arg(events)
   .check_dynet(dn, sessions)
   .check(
     "`delta` must be a single non-negative number; `Inf` admits any wait." =
@@ -145,36 +161,68 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
   # the last ties between identical rows.
   spells <- spells[order(spells$start, spells$end, spells$from, spells$to,
                          spells$.raw_spell), , drop = FALSE]
-  n <- nrow(spells)
   walled <- !is.null(dn$meta$sessions) && !identical(sessions, "collapse")
-  block <- if (walled) {
+  tie_block <- if (walled) {
     ifelse(is.na(spells$session), "\r", as.character(spells$session))
-  } else rep("", n)
+  } else rep("", nrow(spells))
+
+  # The event each tie belongs to. A message is every tie from one source
+  # over one spell in one session: one action addressed to several targets.
+  # Ties are in time order, so numbering events by first appearance keeps
+  # events in time order too.
+  tie_event <- if (identical(unit, "messages")) {
+    key <- paste(spells$session, spells$from, spells$start, spells$end,
+                 sep = "\r")
+    match(key, unique(key))
+  } else seq_len(nrow(spells))
+  n <- max(tie_event)
+  lead <- match(seq_len(n), tie_event)
+  start <- spells$start[lead]
+  end <- spells$end[lead]
+  block <- tie_block[lead]
+  targets <- if (identical(unit, "messages")) {
+    as.character(tapply(spells$to, factor(tie_event, levels = seq_len(n)),
+                        function(v) paste(sort(unique(v)), collapse = ",")))
+  } else spells$to
+  n_targets <- tabulate(tie_event, nbins = n)
 
   events <- data.frame(
     event = seq_len(n),
-    session = spells$session,
-    from = spells$from, to = spells$to,
-    start = spells$start, end = spells$end,
-    duration = spells$end - spells$start,
-    weight = spells$weight,
-    spell = spells$.raw_spell,
+    session = spells$session[lead],
+    from = spells$from[lead], to = targets,
+    start = start, end = end,
+    duration = end - start,
+    weight = spells$weight[lead],
+    spell = spells$.raw_spell[lead],
     stringsAsFactors = FALSE
   )
+  if (identical(unit, "messages")) {
+    events <- data.frame(events[c("event", "session", "from", "to")],
+                         n_targets = n_targets,
+                         events[c("start", "end", "duration", "weight",
+                                  "spell")],
+                         stringsAsFactors = FALSE)
+  }
   if (!identical(sessions, "separate")) events$session <- NULL
+  # Tie attributes ride along, so an event can be read by what it was. A name
+  # the event table already uses keeps its event-graph meaning. A message
+  # takes them from its first tie.
+  attributes_kept <- setdiff(names(spells), c(.event_spell_fields, names(events)))
+  events[attributes_kept] <- spells[lead, attributes_kept, drop = FALSE]
 
   oriented <- dn$directed && identical(direction, "respect")
-  ids <- seq_len(n)
   # Where something carried by an event is available afterwards (`arrive`),
-  # and where an event can pick it up (`leave`). An undirected or
-  # direction-ignoring event does both at both endpoints; a self-loop has
-  # one endpoint, counted once.
-  both <- function(id) {
-    keep <- c(rep(TRUE, length(id)), spells$from[id] != spells$to[id])
-    list(event = c(id, id)[keep], vertex = c(spells$from[id], spells$to[id])[keep])
+  # and where an event can pick it up (`leave`): the targets and the source
+  # of each of its ties. An undirected or direction-ignoring event does both
+  # at every endpoint; an endpoint shared by several ties counts once.
+  ends_of <- function(event, vertex) {
+    pairs <- unique(data.frame(event = event, vertex = vertex,
+                               stringsAsFactors = FALSE))
+    list(event = pairs$event, vertex = pairs$vertex)
   }
-  arrive <- if (oriented) list(event = ids, vertex = spells$to) else both(ids)
-  leave <- if (oriented) list(event = ids, vertex = spells$from) else both(ids)
+  arrive <- if (oriented) ends_of(tie_event, spells$to) else
+    ends_of(c(tie_event, tie_event), c(spells$from, spells$to))
+  leave <- if (oriented) ends_of(tie_event, spells$from) else arrive
 
   arrive_key <- paste(block[arrive$event], arrive$vertex, sep = "\r")
   leave_key <- paste(block[leave$event], leave$vertex, sep = "\r")
@@ -185,22 +233,37 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
 
   arcs <- lapply(shared, function(key) {
     .event_successors(arrivals[[key]], sort(departures[[key]]),
-                      spells$start, spells$end, delta, adjacency,
-                      vertex_of[[key]])
+                      start, end, delta, adjacency, vertex_of[[key]])
   })
   adjacencies <- do.call(rbind, c(list(.empty_event_arcs()), arcs))
   adjacencies <- adjacencies[order(adjacencies$from_event,
                                    adjacencies$to_event, adjacencies$via),
                              , drop = FALSE]
-  from_time <- spells$end[adjacencies$from_event]
-  to_time <- spells$start[adjacencies$to_event]
+  from_time <- end[adjacencies$from_event]
+  to_time <- start[adjacencies$to_event]
   wait <- to_time - from_time
   adjacencies$from_time <- from_time
   adjacencies$to_time <- to_time
   adjacencies$wait <- wait
   if (identical(sessions, "separate")) {
-    adjacencies$session <- spells$session[adjacencies$from_event]
+    adjacencies$session <- events$session[adjacencies$from_event]
   }
+  # Each arc says what its two events were, so a row reads without a lookup
+  # in the event table: who reached whom in each, and their tie attributes.
+  joint <- if (isTRUE(dn$directed)) "->" else "--"
+  reached <- ifelse(n_targets > 1L, sprintf("%d targets", n_targets), targets)
+  tie <- paste(events$from, reached, sep = joint)
+  described <- data.frame(first = tie[adjacencies$from_event],
+                          second = tie[adjacencies$to_event],
+                          stringsAsFactors = FALSE)
+  adjacencies <- data.frame(
+    adjacencies[c("from_event", "to_event", "via")], described,
+    adjacencies[setdiff(names(adjacencies), c("from_event", "to_event", "via"))],
+    stringsAsFactors = FALSE)
+  adjacencies[paste0("first_", attributes_kept)] <-
+    lapply(events[attributes_kept], function(v) v[adjacencies$from_event])
+  adjacencies[paste0("second_", attributes_kept)] <-
+    lapply(events[attributes_kept], function(v) v[adjacencies$to_event])
   rownames(adjacencies) <- NULL
   .check("Internal event graph produced a wait that is not positive." =
            all(adjacencies$wait > 0))
@@ -209,6 +272,7 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
     n_events = n, n_adjacencies = nrow(adjacencies), delta = delta,
     adjacency = adjacency, direction = if (oriented) "respect" else "ignore",
     loops = loops, sessions = sessions, source_directed = dn$directed,
+    events = unit,
     time_unit = dn$meta$time_unit, origin = dn$meta$origin,
     event_rule = "whole_spell_end_to_start",
     simultaneity_rule = "strictly_later_start",
@@ -217,6 +281,12 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
   structure(list(events = events, adjacencies = adjacencies, meta = meta),
             class = "dynet_event_graph")
 }
+
+# Spell columns that the event table already represents or that only the
+# spell table owns; every other spell column is a tie attribute.
+.event_spell_fields <- c("from", "to", "start", "end", "duration", "weight",
+                         "session", "onset_censored", "terminus_censored",
+                         ".raw_spell")
 
 #' Successors of the events arriving at one vertex
 #'
@@ -307,7 +377,10 @@ print.dynet_event_graph <- function(x, ...) {
               format(meta$delta), meta$adjacency, meta$direction,
               meta$session_rule))
   if (meta$n_adjacencies) {
-    print(utils::head(x$adjacencies, 6L), row.names = FALSE)
+    shown <- intersect(c("from_event", "to_event", "first", "second", "via",
+                         "wait", "session"), names(x$adjacencies))
+    print(utils::head(x$adjacencies[shown], 6L), row.names = FALSE)
+    cat("# as.data.frame(x, what = \"adjacencies\") adds the times and the tie attributes of both events.\n")
   } else {
     cat("# No two events follow one another within `delta`.\n")
   }
@@ -318,10 +391,11 @@ print.dynet_event_graph <- function(x, ...) {
 #'
 #' @param object An event graph returned by [event_graph()].
 #' @param ... Ignored.
-#' @return A plain `data.frame`, one row per event: `event`, its start
-#'   `time`, `in_degree` (the distinct events it follows), `out_degree` (the
-#'   distinct events that follow it), and `mean_wait`, the mean wait before
-#'   those successors start. `mean_wait` is `NA` for an event with no
+#' @return A plain `data.frame`, one row per event: `event`, its `session`
+#'   (under `sessions = "separate"`), its start `time`, its endpoints `from` and `to`, `in_degree` (the distinct events
+#'   it follows), `out_degree` (the distinct events that follow it), and
+#'   `mean_wait`, the mean wait before those successors start, followed by the
+#'   event's tie attributes. `mean_wait` is `NA` for an event with no
 #'   successor, where no wait is defined.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -336,19 +410,32 @@ summary.dynet_event_graph <- function(object, ...) {
   total_wait <- vapply(split(pairs$wait, factor(pairs$from_event,
                                                 levels = seq_len(n))),
                        sum, numeric(1L))
-  data.frame(
+  out <- data.frame(
     event = events$event,
     time = events$start,
+    from = events$from,
+    to = events$to,
     in_degree = tabulate(pairs$to_event, nbins = n),
     out_degree = out_degree,
     mean_wait = ifelse(out_degree > 0L, total_wait / pmax(out_degree, 1L),
-                       NA_real_)
+                       NA_real_),
+    stringsAsFactors = FALSE
   )
+  if ("session" %in% names(events)) {
+    out <- data.frame(out[1L], session = events$session, out[-1L],
+                      stringsAsFactors = FALSE)
+  }
+  attributes_kept <- setdiff(names(events), c("event", "session", "from", "to",
+                                              "start", "end", "duration",
+                                              "weight", "spell"))
+  out[attributes_kept] <- events[attributes_kept]
+  out
 }
 
-#' Plot an event graph as a storyline
+#' Plot an event graph
 #'
-#' Draws the event graph as a storyline (Tanahashi and Ma, 2012): every actor
+#' `type = "storyline"`, the default, draws the event graph as a storyline
+#' (Tanahashi and Ma, 2012): every actor
 #' is a line through time, and every event is a column that gathers the lines
 #' of its two endpoints in a light crimson capsule. The stretch of an actor's
 #' line between two of its events is solid when the event graph joins them
@@ -364,23 +451,54 @@ summary.dynet_event_graph <- function(object, ...) {
 #' package. Each actor has its own colour and point shape, so no actor is
 #' told by colour alone.
 #'
+#' `type = "events"` draws the events themselves as the vertices. Each event
+#' is a point at its start time, and each adjacency is a line from the
+#' earlier event to the later one. With `rows = "actor"`, the default, every
+#' source has its own row, in the order of its first event, so a line runs
+#' from the row of the actor whose event was taken further to the row of the
+#' actor who took it. With `rows = "chain"`, events are grouped into relay
+#' chains, the weakly connected components of the event graph among the
+#' events drawn, every chain has its own row ordered by its first event, and
+#' adjacencies are arcs above the row; a row of one point is an event that
+#' relays nothing and continues nothing within `delta`. `color_by` colours
+#' and shapes the points by a column of the event table, such as a tie
+#' attribute. An event graph of messages (`events = "messages"`) is drawn
+#' this way by default, because a message gathers several actors at once
+#' and has no storyline.
+#'
 #' @param x An event graph returned by [event_graph()].
+#' @param type `"storyline"` (the default for ties) draws actors as lines
+#'   through the events; `"events"` (the default for messages) draws events
+#'   as points joined by lines. A storyline of messages raises
+#'   `dynet_bad_input`.
 #' @param top The number of actors drawn, those in the most events (ties by
-#'   name); `8` by default. `NULL` draws every actor. Columns are the events
-#'   that involve at least one drawn actor.
+#'   name); `8` by default. `NULL` draws every actor. In a storyline, columns
+#'   are the events that involve at least one drawn actor; in the events view
+#'   with `rows = "actor"`, the events whose source is drawn. Ignored by
+#'   `rows = "chain"`, which draws every event in the period.
+#' @param rows For `type = "events"`, `"actor"` (the default) gives every
+#'   source a row; `"chain"` gives every relay chain a row.
+#' @param color_by For `type = "events"`, the name of a column of
+#'   `as.data.frame(x)` (for example a tie attribute, `"from"` or `"to"`)
+#'   whose values colour and shape the points. `NULL`, the default, draws
+#'   every point alike.
+#' @param labels For `type = "events"`, whether to write the event under
+#'   each point: `->to` with `rows = "actor"`, whose row already names the
+#'   source, and `from->to` with `rows = "chain"`. `FALSE` by default.
 #' @param start,end Draw only events starting in this period. Default to the
 #'   whole network.
-#' @param palette Actor line colours: `"okabe"` (the default; Okabe-Ito
+#' @param palette Actor line colours, or under `type = "events"` the
+#'   colours of the `color_by` values: `"okabe"` (the default; Okabe-Ito
 #'   without its yellow, which is too faint for a thin line), `"extended"`,
 #'   `"many"`, a vector of colours recycled over the actors, or a function of
 #'   `n` returning `n` colours.
 #' @param node_size Size of the points where a line meets its events; `2.5`
 #'   by default.
-#' @param node_shape Point shapes, recycled over the actors; ggplot shape
-#'   codes. The default cycles nine shapes, so the first 72 actors differ in
-#'   their pair of colour and shape.
-#' @param line_width,line_alpha Width and opacity of the actor lines; `0.9`
-#'   and `1` by default.
+#' @param node_shape Point shapes, recycled over the actors (or the
+#'   `color_by` values); ggplot shape codes. The default cycles nine shapes,
+#'   so the first 72 actors differ in their pair of colour and shape.
+#' @param line_width,line_alpha Width and opacity of the actor lines, or of
+#'   the arcs under `type = "events"`; `0.9` and `1` by default.
 #' @param relay_style,no_relay_style Line types of a stretch that is an
 #'   adjacency of the event graph and of one that is not; `"solid"` and
 #'   `"22"` (dashed) by default. Any ggplot line type.
@@ -391,14 +509,15 @@ summary.dynet_event_graph <- function(object, ...) {
 #'   a directed network; `TRUE` by default.
 #' @param arrow_color,arrow_width,arrow_size Colour, line width and head
 #'   length (in centimetres) of those arrows; `"grey40"`, `0.4` and `0.12` by
-#'   default.
+#'   default. Under `type = "events"`, `arrow_color` and `arrow_size` style
+#'   the arcs and their heads, and `arrows = FALSE` drops the heads.
 #' @param base_size Base font size of the theme; `12` by default.
-#' @param label_size Size of the time labels under the columns; `7` by
-#'   default.
+#' @param label_size Size, in points, of the time labels under the columns,
+#'   or of the `labels` text under `type = "events"`; `7` by default.
 #' @param ... Ignored.
 #' @return A `ggplot` object, so titles, themes and scales can be added with
-#'   `+`. Raises `dynet_bad_input` for a malformed `top`, `start`, `end` or
-#'   styling argument, `dynet_bad_palette` for an unusable `palette`,
+#'   `+`. Raises `dynet_bad_input` for a malformed `top`, `start`, `end`,
+#'   `color_by`, `labels` or styling argument, `dynet_bad_palette` for an unusable `palette`,
 #'   `capsule_color` or `arrow_color`, and `dynet_empty_result` when no event
 #'   starts in the period.
 #' @references
@@ -417,8 +536,12 @@ summary.dynet_event_graph <- function(object, ...) {
 #' ))
 #' eg <- event_graph(dn, delta = 1.5)
 #' plot(eg)
+#' plot(eg, type = "events", labels = TRUE)
 #' @export
-plot.dynet_event_graph <- function(x, top = 8L, start = NULL, end = NULL,
+plot.dynet_event_graph <- function(x, type = c("storyline", "events"),
+                                   top = 8L, start = NULL, end = NULL,
+                                   rows = c("actor", "chain"),
+                                   color_by = NULL, labels = FALSE,
                                    palette = "okabe", node_size = 2.5,
                                    node_shape = c(16, 17, 15, 18, 8, 4, 3, 1, 0),
                                    line_width = 0.9, line_alpha = 1,
@@ -434,7 +557,20 @@ plot.dynet_event_graph <- function(x, top = 8L, start = NULL, end = NULL,
   unit_interval <- function(v) is.numeric(v) && length(v) == 1L &&
     is.finite(v) && v >= 0 && v <= 1
   one_string <- function(v) is.character(v) && length(v) == 1L && !is.na(v)
+  messages <- identical(x$meta$events, "messages")
+  type <- if (missing(type) && messages) "events" else match.arg(type)
+  rows <- match.arg(rows)
+  if (messages && identical(type, "storyline")) {
+    stop(errorCondition(
+      "A storyline draws events between two actors; a message reaches several at once. Use `type = \"events\"`.",
+      class = "dynet_bad_input", call = NULL))
+  }
   .check(
+    "`color_by` must be NULL or the name of one column of the event table." =
+      is.null(color_by) || (one_string(color_by) &&
+                              color_by %in% names(x$events)),
+    "`labels` must be TRUE or FALSE." =
+      is.logical(labels) && length(labels) == 1L && !is.na(labels),
     "`top` must be NULL or one positive whole number." =
       is.null(top) || (is.numeric(top) && length(top) == 1L &&
                          is.finite(top) && top >= 1 && top == round(top)),
@@ -471,6 +607,15 @@ plot.dynet_event_graph <- function(x, top = 8L, start = NULL, end = NULL,
   if (!nrow(events)) {
     stop(errorCondition("No event starts between `start` and `end`.",
                         class = "dynet_empty_result", call = NULL))
+  }
+  if (identical(type, "events")) {
+    return(.plot_event_chains(
+      x, events, rows = rows, top = top, color_by = color_by,
+      labels = labels, palette = palette,
+      node_size = node_size, node_shape = node_shape,
+      line_width = line_width, line_alpha = line_alpha,
+      arrows = arrows, arrow_color = arrow_color, arrow_size = arrow_size,
+      base_size = base_size, label_size = label_size))
   }
   # One membership per event and endpoint; a self-loop has one.
   m <- unique(data.frame(
@@ -601,6 +746,185 @@ plot.dynet_event_graph <- function(x, top = 8L, start = NULL, end = NULL,
                                           vjust = 0.5),
       legend.position = "bottom", legend.box = "vertical")
 }
+
+#' Relay chains of an event graph: its weakly connected components
+#'
+#' @param n Number of events, indexed `1..n`.
+#' @param a,b Endpoints of the arcs, as event indices.
+#' @return An integer vector of length `n`: the smallest index in each
+#'   event's component.
+#' @noRd
+.event_chains <- function(n, a, b) {
+  chain <- seq_len(n)
+  if (!length(a)) return(chain)
+  ends <- c(a, b)
+  # Minimum-label propagation with pointer jumping, to a fixed point. Each
+  # pass is vectorised; the passes are sequential by nature, and a component
+  # of k events settles in at most k passes, so n bounds the iterations.
+  passes <- 0L
+  repeat {
+    low <- rep(pmin(chain[a], chain[b]), 2L)
+    by_end <- order(ends, low)
+    first <- !duplicated(ends[by_end])
+    settled <- chain
+    hit <- ends[by_end][first]
+    settled[hit] <- pmin(settled[hit], low[by_end][first])
+    settled <- settled[settled]
+    passes <- passes + 1L
+    if (identical(settled, chain)) break
+    .check("Internal relay-chain labelling did not settle." = passes <= n)
+    chain <- settled
+  }
+  chain
+}
+
+#' Draw an event graph with events as points and adjacencies as arcs
+#'
+#' @param x An event graph.
+#' @param events The rows of its event table to draw.
+#' @param rows,top,color_by,labels,palette,node_size,node_shape As in
+#'   `plot.dynet_event_graph()`.
+#' @param line_width,line_alpha As there.
+#' @param arrows,arrow_color,arrow_size,base_size,label_size As there.
+#' @return A ggplot object.
+#' @noRd
+.plot_event_chains <- function(x, events, rows, top, color_by, labels,
+                               palette, node_size, node_shape, line_width,
+                               line_alpha, arrows, arrow_color, arrow_size,
+                               base_size, label_size) {
+  events <- events[order(events$start, events$event), , drop = FALSE]
+  n_actors <- length(unique(events$from))
+  if (identical(rows, "actor")) {
+    # The most active sources, ties broken by name; each gets a row, in the
+    # order of their first event.
+    counts <- table(events$from)
+    ranked <- names(counts)[order(-as.integer(counts), names(counts))]
+    chosen <- if (is.null(top)) ranked else utils::head(ranked, top)
+    events <- events[events$from %in% chosen, , drop = FALSE]
+  }
+  n <- nrow(events)
+  # Arcs among the events drawn; two shared vertices are still one arc.
+  adj <- x$adjacencies
+  arcs <- unique(adj[adj$from_event %in% events$event &
+                       adj$to_event %in% events$event,
+                     c("from_event", "to_event"), drop = FALSE])
+  a <- match(arcs$from_event, events$event)
+  b <- match(arcs$to_event, events$event)
+  chain <- .event_chains(n, a, b)
+  n_chains <- length(unique(chain))
+  # Events are in time order, so a chain's smallest index is its first event
+  # and ranking those indices orders the rows by first event; actors are
+  # ordered by their first event the same way.
+  lanes <- if (identical(rows, "actor")) unique(events$from) else NULL
+  row <- if (identical(rows, "actor")) match(events$from, lanes) else
+    match(chain, sort(unique(chain)))
+  n_targets <- events$n_targets %||% rep(1L, n)
+  reached <- ifelse(n_targets > 1L, sprintf("%d targets", n_targets),
+                    events$to)
+  points <- data.frame(event = events$event, time = events$start, row = row,
+                       label = if (identical(rows, "actor")) {
+                         paste0("->", reached)
+                       } else paste(events$from, reached, sep = "->"),
+                       stringsAsFactors = FALSE)
+
+  # An arc within one row is a half-ellipse above it, higher the longer it
+  # spans and never more than half a row high, so it cannot reach the next
+  # row; an arc between rows is a straight line from event to event.
+  span <- events$start[b] - events$start[a]
+  longest <- max(c(span, 0))
+  height <- if (longest > 0) 0.15 + 0.3 * span / longest else rep(0.15, length(a))
+  height[row[a] != row[b]] <- 0
+  theta <- seq(0, pi, length.out = 25L)
+  arc_paths <- data.frame(
+    arc = rep(seq_along(a), each = length(theta)),
+    x = rep(events$start[a], each = length(theta)) +
+      rep(span, each = length(theta)) * (1 - cos(theta)) / 2,
+    y = rep(row[a], each = length(theta)) +
+      rep(row[b] - row[a], each = length(theta)) * (1 - cos(theta)) / 2 -
+      rep(height, each = length(theta)) * sin(theta)
+  )
+
+  plot <- ggplot2::ggplot()
+  if (nrow(arc_paths)) {
+    plot <- plot + ggplot2::geom_path(
+      data = arc_paths, ggplot2::aes(x = x, y = y, group = arc),
+      colour = arrow_color, linewidth = line_width * 0.5, alpha = line_alpha,
+      arrow = if (arrows) ggplot2::arrow(
+        length = ggplot2::unit(arrow_size, "cm"), type = "closed") else NULL)
+  }
+  if (is.null(color_by)) {
+    plot <- plot + ggplot2::geom_point(
+      data = points, ggplot2::aes(x = time, y = row), size = node_size,
+      shape = node_shape[[1L]], colour = "#0072B2")
+  } else {
+    value <- as.character(events[[color_by]])
+    # Colours and shapes come from every value in the graph, not only those
+    # in the period drawn, so a value keeps its look from one figure to the
+    # next.
+    kinds <- sort(unique(as.character(x$events[[color_by]])))
+    colours <- stats::setNames(if (identical(palette, "okabe")) {
+      rep_len(setdiff(.okabe, "#F0E442"), length(kinds))
+    } else .dyn_palette(palette, length(kinds)), kinds)
+    shapes <- stats::setNames(rep_len(node_shape, length(kinds)), kinds)
+    points$kind <- value
+    plot <- plot +
+      ggplot2::geom_point(
+        data = points, ggplot2::aes(x = time, y = row, colour = kind,
+                                    shape = kind),
+        size = node_size) +
+      ggplot2::scale_colour_manual(values = colours, breaks = kinds,
+                                   name = color_by) +
+      ggplot2::scale_shape_manual(values = shapes, breaks = kinds,
+                                  name = color_by)
+  }
+  if (labels) {
+    # Events seconds apart would print their labels over one another, so a
+    # run of close neighbours on one row steps its labels down through three
+    # tiers below the row, clear of the arcs of the next row.
+    near <- 0.06 * max(diff(range(points$time)), .Machine$double.eps)
+    by_row <- order(points$row, points$time)
+    close <- c(FALSE, diff(points$time[by_row]) < near &
+                 diff(points$row[by_row]) == 0)
+    run <- cumsum(!close)
+    tier <- (stats::ave(run, run, FUN = seq_along) - 1L) %% 3L
+    points$label_y <- NA_real_
+    points$label_y[by_row] <- points$row[by_row] + 0.17 + 0.13 * tier
+    plot <- plot + ggplot2::geom_text(
+      data = points, ggplot2::aes(x = time, y = label_y, label = label),
+      size = label_size / ggplot2::.pt, colour = "grey30")
+  }
+  y_scale <- if (identical(rows, "actor")) {
+    ggplot2::scale_y_reverse(breaks = seq_along(lanes), labels = lanes,
+                             expand = ggplot2::expansion(add = c(0.7, 0.6)))
+  } else {
+    ggplot2::scale_y_reverse(breaks = NULL,
+                             expand = ggplot2::expansion(add = c(0.7, 0.6)))
+  }
+  plot +
+    y_scale +
+    ggplot2::labs(
+      x = sprintf("Event start (%s)", x$meta$time_unit %||% "time"),
+      y = if (identical(rows, "actor")) "Actor" else
+        "Relay chains, by first event",
+      title = "Event graph",
+      subtitle = if (identical(rows, "actor")) {
+        sprintf(paste0("%d events by %d of %d actors, one row each; a line ",
+                       "joins two events within delta = %s"),
+                n, length(lanes), n_actors, format(x$meta$delta))
+      } else {
+        sprintf(paste0("%d events in %d relay chains; an arc joins two ",
+                       "events within delta = %s"),
+                n, n_chains, format(x$meta$delta))
+      }) +
+    ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      plot.title = ggplot2::element_text(face = "bold"),
+      plot.subtitle = ggplot2::element_text(colour = "grey45", size = 9),
+      legend.position = "bottom")
+}
+
 
 #' Storyline rows: one per actor and column between its first and last event
 #'

@@ -19,7 +19,8 @@ dynet(
   weight = NULL,
   nodes = NULL,
   groups = NULL,
-  format = c("auto", "interval", "contact", "threaded", "copresence"),
+  format = c("auto", "interval", "contact", "threaded", "copresence", "turns",
+    "broadcast"),
   thread_clock = c("absolute", "relative"),
   directed = TRUE,
   interval = 1,
@@ -53,7 +54,12 @@ Auto-detected from \code{time}, \code{timestamp}, \code{date}, \code{datetime}.}
 selects the threaded format.}
 
 \item{actor, group}{Column names for the actor and the shared group. Naming
-both selects the co-presence format.}
+both selects the co-presence format, unless \code{format = "turns"} or
+\code{"broadcast"}, where \code{group} names the conversation each action belongs
+to and becomes the session unless \code{session} is named (a turns log
+without a group is one conversation; a broadcast log needs one). In
+these logs, ties never cross groups, and the other columns of an
+action's row are the tie attributes of the ties it makes.}
 
 \item{session}{Column name for a session or period grouping. Sessions act
 as walls that time-respecting paths do not cross.}
@@ -76,8 +82,9 @@ colours and groups by it without further argument. A name that is not a
 column of \code{nodes} raises a condition of class \code{dynet_unknown_attribute}.}
 
 \item{format}{One of \code{"auto"} (the default), \code{"interval"}, \code{"contact"},
-\code{"threaded"}, \code{"copresence"}. \code{"auto"} infers the format from the
-arguments you name and the columns present.}
+\code{"threaded"}, \code{"copresence"}, \code{"turns"}, \code{"broadcast"}. \code{"auto"}
+infers the format from the arguments you name and the columns present;
+\code{"turns"} and \code{"broadcast"} are never inferred and must be named.}
 
 \item{thread_clock}{For a threaded log, \code{"absolute"} (the default) keeps
 every post on the calendar; \code{"relative"} puts each thread on its own
@@ -165,6 +172,17 @@ from its own post until the last post in the same thread, following
 Saqr and Nouri (2020). Name the \code{thread} argument to select this.}
 \item{copresence}{Two-mode attendance data. Actors sharing a group become
 connected for the span of that group. Name \code{actor} and \code{group}.}
+\item{turns}{A log of who acted when, with no recipient, such as coded
+chat or collaboration actions. Within each group, every action takes
+up the one before it: a directed contact from the previous actor to
+the current one, at the current action's time. Name \code{actor}, \code{time}
+and (optionally) \code{group}, and set \code{format = "turns"}.}
+\item{broadcast}{The same kind of log, read as every action being
+addressed to the whole group: a directed contact from the actor to
+every other member of the group (every actor with an action in it), at
+the action's time. Name \code{actor}, \code{group} and \code{time}, and set
+\code{format = "broadcast"}. \code{event_graph(events = "messages")} then treats
+each action as one event.}
 }
 
 Every other column of \code{data} is kept as a tie attribute: it appears in
@@ -212,6 +230,20 @@ dynet(forum_posts, thread = "thread")
 
 # A co-presence log: actors sharing a group become connected
 dynet(seminar_attendance, actor = "student", group = "seminar")
+
+# A turns log: each action takes up the one before it in its group
+chat <- data.frame(
+  student = c("Ana", "Ben", "Ana", "Cy", "Dee", "Eli"),
+  team = c("t1", "t1", "t1", "t1", "t2", "t2"),
+  minute = c(1, 2, 4, 5, 1, 3),
+  action = c("plan", "monitor", "discuss", "plan", "plan", "adapt")
+)
+dynet(chat, actor = "student", group = "team", time = "minute",
+      format = "turns")
+
+# The same log as broadcasts: each action reaches the whole team
+dynet(chat, actor = "student", group = "team", time = "minute",
+      format = "broadcast")
 
 # Declare observation time without rewriting the source spell.
 bounded <- dynet(data.frame(

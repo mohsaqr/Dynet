@@ -2,13 +2,17 @@
 % Please edit documentation in R/event-graph.R
 \name{plot.dynet_event_graph}
 \alias{plot.dynet_event_graph}
-\title{Plot an event graph as a storyline}
+\title{Plot an event graph}
 \usage{
 \method{plot}{dynet_event_graph}(
   x,
+  type = c("storyline", "events"),
   top = 8L,
   start = NULL,
   end = NULL,
+  rows = c("actor", "chain"),
+  color_by = NULL,
+  labels = FALSE,
   palette = "okabe",
   node_size = 2.5,
   node_shape = c(16, 17, 15, 18, 8, 4, 3, 1, 0),
@@ -31,14 +35,34 @@
 \arguments{
 \item{x}{An event graph returned by \code{\link[=event_graph]{event_graph()}}.}
 
+\item{type}{\code{"storyline"} (the default for ties) draws actors as lines
+through the events; \code{"events"} (the default for messages) draws events
+as points joined by lines. A storyline of messages raises
+\code{dynet_bad_input}.}
+
 \item{top}{The number of actors drawn, those in the most events (ties by
-name); \code{8} by default. \code{NULL} draws every actor. Columns are the events
-that involve at least one drawn actor.}
+name); \code{8} by default. \code{NULL} draws every actor. In a storyline, columns
+are the events that involve at least one drawn actor; in the events view
+with \code{rows = "actor"}, the events whose source is drawn. Ignored by
+\code{rows = "chain"}, which draws every event in the period.}
 
 \item{start, end}{Draw only events starting in this period. Default to the
 whole network.}
 
-\item{palette}{Actor line colours: \code{"okabe"} (the default; Okabe-Ito
+\item{rows}{For \code{type = "events"}, \code{"actor"} (the default) gives every
+source a row; \code{"chain"} gives every relay chain a row.}
+
+\item{color_by}{For \code{type = "events"}, the name of a column of
+\code{as.data.frame(x)} (for example a tie attribute, \code{"from"} or \code{"to"})
+whose values colour and shape the points. \code{NULL}, the default, draws
+every point alike.}
+
+\item{labels}{For \code{type = "events"}, whether to write the event under
+each point: \verb{->to} with \code{rows = "actor"}, whose row already names the
+source, and \code{from->to} with \code{rows = "chain"}. \code{FALSE} by default.}
+
+\item{palette}{Actor line colours, or under \code{type = "events"} the
+colours of the \code{color_by} values: \code{"okabe"} (the default; Okabe-Ito
 without its yellow, which is too faint for a thin line), \code{"extended"},
 \code{"many"}, a vector of colours recycled over the actors, or a function of
 \code{n} returning \code{n} colours.}
@@ -46,12 +70,12 @@ without its yellow, which is too faint for a thin line), \code{"extended"},
 \item{node_size}{Size of the points where a line meets its events; \code{2.5}
 by default.}
 
-\item{node_shape}{Point shapes, recycled over the actors; ggplot shape
-codes. The default cycles nine shapes, so the first 72 actors differ in
-their pair of colour and shape.}
+\item{node_shape}{Point shapes, recycled over the actors (or the
+\code{color_by} values); ggplot shape codes. The default cycles nine shapes,
+so the first 72 actors differ in their pair of colour and shape.}
 
-\item{line_width, line_alpha}{Width and opacity of the actor lines; \code{0.9}
-and \code{1} by default.}
+\item{line_width, line_alpha}{Width and opacity of the actor lines, or of
+the arcs under \code{type = "events"}; \code{0.9} and \code{1} by default.}
 
 \item{relay_style, no_relay_style}{Line types of a stretch that is an
 adjacency of the event graph and of one that is not; \code{"solid"} and
@@ -66,24 +90,26 @@ a directed network; \code{TRUE} by default.}
 
 \item{arrow_color, arrow_width, arrow_size}{Colour, line width and head
 length (in centimetres) of those arrows; \code{"grey40"}, \code{0.4} and \code{0.12} by
-default.}
+default. Under \code{type = "events"}, \code{arrow_color} and \code{arrow_size} style
+the arcs and their heads, and \code{arrows = FALSE} drops the heads.}
 
 \item{base_size}{Base font size of the theme; \code{12} by default.}
 
-\item{label_size}{Size of the time labels under the columns; \code{7} by
-default.}
+\item{label_size}{Size, in points, of the time labels under the columns,
+or of the \code{labels} text under \code{type = "events"}; \code{7} by default.}
 
 \item{...}{Ignored.}
 }
 \value{
 A \code{ggplot} object, so titles, themes and scales can be added with
-\code{+}. Raises \code{dynet_bad_input} for a malformed \code{top}, \code{start}, \code{end} or
-styling argument, \code{dynet_bad_palette} for an unusable \code{palette},
+\code{+}. Raises \code{dynet_bad_input} for a malformed \code{top}, \code{start}, \code{end},
+\code{color_by}, \code{labels} or styling argument, \code{dynet_bad_palette} for an unusable \code{palette},
 \code{capsule_color} or \code{arrow_color}, and \code{dynet_empty_result} when no event
 starts in the period.
 }
 \description{
-Draws the event graph as a storyline (Tanahashi and Ma, 2012): every actor
+\code{type = "storyline"}, the default, draws the event graph as a storyline
+(Tanahashi and Ma, 2012): every actor
 is a line through time, and every event is a column that gathers the lines
 of its two endpoints in a light crimson capsule. The stretch of an actor's
 line between two of its events is solid when the event graph joins them
@@ -99,6 +125,21 @@ rule (Sugiyama et al., 1981) over repeated sweeps, keeping the ordering
 with the fewest crossings, as in the storyline of the \code{hypergraphs}
 package. Each actor has its own colour and point shape, so no actor is
 told by colour alone.
+
+\code{type = "events"} draws the events themselves as the vertices. Each event
+is a point at its start time, and each adjacency is a line from the
+earlier event to the later one. With \code{rows = "actor"}, the default, every
+source has its own row, in the order of its first event, so a line runs
+from the row of the actor whose event was taken further to the row of the
+actor who took it. With \code{rows = "chain"}, events are grouped into relay
+chains, the weakly connected components of the event graph among the
+events drawn, every chain has its own row ordered by its first event, and
+adjacencies are arcs above the row; a row of one point is an event that
+relays nothing and continues nothing within \code{delta}. \code{color_by} colours
+and shapes the points by a column of the event table, such as a tie
+attribute. An event graph of messages (\code{events = "messages"}) is drawn
+this way by default, because a message gathers several actors at once
+and has no storyline.
 }
 \examples{
 dn <- dynet(data.frame(
@@ -107,6 +148,7 @@ dn <- dynet(data.frame(
 ))
 eg <- event_graph(dn, delta = 1.5)
 plot(eg)
+plot(eg, type = "events", labels = TRUE)
 }
 \references{
 Tanahashi, Y., & Ma, K.-L. (2012). Design considerations for optimizing
