@@ -25,6 +25,23 @@ inferred from the arguments you name:
   Two-mode attendance data. Actors sharing a group become connected for
   the span of that group. Name `actor` and `group`.
 
+- turns:
+
+  A log of who acted when, with no recipient, such as coded chat or
+  collaboration actions. Within each group, every action takes up the
+  one before it: a directed contact from the previous actor to the
+  current one, at the current action's time. Name `actor`, `time` and
+  (optionally) `group`, and set `format = "turns"`.
+
+- broadcast:
+
+  The same kind of log, read as every action being addressed to the
+  whole group: a directed contact from the actor to every other member
+  of the group (every actor with an action in it), at the action's time.
+  Name `actor`, `group` and `time`, and set `format = "broadcast"`.
+  `event_graph(events = "messages")` then treats each action as one
+  event.
+
 Every other column of `data` is kept as a tie attribute: it appears in
 [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) and can
 be selected on with `induce_subgraph(ties = )`. The exceptions are the
@@ -80,7 +97,8 @@ dynet(
   weight = NULL,
   nodes = NULL,
   groups = NULL,
-  format = c("auto", "interval", "contact", "threaded", "copresence"),
+  format = c("auto", "interval", "contact", "threaded", "copresence", "turns",
+    "broadcast"),
   thread_clock = c("absolute", "relative"),
   directed = TRUE,
   interval = 1,
@@ -130,7 +148,12 @@ dynet(
 - actor, group:
 
   Column names for the actor and the shared group. Naming both selects
-  the co-presence format.
+  the co-presence format, unless `format = "turns"` or `"broadcast"`,
+  where `group` names the conversation each action belongs to and
+  becomes the session unless `session` is named (a turns log without a
+  group is one conversation; a broadcast log needs one). In these logs,
+  ties never cross groups, and the other columns of an action's row are
+  the tie attributes of the ties it makes.
 
 - session:
 
@@ -165,8 +188,9 @@ dynet(
 - format:
 
   One of `"auto"` (the default), `"interval"`, `"contact"`,
-  `"threaded"`, `"copresence"`. `"auto"` infers the format from the
-  arguments you name and the columns present.
+  `"threaded"`, `"copresence"`, `"turns"`, `"broadcast"`. `"auto"`
+  infers the format from the arguments you name and the columns present;
+  `"turns"` and `"broadcast"` are never inferred and must be named.
 
 - thread_clock:
 
@@ -323,6 +347,43 @@ dynet(seminar_attendance, actor = "student", group = "seminar")
 #>   s03 s23     0   0        0      1 week_01
 #>   s10 s12     0   0        0      1 week_01
 #> # 411 more spells. summary() describes the network; plot() draws it.
+
+# A turns log: each action takes up the one before it in its group
+chat <- data.frame(
+  student = c("Ana", "Ben", "Ana", "Cy", "Dee", "Eli"),
+  team = c("t1", "t1", "t1", "t1", "t2", "t2"),
+  minute = c(1, 2, 4, 5, 1, 3),
+  action = c("plan", "monitor", "discuss", "plan", "plan", "adapt")
+)
+dynet(chat, actor = "student", group = "team", time = "minute",
+      format = "turns")
+#> # Temporal network (turns format, directed) | a cograph netobject
+#> # 5 vertices | 4 edge spells | 4 distinct pairs
+#> # observed from 2 to 5 step, binned every 1
+#> # 2 sessions: t1, t2
+#> 
+#>  from  to start end duration weight session  action
+#>   Ana Ben     2   2        0      1      t1 monitor
+#>   Dee Eli     3   3        0      1      t2   adapt
+#>   Ben Ana     4   4        0      1      t1 discuss
+#>   Ana  Cy     5   5        0      1      t1    plan
+
+# The same log as broadcasts: each action reaches the whole team
+dynet(chat, actor = "student", group = "team", time = "minute",
+      format = "broadcast")
+#> # Temporal network (broadcast format, directed) | a cograph netobject
+#> # 5 vertices | 10 edge spells | 8 distinct pairs
+#> # observed from 1 to 5 step, binned every 1
+#> # 2 sessions: t1, t2
+#> 
+#>  from  to start end duration weight session  action
+#>   Ana Ben     1   1        0      1      t1    plan
+#>   Ana  Cy     1   1        0      1      t1    plan
+#>   Dee Eli     1   1        0      1      t2    plan
+#>   Ben Ana     2   2        0      1      t1 monitor
+#>   Ben  Cy     2   2        0      1      t1 monitor
+#>   Eli Dee     3   3        0      1      t2   adapt
+#> # 4 more spells. summary() describes the network; plot() draws it.
 
 # Declare observation time without rewriting the source spell.
 bounded <- dynet(data.frame(

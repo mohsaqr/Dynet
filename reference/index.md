@@ -311,7 +311,7 @@ Print, summary, plot and as.data.frame for every result class.
   : Draw community membership as ribbons over time
 
 - [`plot(`*`<dynet_event_graph>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_event_graph.md)
-  : Plot an event graph as a storyline
+  : Plot an event graph
 
 - [`plot(`*`<dynet_metric>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_metric.md)
   : Plot a temporal measure

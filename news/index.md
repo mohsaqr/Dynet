@@ -1,5 +1,56 @@
 # Changelog
 
+## Dynet 0.7.3
+
+- [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) gains
+  `format = "broadcast"`: a log of actions in groups, read as every
+  action addressed to the whole group, becomes ties from the actor to
+  every other member at the action’s time.
+- [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  gains `events = "messages"`, which merges the ties sharing a source,
+  start, end and session into one event reaching several targets (an
+  action to a whole group, an email to several recipients). A message is
+  followed by any later event that leaves one of its targets.
+- The events view of
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) gives every
+  source its own row by default (`rows = "actor"`, honouring `top`);
+  `rows = "chain"` keeps one row per relay chain. A message graph is
+  drawn this way by default.
+- Every adjacency of an event graph now says what its two events were:
+  `first` and `second` give each as `from->to` (`from--to` when
+  undirected), and each tie attribute of the two events comes as
+  `first_<name>` and `second_<name>`.
+  [`print()`](https://rdrr.io/r/base/print.html) shows the events by who
+  reached whom rather than by number alone; `from_event` and `to_event`
+  remain as the keys of the event table.
+- [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) gains
+  `format = "turns"` for logs of who acted when, with no recipient, such
+  as coded chat or collaboration actions. Within each `group`, every
+  action takes up the one before it: a directed contact from the
+  previous actor to the current one, at the current action’s time, with
+  the row’s other columns as its tie attributes. The group is the
+  session unless `session` is named.
+- [`summary()`](https://rdrr.io/r/base/summary.html) of an event graph
+  built with `sessions = "separate"` gives each event’s `session`.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an event
+  graph gains `type = "events"`, which draws the events themselves as
+  the vertices: one point per event at its start time, one arc per
+  adjacency, and one row per relay chain (a weakly connected component
+  of the event graph). `color_by` colours and shapes the points by a
+  column of the event table, such as a coded action, and `labels = TRUE`
+  writes `from->to` under each point. The storyline remains the default.
+- The events of
+  [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  carry the tie attributes of the spells they come from, and
+  [`summary()`](https://rdrr.io/r/base/summary.html) of an event graph
+  gives each event’s `from`, `to` and tie attributes beside its degrees,
+  so an event can be read by what it was (for example, which coded
+  action was relayed) with no merge.
+- The `spell` column of the event table is documented correctly: it is
+  the event’s row in the log given to
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md),
+  counted after dropped rows, not its row in `as.data.frame(dn)`.
+
 ## Dynet 0.7.2
 
 - [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,23 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.3" id="dynet-073">Dynet 0.7.3<a class="anchor" aria-label="anchor" href="#dynet-073"></a></h2>
+<ul><li>
+<code><a href="../reference/dynet.html">dynet()</a></code> gains <code>format = "broadcast"</code>: a log of actions in groups, read as every action addressed to the whole group, becomes ties from the actor to every other member at the action’s time.</li>
+<li>
+<code><a href="../reference/event_graph.html">event_graph()</a></code> gains <code>events = "messages"</code>, which merges the ties sharing a source, start, end and session into one event reaching several targets (an action to a whole group, an email to several recipients). A message is followed by any later event that leaves one of its targets.</li>
+<li>The events view of <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> gives every source its own row by default (<code>rows = "actor"</code>, honouring <code>top</code>); <code>rows = "chain"</code> keeps one row per relay chain. A message graph is drawn this way by default.</li>
+<li>Every adjacency of an event graph now says what its two events were: <code>first</code> and <code>second</code> give each as <code>from-&gt;to</code> (<code>from--to</code> when undirected), and each tie attribute of the two events comes as <code>first_&lt;name&gt;</code> and <code>second_&lt;name&gt;</code>. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows the events by who reached whom rather than by number alone; <code>from_event</code> and <code>to_event</code> remain as the keys of the event table.</li>
+<li>
+<code><a href="../reference/dynet.html">dynet()</a></code> gains <code>format = "turns"</code> for logs of who acted when, with no recipient, such as coded chat or collaboration actions. Within each <code>group</code>, every action takes up the one before it: a directed contact from the previous actor to the current one, at the current action’s time, with the row’s other columns as its tie attributes. The group is the session unless <code>session</code> is named.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of an event graph built with <code>sessions = "separate"</code> gives each event’s <code>session</code>.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> of an event graph gains <code>type = "events"</code>, which draws the events themselves as the vertices: one point per event at its start time, one arc per adjacency, and one row per relay chain (a weakly connected component of the event graph). <code>color_by</code> colours and shapes the points by a column of the event table, such as a coded action, and <code>labels = TRUE</code> writes <code>from-&gt;to</code> under each point. The storyline remains the default.</li>
+<li>The events of <code><a href="../reference/event_graph.html">event_graph()</a></code> carry the tie attributes of the spells they come from, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of an event graph gives each event’s <code>from</code>, <code>to</code> and tie attributes beside its degrees, so an event can be read by what it was (for example, which coded action was relayed) with no merge.</li>
+<li>The <code>spell</code> column of the event table is documented correctly: it is the event’s row in the log given to <code><a href="../reference/dynet.html">dynet()</a></code>, counted after dropped rows, not its row in <code>as.data.frame(dn)</code>.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.2" id="dynet-072">Dynet 0.7.2<a class="anchor" aria-label="anchor" href="#dynet-072"></a></h2>
 <ul><li>

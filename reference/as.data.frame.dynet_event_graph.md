@@ -292,201 +292,201 @@ as.data.frame(eg)
 #> 239   239  Kira  Hugo 20.89 21.33     0.44      1   239
 #> 240   240   Dan   Ana 20.95 21.33     0.38      1   240
 as.data.frame(eg, what = "adjacencies")
-#>     from_event to_event   via from_time to_time wait
-#> 1            1       16   Dan      1.10    2.03 0.93
-#> 2            3       10  Mira      0.42    0.83 0.41
-#> 3            3       12  Mira      0.42    1.23 0.81
-#> 4            4       14  Iris      0.96    1.95 0.99
-#> 5            6        9  Iris      0.50    0.78 0.28
-#> 6            8       15  Kira      1.42    1.95 0.53
-#> 7            9       18  Cara      1.31    2.07 0.76
-#> 8           13       14  Iris      1.85    1.95 0.10
-#> 9           13       21  Iris      1.85    2.74 0.89
-#> 10          14       23  Gita      2.26    2.91 0.65
-#> 11          16       26   Leo      2.30    3.15 0.85
-#> 12          21       40  Finn      3.96    4.77 0.81
-#> 13          22       29  Kira      3.12    3.20 0.08
-#> 14          26       40  Finn      3.94    4.77 0.83
-#> 15          27       30   Ana      3.27    3.43 0.16
-#> 16          29       39   Leo      4.16    4.76 0.60
-#> 17          34       42   Ben      4.85    4.91 0.06
-#> 18          34       46   Ben      4.85    5.27 0.42
-#> 19          36       38  Iris      4.67    4.76 0.09
-#> 20          37       48  Iris      5.07    5.71 0.64
-#> 21          38       46   Ben      4.91    5.27 0.36
-#> 22          39       55  Cara      5.12    6.11 0.99
-#> 23          40       55  Cara      5.19    6.11 0.92
-#> 24          41       46   Ben      5.03    5.27 0.24
-#> 25          44       57   Leo      6.11    6.13 0.02
-#> 26          44       73   Leo      6.11    6.76 0.65
-#> 27          44       76   Leo      6.11    6.83 0.72
-#> 28          45       60  Gita      5.74    6.15 0.41
-#> 29          47       74 Jonas      6.13    6.79 0.66
-#> 30          48       55  Cara      6.00    6.11 0.11
-#> 31          48       77  Cara      6.00    6.96 0.96
-#> 32          49       63  Finn      5.90    6.31 0.41
-#> 33          49       64  Finn      5.90    6.32 0.42
-#> 34          53       75  Gita      6.20    6.81 0.61
-#> 35          54       75  Gita      6.43    6.81 0.38
-#> 36          57       71  Iris      6.20    6.67 0.47
-#> 37          60       80  Mira      6.92    7.09 0.17
-#> 38          60       88  Mira      6.92    7.72 0.80
-#> 39          61       84   Ben      7.50    7.51 0.01
-#> 40          61       87   Ben      7.50    7.65 0.15
-#> 41          62       75  Gita      6.55    6.81 0.26
-#> 42          65       84   Ben      6.68    7.51 0.83
-#> 43          65       87   Ben      6.68    7.65 0.97
-#> 44          66       80  Mira      6.77    7.09 0.32
-#> 45          66       88  Mira      6.77    7.72 0.95
-#> 46          69       79   Ana      6.75    7.04 0.29
-#> 47          69       86   Ana      6.75    7.63 0.88
-#> 48          70       77  Cara      6.77    6.96 0.19
-#> 49          70       85  Cara      6.77    7.51 0.74
-#> 50          71       94   Eve      7.62    8.33 0.71
-#> 51          72       92 Jonas      7.53    8.21 0.68
-#> 52          73       78  Hugo      6.87    7.02 0.15
-#> 53          73       82  Hugo      6.87    7.37 0.50
-#> 54          73       89  Hugo      6.87    7.79 0.92
-#> 55          76       79   Ana      7.00    7.04 0.04
-#> 56          76       86   Ana      7.00    7.63 0.63
-#> 57          78       94   Eve      7.66    8.33 0.67
-#> 58          80      100   Ana      8.15    8.76 0.61
-#> 59          80      101   Ana      8.15    8.77 0.62
-#> 60          82       92 Jonas      8.15    8.21 0.06
-#> 61          82       99 Jonas      8.15    8.61 0.46
-#> 62          83       91   Leo      7.71    8.00 0.29
-#> 63          83       98   Leo      7.71    8.59 0.88
-#> 64          85      106  Nils      8.49    9.40 0.91
-#> 65          86       95  Mira      8.04    8.35 0.31
-#> 66          86       97  Mira      8.04    8.56 0.52
-#> 67          88       92 Jonas      8.14    8.21 0.07
-#> 68          88       99 Jonas      8.14    8.61 0.47
-#> 69          91      102  Cara      8.50    8.78 0.28
-#> 70          93       99 Jonas      8.59    8.61 0.02
-#> 71          93      105 Jonas      8.59    9.35 0.76
-#> 72          93      108 Jonas      8.59    9.49 0.90
-#> 73          94      112  Hugo      8.84    9.84 1.00
-#> 74          95      110  Gita      8.84    9.61 0.77
-#> 75          96      114  Nils      9.53    9.93 0.40
-#> 76          96      121  Nils      9.53   10.38 0.85
-#> 77         100      105 Jonas      9.13    9.35 0.22
-#> 78         100      108 Jonas      9.13    9.49 0.36
-#> 79         102      112  Hugo      9.71    9.84 0.13
-#> 80         103      105 Jonas      9.01    9.35 0.34
-#> 81         103      108 Jonas      9.01    9.49 0.48
-#> 82         104      123 Jonas      9.82   10.56 0.74
-#> 83         105      120  Gita     10.09   10.35 0.26
-#> 84         107      112  Hugo      9.58    9.84 0.26
-#> 85         109      132   Ben     10.26   11.21 0.95
-#> 86         110      114  Nils      9.65    9.93 0.28
-#> 87         110      121  Nils      9.65   10.38 0.73
-#> 88         111      118   Leo      9.79   10.04 0.25
-#> 89         112      121  Nils     10.32   10.38 0.06
-#> 90         115      123 Jonas     10.53   10.56 0.03
-#> 91         116      130  Iris     10.35   11.13 0.78
-#> 92         116      131  Iris     10.35   11.20 0.85
-#> 93         117      120  Gita     10.24   10.35 0.11
-#> 94         118      128  Cara     10.51   11.03 0.52
-#> 95         119      122  Mira     10.44   10.48 0.04
-#> 96         119      125  Mira     10.44   10.77 0.33
-#> 97         119      133  Mira     10.44   11.40 0.96
-#> 98         120      125  Mira     10.60   10.77 0.17
-#> 99         120      133  Mira     10.60   11.40 0.80
-#> 100        120      134  Mira     10.60   11.55 0.95
-#> 101        121      128  Cara     10.68   11.03 0.35
-#> 102        122      140   Dan     11.52   11.75 0.23
-#> 103        122      145   Dan     11.52   12.20 0.68
-#> 104        123      136   Ana     10.83   11.60 0.77
-#> 105        124      154  Mira     11.90   12.86 0.96
-#> 106        128      131  Iris     11.18   11.20 0.02
-#> 107        130      146   Leo     11.77   12.21 0.44
-#> 108        131      151  Cara     11.89   12.65 0.76
-#> 109        133      165  Gita     12.94   13.30 0.36
-#> 110        133      171  Gita     12.94   13.42 0.48
-#> 111        133      180  Gita     12.94   13.88 0.94
-#> 112        134      145   Dan     12.09   12.20 0.11
-#> 113        137      148   Eve     11.93   12.38 0.45
-#> 114        137      153   Eve     11.93   12.78 0.85
-#> 115        138      147  Finn     12.09   12.34 0.25
-#> 116        138      149  Finn     12.09   12.42 0.33
-#> 117        138      152  Finn     12.09   12.73 0.64
-#> 118        139      155 Jonas     12.12   12.91 0.79
-#> 119        140      155 Jonas     12.13   12.91 0.78
-#> 120        141      146   Leo     12.02   12.21 0.19
-#> 121        143      160   Dan     12.36   13.23 0.87
-#> 122        145      155 Jonas     12.79   12.91 0.12
-#> 123        145      161 Jonas     12.79   13.24 0.45
-#> 124        145      168 Jonas     12.79   13.33 0.54
-#> 125        145      174 Jonas     12.79   13.65 0.86
-#> 126        146      151  Cara     12.62   12.65 0.03
-#> 127        146      156  Cara     12.62   13.14 0.52
-#> 128        146      159  Cara     12.62   13.21 0.59
-#> 129        147      154  Mira     12.41   12.86 0.45
-#> 130        147      158  Mira     12.41   13.19 0.78
-#> 131        147      163  Mira     12.41   13.26 0.85
-#> 132        148      166  Hugo     12.64   13.31 0.67
-#> 133        150      175   Ben     13.67   13.73 0.06
-#> 134        151      164  Finn     13.02   13.27 0.25
-#> 135        151      170  Finn     13.02   13.35 0.33
-#> 136        151      181  Finn     13.02   13.95 0.93
-#> 137        152      187   Dan     13.24   14.13 0.89
-#> 138        152      188   Dan     13.24   14.13 0.89
-#> 139        153      156  Cara     13.12   13.14 0.02
-#> 140        153      159  Cara     13.12   13.21 0.09
-#> 141        154      161 Jonas     13.19   13.24 0.05
-#> 142        154      168 Jonas     13.19   13.33 0.14
-#> 143        154      174 Jonas     13.19   13.65 0.46
-#> 144        154      178 Jonas     13.19   13.82 0.63
-#> 145        154      182 Jonas     13.19   13.96 0.77
-#> 146        155      167   Ana     13.29   13.33 0.04
-#> 147        155      172   Ana     13.29   13.55 0.26
-#> 148        155      177   Ana     13.29   13.80 0.51
-#> 149        157      180  Gita     13.67   13.88 0.21
-#> 150        157      185  Gita     13.67   14.01 0.34
-#> 151        157      189  Gita     13.67   14.16 0.49
-#> 152        158      192  Kira     13.91   14.44 0.53
-#> 153        158      194  Kira     13.91   14.55 0.64
-#> 154        159      191   Eve     13.69   14.30 0.61
-#> 155        161      191   Eve     13.44   14.30 0.86
-#> 156        162      191   Eve     13.49   14.30 0.81
-#> 157        166      191   Eve     14.00   14.30 0.30
-#> 158        166      195   Eve     14.00   14.76 0.76
-#> 159        166      199   Eve     14.00   14.95 0.95
-#> 160        167      187   Dan     13.84   14.13 0.29
-#> 161        167      188   Dan     13.84   14.13 0.29
-#> 162        170      202  Mira     14.39   15.29 0.90
-#> 163        176      197  Kira     14.86   14.92 0.06
-#> 164        181      192  Kira     14.09   14.44 0.35
-#> 165        181      194  Kira     14.09   14.55 0.46
-#> 166        181      197  Kira     14.09   14.92 0.83
-#> 167        182      198  Hugo     14.08   14.93 0.85
-#> 168        182      200  Hugo     14.08   14.96 0.88
-#> 169        183      191   Eve     14.13   14.30 0.17
-#> 170        183      195   Eve     14.13   14.76 0.63
-#> 171        183      199   Eve     14.13   14.95 0.82
-#> 172        186      196   Ben     14.34   14.78 0.44
-#> 173        187      198  Hugo     14.26   14.93 0.67
-#> 174        187      200  Hugo     14.26   14.96 0.70
-#> 175        190      195   Eve     14.30   14.76 0.46
-#> 176        190      199   Eve     14.30   14.95 0.65
-#> 177        192      198  Hugo     14.50   14.93 0.43
-#> 178        192      200  Hugo     14.50   14.96 0.46
-#> 179        193      204  Iris     14.72   15.41 0.69
-#> 180        198      205  Kira     15.47   16.16 0.69
-#> 181        203      206  Iris     15.67   16.25 0.58
-#> 182        207      211  Finn     16.41   16.84 0.43
-#> 183        207      214  Finn     16.41   16.97 0.56
-#> 184        211      217  Kira     17.61   18.17 0.56
-#> 185        213      216   Dan     17.25   17.46 0.21
-#> 186        214      221  Mira     18.03   18.95 0.92
-#> 187        219      222 Jonas     18.70   18.96 0.26
-#> 188        222      226  Cara     19.23   19.70 0.47
-#> 189        224      239  Kira     20.17   20.89 0.72
-#> 190        225      228   Ana     19.80   19.91 0.11
-#> 191        225      233   Ana     19.80   20.33 0.53
-#> 192        228      234   Dan     20.10   20.43 0.33
-#> 193        228      237   Dan     20.10   20.68 0.58
-#> 194        228      240   Dan     20.10   20.95 0.85
-#> 195        230      237   Dan     20.46   20.68 0.22
-#> 196        230      240   Dan     20.46   20.95 0.49
+#>     from_event to_event   via       first      second from_time to_time wait
+#> 1            1       16   Dan  Jonas->Dan    Dan->Leo      1.10    2.03 0.93
+#> 2            3       10  Mira   Leo->Mira  Mira->Finn      0.42    0.83 0.41
+#> 3            3       12  Mira   Leo->Mira   Mira->Eve      0.42    1.23 0.81
+#> 4            4       14  Iris   Leo->Iris  Iris->Gita      0.96    1.95 0.99
+#> 5            6        9  Iris   Leo->Iris  Iris->Cara      0.50    0.78 0.28
+#> 6            8       15  Kira   Eve->Kira   Kira->Eve      1.42    1.95 0.53
+#> 7            9       18  Cara  Iris->Cara  Cara->Nils      1.31    2.07 0.76
+#> 8           13       14  Iris   Eve->Iris  Iris->Gita      1.85    1.95 0.10
+#> 9           13       21  Iris   Eve->Iris  Iris->Finn      1.85    2.74 0.89
+#> 10          14       23  Gita  Iris->Gita Gita->Jonas      2.26    2.91 0.65
+#> 11          16       26   Leo    Dan->Leo   Leo->Finn      2.30    3.15 0.85
+#> 12          21       40  Finn  Iris->Finn  Finn->Cara      3.96    4.77 0.81
+#> 13          22       29  Kira  Hugo->Kira   Kira->Leo      3.12    3.20 0.08
+#> 14          26       40  Finn   Leo->Finn  Finn->Cara      3.94    4.77 0.83
+#> 15          27       30   Ana    Dan->Ana  Ana->Jonas      3.27    3.43 0.16
+#> 16          29       39   Leo   Kira->Leo   Leo->Cara      4.16    4.76 0.60
+#> 17          34       42   Ben   Nils->Ben   Ben->Finn      4.85    4.91 0.06
+#> 18          34       46   Ben   Nils->Ben    Ben->Eve      4.85    5.27 0.42
+#> 19          36       38  Iris  Cara->Iris   Iris->Ben      4.67    4.76 0.09
+#> 20          37       48  Iris   Dan->Iris  Iris->Cara      5.07    5.71 0.64
+#> 21          38       46   Ben   Iris->Ben    Ben->Eve      4.91    5.27 0.36
+#> 22          39       55  Cara   Leo->Cara  Cara->Kira      5.12    6.11 0.99
+#> 23          40       55  Cara  Finn->Cara  Cara->Kira      5.19    6.11 0.92
+#> 24          41       46   Ben   Nils->Ben    Ben->Eve      5.03    5.27 0.24
+#> 25          44       57   Leo   Kira->Leo   Leo->Iris      6.11    6.13 0.02
+#> 26          44       73   Leo   Kira->Leo   Leo->Hugo      6.11    6.76 0.65
+#> 27          44       76   Leo   Kira->Leo    Leo->Ana      6.11    6.83 0.72
+#> 28          45       60  Gita  Kira->Gita  Gita->Mira      5.74    6.15 0.41
+#> 29          47       74 Jonas Hugo->Jonas Jonas->Gita      6.13    6.79 0.66
+#> 30          48       55  Cara  Iris->Cara  Cara->Kira      6.00    6.11 0.11
+#> 31          48       77  Cara  Iris->Cara  Cara->Finn      6.00    6.96 0.96
+#> 32          49       63  Finn   Dan->Finn  Finn->Nils      5.90    6.31 0.41
+#> 33          49       64  Finn   Dan->Finn  Finn->Kira      5.90    6.32 0.42
+#> 34          53       75  Gita  Hugo->Gita   Gita->Ana      6.20    6.81 0.61
+#> 35          54       75  Gita  Mira->Gita   Gita->Ana      6.43    6.81 0.38
+#> 36          57       71  Iris   Leo->Iris   Iris->Eve      6.20    6.67 0.47
+#> 37          60       80  Mira  Gita->Mira   Mira->Ana      6.92    7.09 0.17
+#> 38          60       88  Mira  Gita->Mira Mira->Jonas      6.92    7.72 0.80
+#> 39          61       84   Ben   Nils->Ben   Ben->Iris      7.50    7.51 0.01
+#> 40          61       87   Ben   Nils->Ben   Ben->Hugo      7.50    7.65 0.15
+#> 41          62       75  Gita   Dan->Gita   Gita->Ana      6.55    6.81 0.26
+#> 42          65       84   Ben   Nils->Ben   Ben->Iris      6.68    7.51 0.83
+#> 43          65       87   Ben   Nils->Ben   Ben->Hugo      6.68    7.65 0.97
+#> 44          66       80  Mira   Ana->Mira   Mira->Ana      6.77    7.09 0.32
+#> 45          66       88  Mira   Ana->Mira Mira->Jonas      6.77    7.72 0.95
+#> 46          69       79   Ana   Hugo->Ana   Ana->Gita      6.75    7.04 0.29
+#> 47          69       86   Ana   Hugo->Ana   Ana->Mira      6.75    7.63 0.88
+#> 48          70       77  Cara   Ana->Cara  Cara->Finn      6.77    6.96 0.19
+#> 49          70       85  Cara   Ana->Cara  Cara->Nils      6.77    7.51 0.74
+#> 50          71       94   Eve   Iris->Eve   Eve->Hugo      7.62    8.33 0.71
+#> 51          72       92 Jonas  Ana->Jonas  Jonas->Dan      7.53    8.21 0.68
+#> 52          73       78  Hugo   Leo->Hugo   Hugo->Eve      6.87    7.02 0.15
+#> 53          73       82  Hugo   Leo->Hugo Hugo->Jonas      6.87    7.37 0.50
+#> 54          73       89  Hugo   Leo->Hugo   Hugo->Dan      6.87    7.79 0.92
+#> 55          76       79   Ana    Leo->Ana   Ana->Gita      7.00    7.04 0.04
+#> 56          76       86   Ana    Leo->Ana   Ana->Mira      7.00    7.63 0.63
+#> 57          78       94   Eve   Hugo->Eve   Eve->Hugo      7.66    8.33 0.67
+#> 58          80      100   Ana   Mira->Ana  Ana->Jonas      8.15    8.76 0.61
+#> 59          80      101   Ana   Mira->Ana   Ana->Mira      8.15    8.77 0.62
+#> 60          82       92 Jonas Hugo->Jonas  Jonas->Dan      8.15    8.21 0.06
+#> 61          82       99 Jonas Hugo->Jonas  Jonas->Dan      8.15    8.61 0.46
+#> 62          83       91   Leo   Iris->Leo   Leo->Cara      7.71    8.00 0.29
+#> 63          83       98   Leo   Iris->Leo   Leo->Iris      7.71    8.59 0.88
+#> 64          85      106  Nils  Cara->Nils   Nils->Ana      8.49    9.40 0.91
+#> 65          86       95  Mira   Ana->Mira  Mira->Gita      8.04    8.35 0.31
+#> 66          86       97  Mira   Ana->Mira   Mira->Dan      8.04    8.56 0.52
+#> 67          88       92 Jonas Mira->Jonas  Jonas->Dan      8.14    8.21 0.07
+#> 68          88       99 Jonas Mira->Jonas  Jonas->Dan      8.14    8.61 0.47
+#> 69          91      102  Cara   Leo->Cara  Cara->Hugo      8.50    8.78 0.28
+#> 70          93       99 Jonas Finn->Jonas  Jonas->Dan      8.59    8.61 0.02
+#> 71          93      105 Jonas Finn->Jonas Jonas->Gita      8.59    9.35 0.76
+#> 72          93      108 Jonas Finn->Jonas  Jonas->Dan      8.59    9.49 0.90
+#> 73          94      112  Hugo   Eve->Hugo  Hugo->Nils      8.84    9.84 1.00
+#> 74          95      110  Gita  Mira->Gita  Gita->Nils      8.84    9.61 0.77
+#> 75          96      114  Nils  Kira->Nils  Nils->Hugo      9.53    9.93 0.40
+#> 76          96      121  Nils  Kira->Nils  Nils->Cara      9.53   10.38 0.85
+#> 77         100      105 Jonas  Ana->Jonas Jonas->Gita      9.13    9.35 0.22
+#> 78         100      108 Jonas  Ana->Jonas  Jonas->Dan      9.13    9.49 0.36
+#> 79         102      112  Hugo  Cara->Hugo  Hugo->Nils      9.71    9.84 0.13
+#> 80         103      105 Jonas Kira->Jonas Jonas->Gita      9.01    9.35 0.34
+#> 81         103      108 Jonas Kira->Jonas  Jonas->Dan      9.01    9.49 0.48
+#> 82         104      123 Jonas Kira->Jonas  Jonas->Ana      9.82   10.56 0.74
+#> 83         105      120  Gita Jonas->Gita  Gita->Mira     10.09   10.35 0.26
+#> 84         107      112  Hugo  Kira->Hugo  Hugo->Nils      9.58    9.84 0.26
+#> 85         109      132   Ben   Kira->Ben   Ben->Gita     10.26   11.21 0.95
+#> 86         110      114  Nils  Gita->Nils  Nils->Hugo      9.65    9.93 0.28
+#> 87         110      121  Nils  Gita->Nils  Nils->Cara      9.65   10.38 0.73
+#> 88         111      118   Leo   Finn->Leo   Leo->Cara      9.79   10.04 0.25
+#> 89         112      121  Nils  Hugo->Nils  Nils->Cara     10.32   10.38 0.06
+#> 90         115      123 Jonas  Eve->Jonas  Jonas->Ana     10.53   10.56 0.03
+#> 91         116      130  Iris  Finn->Iris   Iris->Leo     10.35   11.13 0.78
+#> 92         116      131  Iris  Finn->Iris  Iris->Cara     10.35   11.20 0.85
+#> 93         117      120  Gita   Ana->Gita  Gita->Mira     10.24   10.35 0.11
+#> 94         118      128  Cara   Leo->Cara  Cara->Iris     10.51   11.03 0.52
+#> 95         119      122  Mira  Iris->Mira   Mira->Dan     10.44   10.48 0.04
+#> 96         119      125  Mira  Iris->Mira  Mira->Gita     10.44   10.77 0.33
+#> 97         119      133  Mira  Iris->Mira  Mira->Gita     10.44   11.40 0.96
+#> 98         120      125  Mira  Gita->Mira  Mira->Gita     10.60   10.77 0.17
+#> 99         120      133  Mira  Gita->Mira  Mira->Gita     10.60   11.40 0.80
+#> 100        120      134  Mira  Gita->Mira   Mira->Dan     10.60   11.55 0.95
+#> 101        121      128  Cara  Nils->Cara  Cara->Iris     10.68   11.03 0.35
+#> 102        122      140   Dan   Mira->Dan  Dan->Jonas     11.52   11.75 0.23
+#> 103        122      145   Dan   Mira->Dan  Dan->Jonas     11.52   12.20 0.68
+#> 104        123      136   Ana  Jonas->Ana   Ana->Kira     10.83   11.60 0.77
+#> 105        124      154  Mira  Kira->Mira Mira->Jonas     11.90   12.86 0.96
+#> 106        128      131  Iris  Cara->Iris  Iris->Cara     11.18   11.20 0.02
+#> 107        130      146   Leo   Iris->Leo   Leo->Cara     11.77   12.21 0.44
+#> 108        131      151  Cara  Iris->Cara  Cara->Finn     11.89   12.65 0.76
+#> 109        133      165  Gita  Mira->Gita  Gita->Mira     12.94   13.30 0.36
+#> 110        133      171  Gita  Mira->Gita Gita->Jonas     12.94   13.42 0.48
+#> 111        133      180  Gita  Mira->Gita Gita->Jonas     12.94   13.88 0.94
+#> 112        134      145   Dan   Mira->Dan  Dan->Jonas     12.09   12.20 0.11
+#> 113        137      148   Eve    Ben->Eve   Eve->Hugo     11.93   12.38 0.45
+#> 114        137      153   Eve    Ben->Eve   Eve->Cara     11.93   12.78 0.85
+#> 115        138      147  Finn   Leo->Finn  Finn->Mira     12.09   12.34 0.25
+#> 116        138      149  Finn   Leo->Finn  Finn->Iris     12.09   12.42 0.33
+#> 117        138      152  Finn   Leo->Finn   Finn->Dan     12.09   12.73 0.64
+#> 118        139      155 Jonas Mira->Jonas  Jonas->Ana     12.12   12.91 0.79
+#> 119        140      155 Jonas  Dan->Jonas  Jonas->Ana     12.13   12.91 0.78
+#> 120        141      146   Leo   Finn->Leo   Leo->Cara     12.02   12.21 0.19
+#> 121        143      160   Dan    Ana->Dan   Dan->Mira     12.36   13.23 0.87
+#> 122        145      155 Jonas  Dan->Jonas  Jonas->Ana     12.79   12.91 0.12
+#> 123        145      161 Jonas  Dan->Jonas  Jonas->Eve     12.79   13.24 0.45
+#> 124        145      168 Jonas  Dan->Jonas Jonas->Gita     12.79   13.33 0.54
+#> 125        145      174 Jonas  Dan->Jonas  Jonas->Ana     12.79   13.65 0.86
+#> 126        146      151  Cara   Leo->Cara  Cara->Finn     12.62   12.65 0.03
+#> 127        146      156  Cara   Leo->Cara   Cara->Leo     12.62   13.14 0.52
+#> 128        146      159  Cara   Leo->Cara   Cara->Eve     12.62   13.21 0.59
+#> 129        147      154  Mira  Finn->Mira Mira->Jonas     12.41   12.86 0.45
+#> 130        147      158  Mira  Finn->Mira  Mira->Kira     12.41   13.19 0.78
+#> 131        147      163  Mira  Finn->Mira   Mira->Ana     12.41   13.26 0.85
+#> 132        148      166  Hugo   Eve->Hugo   Hugo->Eve     12.64   13.31 0.67
+#> 133        150      175   Ben   Nils->Ben   Ben->Nils     13.67   13.73 0.06
+#> 134        151      164  Finn  Cara->Finn  Finn->Mira     13.02   13.27 0.25
+#> 135        151      170  Finn  Cara->Finn  Finn->Mira     13.02   13.35 0.33
+#> 136        151      181  Finn  Cara->Finn  Finn->Kira     13.02   13.95 0.93
+#> 137        152      187   Dan   Finn->Dan   Dan->Hugo     13.24   14.13 0.89
+#> 138        152      188   Dan   Finn->Dan  Dan->Jonas     13.24   14.13 0.89
+#> 139        153      156  Cara   Eve->Cara   Cara->Leo     13.12   13.14 0.02
+#> 140        153      159  Cara   Eve->Cara   Cara->Eve     13.12   13.21 0.09
+#> 141        154      161 Jonas Mira->Jonas  Jonas->Eve     13.19   13.24 0.05
+#> 142        154      168 Jonas Mira->Jonas Jonas->Gita     13.19   13.33 0.14
+#> 143        154      174 Jonas Mira->Jonas  Jonas->Ana     13.19   13.65 0.46
+#> 144        154      178 Jonas Mira->Jonas  Jonas->Dan     13.19   13.82 0.63
+#> 145        154      182 Jonas Mira->Jonas Jonas->Hugo     13.19   13.96 0.77
+#> 146        155      167   Ana  Jonas->Ana    Ana->Dan     13.29   13.33 0.04
+#> 147        155      172   Ana  Jonas->Ana   Ana->Gita     13.29   13.55 0.26
+#> 148        155      177   Ana  Jonas->Ana   Ana->Iris     13.29   13.80 0.51
+#> 149        157      180  Gita   Ana->Gita Gita->Jonas     13.67   13.88 0.21
+#> 150        157      185  Gita   Ana->Gita   Gita->Ana     13.67   14.01 0.34
+#> 151        157      189  Gita   Ana->Gita   Gita->Dan     13.67   14.16 0.49
+#> 152        158      192  Kira  Mira->Kira  Kira->Hugo     13.91   14.44 0.53
+#> 153        158      194  Kira  Mira->Kira   Kira->Eve     13.91   14.55 0.64
+#> 154        159      191   Eve   Cara->Eve   Eve->Nils     13.69   14.30 0.61
+#> 155        161      191   Eve  Jonas->Eve   Eve->Nils     13.44   14.30 0.86
+#> 156        162      191   Eve    Ben->Eve   Eve->Nils     13.49   14.30 0.81
+#> 157        166      191   Eve   Hugo->Eve   Eve->Nils     14.00   14.30 0.30
+#> 158        166      195   Eve   Hugo->Eve   Eve->Hugo     14.00   14.76 0.76
+#> 159        166      199   Eve   Hugo->Eve  Eve->Jonas     14.00   14.95 0.95
+#> 160        167      187   Dan    Ana->Dan   Dan->Hugo     13.84   14.13 0.29
+#> 161        167      188   Dan    Ana->Dan  Dan->Jonas     13.84   14.13 0.29
+#> 162        170      202  Mira  Finn->Mira Mira->Jonas     14.39   15.29 0.90
+#> 163        176      197  Kira  Nils->Kira   Kira->Eve     14.86   14.92 0.06
+#> 164        181      192  Kira  Finn->Kira  Kira->Hugo     14.09   14.44 0.35
+#> 165        181      194  Kira  Finn->Kira   Kira->Eve     14.09   14.55 0.46
+#> 166        181      197  Kira  Finn->Kira   Kira->Eve     14.09   14.92 0.83
+#> 167        182      198  Hugo Jonas->Hugo  Hugo->Kira     14.08   14.93 0.85
+#> 168        182      200  Hugo Jonas->Hugo   Hugo->Eve     14.08   14.96 0.88
+#> 169        183      191   Eve   Nils->Eve   Eve->Nils     14.13   14.30 0.17
+#> 170        183      195   Eve   Nils->Eve   Eve->Hugo     14.13   14.76 0.63
+#> 171        183      199   Eve   Nils->Eve  Eve->Jonas     14.13   14.95 0.82
+#> 172        186      196   Ben   Nils->Ben    Ben->Eve     14.34   14.78 0.44
+#> 173        187      198  Hugo   Dan->Hugo  Hugo->Kira     14.26   14.93 0.67
+#> 174        187      200  Hugo   Dan->Hugo   Hugo->Eve     14.26   14.96 0.70
+#> 175        190      195   Eve   Finn->Eve   Eve->Hugo     14.30   14.76 0.46
+#> 176        190      199   Eve   Finn->Eve  Eve->Jonas     14.30   14.95 0.65
+#> 177        192      198  Hugo  Kira->Hugo  Hugo->Kira     14.50   14.93 0.43
+#> 178        192      200  Hugo  Kira->Hugo   Hugo->Eve     14.50   14.96 0.46
+#> 179        193      204  Iris  Cara->Iris   Iris->Leo     14.72   15.41 0.69
+#> 180        198      205  Kira  Hugo->Kira  Kira->Nils     15.47   16.16 0.69
+#> 181        203      206  Iris  Cara->Iris  Iris->Finn     15.67   16.25 0.58
+#> 182        207      211  Finn  Cara->Finn  Finn->Kira     16.41   16.84 0.43
+#> 183        207      214  Finn  Cara->Finn  Finn->Mira     16.41   16.97 0.56
+#> 184        211      217  Kira  Finn->Kira   Kira->Ben     17.61   18.17 0.56
+#> 185        213      216   Dan   Mira->Dan   Dan->Gita     17.25   17.46 0.21
+#> 186        214      221  Mira  Finn->Mira   Mira->Ben     18.03   18.95 0.92
+#> 187        219      222 Jonas  Dan->Jonas Jonas->Cara     18.70   18.96 0.26
+#> 188        222      226  Cara Jonas->Cara   Cara->Ana     19.23   19.70 0.47
+#> 189        224      239  Kira  Nils->Kira  Kira->Hugo     20.17   20.89 0.72
+#> 190        225      228   Ana   Hugo->Ana    Ana->Dan     19.80   19.91 0.11
+#> 191        225      233   Ana   Hugo->Ana    Ana->Leo     19.80   20.33 0.53
+#> 192        228      234   Dan    Ana->Dan   Dan->Mira     20.10   20.43 0.33
+#> 193        228      237   Dan    Ana->Dan   Dan->Nils     20.10   20.68 0.58
+#> 194        228      240   Dan    Ana->Dan    Dan->Ana     20.10   20.95 0.85
+#> 195        230      237   Dan  Jonas->Dan   Dan->Nils     20.46   20.68 0.22
+#> 196        230      240   Dan  Jonas->Dan    Dan->Ana     20.46   20.95 0.49
 ```

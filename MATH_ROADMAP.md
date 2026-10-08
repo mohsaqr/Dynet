@@ -167,7 +167,7 @@ Path features catch boundary, direction/anchor, equal-predecessor,
 duplicate-state, and cross-session mutants whenever those risks apply.
 
 The focused
-[`testthat::test_file()`](https://testthat.r-lib.org/reference/test_file.html)
+[`testthat::test_file()`](https://rdrr.io/pkg/testthat/man/test_file.html)
 run passes.
 
 Every new or changed function, including an internal helper, has a

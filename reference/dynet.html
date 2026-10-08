@@ -20,6 +20,21 @@ copresence
 Two-mode attendance data. Actors sharing a group become
 connected for the span of that group. Name actor and group.
 
+turns
+A log of who acted when, with no recipient, such as coded
+chat or collaboration actions. Within each group, every action takes
+up the one before it: a directed contact from the previous actor to
+the current one, at the current action's time. Name actor, time
+and (optionally) group, and set format = &quot;turns&quot;.
+
+broadcast
+The same kind of log, read as every action being
+addressed to the whole group: a directed contact from the actor to
+every other member of the group (every actor with an action in it), at
+the action's time. Name actor, group and time, and set
+format = &quot;broadcast&quot;. event_graph(events = &quot;messages&quot;) then treats
+each action as one event.
+
 
 
 
@@ -74,6 +89,21 @@ copresence
 Two-mode attendance data. Actors sharing a group become
 connected for the span of that group. Name actor and group.
 
+turns
+A log of who acted when, with no recipient, such as coded
+chat or collaboration actions. Within each group, every action takes
+up the one before it: a directed contact from the previous actor to
+the current one, at the current action's time. Name actor, time
+and (optionally) group, and set format = &quot;turns&quot;.
+
+broadcast
+The same kind of log, read as every action being
+addressed to the whole group: a directed contact from the actor to
+every other member of the group (every actor with an action in it), at
+the action's time. Name actor, group and time, and set
+format = &quot;broadcast&quot;. event_graph(events = &quot;messages&quot;) then treats
+each action as one event.
+
 
 
 
@@ -115,7 +145,7 @@ observation limits or used to alter eligibility."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -170,6 +200,21 @@ Saqr and Nouri (2020). Name the <code>thread</code> argument to select this.</p>
 <dd><p>Two-mode attendance data. Actors sharing a group become
 connected for the span of that group. Name <code>actor</code> and <code>group</code>.</p></dd>
 
+<dt>turns</dt>
+<dd><p>A log of who acted when, with no recipient, such as coded
+chat or collaboration actions. Within each group, every action takes
+up the one before it: a directed contact from the previous actor to
+the current one, at the current action's time. Name <code>actor</code>, <code>time</code>
+and (optionally) <code>group</code>, and set <code>format = "turns"</code>.</p></dd>
+
+<dt>broadcast</dt>
+<dd><p>The same kind of log, read as every action being
+addressed to the whole group: a directed contact from the actor to
+every other member of the group (every actor with an action in it), at
+the action's time. Name <code>actor</code>, <code>group</code> and <code>time</code>, and set
+<code>format = "broadcast"</code>. <code>event_graph(events = "messages")</code> then treats
+each action as one event.</p></dd>
+
 
 </dl><p>Every other column of <code>data</code> is kept as a tie attribute: it appears in
 <code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> and can be selected on with <code>induce_subgraph(ties = )</code>.
@@ -221,7 +266,8 @@ observation limits or used to alter eligibility.</p>
 <span>  weight <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  nodes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  groups <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"interval"</span>, <span class="st">"contact"</span>, <span class="st">"threaded"</span>, <span class="st">"copresence"</span><span class="op">)</span>,</span>
+<span>  format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"interval"</span>, <span class="st">"contact"</span>, <span class="st">"threaded"</span>, <span class="st">"copresence"</span>, <span class="st">"turns"</span>,</span>
+<span>    <span class="st">"broadcast"</span><span class="op">)</span>,</span>
 <span>  thread_clock <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"absolute"</span>, <span class="st">"relative"</span><span class="op">)</span>,</span>
 <span>  directed <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  interval <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -272,7 +318,12 @@ selects the threaded format.</p></dd>
 
 <dt id="arg-actor-group">actor, group<a class="anchor" aria-label="anchor" href="#arg-actor-group"></a></dt>
 <dd><p>Column names for the actor and the shared group. Naming
-both selects the co-presence format.</p></dd>
+both selects the co-presence format, unless <code>format = "turns"</code> or
+<code>"broadcast"</code>, where <code>group</code> names the conversation each action belongs
+to and becomes the session unless <code>session</code> is named (a turns log
+without a group is one conversation; a broadcast log needs one). In
+these logs, ties never cross groups, and the other columns of an
+action's row are the tie attributes of the ties it makes.</p></dd>
 
 
 <dt id="arg-session">session<a class="anchor" aria-label="anchor" href="#arg-session"></a></dt>
@@ -305,8 +356,9 @@ column of <code>nodes</code> raises a condition of class <code>dynet_unknown_att
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
 <dd><p>One of <code>"auto"</code> (the default), <code>"interval"</code>, <code>"contact"</code>,
-<code>"threaded"</code>, <code>"copresence"</code>. <code>"auto"</code> infers the format from the
-arguments you name and the columns present.</p></dd>
+<code>"threaded"</code>, <code>"copresence"</code>, <code>"turns"</code>, <code>"broadcast"</code>. <code>"auto"</code>
+infers the format from the arguments you name and the columns present;
+<code>"turns"</code> and <code>"broadcast"</code> are never inferred and must be named.</p></dd>
 
 
 <dt id="arg-thread-clock">thread_clock<a class="anchor" aria-label="anchor" href="#arg-thread-clock"></a></dt>
@@ -458,6 +510,43 @@ International Conference on Learning Analytics &amp; Knowledge</em>, 314-319.</p
 <span class="r-out co"><span class="r-pr">#&gt;</span>   s03 s23     0   0        0      1 week_01</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   s10 s12     0   0        0      1 week_01</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # 411 more spells. summary() describes the network; plot() draws it.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A turns log: each action takes up the one before it in its group</span></span></span>
+<span class="r-in"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  student <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ana"</span>, <span class="st">"Ben"</span>, <span class="st">"Ana"</span>, <span class="st">"Cy"</span>, <span class="st">"Dee"</span>, <span class="st">"Eli"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  team <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"t1"</span>, <span class="st">"t1"</span>, <span class="st">"t1"</span>, <span class="st">"t1"</span>, <span class="st">"t2"</span>, <span class="st">"t2"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  minute <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">5</span>, <span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  action <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plan"</span>, <span class="st">"monitor"</span>, <span class="st">"discuss"</span>, <span class="st">"plan"</span>, <span class="st">"plan"</span>, <span class="st">"adapt"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">dynet</span><span class="op">(</span><span class="va">chat</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"team"</span>, time <span class="op">=</span> <span class="st">"minute"</span>,</span></span>
+<span class="r-in"><span>      format <span class="op">=</span> <span class="st">"turns"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Temporal network (turns format, directed) | a cograph netobject</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 5 vertices | 4 edge spells | 4 distinct pairs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # observed from 2 to 5 step, binned every 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 2 sessions: t1, t2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  from  to start end duration weight session  action</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana Ben     2   2        0      1      t1 monitor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Dee Eli     3   3        0      1      t2   adapt</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ben Ana     4   4        0      1      t1 discuss</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Cy     5   5        0      1      t1    plan</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The same log as broadcasts: each action reaches the whole team</span></span></span>
+<span class="r-in"><span><span class="fu">dynet</span><span class="op">(</span><span class="va">chat</span>, actor <span class="op">=</span> <span class="st">"student"</span>, group <span class="op">=</span> <span class="st">"team"</span>, time <span class="op">=</span> <span class="st">"minute"</span>,</span></span>
+<span class="r-in"><span>      format <span class="op">=</span> <span class="st">"broadcast"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Temporal network (broadcast format, directed) | a cograph netobject</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 5 vertices | 10 edge spells | 8 distinct pairs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # observed from 1 to 5 step, binned every 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 2 sessions: t1, t2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  from  to start end duration weight session  action</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana Ben     1   1        0      1      t1    plan</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ana  Cy     1   1        0      1      t1    plan</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Dee Eli     1   1        0      1      t2    plan</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ben Ana     2   2        0      1      t1 monitor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Ben  Cy     2   2        0      1      t1 monitor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Eli Dee     3   3        0      1      t2   adapt</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # 4 more spells. summary() describes the network; plot() draws it.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Declare observation time without rewriting the source spell.</span></span></span>
 <span class="r-in"><span><span class="va">bounded</span> <span class="op">&lt;-</span> <span class="fu">dynet</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
