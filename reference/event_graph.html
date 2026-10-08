@@ -19,7 +19,7 @@ representation; it has one vertex per vertex and time slice instead."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,8 @@ a network built without a session column it raises <code>dynet_no_sessions</code
 <dd><p>The longest admissible wait at the shared vertex, in the
 network's time unit: an arc requires the later event to start no more
 than <code>delta</code> after the earlier one ends. <code>Inf</code>, the default, admits any
-wait. A single non-negative number, or <code>dynet_bad_input</code> is raised.</p></dd>
+wait; zero admits none, since a wait is always positive. A single
+non-negative number, or <code>dynet_bad_input</code> is raised.</p></dd>
 
 
 <dt id="arg-adjacency">adjacency<a class="anchor" aria-label="anchor" href="#arg-adjacency"></a></dt>
@@ -135,13 +136,15 @@ and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Events are ordered by <code>start</code>, then <code>end</code>, <code>from</code> and <code>to</code>, and numbered in
 that order. Event <code>e1</code> precedes <code>e2</code> at a shared vertex <code>v</code> when <code>e2</code>
-starts at or after <code>e1</code> ends and no more than <code>delta</code> later, and strictly
-after <code>e1</code> starts. An event therefore occupies its whole spell, as in the
-event graphs of Kivela et al. (2018): something carried by it is available
-at its endpoints from its end. The strict start rule means that two
-instantaneous events at the same instant are never adjacent, because
-nothing orders them; this also makes the graph acyclic, and numbering
-events by start is a topological order.</p>
+starts strictly after <code>e1</code> ends, and no more than <code>delta</code> later. An event
+therefore occupies its whole spell, as in the event graphs of Kivela et
+al. (2018): something carried by it is available at its endpoints once it
+has ended. Because the later event must start strictly after, two
+instantaneous events at the same instant are never adjacent, nor is an
+event that starts at the very instant another ends; every wait is
+positive, the graph is acyclic, and numbering events by start is a
+topological order. This is the rule of Reticula (Badie-Modiri and
+Kivela, 2023), the reference implementation of the construct.</p>
 <p>Two events that share both endpoints are joined once per shared vertex,
 so they produce two adjacency rows with different <code>via</code>. This is correct:
 each row is a different way the second event can follow the first.</p>
@@ -180,6 +183,9 @@ network percolation to weighted, static event graphs. <em>Scientific
 Reports</em>, 8, 12357. <a href="https://doi.org/10.1038/s41598-018-29577-2" class="external-link">doi:10.1038/s41598-018-29577-2</a></p>
 <p>Mellor, A. (2018). The temporal event graph. <em>Journal of Complex Networks</em>,
 6(4), 639-659. <a href="https://doi.org/10.1093/comnet/cnx048" class="external-link">doi:10.1093/comnet/cnx048</a></p>
+<p>Badie-Modiri, A., &amp; Kivela, M. (2023). Reticula: A temporal network and
+hypergraph analysis software package. <em>SoftwareX</em>, 21, 101301.
+<a href="https://doi.org/10.1016/j.softx.2022.101301" class="external-link">doi:10.1016/j.softx.2022.101301</a></p>
 <p>Kovanen, L., Karsai, M., Kaski, K., Kertesz, J., &amp; Saramaki, J. (2011).
 Temporal motifs in time-dependent networks. <em>Journal of Statistical
 Mechanics: Theory and Experiment</em>, P11005.
@@ -196,7 +202,7 @@ time-respecting paths between vertices.</p></div>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="dynet.html">dynet</a></span><span class="op">(</span><span class="va">school_contacts</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">eg</span> <span class="op">&lt;-</span> <span class="fu">event_graph</span><span class="op">(</span><span class="va">dn</span>, delta <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">eg</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Event graph | 240 events | 201 adjacencies</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Event graph | 240 events | 196 adjacencies</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # delta 1 | adjacency "all" | direction "respect" | sessions_ignored</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  from_event to_event  via from_time to_time wait</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           1       16  Dan      1.10    2.03 0.93</span>
@@ -227,187 +233,182 @@ time-respecting paths between vertices.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 18          34       46   Ben      4.85    5.27 0.42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 19          36       38  Iris      4.67    4.76 0.09</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 20          37       48  Iris      5.07    5.71 0.64</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 21          38       42   Ben      4.91    4.91 0.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 22          38       46   Ben      4.91    5.27 0.36</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23          39       55  Cara      5.12    6.11 0.99</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 24          40       55  Cara      5.19    6.11 0.92</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 25          41       46   Ben      5.03    5.27 0.24</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 26          44       57   Leo      6.11    6.13 0.02</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 27          44       73   Leo      6.11    6.76 0.65</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 28          44       76   Leo      6.11    6.83 0.72</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 29          45       60  Gita      5.74    6.15 0.41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 30          47       74 Jonas      6.13    6.79 0.66</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 31          48       55  Cara      6.00    6.11 0.11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 32          48       77  Cara      6.00    6.96 0.96</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 33          49       63  Finn      5.90    6.31 0.41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 34          49       64  Finn      5.90    6.32 0.42</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 35          53       75  Gita      6.20    6.81 0.61</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 36          54       75  Gita      6.43    6.81 0.38</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 37          57       71  Iris      6.20    6.67 0.47</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38          60       80  Mira      6.92    7.09 0.17</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 39          60       88  Mira      6.92    7.72 0.80</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 40          61       84   Ben      7.50    7.51 0.01</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 41          61       87   Ben      7.50    7.65 0.15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 42          62       75  Gita      6.55    6.81 0.26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 43          65       84   Ben      6.68    7.51 0.83</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 44          65       87   Ben      6.68    7.65 0.97</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 45          66       80  Mira      6.77    7.09 0.32</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 46          66       88  Mira      6.77    7.72 0.95</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 47          69       79   Ana      6.75    7.04 0.29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 48          69       86   Ana      6.75    7.63 0.88</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 49          70       77  Cara      6.77    6.96 0.19</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 50          70       85  Cara      6.77    7.51 0.74</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 51          71       94   Eve      7.62    8.33 0.71</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 52          72       92 Jonas      7.53    8.21 0.68</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 53          73       78  Hugo      6.87    7.02 0.15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 54          73       82  Hugo      6.87    7.37 0.50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 55          73       89  Hugo      6.87    7.79 0.92</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 56          76       79   Ana      7.00    7.04 0.04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 57          76       86   Ana      7.00    7.63 0.63</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 58          78       94   Eve      7.66    8.33 0.67</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 59          80      100   Ana      8.15    8.76 0.61</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 60          80      101   Ana      8.15    8.77 0.62</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 61          82       92 Jonas      8.15    8.21 0.06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 62          82       99 Jonas      8.15    8.61 0.46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 63          83       91   Leo      7.71    8.00 0.29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 64          83       98   Leo      7.71    8.59 0.88</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 65          85      106  Nils      8.49    9.40 0.91</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 66          86       95  Mira      8.04    8.35 0.31</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 67          86       97  Mira      8.04    8.56 0.52</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 68          88       92 Jonas      8.14    8.21 0.07</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 69          88       99 Jonas      8.14    8.61 0.47</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 70          91      102  Cara      8.50    8.78 0.28</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 71          93       99 Jonas      8.59    8.61 0.02</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 72          93      105 Jonas      8.59    9.35 0.76</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 73          93      108 Jonas      8.59    9.49 0.90</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 74          94      112  Hugo      8.84    9.84 1.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 75          95      110  Gita      8.84    9.61 0.77</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 76          96      114  Nils      9.53    9.93 0.40</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 77          96      121  Nils      9.53   10.38 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 78         100      105 Jonas      9.13    9.35 0.22</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 79         100      108 Jonas      9.13    9.49 0.36</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 80         102      112  Hugo      9.71    9.84 0.13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 81         103      105 Jonas      9.01    9.35 0.34</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 82         103      108 Jonas      9.01    9.49 0.48</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 83         104      123 Jonas      9.82   10.56 0.74</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 84         105      120  Gita     10.09   10.35 0.26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 85         107      112  Hugo      9.58    9.84 0.26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 86         109      132   Ben     10.26   11.21 0.95</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 87         110      114  Nils      9.65    9.93 0.28</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 88         110      121  Nils      9.65   10.38 0.73</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 89         111      118   Leo      9.79   10.04 0.25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 90         112      121  Nils     10.32   10.38 0.06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 91         115      123 Jonas     10.53   10.56 0.03</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 92         116      130  Iris     10.35   11.13 0.78</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 93         116      131  Iris     10.35   11.20 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 94         117      120  Gita     10.24   10.35 0.11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 95         118      128  Cara     10.51   11.03 0.52</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 96         119      122  Mira     10.44   10.48 0.04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 97         119      125  Mira     10.44   10.77 0.33</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 98         119      133  Mira     10.44   11.40 0.96</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 99         120      125  Mira     10.60   10.77 0.17</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 100        120      133  Mira     10.60   11.40 0.80</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 101        120      134  Mira     10.60   11.55 0.95</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 102        121      128  Cara     10.68   11.03 0.35</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 103        122      140   Dan     11.52   11.75 0.23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 104        122      145   Dan     11.52   12.20 0.68</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 105        123      136   Ana     10.83   11.60 0.77</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 106        124      154  Mira     11.90   12.86 0.96</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 107        128      131  Iris     11.18   11.20 0.02</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 108        130      146   Leo     11.77   12.21 0.44</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 109        131      151  Cara     11.89   12.65 0.76</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 110        133      165  Gita     12.94   13.30 0.36</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 111        133      171  Gita     12.94   13.42 0.48</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 112        133      180  Gita     12.94   13.88 0.94</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 113        134      145   Dan     12.09   12.20 0.11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 114        137      148   Eve     11.93   12.38 0.45</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 115        137      153   Eve     11.93   12.78 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 116        138      147  Finn     12.09   12.34 0.25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 117        138      149  Finn     12.09   12.42 0.33</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 118        138      152  Finn     12.09   12.73 0.64</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 119        139      155 Jonas     12.12   12.91 0.79</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 120        140      155 Jonas     12.13   12.91 0.78</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 121        141      146   Leo     12.02   12.21 0.19</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 122        143      160   Dan     12.36   13.23 0.87</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 123        145      155 Jonas     12.79   12.91 0.12</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 124        145      161 Jonas     12.79   13.24 0.45</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 125        145      168 Jonas     12.79   13.33 0.54</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 126        145      174 Jonas     12.79   13.65 0.86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 127        146      151  Cara     12.62   12.65 0.03</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 128        146      156  Cara     12.62   13.14 0.52</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 129        146      159  Cara     12.62   13.21 0.59</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 130        147      154  Mira     12.41   12.86 0.45</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 131        147      158  Mira     12.41   13.19 0.78</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 132        147      163  Mira     12.41   13.26 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 133        148      166  Hugo     12.64   13.31 0.67</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 134        150      175   Ben     13.67   13.73 0.06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 135        151      164  Finn     13.02   13.27 0.25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 136        151      170  Finn     13.02   13.35 0.33</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 137        151      181  Finn     13.02   13.95 0.93</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 138        152      187   Dan     13.24   14.13 0.89</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 139        152      188   Dan     13.24   14.13 0.89</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 140        153      156  Cara     13.12   13.14 0.02</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 141        153      159  Cara     13.12   13.21 0.09</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 142        154      161 Jonas     13.19   13.24 0.05</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 143        154      168 Jonas     13.19   13.33 0.14</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 144        154      174 Jonas     13.19   13.65 0.46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 145        154      178 Jonas     13.19   13.82 0.63</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 146        154      182 Jonas     13.19   13.96 0.77</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 147        155      167   Ana     13.29   13.33 0.04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 148        155      172   Ana     13.29   13.55 0.26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 149        155      177   Ana     13.29   13.80 0.51</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 150        157      180  Gita     13.67   13.88 0.21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 151        157      185  Gita     13.67   14.01 0.34</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 152        157      189  Gita     13.67   14.16 0.49</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 153        158      192  Kira     13.91   14.44 0.53</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 154        158      194  Kira     13.91   14.55 0.64</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 155        159      191   Eve     13.69   14.30 0.61</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 156        161      191   Eve     13.44   14.30 0.86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 157        162      191   Eve     13.49   14.30 0.81</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 158        166      191   Eve     14.00   14.30 0.30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 159        166      195   Eve     14.00   14.76 0.76</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 160        166      199   Eve     14.00   14.95 0.95</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 161        167      187   Dan     13.84   14.13 0.29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 162        167      188   Dan     13.84   14.13 0.29</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 163        170      202  Mira     14.39   15.29 0.90</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 164        172      189  Gita     14.16   14.16 0.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 165        176      197  Kira     14.86   14.92 0.06</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 166        181      192  Kira     14.09   14.44 0.35</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 167        181      194  Kira     14.09   14.55 0.46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 168        181      197  Kira     14.09   14.92 0.83</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 169        182      198  Hugo     14.08   14.93 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 170        182      200  Hugo     14.08   14.96 0.88</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 171        183      191   Eve     14.13   14.30 0.17</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 172        183      195   Eve     14.13   14.76 0.63</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 173        183      199   Eve     14.13   14.95 0.82</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 174        184      196   Ben     14.78   14.78 0.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 175        186      196   Ben     14.34   14.78 0.44</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 176        187      198  Hugo     14.26   14.93 0.67</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 177        187      200  Hugo     14.26   14.96 0.70</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 178        190      191   Eve     14.30   14.30 0.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 179        190      195   Eve     14.30   14.76 0.46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 180        190      199   Eve     14.30   14.95 0.65</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 181        192      198  Hugo     14.50   14.93 0.43</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 182        192      200  Hugo     14.50   14.96 0.46</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 183        193      204  Iris     14.72   15.41 0.69</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 184        198      205  Kira     15.47   16.16 0.69</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 185        203      206  Iris     15.67   16.25 0.58</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 186        207      211  Finn     16.41   16.84 0.43</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 187        207      214  Finn     16.41   16.97 0.56</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 188        211      217  Kira     17.61   18.17 0.56</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 189        213      216   Dan     17.25   17.46 0.21</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 190        214      221  Mira     18.03   18.95 0.92</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 191        219      222 Jonas     18.70   18.96 0.26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 192        222      226  Cara     19.23   19.70 0.47</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 193        224      239  Kira     20.17   20.89 0.72</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 194        225      228   Ana     19.80   19.91 0.11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 195        225      233   Ana     19.80   20.33 0.53</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 196        226      233   Ana     20.33   20.33 0.00</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 197        228      234   Dan     20.10   20.43 0.33</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 198        228      237   Dan     20.10   20.68 0.58</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 199        228      240   Dan     20.10   20.95 0.85</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 200        230      237   Dan     20.46   20.68 0.22</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 201        230      240   Dan     20.46   20.95 0.49</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21          38       46   Ben      4.91    5.27 0.36</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22          39       55  Cara      5.12    6.11 0.99</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23          40       55  Cara      5.19    6.11 0.92</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24          41       46   Ben      5.03    5.27 0.24</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25          44       57   Leo      6.11    6.13 0.02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26          44       73   Leo      6.11    6.76 0.65</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27          44       76   Leo      6.11    6.83 0.72</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28          45       60  Gita      5.74    6.15 0.41</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29          47       74 Jonas      6.13    6.79 0.66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30          48       55  Cara      6.00    6.11 0.11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31          48       77  Cara      6.00    6.96 0.96</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32          49       63  Finn      5.90    6.31 0.41</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33          49       64  Finn      5.90    6.32 0.42</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34          53       75  Gita      6.20    6.81 0.61</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35          54       75  Gita      6.43    6.81 0.38</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36          57       71  Iris      6.20    6.67 0.47</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37          60       80  Mira      6.92    7.09 0.17</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38          60       88  Mira      6.92    7.72 0.80</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39          61       84   Ben      7.50    7.51 0.01</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40          61       87   Ben      7.50    7.65 0.15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41          62       75  Gita      6.55    6.81 0.26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42          65       84   Ben      6.68    7.51 0.83</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43          65       87   Ben      6.68    7.65 0.97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44          66       80  Mira      6.77    7.09 0.32</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45          66       88  Mira      6.77    7.72 0.95</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46          69       79   Ana      6.75    7.04 0.29</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47          69       86   Ana      6.75    7.63 0.88</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48          70       77  Cara      6.77    6.96 0.19</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49          70       85  Cara      6.77    7.51 0.74</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50          71       94   Eve      7.62    8.33 0.71</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51          72       92 Jonas      7.53    8.21 0.68</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52          73       78  Hugo      6.87    7.02 0.15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53          73       82  Hugo      6.87    7.37 0.50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54          73       89  Hugo      6.87    7.79 0.92</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55          76       79   Ana      7.00    7.04 0.04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56          76       86   Ana      7.00    7.63 0.63</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57          78       94   Eve      7.66    8.33 0.67</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58          80      100   Ana      8.15    8.76 0.61</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59          80      101   Ana      8.15    8.77 0.62</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60          82       92 Jonas      8.15    8.21 0.06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61          82       99 Jonas      8.15    8.61 0.46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62          83       91   Leo      7.71    8.00 0.29</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63          83       98   Leo      7.71    8.59 0.88</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64          85      106  Nils      8.49    9.40 0.91</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65          86       95  Mira      8.04    8.35 0.31</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66          86       97  Mira      8.04    8.56 0.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67          88       92 Jonas      8.14    8.21 0.07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68          88       99 Jonas      8.14    8.61 0.47</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69          91      102  Cara      8.50    8.78 0.28</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70          93       99 Jonas      8.59    8.61 0.02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71          93      105 Jonas      8.59    9.35 0.76</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 72          93      108 Jonas      8.59    9.49 0.90</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 73          94      112  Hugo      8.84    9.84 1.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 74          95      110  Gita      8.84    9.61 0.77</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 75          96      114  Nils      9.53    9.93 0.40</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 76          96      121  Nils      9.53   10.38 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 77         100      105 Jonas      9.13    9.35 0.22</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 78         100      108 Jonas      9.13    9.49 0.36</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 79         102      112  Hugo      9.71    9.84 0.13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 80         103      105 Jonas      9.01    9.35 0.34</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 81         103      108 Jonas      9.01    9.49 0.48</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 82         104      123 Jonas      9.82   10.56 0.74</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 83         105      120  Gita     10.09   10.35 0.26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 84         107      112  Hugo      9.58    9.84 0.26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 85         109      132   Ben     10.26   11.21 0.95</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 86         110      114  Nils      9.65    9.93 0.28</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 87         110      121  Nils      9.65   10.38 0.73</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 88         111      118   Leo      9.79   10.04 0.25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 89         112      121  Nils     10.32   10.38 0.06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 90         115      123 Jonas     10.53   10.56 0.03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 91         116      130  Iris     10.35   11.13 0.78</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 92         116      131  Iris     10.35   11.20 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 93         117      120  Gita     10.24   10.35 0.11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 94         118      128  Cara     10.51   11.03 0.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 95         119      122  Mira     10.44   10.48 0.04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 96         119      125  Mira     10.44   10.77 0.33</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 97         119      133  Mira     10.44   11.40 0.96</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 98         120      125  Mira     10.60   10.77 0.17</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 99         120      133  Mira     10.60   11.40 0.80</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 100        120      134  Mira     10.60   11.55 0.95</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 101        121      128  Cara     10.68   11.03 0.35</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 102        122      140   Dan     11.52   11.75 0.23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103        122      145   Dan     11.52   12.20 0.68</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 104        123      136   Ana     10.83   11.60 0.77</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 105        124      154  Mira     11.90   12.86 0.96</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 106        128      131  Iris     11.18   11.20 0.02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 107        130      146   Leo     11.77   12.21 0.44</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 108        131      151  Cara     11.89   12.65 0.76</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 109        133      165  Gita     12.94   13.30 0.36</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 110        133      171  Gita     12.94   13.42 0.48</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 111        133      180  Gita     12.94   13.88 0.94</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 112        134      145   Dan     12.09   12.20 0.11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 113        137      148   Eve     11.93   12.38 0.45</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 114        137      153   Eve     11.93   12.78 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 115        138      147  Finn     12.09   12.34 0.25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 116        138      149  Finn     12.09   12.42 0.33</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 117        138      152  Finn     12.09   12.73 0.64</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 118        139      155 Jonas     12.12   12.91 0.79</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 119        140      155 Jonas     12.13   12.91 0.78</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 120        141      146   Leo     12.02   12.21 0.19</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 121        143      160   Dan     12.36   13.23 0.87</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 122        145      155 Jonas     12.79   12.91 0.12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 123        145      161 Jonas     12.79   13.24 0.45</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 124        145      168 Jonas     12.79   13.33 0.54</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 125        145      174 Jonas     12.79   13.65 0.86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 126        146      151  Cara     12.62   12.65 0.03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 127        146      156  Cara     12.62   13.14 0.52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 128        146      159  Cara     12.62   13.21 0.59</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 129        147      154  Mira     12.41   12.86 0.45</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 130        147      158  Mira     12.41   13.19 0.78</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 131        147      163  Mira     12.41   13.26 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 132        148      166  Hugo     12.64   13.31 0.67</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 133        150      175   Ben     13.67   13.73 0.06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 134        151      164  Finn     13.02   13.27 0.25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 135        151      170  Finn     13.02   13.35 0.33</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 136        151      181  Finn     13.02   13.95 0.93</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 137        152      187   Dan     13.24   14.13 0.89</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 138        152      188   Dan     13.24   14.13 0.89</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 139        153      156  Cara     13.12   13.14 0.02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 140        153      159  Cara     13.12   13.21 0.09</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 141        154      161 Jonas     13.19   13.24 0.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 142        154      168 Jonas     13.19   13.33 0.14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 143        154      174 Jonas     13.19   13.65 0.46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 144        154      178 Jonas     13.19   13.82 0.63</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 145        154      182 Jonas     13.19   13.96 0.77</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 146        155      167   Ana     13.29   13.33 0.04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 147        155      172   Ana     13.29   13.55 0.26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 148        155      177   Ana     13.29   13.80 0.51</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 149        157      180  Gita     13.67   13.88 0.21</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 150        157      185  Gita     13.67   14.01 0.34</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 151        157      189  Gita     13.67   14.16 0.49</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 152        158      192  Kira     13.91   14.44 0.53</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 153        158      194  Kira     13.91   14.55 0.64</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 154        159      191   Eve     13.69   14.30 0.61</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 155        161      191   Eve     13.44   14.30 0.86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 156        162      191   Eve     13.49   14.30 0.81</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 157        166      191   Eve     14.00   14.30 0.30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 158        166      195   Eve     14.00   14.76 0.76</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 159        166      199   Eve     14.00   14.95 0.95</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 160        167      187   Dan     13.84   14.13 0.29</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 161        167      188   Dan     13.84   14.13 0.29</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 162        170      202  Mira     14.39   15.29 0.90</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 163        176      197  Kira     14.86   14.92 0.06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 164        181      192  Kira     14.09   14.44 0.35</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 165        181      194  Kira     14.09   14.55 0.46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 166        181      197  Kira     14.09   14.92 0.83</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 167        182      198  Hugo     14.08   14.93 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 168        182      200  Hugo     14.08   14.96 0.88</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 169        183      191   Eve     14.13   14.30 0.17</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 170        183      195   Eve     14.13   14.76 0.63</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 171        183      199   Eve     14.13   14.95 0.82</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 172        186      196   Ben     14.34   14.78 0.44</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 173        187      198  Hugo     14.26   14.93 0.67</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 174        187      200  Hugo     14.26   14.96 0.70</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 175        190      195   Eve     14.30   14.76 0.46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 176        190      199   Eve     14.30   14.95 0.65</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 177        192      198  Hugo     14.50   14.93 0.43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 178        192      200  Hugo     14.50   14.96 0.46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 179        193      204  Iris     14.72   15.41 0.69</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 180        198      205  Kira     15.47   16.16 0.69</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 181        203      206  Iris     15.67   16.25 0.58</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 182        207      211  Finn     16.41   16.84 0.43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 183        207      214  Finn     16.41   16.97 0.56</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 184        211      217  Kira     17.61   18.17 0.56</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 185        213      216   Dan     17.25   17.46 0.21</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 186        214      221  Mira     18.03   18.95 0.92</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 187        219      222 Jonas     18.70   18.96 0.26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 188        222      226  Cara     19.23   19.70 0.47</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 189        224      239  Kira     20.17   20.89 0.72</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 190        225      228   Ana     19.80   19.91 0.11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 191        225      233   Ana     19.80   20.33 0.53</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 192        228      234   Dan     20.10   20.43 0.33</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 193        228      237   Dan     20.10   20.68 0.58</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 194        228      240   Dan     20.10   20.95 0.85</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 195        230      237   Dan     20.46   20.68 0.22</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 196        230      240   Dan     20.46   20.95 0.49</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eg</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     event  time in_degree out_degree mean_wait</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1       1  0.00         0          1 0.9300000</span>
@@ -447,11 +448,11 @@ time-respecting paths between vertices.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 35     35  4.55         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 36     36  4.58         0          1 0.0900000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 37     37  4.73         0          1 0.6400000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 38     38  4.76         1          2 0.1800000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38     38  4.76         1          1 0.3600000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 39     39  4.76         1          1 0.9900000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 40     40  4.77         2          1 0.9200000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 41     41  4.89         0          1 0.2400000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 42     42  4.91         2          0        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42     42  4.91         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 43     43  4.92         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 44     44  5.01         0          3 0.4633333</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 45     45  5.19         0          1 0.4100000</span>
@@ -581,7 +582,7 @@ time-respecting paths between vertices.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 169   169 13.33         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 170   170 13.35         1          1 0.9000000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 171   171 13.42         1          0        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 172   172 13.55         1          1 0.0000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 172   172 13.55         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 173   173 13.57         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 174   174 13.65         2          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 175   175 13.73         1          0        NA</span>
@@ -593,19 +594,19 @@ time-respecting paths between vertices.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 181   181 13.95         1          3 0.5466667</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 182   182 13.96         1          2 0.8650000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 183   183 13.97         0          3 0.5400000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 184   184 13.97         0          1 0.0000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 184   184 13.97         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 185   185 14.01         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 186   186 14.02         0          1 0.4400000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 187   187 14.13         2          2 0.6850000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 188   188 14.13         2          0        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 189   189 14.16         2          0        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 190   190 14.18         0          3 0.3700000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 191   191 14.30         6          0        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 189   189 14.16         1          0        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 190   190 14.18         0          2 0.5550000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 191   191 14.30         5          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 192   192 14.44         2          2 0.4450000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 193   193 14.50         0          1 0.6900000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 194   194 14.55         2          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 195   195 14.76         3          0        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 196   196 14.78         2          0        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 196   196 14.78         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 197   197 14.92         2          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 198   198 14.93         3          1 0.6900000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 199   199 14.95         3          0        NA</span>
@@ -635,14 +636,14 @@ time-respecting paths between vertices.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 223   223 19.03         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 224   224 19.46         0          1 0.7200000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 225   225 19.54         0          2 0.3200000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 226   226 19.70         1          1 0.0000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 226   226 19.70         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 227   227 19.81         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 228   228 19.91         1          3 0.5866667</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 229   229 19.96         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 230   230 20.00         0          2 0.3550000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 231   231 20.01         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 232   232 20.14         0          0        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 233   233 20.33         2          0        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 233   233 20.33         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 234   234 20.43         1          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 235   235 20.45         0          0        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 236   236 20.49         0          0        NA</span>
@@ -654,7 +655,7 @@ time-respecting paths between vertices.</p></div>
 <span class="r-in"><span><span class="co"># Only the earliest successors, as for temporal motifs</span></span></span>
 <span class="r-in"><span><span class="va">sparse</span> <span class="op">&lt;-</span> <span class="fu">event_graph</span><span class="op">(</span><span class="va">dn</span>, delta <span class="op">=</span> <span class="fl">1</span>, adjacency <span class="op">=</span> <span class="st">"next"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">sparse</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Event graph | 240 events | 127 adjacencies</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Event graph | 240 events | 124 adjacencies</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> # delta 1 | adjacency "next" | direction "respect" | sessions_ignored</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  from_event to_event  via from_time to_time wait</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           1       16  Dan      1.10    2.03 0.93</span>

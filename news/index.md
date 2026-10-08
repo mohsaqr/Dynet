@@ -1,5 +1,17 @@
 # Changelog
 
+## Dynet 0.7.2
+
+- [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  now joins two events only when the later one starts strictly after the
+  earlier one ends. An event that starts at the very instant an interval
+  event ends is no longer its successor, so every wait is positive and
+  `delta = 0` admits no adjacency. This is the rule of Reticula
+  (Badie-Modiri and Kivela, 2023), the reference implementation of the
+  event graph, against which
+  [`event_graph()`](https://pak.dynasite.org/Dynet/reference/event_graph.md)
+  has been checked on 600 random networks with identical results.
+
 ## Dynet 0.7.1
 
 - The [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md)

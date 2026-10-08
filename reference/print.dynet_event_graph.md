@@ -29,7 +29,7 @@ print(x, ...)
 ``` r
 dn <- dynet(school_contacts)
 event_graph(dn, delta = 1)
-#> # Event graph | 240 events | 201 adjacencies
+#> # Event graph | 240 events | 196 adjacencies
 #> # delta 1 | adjacency "all" | direction "respect" | sessions_ignored
 #>  from_event to_event  via from_time to_time wait
 #>           1       16  Dan      1.10    2.03 0.93
