@@ -106,7 +106,7 @@ mixing <- function(dn, attribute,
                        sample = NULL,
                        start = NULL, end = NULL,
                        step = NULL, window = NULL, plot = FALSE) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
   spec <- .window_spec(dn, start, end, step, window)
@@ -119,7 +119,7 @@ mixing <- function(dn, attribute,
       sprintf("No vertex attribute %s. This network has %s. Supply attributes through dynet(nodes = ).",
               sQuote(attribute),
               if (length(have)) paste(have, collapse = ", ") else "no attributes"),
-      class = "dynet_unknown_attribute", call = NULL))
+      class = c("dynet_unknown_attribute", "dynet_bad_input"), call = NULL))
   }
 
   raw_group <- as.character(dn$nodes[[attribute]])
@@ -308,7 +308,7 @@ snapshots <- function(dn, at = NULL,
                           sample = NULL,
                           start = NULL, end = NULL,
                           step = NULL, window = NULL, plot = FALSE) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
   spec <- .window_spec(dn, start, end, step, window)
@@ -319,8 +319,14 @@ snapshots <- function(dn, at = NULL,
     grid <- .grid_for(enc, dn, spec)
     if (!is.null(at)) {
       # With overlapping windows more than one covers `at`; all of them are
-      # returned, since each is a genuine measurement of that moment.
-      k <- which(grid$lo <= at & grid$hi > at)
+      # returned, since each is a genuine measurement of that moment. Bin
+      # edges are snapped onto the data's own boundaries, so `at` is compared
+      # with the tolerant time helpers: a bare `<` let a time one ulp below a
+      # boundary fall in the half-open bin that ends there. A closed bin (the
+      # last one, or an instant under `window = 0`) also covers its upper edge.
+      closed <- grid$closed | spec$window == 0
+      k <- which(.time_leq(grid$lo, at) &
+                   ifelse(closed, .time_leq(at, grid$hi), !.time_leq(grid$hi, at)))
       if (length(k) == 0L) k <- which.min(abs(grid$lo - at))
       grid <- grid[k, , drop = FALSE]
     }
@@ -476,7 +482,7 @@ plot.dynet_snapshot <- function(x, base_size = 12, palette = "okabe", ...) {
   if (!nrow(counts)) {
     stop(errorCondition(
       "There is nothing to draw: no tie is active in any requested window.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   unit <- attr(x, "time_unit") %||% "step"
   p <- ggplot2::ggplot(counts, ggplot2::aes(x = time, y = ties)) +

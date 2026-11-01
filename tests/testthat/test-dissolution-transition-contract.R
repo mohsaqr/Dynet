@@ -359,7 +359,7 @@ test_that("T02 transformations preserve fraction and pair-state identity", {
   expect_equal(.t02_value(make(labels = c("", "y", "z")), 5), base)
   expect_equal(.t02_value(make(multiplier = 3, offset = 11), 26), base)
   reweighted <- edges
-  reweighted$weight <- c(-100, 0, 1e6, 2)
+  reweighted$weight <- c(500, 0, 1e6, 2)
   expect_equal(.t02_value(make(reweighted), 5), base)
 
   transposed <- edges

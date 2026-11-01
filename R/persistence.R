@@ -116,28 +116,30 @@ persistence <- function(dn, scope = c("pertime", "node", "overall"),
                         sessions = c("bounded", "collapse", "separate"),
                         start = NULL, end = NULL, step = NULL, window = NULL,
                         plot = FALSE) {
-  scope <- match.arg(scope)
-  sessions <- match.arg(sessions)
+  scope <- .match_choice(scope)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
 
   snaps <- as.data.frame(snapshots(dn, sessions = sessions, start = start,
                                    end = end, step = step, window = window))
-  blocks <- if (identical(sessions, "separate") && "session" %in% names(snaps)) {
-    split(snaps, snaps$session)
-  } else {
-    list(all = snaps)
-  }
+  # Bins come from the grid so an empty bin is a layer with no tie, never a
+  # gap that makes its two neighbours look consecutive.
+  blocks <- .measure_blocks(
+    snaps, .measure_bin_times(dn, sessions, start, end, step, window),
+    sessions
+  )
 
-  per_block <- Map(function(block, label) {
-    times <- sort(unique(block$time))
+  per_block <- lapply(blocks, function(one) {
+    times <- one$times
+    label <- one$label
     if (length(times) < 2L) {
       stop(errorCondition(
         paste0("Persistence needs at least two time bins; a single bin opens ",
                "no transition. Widen the range or lower `step`."),
-        class = "dynet_empty_result", call = NULL))
+        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
     }
     # Always symmetrise: the published definition is for undirected graphs.
-    layers <- lapply(.binary_layers(dn, block, times, symmetrise = TRUE),
+    layers <- lapply(.binary_layers(dn, one$snaps, times, symmetrise = TRUE),
                      function(m) {
                        diag(m) <- 0
                        m
@@ -147,7 +149,7 @@ persistence <- function(dn, scope = c("pertime", "node", "overall"),
       .topological_overlap(layers[[k]], layers[[k + 1L]])
     })
     list(label = label, times = times[transitions], overlap = overlap)
-  }, blocks, names(blocks))
+  })
 
   nodes <- dn$nodes$name
   frames <- lapply(per_block, function(one) {

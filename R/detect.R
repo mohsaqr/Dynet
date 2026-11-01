@@ -65,14 +65,14 @@
     if (!is.character(given) || length(given) != 1L) {
       stop(errorCondition(
         sprintf("`%s` must be a single column name.", arg),
-        class = "dynet_bad_input", call = NULL
+        class = c("dynet_bad_column_name", "dynet_bad_input"), call = NULL
       ))
     }
     if (!given %in% names(data)) {
       stop(errorCondition(
         sprintf("Column `%s` (given as `%s`) is not in the data. Available: %s",
                 given, arg, paste(names(data), collapse = ", ")),
-        class = "dynet_missing_column", call = NULL
+        class = c("dynet_missing_column", "dynet_bad_input"), call = NULL
       ))
     }
     return(given)
@@ -127,7 +127,8 @@
   if (is.numeric(x)) {
     if (anyNA(x)) {
       stop(errorCondition("Time columns must not contain NA values.",
-                          class = "dynet_bad_input", call = NULL))
+                          class = c("dynet_bad_time", "dynet_bad_input"),
+                          call = NULL))
     }
     return(list(values = as.numeric(x), unit = "step", origin = 0))
   }
@@ -140,13 +141,14 @@
     stop(errorCondition(
       sprintf("Time column has unsupported type <%s>. Supply numeric, Date, POSIXct or character times.",
               paste(class(x), collapse = "/")),
-      class = "dynet_bad_input", call = NULL
+      class = c("dynet_bad_time", "dynet_bad_input"), call = NULL
     ))
   }
 
   if (anyNA(parsed)) {
     stop(errorCondition("Time columns must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_bad_time", "dynet_bad_input"),
+                        call = NULL))
   }
 
   span <- as.numeric(difftime(max(parsed), min(parsed), units = "secs"))
@@ -159,6 +161,32 @@
     unit   = unit,
     origin = o
   )
+}
+
+#' Parse a second time column on the clock of the first
+#'
+#' An end column must use the same kind of clock as the start column it
+#' closes: both plain numbers, or both calendar values (`Date`, `POSIXct`,
+#' character date-times). Mixing the two would read a number as seconds
+#' since 1970 against an offset, or a calendar value against a step count,
+#' so it is refused rather than converted.
+#'
+#' @param x The companion column (an end time).
+#' @param reference The `.parse_time()` result of the start column.
+#' @param arg Argument name quoted in the error message.
+#' @return A numeric vector of offsets on the reference clock.
+#' @noRd
+.parse_companion_time <- function(x, reference, arg) {
+  if (is.factor(x)) x <- as.character(x)
+  reference_numeric <- identical(reference$unit, "step")
+  if (!identical(is.numeric(x), reference_numeric)) {
+    stop(errorCondition(
+      sprintf("`%s` and the start time use different clocks: one is numeric and the other a date-time. Supply both as numbers or both as dates.",
+              arg),
+      class = c("dynet_mixed_clock", "dynet_bad_input"), call = NULL
+    ))
+  }
+  .parse_time(x, reference$unit, origin = reference$origin)$values
 }
 
 #' Choose a readable time unit for an observed span
@@ -196,7 +224,7 @@
     stop(errorCondition(
       sprintf("Could not parse time strings such as '%s'. Supply numeric, Date or POSIXct times instead.",
               x[1L]),
-      class = "dynet_unparsed_time", call = NULL
+      class = c("dynet_unparsed_time", "dynet_bad_input"), call = NULL
     ))
   }
   trial[[best]]

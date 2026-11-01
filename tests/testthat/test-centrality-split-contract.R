@@ -85,3 +85,22 @@ test_that("rescaled temporal pagerank sums to one in every block", {
   scores <- as.data.frame(path_centrality(dn, measure = "pagerank"))
   expect_equal(sum(scores$value), 1)
 })
+
+test_that("efficiency counts the hops of the journey the criterion selects", {
+  # A reaches C first at t = 2 through B (two hops), and in one hop at t = 5.
+  dn <- quiet_dynet(data.frame(from = c("A", "B", "A"), to = c("B", "C", "C"),
+                               start = c(1, 2, 5), end = c(1, 2, 5)))
+  foremost <- as.data.frame(path_centrality(dn, measure = "efficiency"))
+  fewest <- as.data.frame(path_centrality(dn, measure = "efficiency",
+                                          criterion = "min_hops"))
+  expect_equal(foremost$value[foremost$node == "A"], (1 + 1 / 2) / 2)
+  expect_equal(fewest$value[fewest$node == "A"], (1 + 1) / 2)
+  # Fewest hops can only shorten a distance, so efficiency can only rise.
+  expect_true(all(fewest$value >= foremost$value - sqrt(.Machine$double.eps)))
+})
+
+test_that("efficiency rejects a direction it does not define", {
+  dn <- quiet_dynet(chain_edges())
+  expect_error(path_centrality(dn, measure = "efficiency", mode = "all"),
+               class = "dynet_bad_input")
+})

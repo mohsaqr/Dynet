@@ -374,7 +374,7 @@ test_that("T04 transformations preserve numerator and rescale inverse time", {
   expect_equal(scaled, base / 3)
 
   reweighted <- edges
-  reweighted$weight <- c(-100, 0, 1e6, 2, 4, 7, 9, 11, 13)
+  reweighted$weight <- c(500, 0, 1e6, 2, 4, 7, 9, 11, 13)
   expect_equal(.t04_value(make(reweighted)), base)
 
   transposed <- edges

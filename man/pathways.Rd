@@ -58,12 +58,19 @@ answers "who is reachable".
 The result is already ordered and already carries the share of the total,
 so a caller never sorts or subsets it; \code{top} limits it in the call.
 
+Every optimal route that \code{\link[=paths]{paths()}} counts is one route here, the route to
+a vertex that lies on the way to another included, so for one source
+\code{sum(count)} equals the summed \code{n_paths} of the vertices reached in at
+least \code{min_hops} hops.
+
 Routes are keyed on their \strong{vertex sequence}. The trajectory tree keys a
 node on vertex \emph{and} time, so one sequence realised through different
 contacts appears there as several branches; those are one pathway here and
-their counts are added. Under the foremost criterion this loses nothing:
-only earliest-arrival routes survive to be counted, so duplicates of a
-sequence necessarily share an arrival time, and a test asserts it.
+their counts are added. The arrival time loses nothing in that merge: a
+vertex sequence ends at one endpoint, and every counted route to it attains
+the same optimum, which a test asserts. Intermediate hop times can differ
+between the merged realisations; the steps table keeps the first in the
+order of the path result.
 }
 \examples{
 dn <- dynet(school_contacts)

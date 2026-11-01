@@ -82,6 +82,123 @@
   out
 }
 
+#' Build the vertex states and arcs of one projection block
+#'
+#' Vectorised over slices and vertices: each slice's snapshot state is read
+#' once, its active spells are pooled by pair with `split()`, and every
+#' identity arc of the block is laid out in one table. The final sort fixes the
+#' row order, so construction order does not leak into the result.
+#'
+#' @param dn Parent temporal network.
+#' @param enc The block's encoding.
+#' @param label The block label (session name or `"all"`).
+#' @param grid The block's slice grid from `.grid_for()`.
+#' @param state_offset States already used by earlier blocks.
+#' @param spec The resolved grid specification.
+#' @param session_blocks Whether the public `session` key is present.
+#' @param copied The copied node attributes from
+#'   `.projection_node_attributes()`.
+#' @param coupling `"ordinal"` or `"categorical"`.
+#' @param omega Identity-arc weight.
+#' @return A list with `vertices` and `edges` data frames for the block.
+#' @noRd
+.projection_block <- function(dn, enc, label, grid, state_offset, spec,
+                              session_blocks, copied, coupling, omega) {
+  n <- nrow(dn$nodes)
+  n_slices <- nrow(grid)
+  local_session_mode <- if (session_blocks) "separate" else "collapse"
+  per_slice <- lapply(seq_len(n_slices), function(slice) {
+    bin <- grid[slice, , drop = FALSE]
+    state <- .snapshot_state(
+      dn, enc, bin, spec$window, local_session_mode, label
+    )
+    ids <- state_offset + (slice - 1L) * n + seq_len(n)
+    vertices <- data.frame(
+      state = as.integer(ids), slice = rep.int(as.integer(slice), n),
+      time = rep.int(as.numeric(bin$time), n),
+      start = rep.int(as.numeric(bin$lo), n),
+      end = rep.int(as.numeric(bin$hi), n),
+      closed = rep.int(isTRUE(bin$closed), n),
+      node = enc$names, active = as.logical(state$eligible),
+      stringsAsFactors = FALSE
+    )
+    if (session_blocks) {
+      vertices <- cbind(vertices["state"], session = label,
+                        vertices[setdiff(names(vertices), "state")])
+    }
+    if ("observation" %in% names(grid)) {
+      before <- intersect(c("state", "session"), names(vertices))
+      vertices <- cbind(
+        vertices[before], observation = as.integer(bin$observation),
+        vertices[setdiff(names(vertices), before)]
+      )
+    }
+    if (ncol(copied$data)) vertices <- cbind(vertices, copied$data)
+
+    active_rows <- which(state$active)
+    within <- NULL
+    if (length(active_rows)) {
+      from <- enc$from[active_rows]
+      to <- enc$to[active_rows]
+      key <- (from - 1L) * enc$n + to
+      first <- !duplicated(key)
+      group <- match(key, key[first])
+      # Parallel spells of one pair sum in their original order.
+      weight <- vapply(split(enc$weight[active_rows], group), sum,
+                       numeric(1L))
+      count <- tabulate(group, sum(first))
+      pair_from <- from[first]
+      pair_to <- to[first]
+      # An undirected nonloop pair gives reciprocal arcs; a loop gives one.
+      back <- !dn$directed & pair_from != pair_to
+      arc_from <- c(pair_from, pair_to[back])
+      arc_to <- c(pair_to, pair_from[back])
+      within <- .projection_edge_row(
+        ids[arc_from], ids[arc_to], enc$names[arc_from], enc$names[arc_to],
+        label, slice, slice, bin$time, bin$time, "within_slice",
+        c(weight, weight[back]), c(count, count[back]), session_blocks
+      )
+    }
+    list(vertices = vertices, within = within)
+  })
+  vertices <- do.call(rbind, lapply(per_slice, `[[`, "vertices"))
+  rownames(vertices) <- NULL
+
+  identity <- NULL
+  if (n_slices > 1L) {
+    # Ordinal coupling ties a slice to the next one only; categorical ties
+    # every ordered pair, which is what an unordered aspect-layer needs and
+    # what a temporal network must not have.
+    links <- if (identical(coupling, "ordinal")) {
+      data.frame(from = seq_len(n_slices - 1L), to = seq.int(2L, n_slices))
+    } else {
+      upper <- which(upper.tri(diag(n_slices)), arr.ind = TRUE)
+      data.frame(from = upper[, "row"], to = upper[, "col"])
+    }
+    from_slice <- rep(links$from, each = n)
+    to_slice <- rep(links$to, each = n)
+    node <- rep.int(seq_len(n), nrow(links))
+    identity <- .projection_edge_row(
+      state_offset + (from_slice - 1L) * n + node,
+      state_offset + (to_slice - 1L) * n + node,
+      enc$names[node], enc$names[node], label, from_slice, to_slice,
+      grid$time[from_slice], grid$time[to_slice], "identity_arc",
+      omega, 0L, session_blocks
+    )
+  }
+  rows <- c(lapply(per_slice, `[[`, "within"), list(identity))
+  rows <- rows[!vapply(rows, is.null, logical(1L))]
+  edges <- if (length(rows)) do.call(rbind, rows) else
+    .empty_projection_edges(session_blocks)
+  if (nrow(edges)) {
+    type_order <- match(edges$edge_type, c("within_slice", "identity_arc"))
+    edges <- edges[order(edges$from_slice, type_order,
+                         edges$from_state, edges$to_state), , drop = FALSE]
+  }
+  rownames(edges) <- NULL
+  list(vertices = vertices, edges = edges)
+}
+
 #' Project a temporal network into directed vertex-time states
 #'
 #' `projection()` discretises a temporal network into snapshot slices and
@@ -156,8 +273,8 @@ projection <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
     start = NULL, end = NULL, step = NULL, window = NULL, omega = 1,
     coupling = c("ordinal", "categorical")) {
-  sessions <- match.arg(sessions)
-  coupling <- match.arg(coupling)
+  sessions <- .match_choice(sessions)
+  coupling <- .match_choice(coupling)
   .check_dynet(dn, sessions)
   .check("`omega` must be one non-negative number." =
            length(omega) == 1L && is.numeric(omega) && is.finite(omega) &&
@@ -179,122 +296,19 @@ projection <- function(
     "closed", "node", "active"
   )
   copied <- .projection_node_attributes(dn, vertex_reserved)
-  vertex_frames <- vector("list", length(parts))
-  edge_frames <- vector("list", length(parts))
-  grids <- vector("list", length(parts))
-  state_offset <- 0L
-
-  for (block in seq_along(parts)) {
-    enc <- parts[[block]]
-    label <- block_labels[[block]]
-    grid <- .grid_for(enc, dn, spec)
-    grids[[block]] <- grid
-    local_session_mode <- if (session_blocks) "separate" else "collapse"
-    slice_frames <- vector("list", nrow(grid))
-    within_rows <- list()
-    within_index <- 0L
-
-    for (slice in seq_len(nrow(grid))) {
-      bin <- grid[slice, , drop = FALSE]
-      state <- .snapshot_state(
-        dn, enc, bin, spec$window, local_session_mode, label
-      )
-      ids <- state_offset + (slice - 1L) * n + seq_len(n)
-      vertices <- data.frame(
-        state = as.integer(ids), slice = rep.int(as.integer(slice), n),
-        time = rep.int(as.numeric(bin$time), n),
-        start = rep.int(as.numeric(bin$lo), n),
-        end = rep.int(as.numeric(bin$hi), n),
-        closed = rep.int(isTRUE(bin$closed), n),
-        node = enc$names, active = as.logical(state$eligible),
-        stringsAsFactors = FALSE
-      )
-      if (session_blocks) {
-        vertices <- cbind(vertices["state"], session = label,
-                          vertices[setdiff(names(vertices), "state")])
-      }
-      if ("observation" %in% names(grid)) {
-        before <- intersect(c("state", "session"), names(vertices))
-        vertices <- cbind(
-          vertices[before], observation = as.integer(bin$observation),
-          vertices[setdiff(names(vertices), before)]
-        )
-      }
-      if (ncol(copied$data)) vertices <- cbind(vertices, copied$data)
-      slice_frames[[slice]] <- vertices
-
-      active_rows <- which(state$active)
-      if (length(active_rows)) {
-        pair_key <- (enc$from[active_rows] - 1L) * enc$n + enc$to[active_rows]
-        by_pair <- split(active_rows, pair_key)
-        pair_order <- order(
-          vapply(by_pair, function(rows) enc$from[rows[[1L]]], integer(1L)),
-          vapply(by_pair, function(rows) enc$to[rows[[1L]]], integer(1L))
-        )
-        by_pair <- by_pair[pair_order]
-        for (rows in by_pair) {
-          from <- enc$from[rows[[1L]]]
-          to <- enc$to[rows[[1L]]]
-          directions <- if (!dn$directed && from != to) {
-            list(c(from, to), c(to, from))
-          } else list(c(from, to))
-          for (direction in directions) {
-            within_index <- within_index + 1L
-            within_rows[[within_index]] <- .projection_edge_row(
-              ids[[direction[[1L]]]], ids[[direction[[2L]]]],
-              enc$names[[direction[[1L]]]], enc$names[[direction[[2L]]]],
-              label, slice, slice, bin$time, bin$time, "within_slice",
-              sum(enc$weight[rows]), length(rows), session_blocks
-            )
-          }
-        }
-      }
-    }
-
-    vertices <- do.call(rbind, slice_frames)
-    rownames(vertices) <- NULL
-    vertex_frames[[block]] <- vertices
-
-    identity_rows <- list()
-    identity_index <- 0L
-    if (nrow(grid) > 1L) {
-      # Ordinal coupling ties a slice to the next one only; categorical ties
-      # every ordered pair, which is what an unordered aspect-layer needs and
-      # what a temporal network must not have.
-      for (slice in seq_len(nrow(grid) - 1L)) {
-        reach <- if (identical(coupling, "ordinal")) {
-          slice + 1L
-        } else {
-          seq.int(slice + 1L, nrow(grid))
-        }
-        from_ids <- state_offset + (slice - 1L) * n + seq_len(n)
-        for (later in reach) {
-          to_ids <- state_offset + (later - 1L) * n + seq_len(n)
-          for (node in seq_len(n)) {
-            identity_index <- identity_index + 1L
-            identity_rows[[identity_index]] <- .projection_edge_row(
-              from_ids[[node]], to_ids[[node]],
-              enc$names[[node]], enc$names[[node]],
-              label, slice, later, grid$time[[slice]],
-              grid$time[[later]], "identity_arc", omega, 0L,
-              session_blocks
-            )
-          }
-        }
-      }
-    }
-    rows <- c(within_rows, identity_rows)
-    edges <- if (length(rows)) do.call(rbind, rows) else
-      .empty_projection_edges(session_blocks)
-    if (nrow(edges)) {
-      type_order <- match(edges$edge_type, c("within_slice", "identity_arc"))
-      edges <- edges[order(edges$from_slice, type_order,
-                           edges$from_state, edges$to_state), , drop = FALSE]
-    }
-    rownames(edges) <- NULL
-    edge_frames[[block]] <- edges
-    state_offset <- state_offset + nrow(grid) * n
-  }
+  grids <- lapply(parts, function(enc) .grid_for(enc, dn, spec))
+  # Each block's states follow the previous block's, so the offsets are a
+  # running total of slices times vertices.
+  slice_counts <- vapply(grids, nrow, integer(1L))
+  offsets <- c(0L, cumsum(slice_counts * n))[seq_along(parts)]
+  blocks <- Map(function(enc, label, grid, state_offset) {
+    .projection_block(
+      dn, enc, label, grid, state_offset, spec, session_blocks, copied,
+      coupling, omega
+    )
+  }, parts, block_labels, grids, offsets)
+  vertex_frames <- lapply(blocks, `[[`, "vertices")
+  edge_frames <- lapply(blocks, `[[`, "edges")
 
   vertices <- do.call(rbind, vertex_frames)
   edges <- do.call(rbind, edge_frames)
@@ -361,7 +375,7 @@ projection <- function(
 as.data.frame.dynet_projection <- function(
     x, row.names = NULL, optional = FALSE,
     what = c("vertices", "edges"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   out <- x[[what]]
   attributes(out) <- list(
     names = names(out), row.names = seq_len(nrow(out)), class = "data.frame"
@@ -421,4 +435,47 @@ summary.dynet_projection <- function(object, ...) {
   out <- do.call(rbind, parts)
   rownames(out) <- NULL
   out
+}
+
+#' Draw a time-projected network
+#'
+#' Each vertex state is a point at its slice's time on its vertex's row.
+#' Within-slice arcs are drawn as solid curves and identity arcs, which carry
+#' a vertex into the next slice, as dashed straight segments, so the two arc
+#' types differ by line type and geometry, never by colour alone.
+#'
+#' @param x A `dynet_projection` from [projection()].
+#' @param base_size Base font size.
+#' @param ... Ignored.
+#' @return A `ggplot` object.
+#' @export
+plot.dynet_projection <- function(x, base_size = 12, ...) {
+  vertices <- as.data.frame(x, what = "vertices")
+  edges <- as.data.frame(x, what = "edges")
+  rows <- unique(vertices$node)
+  vertices$y <- match(vertices$node, rows)
+  edges$x <- edges$from_time
+  edges$xend <- edges$to_time
+  edges$y <- match(edges$from_node, rows)
+  edges$yend <- match(edges$to_node, rows)
+  within <- edges[edges$edge_type == "within_slice", , drop = FALSE]
+  identity <- edges[edges$edge_type != "within_slice", , drop = FALSE]
+  ggplot2::ggplot() +
+    ggplot2::geom_segment(
+      data = identity,
+      ggplot2::aes(x = x, xend = xend, y = y, yend = yend),
+      linetype = "22", colour = "#999999", linewidth = 0.3) +
+    ggplot2::geom_curve(
+      data = within,
+      ggplot2::aes(x = x, xend = xend, y = y, yend = yend),
+      curvature = 0.3, colour = "#0072B2", alpha = 0.5, linewidth = 0.4) +
+    ggplot2::geom_point(
+      data = vertices, ggplot2::aes(x = time, y = y),
+      shape = 21, fill = "#E69F00", colour = "white", size = 2.4) +
+    ggplot2::scale_y_continuous(breaks = seq_along(rows), labels = rows) +
+    ggplot2::labs(x = sprintf("Time (%s)", x$meta$time_unit %||% ""),
+                  y = NULL, title = "Time-projected network",
+                  subtitle = "curves: within-slice arcs; dashed: identity arcs") +
+    ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 }

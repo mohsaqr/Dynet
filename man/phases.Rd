@@ -46,10 +46,12 @@ such as weekday-and-weekend needs.}
 \item{window}{Width represented by each bin.}
 }
 \value{
-A \code{dynet_phases} frame, one row per time bin: \code{session} (only when
-the network has sessions), \code{time}, \code{phase}, \code{boundary} (is this the first
-bin of its phase) and \code{silhouette} (this bin's width under the chosen
-\code{k}). Print it, \code{\link[=plot]{plot()}} it, or take the plain frame with
+A \code{dynet_phases} frame, one row per time bin of the grid, a bin
+with no tie included: \code{time}, \code{phase}, \code{boundary} (is this the first bin
+of its phase) and \code{silhouette} (this bin's width under the chosen \code{k}).
+There is no \code{session} column: \code{\link[=similarity]{similarity()}} keys its layers on time
+alone, so under \code{sessions = "separate"} two session-local bins sharing a
+time are one layer here too. Print it, \code{\link[=plot]{plot()}} it, or take the plain frame with
 \code{\link[=as.data.frame]{as.data.frame()}}, which also serves \code{what = "profile"} for the
 \eqn{k}-by-\eqn{k} sensitivity table and \code{what = "phases"} for one row
 per phase.
@@ -67,8 +69,13 @@ together and does not look at vertices at all.
 \details{
 The distance between two bins is \code{1 - similarity} for every method except
 \code{"hamming"}, which already reports disagreement and is instead divided by
-the number of vertex pairs that could carry a tie. Getting that one
-backwards would silently invert the answer, so it is handled explicitly.
+the number of vertex pairs that could carry a tie, so it lies in
+\eqn{[0, 1]}. Getting that one backwards would silently invert the
+answer, so it is handled explicitly. Two bins with no tie are the same
+network and sit at distance zero. A bin with no tie against one with ties
+leaves \code{"overlap"}, \code{"cosine"} and \code{"pearson"} undefined, and the verb then
+raises \code{dynet_undefined_similarity} rather than guess a distance;
+\code{"jaccard"} and \code{"hamming"} are defined for every pair of bins.
 \code{"pearson"} similarity can be negative, so its distance runs in
 \eqn{[0, 2]} rather than \eqn{[0, 1]}; that is a valid distance, but do not
 expect the unit scale.

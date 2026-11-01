@@ -7,7 +7,10 @@
 #' @description
 #' Imports a temporal network held in another R representation, so that every
 #' Dynet verb applies to it. A method is supplied for `networkDynamic`
-#' objects; the method for `dynet` is the identity.
+#' objects; the method for `dynet` is the identity. Any other object raises a
+#' condition of class `dynet_unsupported_class` (inheriting from
+#' `dynet_bad_input`); build a temporal network from a relational log with
+#' [dynet()] instead.
 #'
 #' @param x An object representing a temporal network.
 #' @param ... Passed to a class-specific method.
@@ -34,6 +37,16 @@ as_dynet <- function(x, ...) {
 #' @export
 as_dynet.dynet <- function(x, ...) {
   x
+}
+
+#' @rdname as_dynet
+#' @export
+as_dynet.default <- function(x, ...) {
+  stop(errorCondition(
+    sprintf("as_dynet() has no method for an object of class <%s>. Build a temporal network from a data frame with dynet().",
+            paste(class(x), collapse = "/")),
+    class = c("dynet_unsupported_class", "dynet_bad_input"), call = NULL
+  ))
 }
 
 #' Import a networkDynamic object
@@ -101,7 +114,7 @@ as_dynet.networkDynamic <- function(
       !requireNamespace("networkDynamic", quietly = TRUE)) {
     stop(errorCondition(
       "Importing a networkDynamic object needs the network and networkDynamic packages.",
-      class = "dynet_needs_networkDynamic", call = NULL
+      class = c("dynet_needs_networkDynamic", "dynet_bad_input"), call = NULL
     ))
   }
   .check(
@@ -151,7 +164,7 @@ as_dynet.networkDynamic <- function(
     length(value) == n && is.atomic(value) && is.null(dim(value))
   }, logical(1L))]
   nodes <- data.frame(name = node_names, stringsAsFactors = FALSE)
-  for (attribute in retained_vertex) nodes[[attribute]] <- get_vertex(attribute)
+  nodes[retained_vertex] <- lapply(retained_vertex, get_vertex)
   if (!is.null(group_attribute) && !group_attribute %in% names(nodes)) {
     stop(errorCondition(
       sprintf("Unknown static vertex group attribute %s.", sQuote(group_attribute)),
@@ -165,7 +178,7 @@ as_dynet.networkDynamic <- function(
   if (!nrow(edge_spells)) {
     stop(errorCondition(
       "The networkDynamic object has no retained edge activity spells.",
-      class = "dynet_empty_network", call = NULL
+      class = c("dynet_empty_network", "dynet_bad_input"), call = NULL
     ))
   }
   required <- c("onset", "terminus", "tail", "head", "edge.id")
@@ -247,6 +260,9 @@ as_dynet.networkDynamic <- function(
                                            logical(1L))]
     reserved <- c(names(imported), "duration", ".raw_spell")
     used <- reserved
+    # Sequential by necessity: a renamed attribute (`edge_x`) may itself
+    # collide with a later attribute's name, so each choice depends on every
+    # name chosen before it.
     for (attribute in retained_edge) {
       final <- attribute
       while (final %in% used) final <- paste0("edge_", final)

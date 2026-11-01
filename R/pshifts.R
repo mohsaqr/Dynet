@@ -49,18 +49,21 @@
   onset <- enc$raw_event_start
   keep <- !enc$raw_event_onset_censored &
     .time_in_observation(dn, onset)
-  if (!is.null(start)) keep <- keep & onset >= start
-  if (!is.null(end)) keep <- keep & onset <= end
+  # Inclusive limits, compared with the package's time tolerance: a turn
+  # stored as 0.1 + 0.2 is inside a query that ends at 0.3.
+  if (!is.null(start)) keep <- keep & .time_leq_each(start, onset)
+  if (!is.null(end)) keep <- keep & .time_leq_each(onset, end)
   rows <- which(keep)
   if (!length(rows)) return(data.frame())
   observations <- .observation_table(dn)
   component <- if (is.null(observations)) {
     rep.int(1L, length(rows))
   } else vapply(onset[rows], function(time) {
+    point <- .time_eq_each(observations$end, observations$start)
     hit <- which(
-      (observations$end > observations$start &
-         observations$start <= time & observations$end >= time) |
-      (observations$end == observations$start & observations$start == time)
+      (!point & .time_leq_each(observations$start, time) &
+         .time_leq_each(time, observations$end)) |
+      (point & .time_eq_each(observations$start, time))
     )
     if (length(hit)) hit[[1L]] else NA_integer_
   }, integer(1L))
@@ -203,9 +206,9 @@ pshifts <- function(
     dn, sessions = c("bounded", "collapse", "separate"),
     output = c("final", "cumulative"), start = NULL, end = NULL,
     group_events = c("simultaneous", "none"), plot = FALSE) {
-  sessions <- match.arg(sessions)
-  output <- match.arg(output)
-  group_events <- match.arg(group_events)
+  sessions <- .match_choice(sessions)
+  output <- .match_choice(output)
+  group_events <- .match_choice(group_events)
   .check_dynet(dn, sessions)
   if (!isTRUE(dn$directed)) {
     stop(errorCondition(

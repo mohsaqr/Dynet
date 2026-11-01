@@ -1,7 +1,8 @@
 # turnover() is volatility and fluctuability (Thompson et al. 2017). The trap
-# this file guards is the scale of the Hamming distance: cograph's is a raw
-# count over the full symmetric matrix, teneto's is a proportion over the pair
-# domain, and they differ by a factor of 2 * choose(n, 2) when undirected.
+# this file guards is the scale of the Hamming distance: similarity()'s is a
+# count over the eligible pair domain (one cell per dyad, as sna::hdist()),
+# teneto's is a proportion over the same domain, and they differ by a factor
+# of choose(n, 2) when undirected.
 
 teneto_fixture <- function() {
   quiet_dynet(
@@ -98,17 +99,20 @@ test_that("both measures are dimensionless under a rescaling of time", {
   base <- as.data.frame(turnover(dn, measure = c("volatility",
                                                  "fluctuability"),
                                  scope = "overall",
-                                 start = 0, end = 3, window = 0))
+                                 start = 0, end = 3, step = 1, window = 0))
+  # Rescale the grid with the clock. Before 2026-11-01 this test left the
+  # scaled step at its default and passed only because the empty bins of
+  # that finer grid were silently dropped.
   wide <- as.data.frame(turnover(scaled, measure = c("volatility",
                                                      "fluctuability"),
                                  scope = "overall",
-                                 start = 0, end = 30, window = 0))
+                                 start = 0, end = 30, step = 10, window = 0))
   expect_equal(base$value, wide$value, tolerance = 1e-12)
 })
 
 test_that("volatility agrees with similarity's hamming, rescaled", {
-  # similarity(method = "hamming") is a raw count over the full symmetric
-  # matrix. Dividing by 2 * choose(n, 2) recovers the proportion. Reaching
+  # similarity(method = "hamming") counts differing dyads over the eligible
+  # pair domain. Dividing by choose(n, 2) recovers the proportion. Reaching
   # into an off-diagonal like this is test-only work -- that a user would
   # otherwise have to do it is exactly why turnover() exists.
   dn <- teneto_fixture()
@@ -119,7 +123,7 @@ test_that("volatility agrees with similarity's hamming, rescaled", {
   n <- nrow(dn$nodes)
   rescaled <- vapply(mine$time, function(t) {
     row <- sim[sim$time == t & sim$other == t + 1, , drop = FALSE]
-    row$value / (2 * choose(n, 2))
+    row$value / choose(n, 2)
   }, numeric(1L))
   expect_equal(mine$value, rescaled, tolerance = 1e-12)
 })

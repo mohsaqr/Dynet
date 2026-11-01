@@ -22,10 +22,12 @@ quietly doing nothing.}
 A new \code{dynet} object, class
 \code{c("dynet", "netobject", "cograph_network")}. Updated components are
 canonicalised with the retained components, so overlaps can merge and
-spell identifiers can change. Raises \code{dynet_bad_input} when \code{spells} is
-not a valid selection, when \code{data} is malformed or of the wrong height,
-or when it names the read-only derived columns \code{vertex_spell},
-\code{duration} or \code{instant}.
+spell identifiers can change. \code{start} and \code{end} may be given on the
+network's own clock, \code{Date} or \code{POSIXct} for a calendar network. Raises
+\code{dynet_vertex_spell_not_found} when \code{spells} selects no component, and
+\code{dynet_bad_input} when \code{spells} is not a valid selection, when \code{data} is
+malformed or of the wrong height, or when it names the read-only derived
+columns \code{vertex_spell}, \code{duration} or \code{instant}.
 }
 \description{
 Update declared vertex-activity components

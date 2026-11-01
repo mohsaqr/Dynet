@@ -18,8 +18,9 @@ gaps(
 \item{unit}{\code{"node"}, the default, for the gaps between the events incident
 to each vertex, a loop counting once and direction ignored; \code{"pair"} for
 the gaps between the events of each ordered pair, or each unordered dyad
-on an undirected network. Loops are excluded from \code{"pair"}, matching
-\code{\link[=durations]{durations()}}.}
+on an undirected network. A retained loop (\code{dynet(loops = TRUE)}) is
+excluded from \code{"pair"}, unlike \code{\link[=durations]{durations()}}, which reports it as its own
+pair row.}
 
 \item{sessions}{How to treat sessions, as in \code{\link[=burstiness]{burstiness()}}. \code{"bounded"},
 the default, forms gaps inside each session so no gap spans a session

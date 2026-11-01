@@ -33,6 +33,9 @@
   if (is.null(existing)) {
     existing <- value[rep(NA_integer_, n)]
   }
+  # Assigning a factor into a character (or numeric) column writes its
+  # integer codes, so `factor("zz")` would land as "1"; its labels are meant.
+  if (is.factor(value) && !is.factor(existing)) value <- as.character(value)
   if (is.factor(existing)) {
     levels <- union(levels(existing), unique(as.character(value)))
     existing <- factor(as.character(existing), levels = levels,
@@ -54,6 +57,10 @@
 #'   vertex activity and metadata as `dn` and the supplied attributes added to
 #'   or replaced on the named vertices. Unnamed vertices keep their existing
 #'   values, gaining `NA` in any column the network did not already have.
+#'   When the network carries a cograph grouping derived from an attribute
+#'   (`dynet(groups = )`) and `data` updates that attribute without supplying
+#'   `groups`, the grouping follows the attribute, so `groups` and the
+#'   source never disagree.
 #'   Raises `dynet_unknown_node` when a name is not a vertex, and
 #'   `dynet_bad_input` when `data` is malformed or names a cograph structural
 #'   column (`id`, `label`, `x`, `y`).
@@ -91,18 +98,29 @@ update_nodes <- function(dn, data) {
       class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL
     ))
   }
-  for (attribute in setdiff(names(data), "name")) {
+  attributes <- setdiff(names(data), "name")
+  atomic <- vapply(attributes, function(attribute) {
     value <- data[[attribute]]
-    if (!is.atomic(value) || !is.null(dim(value))) {
-      stop(errorCondition(
-        sprintf("Node attribute %s must be an atomic vector.", sQuote(attribute)),
-        class = "dynet_bad_input", call = NULL
-      ))
-    }
-    nodes[[attribute]] <- .replace_attribute_values(
-      nodes[[attribute]], index, value, nrow(nodes)
-    )
+    is.atomic(value) && is.null(dim(value))
+  }, logical(1L))
+  if (!all(atomic)) {
+    stop(errorCondition(
+      sprintf("Node attribute %s must be an atomic vector.",
+              sQuote(attributes[!atomic][[1L]])),
+      class = "dynet_bad_input", call = NULL
+    ))
   }
+  # The grouping was copied from one attribute; updating that attribute alone
+  # must carry the grouping with it, or the two silently diverge.
+  source <- .group_source(nodes)
+  if (length(source) && source %in% attributes && !"groups" %in% attributes) {
+    attributes <- c(attributes, "groups")
+    data$groups <- as.character(data[[source]])
+  }
+  nodes[attributes] <- lapply(attributes, function(attribute) {
+    .replace_attribute_values(nodes[[attribute]], index, data[[attribute]],
+                              nrow(nodes))
+  })
   .rebuild_ties(
     dn, dn$spells, identical(dn$meta$raw_censoring, "explicit"),
     match.call(), nodes = nodes
@@ -199,7 +217,8 @@ rename_nodes <- function(dn, mapping) {
 #' @param ties Which ties to update: a condition on the spell table,
 #'   evaluated the way [subset()] evaluates one, over the columns
 #'   `as.data.frame(dn)` returns; or integer row positions or a logical mask
-#'   over that table.
+#'   over that table. As in [subset()], a condition that is `NA` for a spell
+#'   does not select it.
 #' @param data A data frame with one row or one row per selected tie. Columns
 #'   may be canonical tie fields or arbitrary atomic spell attributes.
 #' @param loops Whether an endpoint update may introduce a new self-loop.
@@ -208,11 +227,15 @@ rename_nodes <- function(dn, mapping) {
 #'   `c("dynet", "netobject", "cograph_network")`, holding the unselected
 #'   spells unchanged and the selected spells with the supplied values
 #'   substituted. Because the edited spells are rebuilt together with the
-#'   rest, spell order and the canonical spell identifiers may change. Raises
-#'   `dynet_loop_not_allowed` when an endpoint update would create a new
-#'   self-loop without `loops = TRUE`, and `dynet_bad_input` when the
-#'   selection or `data` is malformed, or names the read-only derived columns
-#'   `duration` or `.raw_spell`.
+#'   rest, spell order and the canonical spell identifiers may change. An
+#'   update that changes only attributes keeps the network's source format;
+#'   one that moves `start` or `end` records it as `"interval"`, as
+#'   [add_ties()] does. Raises `dynet_tie_not_found` when the selection
+#'   matches no spell, `dynet_loop_not_allowed` when an endpoint update would
+#'   create a new self-loop without `loops = TRUE`, `dynet_reserved_column`
+#'   when `data` names the read-only derived columns `duration` or
+#'   `.raw_spell`, and `dynet_bad_input` when the selection or `data` is
+#'   otherwise malformed.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' marked <- update_ties(dn, ties = end - start > 1,
@@ -220,11 +243,18 @@ rename_nodes <- function(dn, mapping) {
 #' marked
 #' @export
 update_ties <- function(dn, ties, data, loops = FALSE) {
-  ties <- .select_ties(dn, substitute(ties), parent.frame())
   .check_dynet(dn, "bounded")
+  ties <- .select_ties(dn, substitute(ties), parent.frame())
   .check("`loops` must be one non-missing logical value." =
            is.logical(loops) && length(loops) == 1L && !is.na(loops))
   index <- .edit_row_selector(ties, nrow(dn$spells), "ties")
+  # `x[-integer(0), ]` is the empty table, not the whole one: an empty
+  # selection would otherwise reach the rebuild with every spell dropped.
+  if (!length(index)) {
+    stop(errorCondition("No temporal ties matched the update request.",
+                        class = c("dynet_tie_not_found", "dynet_bad_input"),
+                        call = NULL))
+  }
   if (!is.data.frame(data) || !nrow(data) || anyDuplicated(names(data)) ||
       !ncol(data)) {
     stop(errorCondition("`data` must be a nonempty update data frame.",
@@ -238,7 +268,8 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   }
   if (any(names(data) %in% c("duration", ".raw_spell"))) {
     stop(errorCondition("`duration` and `.raw_spell` are derived and read-only.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_reserved_column", "dynet_bad_input"),
+                        call = NULL))
   }
   if (nrow(data) == 1L && length(index) > 1L) {
     data <- data[rep(1L, length(index)), , drop = FALSE]
@@ -246,16 +277,20 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   all_spells <- dn$spells[, setdiff(names(dn$spells), ".raw_spell"), drop = FALSE]
   selected <- all_spells[index, , drop = FALSE]
   old_loop <- selected$from == selected$to
-  for (attribute in names(data)) {
+  atomic <- vapply(names(data), function(attribute) {
     value <- data[[attribute]]
-    if (!is.atomic(value) || !is.null(dim(value))) {
-      stop(errorCondition(
-        sprintf("Tie attribute %s must be an atomic vector.", sQuote(attribute)),
-        class = "dynet_bad_input", call = NULL
-      ))
-    }
-    selected[[attribute]] <- value
+    is.atomic(value) && is.null(dim(value))
+  }, logical(1L))
+  if (!all(atomic)) {
+    stop(errorCondition(
+      sprintf("Tie attribute %s must be an atomic vector.",
+              sQuote(names(data)[!atomic][[1L]])),
+      class = "dynet_bad_input", call = NULL
+    ))
   }
+  selected[names(data)] <- lapply(names(data), function(attribute) {
+    data[[attribute]]
+  })
   new_loop <- as.character(selected$from) == as.character(selected$to)
   if (any(new_loop & !old_loop) && !loops) {
     stop(errorCondition(
@@ -270,7 +305,10 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
   attr(normalized, "censor_explicit") <- NULL
   remaining <- all_spells[-index, , drop = FALSE]
   rebuilt <- .bind_added_ties(remaining, normalized)
-  .rebuild_ties(dn, rebuilt, explicit, match.call(), format = "interval")
+  # Relabelling a contact log's tie does not make it an interval log.
+  retimed <- any(c("start", "end") %in% names(data))
+  .rebuild_ties(dn, rebuilt, explicit, match.call(),
+                format = if (retimed) "interval" else NULL)
 }
 
 #' Turn whatever the caller wrote for `nodes` into vertex names
@@ -328,8 +366,9 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #' resolves to its column, the same precedence `subset()` gives a data frame's
 #' own columns over the calling frame.
 #'
-#' Whatever the expression evaluates to is handed on unchanged to
-#' `.edit_row_selector()`, so row positions and a logical mask keep working
+#' Whatever the expression evaluates to is handed on to
+#' `.edit_row_selector()`, a logical result with its `NA` read as `FALSE` (as
+#' [subset()] reads one), so row positions and a logical mask keep working
 #' exactly as before; the only new capability is that a bare condition on a tie
 #' attribute now resolves instead of raising "object not found".
 #'
@@ -340,7 +379,11 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #' @noRd
 .select_ties <- function(dn, expr, env) {
   if (is.null(expr)) return(NULL)
-  .eval_selection(expr, as.data.frame(dn), env, "ties")
+  value <- .eval_selection(expr, as.data.frame(dn), env, "ties")
+  # subset() drops a row whose condition is NA, and so does `.select_nodes()`;
+  # a condition on an attribute with missing values must not be an error.
+  if (is.logical(value)) value[is.na(value)] <- FALSE
+  value
 }
 
 #' Evaluate a selection condition, classing any failure
@@ -409,7 +452,8 @@ update_ties <- function(dn, ties, data, loops = FALSE) {
 #'   `duration > 2 & weight >= 1` -- over the columns `as.data.frame(dn)`
 #'   returns, tie attributes included; or integer row positions or a logical
 #'   mask over that same table, in that order, a mask having exactly as many
-#'   elements as there are spells. Default `NULL`, meaning every tie. At least
+#'   elements as there are spells; an `NA` in it, as in [subset()], does not
+#'   select the spell. Default `NULL`, meaning every tie. At least
 #'   one of `nodes` and `ties` must be supplied.
 #' @param keep_isolates Whether named nodes without a selected tie remain.
 #'   Default `FALSE`; it has an effect only when `nodes` is supplied.
@@ -476,7 +520,8 @@ induce_subgraph <- function(dn, nodes = NULL, ties = NULL,
   spells <- dn$spells[keep, , drop = FALSE]
   if (!nrow(spells)) {
     stop(errorCondition("The requested temporal subgraph has no ties.",
-                        class = "dynet_empty_network", call = NULL))
+                        class = c("dynet_empty_network", "dynet_bad_input"),
+                        call = NULL))
   }
   endpoint_nodes <- unique(c(spells$from, spells$to))
   kept_names <- if (keep_isolates && !is.null(nodes)) {

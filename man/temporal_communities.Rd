@@ -105,10 +105,21 @@ inactivity. It is therefore carried along by the coupling and receives a
 label rather than being dropped, which would break the chain. The \code{active}
 column marks those states.
 
+\emph{Warnings.} \code{dynet_single_seed} for one seed; \code{dynet_no_converge} when a
+run hits \code{max_passes} while its communities are still merging, or when
+\code{method = "consensus"} has not reached agreement after \code{max_passes} rounds;
+\code{dynet_empty_slice} when \code{omega = 0} and a bin has no edges, since every
+partition of such a bin scores the same and its labels are arbitrary.
+\code{attr(x, "n_empty_slices")} records how many bins had no edges.
+
 \emph{Reproducibility.} The result is a deterministic function of \code{seeds}: two
 calls with the same seeds return identical frames. The caller's random
 stream is saved and restored, so running this verb never changes what the
-next \code{sample()} produces.
+next \code{sample()} produces. A seed fixes a visiting order over the states as
+they are indexed, which follows the network's vertex order; renaming the
+vertices can therefore change which of several near-equal partitions a
+seed lands on. A clear community structure is recovered either way.
+An ambiguous one is exactly what a low \code{stability_ari} flags.
 }
 \examples{
 dn <- dynet(school_contacts)

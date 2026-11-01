@@ -626,6 +626,10 @@ test_that("animate rejects bad arguments by class", {
   expect_error(animate(dn, file = target, anchor_strength = -1),
     class = "dynet_bad_input")
   expect_error(animate(dn, file = NA_character_), class = "dynet_bad_input")
+  # A fractional seed used to pass for the fixed layouts and fail only for
+  # the spring ones.
+  expect_error(animate(dn, file = target, layout = "circle", seed = 1.5),
+    class = "dynet_bad_input")
   expect_error(animate(dn, file = target, layout = "wiggle"))
   expect_error(animate(dn, file = target, sessions = "separate"))
 })

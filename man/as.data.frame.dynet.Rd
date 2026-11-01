@@ -29,7 +29,8 @@ spells, \code{"observed_edges"} for derived observation fragments,
 \code{"observations"} for canonical observed support, \code{"vertex_spells"} for
 canonical declared vertex activity, \code{"nodes"} for the vertex table,
 \code{"bins"} for the measurement grid, or \code{"network"} for the aggregate edge
-list cograph renders.}
+list cograph renders. Any other value raises \code{dynet_bad_choice}, a
+\code{dynet_bad_input}.}
 
 \item{measure}{Optional centrality measures to annotate the vertex table
 with, valid only for \code{what = "nodes"}. Each becomes one column holding the

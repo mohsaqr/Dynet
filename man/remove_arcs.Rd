@@ -21,7 +21,8 @@ remove_arcs(
 evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{duration > 2},
 \code{course == "g1"} -- over the columns \code{as.data.frame(dn)} returns, tie
 attributes included; or integer positions or a logical mask over that
-table.}
+table. As in \code{\link[=subset]{subset()}}, a condition that is \code{NA} for a spell does not
+select it.}
 
 \item{from, to, start, end, session}{Optional selectors combined by conjunction.
 \code{start} and \code{end} match a spell's own boundary, compared with the

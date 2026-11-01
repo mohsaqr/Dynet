@@ -138,10 +138,10 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
                         delta = Inf, adjacency = c("all", "next"),
                         direction = c("respect", "ignore"), loops = FALSE,
                         events = c("ties", "messages")) {
-  sessions <- match.arg(sessions)
-  adjacency <- match.arg(adjacency)
-  direction <- match.arg(direction)
-  unit <- match.arg(events)
+  sessions <- .match_choice(sessions)
+  adjacency <- .match_choice(adjacency)
+  direction <- .match_choice(direction)
+  unit <- .match_choice(events)
   .check_dynet(dn, sessions)
   .check(
     "`delta` must be a single non-negative number; `Inf` admits any wait." =
@@ -155,7 +155,7 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
   if (!nrow(spells)) {
     stop(errorCondition(
       "No events remain to build an event graph from; every spell is a self-loop, which `loops = FALSE` drops.",
-      class = "dynet_empty_network", call = NULL))
+      class = c("dynet_empty_network", "dynet_bad_input"), call = NULL))
   }
   # A deterministic total order, never input order: the raw spell id breaks
   # the last ties between identical rows.
@@ -353,7 +353,7 @@ event_graph <- function(dn, sessions = c("bounded", "collapse", "separate"),
 as.data.frame.dynet_event_graph <- function(
     x, row.names = NULL, optional = FALSE,
     what = c("events", "adjacencies"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   out <- x[[what]]
   attributes(out) <- list(
     names = names(out), row.names = seq_len(nrow(out)), class = "data.frame"
@@ -558,8 +558,8 @@ plot.dynet_event_graph <- function(x, type = c("storyline", "events"),
     is.finite(v) && v >= 0 && v <= 1
   one_string <- function(v) is.character(v) && length(v) == 1L && !is.na(v)
   messages <- identical(x$meta$events, "messages")
-  type <- if (missing(type) && messages) "events" else match.arg(type)
-  rows <- match.arg(rows)
+  type <- if (missing(type) && messages) "events" else .match_choice(type)
+  rows <- .match_choice(rows)
   if (messages && identical(type, "storyline")) {
     stop(errorCondition(
       "A storyline draws events between two actors; a message reaches several at once. Use `type = \"events\"`.",
@@ -606,7 +606,7 @@ plot.dynet_event_graph <- function(x, type = c("storyline", "events"),
   events <- events[in_period, , drop = FALSE]
   if (!nrow(events)) {
     stop(errorCondition("No event starts between `start` and `end`.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   if (identical(type, "events")) {
     return(.plot_event_chains(

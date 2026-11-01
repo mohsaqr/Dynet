@@ -103,6 +103,20 @@
 #'   plain frame with [as.data.frame()].
 #'
 #' @details
+#' For communities \eqn{a = 1, \dots, C} of sizes \eqn{N_a}, with
+#' \eqn{W_a} the ties inside community \eqn{a} and \eqn{B_{ab}} the ties
+#' between \eqn{a} and \eqn{b} in a bin, the value is
+#' \deqn{SID = \sum_a \left( \frac{2 W_a}{N_a (N_a - 1)} -
+#'   \sum_{b \ne a} \frac{B_{ab}}{N_a N_b} \right).}
+#' Each community's within-density enters once. With two communities this
+#' equals `teneto.networkmeasures.sid(calc = "overtime")` exactly (checked
+#' against teneto 0.5.3). With three or more it does not: teneto sums the
+#' pairwise contrast over every ordered pair of communities, so its
+#' within-density term enters \eqn{C - 1} times and its value is
+#' \eqn{\sum_a (C - 1) 2 W_a / (N_a (N_a - 1)) - \sum_a \sum_{b \ne a}
+#' B_{ab} / (N_a N_b)}. Values from the two are comparable only for
+#' \eqn{C = 2}. A bin with no tie scores zero.
+#'
 #' A community of one vertex makes the within-community normaliser
 #' `2 / (N_a (N_a - 1))` a division by zero. Rather than drop the vertex,
 #' which would change every other community's denominator, the bin returns
@@ -146,18 +160,19 @@ segregation <- function(dn, communities, scope = c("pertime", "overall"),
                         sessions = c("bounded", "collapse", "separate"),
                         start = NULL, end = NULL, step = NULL, window = NULL,
                         plot = FALSE) {
-  scope <- match.arg(scope)
-  sessions <- match.arg(sessions)
+  scope <- .match_choice(scope)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   group <- .resolve_communities(dn, communities)
 
   snaps <- as.data.frame(snapshots(dn, sessions = sessions, start = start,
                                    end = end, step = step, window = window))
-  blocks <- if (identical(sessions, "separate") && "session" %in% names(snaps)) {
-    split(snaps, snaps$session)
-  } else {
-    list(all = snaps)
-  }
+  # Bins come from the grid so an empty bin is a layer with no tie, never a
+  # gap that makes its two neighbours look consecutive.
+  blocks <- .measure_blocks(
+    snaps, .measure_bin_times(dn, sessions, start, end, step, window),
+    sessions
+  )
   sizes <- table(group)
   if (any(sizes < 2L)) {
     warning(warningCondition(
@@ -167,9 +182,10 @@ segregation <- function(dn, communities, scope = c("pertime", "overall"),
       class = "dynet_singleton_community"))
   }
 
-  frames <- Map(function(block, label) {
-    times <- sort(unique(block$time))
-    layers <- lapply(.binary_layers(dn, block, times, symmetrise = TRUE),
+  frames <- lapply(blocks, function(one) {
+    times <- one$times
+    label <- one$label
+    layers <- lapply(.binary_layers(dn, one$snaps, times, symmetrise = TRUE),
                      function(m) {
                        diag(m) <- 0
                        m
@@ -183,7 +199,7 @@ segregation <- function(dn, communities, scope = c("pertime", "overall"),
       data.frame(session = label, measure = "sid", value = mean(value),
                  stringsAsFactors = FALSE)
     }
-  }, blocks, names(blocks))
+  })
 
   out <- .metric(
     do.call(rbind, frames), level = "graph",

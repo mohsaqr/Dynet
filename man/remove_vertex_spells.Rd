@@ -19,7 +19,9 @@ A new \code{dynet} object, class
 components dropped and the rest canonicalised again, so the remaining
 spell identifiers renumber. A node with no remaining declaration becomes
 implicitly always active over observation support. Raises
-\code{dynet_bad_input} when \code{spells} is not a valid selection.
+\code{dynet_vertex_spell_not_found} when \code{spells} selects no component (an
+all-\code{FALSE} mask), and \code{dynet_bad_input} when \code{spells} is not a valid
+selection.
 }
 \description{
 Remove declared vertex-activity components

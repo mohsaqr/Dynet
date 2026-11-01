@@ -75,8 +75,16 @@
 #' @param start,end Column names for the start and end of an edge spell.
 #'   Auto-detected from `start`/`end`, `onset`/`terminus`, `begin`/`finish`.
 #' @param duration Column name for a spell duration, used in place of `end`.
-#' @param time Column name for an event time, used in place of `start`.
-#'   Auto-detected from `time`, `timestamp`, `date`, `datetime`.
+#'   A numeric duration is read in the network's time unit, so for calendar
+#'   times either set `time_unit` explicitly or supply a `difftime` column,
+#'   which is converted to that unit. Durations must be finite and
+#'   non-negative.
+#' @param time Column name for an event time, used in place of `start`
+#'   (for an interval log, `time` names the start of each spell when
+#'   `start` is not given). Auto-detected from `time`, `timestamp`, `date`,
+#'   `datetime`. An end column must use the same clock as the start: both
+#'   numeric or both calendar values, otherwise a condition of class
+#'   `dynet_mixed_clock` is raised.
 #' @param thread_clock For a threaded log, `"absolute"` (the default) keeps
 #'   every post on the calendar; `"relative"` puts each thread on its own
 #'   clock, measured from the thread's first post, so a tie opens at the
@@ -96,14 +104,23 @@
 #'   as walls that time-respecting paths do not cross.
 #' @param weight Column name for event multiplicity. `NULL` auto-detects a
 #'   column named `weight`, `weights` or `strength` (and says so); with none,
-#'   every row counts once.
+#'   every row counts once. Weights must be finite and non-negative; a
+#'   missing, infinite or negative weight raises a condition of class
+#'   `dynet_bad_weight`.
 #' @param nodes Optional data frame of vertex attributes. The vertex key is
 #'   auto-detected (`node`, `vertex.id`, `id`, `name`, ...), or given as the
 #'   first column. When the key is not `name` and the table also has a
 #'   `name` column, the vertices are named by `name`: edge endpoints and
 #'   vertex spells given by key are translated, and the key stays on the
 #'   node table as an attribute. A key with no row in `nodes` keeps the key
-#'   as its name, with a `dynet_unnamed_nodes` warning.
+#'   as its name, with a `dynet_unnamed_nodes` warning. A vertex named in
+#'   `nodes` that has no tie and no row in `vertex_spells` is handled by
+#'   `keep_isolates`.
+#' @param keep_isolates Whether vertices named in `nodes` that take part in
+#'   no tie are kept. `FALSE`, the default, leaves them out of the network
+#'   and says so with a message of class `dynet_dropped_nodes`; `TRUE` keeps
+#'   them as isolates, present at all times unless `vertex_spells` says
+#'   otherwise, so measures computed over the vertex set count them.
 #' @param groups Name of a column in `nodes` to use as the vertex partition.
 #'   Written into the places cograph looks for it, so `cograph::splot()`
 #'   colours and groups by it without further argument. A name that is not a
@@ -230,10 +247,10 @@ dynet <- function(data,
                   observation_spells = NULL,
                   loops = FALSE, min_thread_posts = 1L,
                   onset_censored = NULL, terminus_censored = NULL,
-                  vertex_spells = NULL) {
+                  vertex_spells = NULL, keep_isolates = FALSE) {
 
-  format <- match.arg(format)
-  thread_clock <- match.arg(thread_clock)
+  format <- .match_choice(format)
+  thread_clock <- .match_choice(thread_clock)
   if (identical(thread_clock, "relative") && is.null(thread)) {
     stop(errorCondition(
       "`thread_clock = \"relative\"` needs a threaded log: name the `thread` column.",
@@ -254,6 +271,9 @@ dynet <- function(data,
       is.logical(directed) && length(directed) == 1L && !is.na(directed),
     "`loops` must be a single TRUE or FALSE."               =
       is.logical(loops) && length(loops) == 1L && !is.na(loops),
+    "`keep_isolates` must be a single TRUE or FALSE."       =
+      is.logical(keep_isolates) && length(keep_isolates) == 1L &&
+      !is.na(keep_isolates),
     "`min_thread_posts` must be a single whole number of at least 1." =
       is.numeric(min_thread_posts) && length(min_thread_posts) == 1L &&
       is.finite(min_thread_posts) && min_thread_posts >= 1 &&
@@ -285,15 +305,17 @@ dynet <- function(data,
     copresence = .build_copresence(data, actor, group, time, start, end,
                                    session, time_unit),
     threaded   = .build_threaded(data, from, to, time, thread, session,
-                                 time_unit, thread_clock = thread_clock,
+                                 time_unit, start = start,
+                                 thread_clock = thread_clock,
                                  loops = loops,
                                  min_thread_posts = as.integer(min_thread_posts)),
-    contact    = .build_contact(data, from, to, time, session, time_unit),
+    contact    = .build_contact(data, from, to, time, session, time_unit,
+                                start = start),
     turns      = .build_turns(data, actor, group, time, session, time_unit),
     broadcast  = .build_broadcast(data, actor, group, time, session,
                                   time_unit),
     interval   = .build_interval(data, from, to, start, end, duration, session,
-                                 time_unit)
+                                 time_unit, time = time)
   )
 
   if (identical(format, "copresence") && directed) directed <- FALSE
@@ -310,7 +332,7 @@ dynet <- function(data,
     e <- .attach_tie_attributes(e, data, built, session, weight,
                                 onset_censored, terminus_censored)
   }
-  flagged_point <- e$end == e$start &
+  flagged_point <- .time_eq_each(e$end, e$start) &
     (e$onset_censored | e$terminus_censored)
   if (any(flagged_point)) {
     stop(errorCondition(
@@ -334,7 +356,8 @@ dynet <- function(data,
   }
   if (nrow(e) == 0L) {
     stop(errorCondition("No edge events remain after cleaning.",
-                        class = "dynet_empty_network", call = NULL))
+                        class = c("dynet_empty_network", "dynet_bad_input"),
+                        call = NULL))
   }
 
   # This identifier belongs to the raw canonical row and survives sorting and
@@ -381,7 +404,8 @@ dynet <- function(data,
     built$node_pool <- .translate_vertices(built$node_pool, naming)
   }
   node_table <- .build_nodes(
-    e, nodes, c(built$node_pool, vertex_activity$spells$node)
+    e, nodes, c(built$node_pool, vertex_activity$spells$node),
+    keep_isolates = keep_isolates
   )
 
   t_min <- min(e$start)
@@ -405,6 +429,15 @@ dynet <- function(data,
   } else {
     raw_range
   }
+  # An open-ended spell (networkDynamic's -Inf/Inf convention) is measurable
+  # only inside a finite observation window; without one every grid is
+  # infinite and the bin count is undefined.
+  if (!all(is.finite(observation))) {
+    stop(errorCondition(
+      "A spell starts or ends at an infinite time and no finite observation window bounds it. Supply `observation_start` and `observation_end`.",
+      class = c("dynet_unbounded_spell", "dynet_bad_input"), call = NULL
+    ))
+  }
 
   metadata <- list(
     type       = "temporal",
@@ -414,9 +447,10 @@ dynet <- function(data,
     time_unit  = built$time_unit,
     origin     = built$origin,
     interval   = interval,
-    n_bins     = max(1L, as.integer(ceiling(
-      (observation[["end"]] - observation[["start"]]) / interval
-    ))),
+    # The engine's tolerant bin count: a bare ceiling invents a trailing bin
+    # when the span carries rounding error, as one between Unix timestamps does.
+    n_bins     = .grid_bins(observation[["end"]] - observation[["start"]],
+                            interval, scale = max(abs(observation))),
     sessions   = if (all(is.na(e$session))) NULL else sort(unique(e$session)),
     call       = match.call()
   )
@@ -615,7 +649,7 @@ dynet <- function(data,
   if (any(!is.finite(start)) || any(!is.finite(end))) {
     fail("Vertex-spell times must be finite.")
   }
-  if (any(end < start)) {
+  if (any(!.time_leq(start, end))) {
     fail("Every vertex spell must end at or after it starts.")
   }
 
@@ -657,7 +691,7 @@ dynet <- function(data,
   }
   onset_censored <- resolve_flag("onset_censored")
   terminus_censored <- resolve_flag("terminus_censored")
-  if (any(start == end & (onset_censored | terminus_censored))) {
+  if (any(.time_eq(start, end) & (onset_censored | terminus_censored))) {
     fail("A vertex point spell cannot carry a censor flag.",
          "dynet_bad_vertex_censor")
   }
@@ -689,7 +723,7 @@ dynet <- function(data,
         # Sequential dependency: component membership depends on the running
         # union endpoint, so each sorted interval must be considered in turn.
         for (i in seq.int(2L, nrow(positive))) {
-          if (positive$start[i] <= running_end) {
+          if (.time_leq(positive$start[i], running_end)) {
             members <- c(members, i)
             running_end <- max(running_end, positive$end[i])
           } else {
@@ -722,7 +756,8 @@ dynet <- function(data,
     points <- sort(unique(rows$start[rows$start == rows$end]))
     if (length(points) && nrow(intervals)) {
       covered <- vapply(points, function(point) {
-        any(point >= intervals$start & point < intervals$end)
+        any(.time_geq(point, intervals$start) &
+              !.time_geq(point, intervals$end))
       }, logical(1L))
       points <- points[!covered]
     }
@@ -806,7 +841,7 @@ dynet <- function(data,
     # Sequential dependency: each interval is compared with the running union
     # endpoint, so this normalization cannot be vectorized independently.
     for (i in ord[-1L]) {
-      if (start[i] <= current_end) {
+      if (.time_leq(start[i], current_end)) {
         current_end <- max(current_end, end[i])
       } else {
         merged[[length(merged) + 1L]] <- c(current_start, current_end)
@@ -826,7 +861,8 @@ dynet <- function(data,
   points <- sort(unique(start[end == start]))
   if (length(points) && nrow(positive_table)) {
     covered <- vapply(points, function(point) {
-      any(point >= positive_table$start & point <= positive_table$end)
+      any(.time_geq(point, positive_table$start) &
+            .time_leq(point, positive_table$end))
     }, logical(1L))
     points <- points[!covered]
   }
@@ -836,7 +872,7 @@ dynet <- function(data,
   rownames(out) <- NULL
   out <- data.frame(
     observation = seq_len(nrow(out)), start = out$start, end = out$end,
-    duration = out$end - out$start, instant = out$end == out$start
+    duration = out$end - out$start, instant = .time_eq(out$end, out$start)
   )
   out
 }
@@ -865,7 +901,7 @@ dynet <- function(data,
         "`observation_end` (%s) is earlier than `observation_start` (%s).",
         upper, lower
       ),
-      class = "dynet_bad_input", call = NULL
+      class = c("dynet_bad_observation", "dynet_bad_input"), call = NULL
     ))
   }
   c(start = lower, end = upper)
@@ -924,7 +960,7 @@ dynet <- function(data,
       stop(errorCondition(
         sprintf("`groups = %s` is not a vertex attribute. Supply it through `nodes = `.",
                 sQuote(groups)),
-        class = "dynet_unknown_attribute", call = NULL))
+        class = c("dynet_unknown_attribute", "dynet_bad_input"), call = NULL))
     }
     # cograph finds the partition at $nodes$groups and $node_groups.
     node_tbl$groups <- as.character(nodes[[groups]])
@@ -988,20 +1024,26 @@ dynet <- function(data,
     stop(errorCondition(
       sprintf("Could not find a source column. Name it with `from = `. Available: %s",
               paste(names(data), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   t <- .resolve_column(data, to, "to", exclude = f, arg = "to")
+  if (identical(t, f)) {
+    stop(errorCondition(
+      sprintf("`from` and `to` both name the column `%s`; every tie would be a self-loop.", f),
+      class = c("dynet_same_column", "dynet_bad_input"), call = NULL))
+  }
   if (is.null(t)) {
     stop(errorCondition(
       sprintf("Could not find a target column. Name it with `to = `. Available: %s",
               paste(setdiff(names(data), f), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   vals <- list(from = as.character(data[[f]]), to = as.character(data[[t]]),
                columns = c(f, t))
   if (anyNA(vals$from) || anyNA(vals$to)) {
     stop(errorCondition("Source and target columns must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_missing_value", "dynet_bad_input"),
+                        call = NULL))
   }
   vals
 }
@@ -1018,7 +1060,7 @@ dynet <- function(data,
   if (anyNA(values)) {
     stop(errorCondition(
       "Session labels must not contain missing values.",
-      class = "dynet_bad_input", call = NULL
+      class = c("dynet_missing_value", "dynet_bad_input"), call = NULL
     ))
   }
   values
@@ -1028,19 +1070,29 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to,start,end,duration,session User-supplied column names.
 #' @param time_unit Requested time unit.
+#' @param time User-supplied event-time column, used as the spell start
+#'   when `start` is not given. Defaults to `NULL`.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`,
 #'   `node_pool` and `used` (the source columns the builder consumed).
 #' @noRd
 .build_interval <- function(data, from, to, start, end, duration, session,
-                            time_unit) {
+                            time_unit, time = NULL) {
   dyad <- .resolve_dyad(data, from, to)
 
-  s_col <- .resolve_column(data, start, "start", arg = "start")
-  if (is.null(s_col)) s_col <- .resolve_column(data, NULL, "time")
+  # An explicit `start` wins, then an explicit `time`, and only then the
+  # alias tables, so a named argument is never overridden by a column that
+  # merely looks like a start time.
+  s_col <- if (!is.null(start)) {
+    .resolve_column(data, start, "start", arg = "start")
+  } else if (!is.null(time)) {
+    .resolve_column(data, time, "time", arg = "time")
+  } else {
+    .resolve_column(data, NULL, "start") %||% .resolve_column(data, NULL, "time")
+  }
   if (is.null(s_col)) {
     stop(errorCondition(
       "Could not find a start-time column. Name it with `start = ` or `time = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   e_col <- .resolve_column(data, end, "end", exclude = s_col, arg = "end")
   d_col <- .resolve_column(data, duration, "duration", exclude = s_col,
@@ -1050,24 +1102,19 @@ dynet <- function(data,
   starts <- parsed_start$values
 
   ends <- if (!is.null(e_col)) {
-    .parse_time(data[[e_col]], parsed_start$unit,
-                origin = parsed_start$origin)$values
+    .parse_companion_time(data[[e_col]], parsed_start, "end")
   } else if (!is.null(d_col)) {
-    dur <- data[[d_col]]
-    if (!is.numeric(dur)) {
-      stop(errorCondition("The duration column must be numeric.",
-                          class = "dynet_bad_input", call = NULL))
-    }
-    starts + dur
+    starts + .parse_duration(data[[d_col]], parsed_start$unit)
   } else {
     stop(errorCondition(
       "Interval format needs an end time or a duration. Name it with `end = ` or `duration = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
 
   if (any(ends < starts)) {
     stop(errorCondition("Every edge must end at or after it starts.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_bad_spell", "dynet_bad_input"),
+                        call = NULL))
   }
 
   list(
@@ -1082,22 +1129,65 @@ dynet <- function(data,
   )
 }
 
+#' Read a duration column in the network's time unit
+#'
+#' A `difftime` is converted to the network's calendar unit; a plain number
+#' is taken to be in that unit already. Missing, infinite or negative
+#' durations are refused, because each would otherwise surface far from its
+#' cause (an `if (NA)` failure, an unbounded grid, a spell ending before it
+#' starts).
+#'
+#' @param dur The duration column.
+#' @param unit The resolved network time unit (`"step"` for numeric times).
+#' @return A numeric vector of durations.
+#' @noRd
+.parse_duration <- function(dur, unit) {
+  if (inherits(dur, "difftime")) {
+    if (identical(unit, "step")) {
+      stop(errorCondition(
+        "A `difftime` duration needs calendar start times; these start times are plain numbers.",
+        class = c("dynet_mixed_clock", "dynet_bad_input"), call = NULL))
+    }
+    dur <- as.numeric(dur, units = unit)
+  }
+  if (!is.numeric(dur)) {
+    stop(errorCondition("The duration column must be numeric.",
+                        class = c("dynet_bad_spell", "dynet_bad_input"),
+                        call = NULL))
+  }
+  if (anyNA(dur) || any(!is.finite(dur)) || any(dur < 0)) {
+    stop(errorCondition(
+      "Durations must be finite, non-negative and not missing.",
+      class = c("dynet_bad_spell", "dynet_bad_input"), call = NULL))
+  }
+  as.numeric(dur)
+}
+
 #' Build a contact-format edge table
 #' @param data Data frame.
 #' @param from,to,time,session User-supplied column names.
 #' @param time_unit Requested time unit.
+#' @param start User-supplied start column, used as the event time when
+#'   `time` is not given. Defaults to `NULL`.
 #' @return A list with `edges`, `time_unit`, `origin`, `row_index`,
 #'   `node_pool` and `used` (the source columns the builder consumed).
 #' @noRd
-.build_contact <- function(data, from, to, time, session, time_unit) {
+.build_contact <- function(data, from, to, time, session, time_unit,
+                           start = NULL) {
   dyad <- .resolve_dyad(data, from, to)
-  t_col <- .resolve_column(data, time, "time", arg = "time")
-  if (is.null(t_col)) t_col <- .resolve_column(data, NULL, "start")
+  # An explicit `time` wins, then an explicit `start`, then the aliases.
+  t_col <- if (!is.null(time)) {
+    .resolve_column(data, time, "time", arg = "time")
+  } else if (!is.null(start)) {
+    .resolve_column(data, start, "start", arg = "start")
+  } else {
+    .resolve_column(data, NULL, "time") %||% .resolve_column(data, NULL, "start")
+  }
   if (is.null(t_col)) {
     stop(errorCondition(
       sprintf("Could not find an event-time column. Name it with `time = `. Available: %s",
               paste(names(data), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   parsed <- .parse_time(data[[t_col]], time_unit)
   list(
@@ -1132,7 +1222,7 @@ dynet <- function(data,
   if (is.null(a_col)) {
     stop(errorCondition(
       "Could not find an actor column. Name it with `actor = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   g_col <- .resolve_column(data, group, "group", exclude = a_col, arg = "group")
   t_col <- .resolve_column(data, time, "time", exclude = c(a_col, g_col),
@@ -1141,19 +1231,21 @@ dynet <- function(data,
     stop(errorCondition(
       sprintf("Could not find an action-time column. Name it with `time = `. Available: %s",
               paste(names(data), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   actors <- as.character(data[[a_col]])
   groups <- if (is.null(g_col)) rep("", nrow(data)) else
     as.character(data[[g_col]])
   if (anyNA(actors) || anyNA(groups)) {
     stop(errorCondition("Actor and group columns must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_missing_value", "dynet_bad_input"),
+                        call = NULL))
   }
   parsed <- .parse_time(data[[t_col]], time_unit)
   if (anyNA(parsed$values)) {
     stop(errorCondition("The action-time column must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_bad_time", "dynet_bad_input"),
+                        call = NULL))
   }
   # The group is the conversation, so it is the session unless one is named;
   # a column that merely looks like a session (a course, say) stays a tie
@@ -1171,7 +1263,7 @@ dynet <- function(data,
   if (!length(taker)) {
     stop(errorCondition(
       "No group has two or more actions, so no action takes up another.",
-      class = "dynet_empty_network", call = NULL))
+      class = c("dynet_empty_network", "dynet_bad_input"), call = NULL))
   }
   list(
     edges = data.frame(from = actors[taken], to = actors[taker],
@@ -1208,7 +1300,7 @@ dynet <- function(data,
   if (is.null(a_col) || is.null(g_col)) {
     stop(errorCondition(
       "A broadcast log needs an actor and a group column. Name them with `actor = ` and `group = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   t_col <- .resolve_column(data, time, "time", exclude = c(a_col, g_col),
                            arg = "time")
@@ -1216,18 +1308,20 @@ dynet <- function(data,
     stop(errorCondition(
       sprintf("Could not find an action-time column. Name it with `time = `. Available: %s",
               paste(names(data), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   actors <- as.character(data[[a_col]])
   groups <- as.character(data[[g_col]])
   if (anyNA(actors) || anyNA(groups)) {
     stop(errorCondition("Actor and group columns must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_missing_value", "dynet_bad_input"),
+                        call = NULL))
   }
   parsed <- .parse_time(data[[t_col]], time_unit)
   if (anyNA(parsed$values)) {
     stop(errorCondition("The action-time column must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_bad_time", "dynet_bad_input"),
+                        call = NULL))
   }
   # As in a turns log, the group is the session unless one is named.
   sessions <- if (!is.null(session)) .resolve_session(data, session) else groups
@@ -1242,7 +1336,7 @@ dynet <- function(data,
   if (!nrow(reach)) {
     stop(errorCondition(
       "No group has two or more actors, so no action reaches anyone.",
-      class = "dynet_empty_network", call = NULL))
+      class = c("dynet_empty_network", "dynet_bad_input"), call = NULL))
   }
   list(
     edges = data.frame(from = reach$actor, to = reach$member,
@@ -1268,6 +1362,8 @@ dynet <- function(data,
 #' @param data Data frame.
 #' @param from,to,time,thread,session User-supplied column names.
 #' @param time_unit Requested time unit.
+#' @param start User-supplied start column, used as the post time when
+#'   `time` is not given. Defaults to `NULL`.
 #' @param thread_clock `"absolute"`, the default, keeps every post on the
 #'   calendar; `"relative"` re-bases each thread on its own first post.
 #' @param loops Whether self-replies are kept. When they are not, they are
@@ -1278,20 +1374,22 @@ dynet <- function(data,
 #'   `time_unit`, `origin`, `row_index`, `node_pool` and `used`.
 #' @noRd
 .build_threaded <- function(data, from, to, time, thread, session, time_unit,
-                            thread_clock = "absolute", loops = FALSE,
-                            min_thread_posts = 1L) {
-  base <- .build_contact(data, from, to, time, session, time_unit)
+                            start = NULL, thread_clock = "absolute",
+                            loops = FALSE, min_thread_posts = 1L) {
+  base <- .build_contact(data, from, to, time, session, time_unit,
+                         start = start)
   th_col <- .resolve_column(data, thread, "thread", arg = "thread")
   if (is.null(th_col)) {
     stop(errorCondition(
       sprintf("Could not find a thread column. Name it with `thread = `. Available: %s",
               paste(names(data), collapse = ", ")),
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   th <- as.character(data[[th_col]])
   if (anyNA(th)) {
     stop(errorCondition("The thread column must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_missing_value", "dynet_bad_input"),
+                        call = NULL))
   }
   # A dropped self-reply must not keep its thread alive, and a thread that
   # never became an exchange is dropped whole: both filters run before the
@@ -1314,7 +1412,8 @@ dynet <- function(data,
   }
   if (!any(keep)) {
     stop(errorCondition("No edge events remain after cleaning.",
-                        class = "dynet_empty_network", call = NULL))
+                        class = c("dynet_empty_network", "dynet_bad_input"),
+                        call = NULL))
   }
   if (!all(keep)) {
     base$edges <- base$edges[keep, , drop = FALSE]
@@ -1356,20 +1455,21 @@ dynet <- function(data,
   if (is.null(a_col)) {
     stop(errorCondition(
       "Could not find an actor column. Name it with `actor = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
   g_col <- .resolve_column(data, group, "group", exclude = a_col, arg = "group")
   if (is.null(g_col)) {
     stop(errorCondition(
       "Could not find a group column. Name it with `group = `.",
-      class = "dynet_missing_column", call = NULL))
+      class = c("dynet_missing_column", "dynet_bad_input"), call = NULL))
   }
 
   actors <- as.character(data[[a_col]])
   groups <- as.character(data[[g_col]])
   if (anyNA(actors) || anyNA(groups)) {
     stop(errorCondition("Actor and group columns must not contain NA values.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_missing_value", "dynet_bad_input"),
+                        call = NULL))
   }
 
   s_col <- .resolve_column(data, start, "start", exclude = c(a_col, g_col))
@@ -1377,7 +1477,10 @@ dynet <- function(data,
                            arg = "time")
   e_col <- .resolve_column(data, end, "end", exclude = c(a_col, g_col),
                            arg = "end")
-  clock <- s_col %||% t_col
+  # A named argument is never overridden by an auto-detected column: an
+  # explicit `time` beats a column that merely looks like a start.
+  clock <- if (!is.null(start)) s_col else if (!is.null(time)) t_col else
+    s_col %||% t_col
 
   if (is.null(clock)) {
     # No clock at all: groups are ordered by first appearance and each occupies
@@ -1390,7 +1493,7 @@ dynet <- function(data,
   } else {
     parsed <- .parse_time(data[[clock]], time_unit)
     ends <- if (!is.null(e_col)) {
-      .parse_time(data[[e_col]], parsed$unit, origin = parsed$origin)$values
+      .parse_companion_time(data[[e_col]], parsed, "end")
     } else {
       parsed$values
     }
@@ -1401,6 +1504,18 @@ dynet <- function(data,
   }
 
   sess <- .resolve_session(data, session)
+  # A group's spell carries one session label; a group whose rows disagree
+  # has no single session to give it.
+  labels_per_group <- tapply(sess, groups, function(s) {
+    length(unique(s[!is.na(s)]))
+  })
+  if (any(labels_per_group > 1L)) {
+    stop(errorCondition(
+      sprintf("Group(s) %s carry more than one session label; a co-presence group must lie in one session.",
+              paste(utils::head(names(labels_per_group)[labels_per_group > 1L], 5),
+                    collapse = ", ")),
+      class = c("dynet_ambiguous_session", "dynet_bad_input"), call = NULL))
+  }
   members <- split(seq_along(actors), groups)
 
   pairs <- lapply(names(members), function(g) {
@@ -1421,7 +1536,7 @@ dynet <- function(data,
   if (length(pairs) == 0L) {
     stop(errorCondition(
       "No group contains two or more actors, so no co-presence edge can be formed.",
-      class = "dynet_empty_network", call = NULL))
+      class = c("dynet_empty_network", "dynet_bad_input"), call = NULL))
   }
 
   list(
@@ -1458,8 +1573,11 @@ dynet <- function(data,
   session_col <- if (isTRUE(built$session_named_only) && is.null(session)) {
     NULL
   } else .resolve_column(data, session, "session", arg = "session")
-  weight_col <- if (is.null(weight)) NULL else
-    .resolve_column(data, weight, "duration", arg = "weight")
+  # An auto-detected weight column (`weights`, `strength`) is consumed as the
+  # weight exactly like a named one, so it is not also carried as an
+  # attribute beside the canonical `weight`.
+  weight_col <- if (is.null(weight)) .match_column(data, "weight") else
+    .resolve_column(data, weight, "weight", arg = "weight")
   consumed <- c(built$used, session_col, weight_col, onset_censored,
                 terminus_censored)
   canonical <- c("from", "to", "start", "end", "duration", "weight",
@@ -1501,15 +1619,25 @@ dynet <- function(data,
   if (is.null(row_index)) {
     warning(warningCondition(
       "`weight` is ignored for co-presence networks, where each pair counts once.",
-      class = "dynet_weight_ignored"), call. = FALSE)
+      class = "dynet_weight_ignored", call = NULL))
     return(rep(1, n))
   }
   w <- data[[.resolve_column(data, weight, "weight", arg = "weight")]]
   if (!is.numeric(w)) {
     stop(errorCondition("The weight column must be numeric.",
-                        class = "dynet_bad_input", call = NULL))
+                        class = c("dynet_bad_weight", "dynet_bad_input"),
+                        call = NULL))
   }
-  w[row_index]
+  # A missing weight vanished from the aggregate network and a negative one
+  # was dropped by its `w > 0` rule, both silently; multiplicities are
+  # finite and non-negative.
+  w <- as.numeric(w[row_index])
+  if (anyNA(w) || any(!is.finite(w)) || any(w < 0)) {
+    stop(errorCondition(
+      "Weights must be finite, non-negative and not missing.",
+      class = c("dynet_bad_weight", "dynet_bad_input"), call = NULL))
+  }
+  w
 }
 
 #' Vertex names carried by a node table beside its key
@@ -1539,6 +1667,31 @@ dynet <- function(data,
   out
 }
 
+#' The vertex names a node table lists
+#'
+#' The names the node table gives its vertices: its `name` column when the
+#' table carries a separate key beside it (see `.node_naming()`), otherwise
+#' its key column. Validates that `nodes` is a data frame.
+#' @param nodes The user's node table, or `NULL`.
+#' @return A character vector of distinct, non-missing names.
+#' @noRd
+.listed_node_names <- function(nodes) {
+  if (is.null(nodes)) return(character())
+  if (!is.data.frame(nodes)) {
+    stop(errorCondition("`nodes` must be a data frame of vertex attributes.",
+                        class = c("dynet_bad_nodes", "dynet_bad_input"),
+                        call = NULL))
+  }
+  naming <- .node_naming(nodes)
+  values <- if (!is.null(naming)) naming$name else {
+    key <- .match_column(nodes, "actor") %||% .match_column(nodes, "from") %||%
+      names(nodes)[1L]
+    as.character(nodes[[key]])
+  }
+  values <- unique(values[!is.na(values)])
+  values[nzchar(values)]
+}
+
 #' Translate vertex keys to their names
 #' @param values Character vertex keys.
 #' @param naming The table from `.node_naming()`.
@@ -1555,22 +1708,37 @@ dynet <- function(data,
 #' @param edges Canonical edge frame.
 #' @param nodes Optional data frame of vertex attributes.
 #' @param pool Extra vertex names that must appear even without an edge.
+#' @param keep_isolates Whether a vertex named in `nodes` with no tie is kept.
+#'   Defaults to `FALSE`, which drops it with a `dynet_dropped_nodes` message.
 #' @return A data frame with `name` first, one row per vertex.
 #' @noRd
-.build_nodes <- function(edges, nodes, pool = character()) {
+.build_nodes <- function(edges, nodes, pool = character(),
+                         keep_isolates = FALSE) {
   observed <- unique(c(edges$from, edges$to, pool))
+  listed <- .listed_node_names(nodes)
+  isolated <- setdiff(listed, observed)
+  if (length(isolated)) {
+    if (keep_isolates) {
+      observed <- c(observed, isolated)
+    } else {
+      # Base R has no messageCondition(); a classed message is a structure.
+      message(structure(
+        class = c("dynet_dropped_nodes", "message", "condition"),
+        list(message = sprintf(
+          "%d vertex/vertices in `nodes` take part in no tie and are left out: %s. Use keep_isolates = TRUE to keep them.\n",
+          length(isolated), paste(utils::head(isolated, 5), collapse = ", ")
+        ), call = NULL)
+      ))
+    }
+  }
   # Vertices named with numbers sort numerically, so v10 does not land before
   # v2. Detected by pattern rather than by coercion, which would need its
   # warning suppressed.
   all_numeric <- all(grepl("^[+-]?[0-9]+(\\.[0-9]+)?$", observed))
-  observed <- if (all_numeric) observed[order(as.numeric(observed))] else sort(observed)
+  observed <- if (all_numeric) observed[order(as.numeric(observed), observed)] else sort(observed)
   out <- data.frame(name = observed, stringsAsFactors = FALSE)
 
   if (is.null(nodes)) return(out)
-  if (!is.data.frame(nodes)) {
-    stop(errorCondition("`nodes` must be a data frame of vertex attributes.",
-                        class = "dynet_bad_input", call = NULL))
-  }
   key <- .match_column(nodes, "actor") %||% .match_column(nodes, "from") %||%
     names(nodes)[1L]
   attrs <- nodes

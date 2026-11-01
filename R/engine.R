@@ -64,27 +64,35 @@
 
 #' Tolerant equality of two times
 #'
+#' Each pair `a[i]`, `b[i]` is compared with its own tolerance,
+#' `.time_tol(a[i], b[i])`. The tolerance used to be pooled over every value
+#' in both vectors, so comparing `c(0, 1.7e9)` with `c(1e-8, 1.7e9)` called
+#' `0` and `1e-8` equal merely because a Unix timestamp sat in the same
+#' vector. Two equal infinities are equal (`Inf - Inf` is `NaN`, which used
+#' to return `NA` here while `.time_leq(Inf, Inf)` returned `TRUE`). A
+#' missing time propagates as `NA`; it is never silently `TRUE`.
+#'
 #' @param a,b Numeric times, recycled as usual.
 #' @return A logical vector, `TRUE` where the two times agree to within
-#'   `.time_tol()`.
+#'   their pair's `.time_tol()`, `NA` where either is `NA`.
 #' @noRd
-.time_eq <- function(a, b) abs(a - b) <= .time_tol(a, b)
+.time_eq <- function(a, b) .time_eq_each(a, b)
 
 #' Tolerant "at or before" comparison of two times
 #'
 #' @param a,b Numeric times, recycled as usual.
 #' @return A logical vector, `TRUE` where `a` is below `b` or within
-#'   `.time_tol()` of it.
+#'   their pair's `.time_tol()` of it, `NA` where either is `NA`.
 #' @noRd
-.time_leq <- function(a, b) a <= b + .time_tol(a, b)
+.time_leq <- function(a, b) .time_leq_each(a, b)
 
 #' Tolerant "at or after" comparison of two times
 #'
 #' @param a,b Numeric times, recycled as usual.
 #' @return A logical vector, `TRUE` where `a` is above `b` or within
-#'   `.time_tol()` of it.
+#'   their pair's `.time_tol()` of it, `NA` where either is `NA`.
 #' @noRd
-.time_geq <- function(a, b) a >= b - .time_tol(a, b)
+.time_geq <- function(a, b) a >= b - .time_tol_each(a, b)
 
 #' Element-wise tolerance for comparing paired times
 #'
@@ -107,7 +115,9 @@
 #' @param a,b Numeric times.
 #' @return A logical vector.
 #' @noRd
-.time_eq_each <- function(a, b) abs(a - b) <= .time_tol_each(a, b)
+.time_eq_each <- function(a, b) {
+  (a == b) | abs(a - b) <= .time_tol_each(a, b)
+}
 
 #' Element-wise tolerant "at or before", matching scalar `.time_leq()` per pair
 #' @param a,b Numeric times.
@@ -122,10 +132,21 @@
 # here and turned back into names before any result leaves the package.
 
 #' Validate a dynet object and its session argument
+#'
+#' Beyond the class, the structural contract every verb relies on is checked
+#' here, once, so that an object whose tables were edited by hand fails with
+#' a classed error at the entry point instead of returning plausible wrong
+#' numbers (an endpoint missing from the vertex table used to be counted as
+#' absent; a spell ending before it starts was silently dropped; a missing
+#' node table zeroed every measure).
+#'
 #' @param dn Object to check.
 #' @param sessions Session handling mode, matched against `"bounded"`,
 #'   `"collapse"` and `"separate"`. Default `"bounded"`.
-#' @return The matched session mode, invisibly.
+#' @return The matched session mode, invisibly. Raises `dynet_bad_input`
+#'   when `dn` is not a `dynet`, `dynet_corrupt_object` (with parent
+#'   `dynet_bad_input`) when its tables break the structural contract, and
+#'   `dynet_no_sessions` when `sessions = "separate"` has no session column.
 #' @noRd
 .check_dynet <- function(dn, sessions = "bounded") {
   if (!inherits(dn, "dynet")) {
@@ -133,13 +154,80 @@
       "`dn` must be a temporal network built with dynet().",
       class = "dynet_bad_input", call = NULL))
   }
-  sessions <- match.arg(sessions, c("bounded", "collapse", "separate"))
+  .check_dynet_structure(dn)
+  sessions <- .match_choice(sessions, c("bounded", "collapse", "separate"))
   if (identical(sessions, "separate") && is.null(dn$meta$sessions)) {
     stop(errorCondition(
       "sessions = \"separate\" needs a session column; build the network with `session = `.",
-      class = "dynet_no_sessions", call = NULL))
+      class = c("dynet_no_sessions", "dynet_bad_input"), call = NULL))
   }
   invisible(sessions)
+}
+
+#' Check the tables of a `dynet` object against the structural contract
+#'
+#' The contract is what `dynet()` guarantees and what `.encode()` and every
+#' measurement assume: a spell table with the canonical columns, numeric
+#' non-missing times with `end >= start`, unique spell identifiers, endpoints
+#' that are all vertices, and a vertex table whose names are complete and
+#' unique. Weights are only required to be numeric, because `dynet()` accepts
+#' signed and missing weights.
+#'
+#' @param dn A `dynet` object.
+#' @return `TRUE`, invisibly. Raises `dynet_corrupt_object` (with parent
+#'   `dynet_bad_input`) naming the first broken rule.
+#' @examples
+#' dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))
+#' Dynet:::.check_dynet_structure(dn)
+#' @noRd
+.check_dynet_structure <- function(dn) {
+  corrupt <- function(rule) {
+    stop(errorCondition(
+      sprintf("`dn` is not a valid dynet object: %s Rebuild it with dynet().",
+              rule),
+      class = c("dynet_corrupt_object", "dynet_bad_input"), call = NULL))
+  }
+  spells <- dn$spells
+  nodes <- dn$nodes
+  required <- c("from", "to", "start", "end", "weight", "session",
+                "onset_censored", "terminus_censored", ".raw_spell")
+  if (!is.data.frame(spells)) corrupt("its spell table is missing.")
+  missing_cols <- setdiff(required, names(spells))
+  if (length(missing_cols)) {
+    corrupt(sprintf("its spell table lacks %s.",
+                    paste(sQuote(missing_cols, FALSE), collapse = ", ")))
+  }
+  if (!is.data.frame(nodes) || !"name" %in% names(nodes)) {
+    corrupt("its vertex table is missing or has no `name` column.")
+  }
+  if (!is.character(nodes$name) || anyNA(nodes$name) ||
+      anyDuplicated(nodes$name)) {
+    corrupt("vertex names must be complete, unique character strings.")
+  }
+  if (!is.numeric(spells$start) || !is.numeric(spells$end)) {
+    corrupt("spell times must be numeric.")
+  }
+  if (anyNA(spells$start) || anyNA(spells$end)) {
+    corrupt("spell times must not be missing.")
+  }
+  if (any(spells$end < spells$start)) {
+    corrupt("every spell must end at or after it starts.")
+  }
+  if (!is.numeric(spells$weight)) corrupt("spell weights must be numeric.")
+  if (anyNA(spells$.raw_spell) || anyDuplicated(spells$.raw_spell)) {
+    corrupt("spell identifiers must be complete and unique.")
+  }
+  endpoints <- c(as.character(spells$from), as.character(spells$to))
+  if (!all(endpoints %in% nodes$name)) {
+    corrupt("every spell endpoint must be a vertex of its vertex table.")
+  }
+  vertex_spells <- dn$vertex_spells
+  if (!is.null(vertex_spells) && nrow(vertex_spells) &&
+      !all(as.character(vertex_spells$node) %in% nodes$name)) {
+    corrupt("every vertex spell must belong to a vertex of its vertex table.")
+  }
+  if (!is.list(dn$meta)) corrupt("its metadata is missing.")
+  invisible(TRUE)
 }
 
 #' Integer-encode a canonical edge frame against the vertex table
@@ -671,7 +759,7 @@
 #' @noRd
 .legacy_sample <- function(window = NULL, sample = NULL) {
   if (is.null(sample)) return(window)
-  sample <- match.arg(sample, c("window", "instant"))
+  sample <- .match_choice(sample, c("window", "instant"))
   warning(warningCondition(
     "`sample` is deprecated; use `window = 0` for point sampling and a positive `window` for window sampling.",
     class = "dynet_deprecated", call = NULL))
@@ -702,7 +790,8 @@
 #' @return A single number.
 #' @noRd
 .default_end <- function(t_min, t_max, step) {
-  t_min + (.grid_bins(t_max - t_min, step) - 1L) * step
+  t_min + (.grid_bins(t_max - t_min, step,
+                      scale = max(abs(t_min), abs(t_max))) - 1L) * step
 }
 
 #' Number of bins of width `step` needed to cover a span
@@ -712,22 +801,64 @@
 #' a whole number is taken to be that whole number. Anything genuinely above
 #' it takes the ceiling.
 #'
-#' The tolerance is per element and relative to the ratio. The previous form,
-#' `ceiling(span / step - 1e-9)`, subtracted a fixed epsilon from the ratio
-#' itself, which is a tolerance on the bin COUNT rather than on time: it
-#' discarded any event landing up to `1e-9 * step` above an exact multiple,
-#' silently dropping it from every measurement built on the grid.
+#' The tolerance is a tolerance on TIME, per element, at the magnitude of the
+#' times the span was computed from (`scale`), exactly as `.time_tol()`
+#' sizes it. The first form, `ceiling(span / step - 1e-9)`, subtracted a fixed
+#' epsilon from the ratio itself, which is a tolerance on the bin COUNT rather
+#' than on time: it discarded any event landing up to `1e-9 * step` above an
+#' exact multiple. The second form scaled the tolerance by the ratio, which
+#' ignores that a span of `0.7` between two Unix timestamps (~1.7e9) already
+#' carries a rounding error of ~1e-7: it invented a trailing bin on such data
+#' (eight bins for a 0.7-long period measured every 0.1).
 #'
 #' @param span,step Numeric widths, recycled as usual.
-#' @return An integer vector of bin counts, at least one.
+#' @param scale Magnitude of the times the span was computed from. Default
+#'   `0`, which sizes the tolerance on the span alone.
+#' @return An integer vector of bin counts, at least one. Raises
+#'   `dynet_bad_grid` (with parent `dynet_bad_input`) when a count is not
+#'   finite or exceeds the largest integer, which an unbounded span or a
+#'   vanishing `step` produces.
 #' @noRd
-.grid_bins <- function(span, step) {
+.grid_bins <- function(span, step, scale = 0) {
   ratio <- span / step
+  .check_bin_count(ratio)
   nearest <- round(ratio)
-  tol <- 128 * .Machine$double.eps * pmax(1, abs(ratio))
+  tol <- 128 * .Machine$double.eps * pmax(1, abs(span), abs(scale)) / step
   exact <- abs(ratio - nearest) <= tol
   pmax(1L, as.integer(ifelse(exact, nearest, ceiling(ratio))))
 }
+
+#' Refuse a measurement grid whose bin count cannot be represented
+#'
+#' @param ratio Span divided by step, one element per grid.
+#' @return `TRUE`, invisibly. Raises `dynet_bad_grid` (with parent
+#'   `dynet_bad_input`) for a missing, infinite or larger-than-integer count.
+#' @noRd
+.check_bin_count <- function(ratio) {
+  if (anyNA(ratio) || any(!is.finite(ratio)) ||
+      any(abs(ratio) >= .Machine$integer.max)) {
+    stop(errorCondition(
+      paste0("The measurement grid cannot be built: the period is unbounded ",
+             "or `step` is too small for it. Supply a finite `end` or a ",
+             "larger `step`."),
+      class = c("dynet_bad_grid", "dynet_bad_input"), call = NULL))
+  }
+  invisible(TRUE)
+}
+
+#' Lattice points `start, start + step, ...` of a grid with a known count
+#'
+#' Built directly as `start + k * step` rather than with `seq(by = )`, whose
+#' own count is `floor((to - from) / by + 1e-10)`: on Unix-scale times the
+#' representation error of `to - from` exceeds that epsilon, so `seq()`
+#' could drop the last point and with it the right-closed final window.
+#'
+#' @param start First point.
+#' @param n Number of points, at least one.
+#' @param step Spacing.
+#' @return A numeric vector of length `n`.
+#' @noRd
+.lattice <- function(start, n, step) start + (seq_len(n) - 1L) * step
 
 #' Build the measurement grid
 #'
@@ -759,11 +890,24 @@
   # Point sampling (`window = 0`) runs through the last observed instant, as
   # `tsna` samples `seq(start, end, time.interval)` inclusive; a positive
   # window stops at the last window that still opens inside the period.
+  # The default end is counted from `start`, not from the first observed
+  # time: counted from `t_min`, a `start` off the data's own lattice (0.5 on
+  # data starting at 0) stopped one window short and silently dropped
+  # everything in the last partial window, which `tsna::tSnaStats()` keeps.
   end   <- spec$end %||% if (identical(spec$window, 0)) t_max else
-    .default_end(t_min, t_max, spec$step)
+    .default_end(start, t_max, spec$step)
   # A grid whose end precedes its start still yields the single measurement
   # at `start`, so that a verb never returns zero rows for a valid network.
-  lo <- if (end < start) start else seq(from = start, to = end, by = spec$step)
+  lo <- if (end < start) {
+    start
+  } else if (is.null(spec$end) && !identical(spec$window, 0)) {
+    .lattice(start, .grid_bins(t_max - start, spec$step,
+                               scale = max(abs(start), abs(t_max))),
+             spec$step)
+  } else {
+    .check_bin_count((end - start) / spec$step)
+    seq(from = start, to = end, by = spec$step)
+  }
   closed <- rep(FALSE, length(lo))
   if (is.null(spec$end)) closed[length(lo)] <- TRUE
   data.frame(bin = seq_along(lo), lo = lo, hi = lo + spec$window, time = lo,
@@ -789,8 +933,14 @@
     if (is.null(spec$phase_start)) {
       first <- component_start
     } else {
+      # The first lattice point at or after the component start, with the
+      # tolerance on TIME at the magnitude of the times. A fixed `1e-12` on
+      # the ratio skipped the first window whenever the start sat on the
+      # lattice but its Unix-scale subtraction rounded up (1699999990.2 on a
+      # lattice phased at 1699999990.1 by 0.1 gives a ratio of 1.0000014).
+      tol <- .time_tol_each(component_start, spec$phase_start)
       phase <- ceiling(
-        (component_start - spec$phase_start) / spec$step - 1e-12
+        (component_start - spec$phase_start - tol) / spec$step
       )
       first <- spec$phase_start + max(0, phase) * spec$step
     }
@@ -804,8 +954,16 @@
     last <- if (!is.null(spec$end)) component_end else
       if (identical(spec$window, 0)) component_end else
         .default_end(first, component_end, spec$step)
-    times <- if (first > component_end) numeric() else
+    times <- if (first > component_end) {
+      numeric()
+    } else if (is.null(spec$end) && !identical(spec$window, 0)) {
+      .lattice(first, .grid_bins(component_end - first, spec$step,
+                                 scale = max(abs(first), abs(component_end))),
+               spec$step)
+    } else {
+      .check_bin_count((last - first) / spec$step)
       seq(first, last, by = spec$step)
+    }
     if (!length(times)) return(NULL)
     closed <- rep(FALSE, length(times))
     if (is.null(spec$end)) closed[length(closed)] <- TRUE
@@ -1080,8 +1238,13 @@
 #' inside the window, or to drop one that starts exactly at its end. Rather
 #' than make each predicate tolerant, the grid itself is corrected once: an
 #' edge within `.time_tol()` of a boundary present in the data (a spell
-#' start or end, a raw event limit, or an observation limit) is replaced by
-#' that boundary, so the strict comparisons downstream are exact. An edge
+#' start or end, a raw event limit, a declared vertex-spell limit, or an
+#' observation limit) is replaced by that boundary, so the strict comparisons
+#' downstream are exact. Vertex-spell limits were once missing from the
+#' anchors, so on a grid stepped by 0.1 a vertex arriving at 0.3 was counted
+#' present in `[0.2, 0.3)`, because that window's right edge was computed as
+#' 0.30000000000000004. The tolerance is each edge's own, not one pooled over
+#' the whole grid. An edge
 #' with no boundary nearby is left as it is. Reported `time` values follow
 #' `lo`, so a bin's time equals the data's own value of that instant.
 #'
@@ -1100,6 +1263,7 @@
   if (!nrow(grid)) return(grid)
   observations <- .observation_table(dn)
   anchors <- c(enc$start, enc$end, enc$raw_event_start, enc$raw_event_end,
+               dn$vertex_spells$start, dn$vertex_spells$end,
                observations$start, observations$end, dn$meta$time_range)
   anchors <- sort(unique(anchors[is.finite(anchors)]))
   if (!length(anchors)) return(grid)
@@ -1109,7 +1273,7 @@
     below <- anchors[pmax(pos, 1L)]
     above <- anchors[pmin(pos + 1L, length(anchors))]
     nearest <- ifelse(abs(x - below) <= abs(x - above), below, above)
-    hit <- abs(x - nearest) <= .time_tol(x, nearest)
+    hit <- .time_eq_each(x, nearest)
     ifelse(hit, nearest, x)
   }
   grid$lo <- snap(grid$lo)

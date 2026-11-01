@@ -18,6 +18,10 @@ A new \code{dynet} object, class
 vertex activity and metadata as \code{dn} and the supplied attributes added to
 or replaced on the named vertices. Unnamed vertices keep their existing
 values, gaining \code{NA} in any column the network did not already have.
+When the network carries a cograph grouping derived from an attribute
+(\code{dynet(groups = )}) and \code{data} updates that attribute without supplying
+\code{groups}, the grouping follows the attribute, so \code{groups} and the
+source never disagree.
 Raises \code{dynet_unknown_node} when a name is not a vertex, and
 \code{dynet_bad_input} when \code{data} is malformed or names a cograph structural
 column (\code{id}, \code{label}, \code{x}, \code{y}).

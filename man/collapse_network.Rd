@@ -48,11 +48,22 @@ once, so choosing one does not discard the others: \code{from}, \code{to},
 pair was active, overlaps counted once), \code{total_duration} (summed spell
 lengths, overlaps counted twice), \code{duration_fraction} (\code{union_duration}
 over the pair's joint activity opportunity, \code{NA} when that opportunity is
-zero), \code{spell_count}, \code{weight_sum}, \code{weighted_duration} (weight times
-duration, summed), \code{latest_weight} (the weight of the last spell to end),
-\code{first} and \code{last} (the pair's earliest onset and latest terminus), and
-the \code{activity.duration} and \code{activity.count} aliases for compatibility
-with \code{networkDynamic::network.collapse()}.
+zero), \code{spell_count} (raw spells touching the range), \code{weight_sum} (the
+full weight of every such spell, summed, however little of the spell
+falls inside the range, as \code{networkDynamic::network.collapse()} keeps an
+attribute whole), \code{weighted_duration} (each spell's weight times the part
+of its duration inside the range, summed; this is the only field that
+shares a weight out by time), \code{latest_weight} (the weight of the last
+spell to end), \code{first} and \code{last} (the pair's earliest onset and latest
+terminus inside the range), and two columns named as
+\code{networkDynamic::network.collapse(rm.time.info = FALSE)} names them:
+\code{activity.duration}, equal to \code{union_duration}, and \code{activity.count}, the
+number of activity runs after merging spells that overlap or abut and
+absorbing a point that falls inside a spell. \code{activity.count} therefore
+equals \code{spell_count} only when no two spells of the pair touch.
+
+A spell that only touches a bound, to within the package's time
+tolerance, contributes nothing: it leaves no edge of zero width behind.
 
 The node table carries one row per vertex, with \code{name}, any static vertex
 attributes the network was built with, \code{activity_duration} (time the

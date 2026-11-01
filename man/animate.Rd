@@ -117,7 +117,7 @@ or \code{cooling}. Empty by default. A larger \code{repulsion} opens a dense
 core.}
 
 \item{seed}{Seed for the spring layouts, so \code{"spring"} and \code{"relaxed"} are
-reproducible; \code{42} by default. Under a seed the caller's random state is
+reproducible; one whole number, \code{42} by default. Under a seed the caller's random state is
 restored on exit. \code{NULL} draws from the current random state instead and
 leaves it advanced, which is what makes successive unseeded calls differ.}
 
@@ -231,7 +231,8 @@ refuses; \code{dynet_bad_input} for a \code{\link[=centrality_series]{centrality
 node-level or lands on none of the bins, and a warning of class
 \code{dynet_partial_measure} when it lands on only some; and \code{dynet_bad_input} for a non-positive
 \code{fps}, \code{tween}, \code{width}, \code{height} or \code{res}, an odd video size, a \code{loop}
-that is neither logical nor a positive whole number, or a negative
+that is neither logical nor a positive whole number, a \code{seed} that is not
+one whole number, or a negative
 \code{max_displacement} or \code{anchor_strength}.
 }
 

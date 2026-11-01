@@ -46,6 +46,54 @@
     net_format = dn$meta$format
   )
 }
+#' Match one choice from a fixed set, raising a classed condition
+#'
+#' `match.arg()` with the error a caller can catch. A bare `match.arg()`
+#' raises an unclassed `simpleError`, so `as.data.frame(x, what = "typo")` or
+#' `plot(x, type = "typo")` could only be tested by message text. This keeps
+#' `match.arg()`'s semantics -- the full default vector selects its first
+#' element, `NULL` does too, and a unique prefix is accepted -- and raises
+#' `dynet_bad_choice` (a `dynet_bad_input`) for anything else.
+#'
+#' @param arg The value supplied.
+#' @param choices Character vector of allowed values.
+#' @param name Argument name, for the message; defaults to the expression
+#'   passed as `arg`.
+#' @param several.ok Accept several values, as `match.arg()` does.
+#' @return A single element of `choices`. Raises `dynet_bad_choice` when
+#'   `arg` is not one string matching exactly one choice.
+#' @noRd
+.match_choice <- function(arg, choices, name = NULL, several.ok = FALSE) {
+  if (is.null(name)) name <- deparse1(substitute(arg))
+  if (missing(choices)) {
+    # Mirror match.arg(): the allowed set is the caller's default vector.
+    parent <- sys.parent()
+    choices <- eval(formals(sys.function(parent))[[name]],
+                    envir = sys.frame(parent))
+  }
+  if (is.null(arg) || identical(arg, choices)) {
+    return(if (isTRUE(several.ok)) choices else choices[[1L]])
+  }
+  bad <- function() {
+    stop(errorCondition(
+      sprintf("`%s` must be %s of %s; got %s.", name,
+              if (isTRUE(several.ok)) "a subset" else "one",
+              paste(sprintf("\"%s\"", choices), collapse = ", "),
+              paste(deparse(arg), collapse = " ")),
+      class = c("dynet_bad_choice", "dynet_bad_input"), call = NULL))
+  }
+  if (!is.character(arg) || !length(arg) || anyNA(arg)) bad()
+  if (isTRUE(several.ok)) {
+    hits <- pmatch(arg, choices, nomatch = 0L, duplicates.ok = TRUE)
+    if (any(hits == 0L)) bad()
+    return(unique(choices[hits]))
+  }
+  if (length(arg) != 1L) bad()
+  hit <- pmatch(arg, choices)
+  if (is.na(hit)) bad()
+  choices[[hit]]
+}
+
 #' Rank vertices by their mean measured value
 #'
 #' A vertex outside its activity spell, or a bin the grid never defined,
@@ -88,7 +136,9 @@
 #'   the solver's `iterations` and `residual`, the `balance_*` family for the
 #'   row-column scaling step, and `spectral_radius`, `eigenspace_dimension`
 #'   and `eigen_residual` for the eigen step. A result with nothing to report
-#'   gives a zero-row frame of those same columns rather than `NULL`.
+#'   gives a zero-row frame of those same columns rather than `NULL`. An
+#'   unknown `what` or `layout` raises `dynet_bad_choice`, a
+#'   `dynet_bad_input`.
 #' @param top Keep only the `top` vertices with the largest mean value, and
 #'   order the result from largest to smallest. A single positive number;
 #'   `NULL`, the default, keeps every row in the measure's own order. It
@@ -126,7 +176,7 @@ as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
                                        layout = c("long", "wide"),
                                        what = c("values", "diagnostics"),
                                        top = NULL, ...) {
-  layout <- match.arg(layout)
+  layout <- .match_choice(layout, c("long", "wide"), "layout")
   if (!is.null(top)) {
     .check("`top` must be one positive number." =
              length(top) == 1L && is.numeric(top) && is.finite(top) && top >= 1)
@@ -147,7 +197,7 @@ as.data.frame.dynet_metric <- function(x, row.names = NULL, optional = FALSE,
     rownames(out) <- NULL
     return(out)
   }
-  what <- match.arg(what)
+  what <- .match_choice(what, c("values", "diagnostics"), "what")
   if (identical(what, "diagnostics")) {
     found <- attr(x, "prestige_diagnostics")
     if (is.null(found)) {
@@ -341,20 +391,22 @@ tail.dynet_metric <- function(x, n = 6L, ...) {
 #' question a temporal network is being asked.
 #'
 #' @param object A `dynet_metric`.
-#' @param by Grouping for the summary: `"node"`, `"time"` or `"measure"`. The
-#'   default, `NULL`, groups by `"node"` when the measure has a `node` column
-#'   and by `"measure"` otherwise. A `session` column, when the measure has
-#'   one, and `measure` itself are always part of the grouping as well. A
-#'   grouping the measure has no column for -- `"node"` on a graph-level
-#'   series, say -- is dropped rather than raising, leaving the grouping the
-#'   measure does carry.
+#' @param by Grouping for the summary: `"node"`, `"time"`, `"measure"` or
+#'   `"pair"`. The default, `NULL`, groups by `"node"` when the measure has a
+#'   `node` column and by `"measure"` otherwise. `"pair"` groups a pair-level
+#'   measure, such as [gaps()] with `unit = "pair"`, by its `from` and `to`
+#'   columns. A `session` column, when the measure has one, and `measure`
+#'   itself are always part of the grouping as well. A grouping the measure
+#'   has no column for -- `"node"` on a graph-level series, say -- is dropped
+#'   rather than raising, leaving the grouping the measure does carry. Any
+#'   other value raises `dynet_bad_choice`.
 #' @param ... Ignored.
 #'
 #' @return A `data.frame` with the grouping columns plus `n`, `mean`, `sd`,
-#'   `min`, `max` and, when time is available, `peak_time`. `n` counts the
-#'   measured values the statistics were computed from, so a vertex that was
-#'   inactive for part of the calendar reports fewer than the number of time
-#'   points.
+#'   `min`, `max` and, when time is available, `peak_time`; one row per
+#'   combination of the grouping columns. `n` counts the measured values the
+#'   statistics were computed from, so a vertex that was inactive for part of
+#'   the calendar reports fewer than the number of time points.
 #'
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -366,8 +418,9 @@ tail.dynet_metric <- function(x, n = 6L, ...) {
 summary.dynet_metric <- function(object, by = NULL, ...) {
   df <- as.data.frame(object)
   if (is.null(by)) by <- if ("node" %in% names(df)) "node" else "measure"
-  by <- match.arg(by, c("node", "time", "measure"))
-  keys <- intersect(unique(c("session", by, "measure")), names(df))
+  by <- .match_choice(by, c("node", "time", "measure", "pair"), "by")
+  grouping <- if (identical(by, "pair")) c("from", "to") else by
+  keys <- intersect(unique(c("session", grouping, "measure")), names(df))
   key_tbl <- df[, keys, drop = FALSE]
   has_time <- "time" %in% names(df) && !identical(by, "time")
 
@@ -399,22 +452,27 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 
 #' Which rows of a metric frame does `highlight` select?
 #'
-#' A series is highlighted when its grouping value (vertex or measure name) is
-#' named, or, for a mixing table carrying `from_group` and `to_group`, when
-#' either endpoint group is named. `NULL` highlights everything. A `highlight`
+#' A series is highlighted when its grouping value (vertex, pair or measure
+#' name) is named, or, when the frame carries endpoints -- `from` and `to` for
+#' a pair-level measure, `from_group` and `to_group` for a [mixing()] table --
+#' when either endpoint is named. `NULL` highlights everything. A `highlight`
 #' that matches no series is a mistake and is reported as one.
 #'
 #' @param df The plain data frame of a `dynet_metric`, with a `.grp` column.
 #' @param highlight Character vector or `NULL`.
-#' @return Logical vector, one entry per row of `df`.
+#' @return Logical vector, one entry per row of `df`. Raises
+#'   `dynet_bad_input` for a non-character `highlight` and
+#'   `dynet_unknown_highlight` for one that matches no series.
 #' @noRd
 .highlight_rows <- function(df, highlight) {
   if (is.null(highlight)) return(rep(TRUE, nrow(df)))
-  stopifnot("`highlight` must be a character vector" = is.character(highlight))
-  hit <- df$.grp %in% highlight
-  if (all(c("from_group", "to_group") %in% names(df))) {
-    hit <- hit | df$from_group %in% highlight | df$to_group %in% highlight
-  }
+  .check("`highlight` must be a character vector." =
+           is.character(highlight) && length(highlight) > 0L)
+  endpoints <- list(c("from", "to"), c("from_group", "to_group"))
+  hit <- Reduce(function(acc, pair) {
+    if (!all(pair %in% names(df))) return(acc)
+    acc | df[[pair[[1L]]]] %in% highlight | df[[pair[[2L]]]] %in% highlight
+  }, endpoints, df$.grp %in% highlight)
   if (!any(hit)) {
     stop(errorCondition(
       sprintf("`highlight` matches no series: %s.",
@@ -424,11 +482,36 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
   hit
 }
 
+#' The series a row of a timed measure belongs to
+#'
+#' A node-level measure draws one series per vertex and a pair-level one --
+#' [gaps()] with `unit = "pair"`, say -- one per vertex pair. Anything else is
+#' a graph-level series, drawn one line per measure. Grouping a pair-level
+#' measure by `measure` would join every pair's values into a single zigzag.
+#'
+#' @param df The plain data frame of a `dynet_metric`.
+#' @param directed Whether pairs are ordered, for the label.
+#' @return A list with `key`, one series label per row, and `by`, one of
+#'   `"node"`, `"pair"` or `"measure"`.
+#' @noRd
+.series_key <- function(df, directed) {
+  if ("node" %in% names(df)) return(list(key = df$node, by = "node"))
+  if (all(c("from", "to") %in% names(df))) {
+    return(list(key = .pair_label(df$from, df$to, directed), by = "pair"))
+  }
+  list(key = df$measure, by = "measure")
+}
+
 #' Plot a temporal measure
 #'
 #' Draws the quantity against time. Node-level measures are drawn as one line
-#' per vertex; graph-level measures as one line per measure. Distinctions are
-#' carried by colour and line type together, never by colour alone.
+#' per vertex, pair-level measures as one marked line per vertex pair (each
+#' observation is a point, so a pair observed once is still drawn), and
+#' graph-level measures as one line per measure. Distinctions are carried by
+#' colour and line type together, never by colour alone; when there are more
+#' series than distinct colour and line-type combinations, a
+#' `dynet_palette_recycled` warning says so rather than letting two series
+#' look identical in silence.
 #'
 #' A measure with no time axis, such as reachability or [durations()], has no
 #' trajectory to draw and is shown as a bar panel instead, one bar per vertex
@@ -437,22 +520,28 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 #'
 #' @param x A `dynet_metric`.
 #' @param type `"line"` for trajectories over time, `"heatmap"` for a
-#'   vertex-by-time tile plot, `"ridge"` for small multiples per measure.
-#'   Ignored for a measure with no time axis.
+#'   series-by-time tile plot (one row per vertex, pair or measure),
+#'   `"ridge"` for small multiples per measure. Ignored for a measure with no
+#'   time axis. Any other value raises `dynet_bad_choice`.
 #' @param highlight Optional character vector naming the series to draw in
 #'   colour, with everything else in grey: vertex names for a node-level
-#'   measure, measure names for a graph-level one. For a [mixing()] result a
-#'   group name selects every flow into or out of that group, so
-#'   `highlight = "Teacher"` colours the teacher rows and columns of the mixing
-#'   table. A name that matches nothing raises an error of class
+#'   measure, measure names for a graph-level one. For a pair-level measure a
+#'   vertex name selects every pair that vertex belongs to, and for a
+#'   [mixing()] result a group name selects every flow into or out of that
+#'   group, so `highlight = "Teacher"` colours the teacher rows and columns of
+#'   the mixing table. A name that matches nothing raises an error of class
 #'   `dynet_unknown_highlight`. Ignored for a measure with no time axis.
-#' @param top How many rows to draw. For a measure taken over time, the `top`
-#'   vertices with the largest mean value; `NULL`, the default, draws every
-#'   vertex. For a measure with no time axis, the `top` rows with the largest
-#'   absolute value, defaulting to `30`, with a subtitle naming how many of
-#'   how many are shown.
+#' @param top How many series to draw. For a measure taken over time, the
+#'   `top` vertices (or pairs, for a pair-level measure) with the largest
+#'   mean value; `NULL`, the default, draws every one. A graph-level series
+#'   ignores it. For a measure with no time axis, the `top` rows with the
+#'   largest absolute value, defaulting to `30`, with a subtitle naming how
+#'   many of how many are shown.
 #' @param palette Colours for the series: `"okabe"` (the default),
 #'   `"extended"`, `"many"`, your own vector of colours, or a function of `n`.
+#'   Okabe-Ito has nine colours and the lines six types, so eighteen series
+#'   can be told apart; beyond that a `dynet_palette_recycled` warning
+#'   suggests `top`, `highlight` or `palette = "many"`.
 #' @param base_size Base font size.
 #' @param ... Ignored.
 #'
@@ -469,67 +558,104 @@ summary.dynet_metric <- function(object, by = NULL, ...) {
 plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
                               highlight = NULL, top = NULL,
                               palette = "okabe", base_size = 12, ...) {
-  type <- match.arg(type)
+  type <- .match_choice(type, c("line", "heatmap", "ridge"), "type")
   .dyn_palette(palette, 1L)
   df <- as.data.frame(x)
   if (!"time" %in% names(df)) {
     return(.plot_no_time(df, x, base_size, top = top %||% 30L,
                          palette = palette))
   }
-  has_node <- "node" %in% names(df)
+  series <- .series_key(df, attr(x, "directed"))
+  df$.grp <- series$key
 
-  if (has_node && !is.null(top)) {
-    rank <- .node_rank(df$value, df$node)
+  if (!identical(series$by, "measure") && !is.null(top)) {
+    .check("`top` must be one positive number." =
+             length(top) == 1L && is.numeric(top) && is.finite(top) &&
+               top >= 1)
+    rank <- .node_rank(df$value, df$.grp)
     keep <- names(rank)[seq_len(min(top, length(rank)))]
-    df <- df[df$node %in% keep, , drop = FALSE]
+    df <- df[df$.grp %in% keep, , drop = FALSE]
   }
 
-  if (identical(type, "heatmap")) return(.plot_heatmap(df, x, has_node, base_size))
+  if (identical(type, "heatmap")) return(.plot_heatmap(df, x, base_size))
 
-  grp <- if (has_node) "node" else "measure"
-  df$.grp <- df[[grp]]
   df$.hl <- .highlight_rows(df, highlight)
-  n_hl <- length(unique(df$.grp[df$.hl]))
+  coloured <- unique(df$.grp[df$.hl])
+  n_col <- length(coloured)
+  colours <- .dyn_palette(palette, n_col)
+  linetypes <- rep(1:6, length.out = n_col)
+  .warn_recycled_style(coloured, colours, linetypes)
 
-  n_grp <- length(unique(df$.grp))
+  # A series observed once has no line to draw and is marked with a point
+  # instead. A pair-level series is a sequence of events, such as the gaps
+  # between one pair's contacts, so every one of its observations is marked.
+  # Shapes cycle with the line types, so the colour-and-type check above
+  # covers them too.
+  panel_key <- do.call(paste, c(
+    df[intersect(c(".grp", "measure", "session"), names(df))], sep = "\r"))
+  defined <- stats::ave(as.numeric(!is.na(df$value)), panel_key, FUN = sum)
+  df$.line <- defined > 1
+  df$.mark <- identical(series$by, "pair") | defined == 1
+  shapes <- rep(c(16L, 17L, 15L, 3L, 4L, 8L), length.out = n_col)
+
+  # The full frame stays the plot's own data, so `p$data` still lists every
+  # drawn series; each layer then takes the rows it draws.
   p <- ggplot2::ggplot(df, ggplot2::aes(x = time, y = value, group = .grp))
-
-  if (is.null(highlight)) {
+  if (!is.null(highlight)) {
     p <- p +
-      ggplot2::geom_line(ggplot2::aes(colour = .grp, linetype = .grp),
-                         linewidth = 0.6) +
-      ggplot2::scale_colour_manual(values = .dyn_palette(palette, n_grp), name = NULL) +
-      ggplot2::scale_linetype_manual(values = rep(1:6, length.out = n_grp),
-                                     name = NULL)
-  } else {
+      ggplot2::geom_line(data = df[df$.line & !df$.hl, , drop = FALSE],
+                         colour = "grey80", linewidth = 0.4)
+  }
+  p <- p +
+    ggplot2::geom_line(data = df[df$.line & df$.hl, , drop = FALSE],
+                       ggplot2::aes(colour = .grp, linetype = .grp),
+                       linewidth = if (is.null(highlight)) 0.6 else 0.8)
+  if (any(df$.mark)) {
+    if (!is.null(highlight)) {
+      p <- p + ggplot2::geom_point(data = df[df$.mark & !df$.hl, , drop = FALSE],
+                                   colour = "grey80", size = 1.2)
+    }
     p <- p +
-      ggplot2::geom_line(data = df[!df$.hl, , drop = FALSE],
-                         colour = "grey80", linewidth = 0.4) +
-      ggplot2::geom_line(data = df[df$.hl, , drop = FALSE],
-                         ggplot2::aes(colour = .grp, linetype = .grp),
-                         linewidth = 0.8) +
-      ggplot2::scale_colour_manual(values = .dyn_palette(palette, n_hl),
-                                   name = NULL) +
-      ggplot2::scale_linetype_manual(values = rep(1:6, length.out = n_hl),
-                                     name = NULL)
+      ggplot2::geom_point(data = df[df$.mark & df$.hl, , drop = FALSE],
+                          ggplot2::aes(colour = .grp, shape = .grp),
+                          size = 1.8) +
+      ggplot2::scale_shape_manual(values = shapes, name = NULL)
   }
+  p <- p +
+    ggplot2::scale_colour_manual(values = colours, name = NULL) +
+    ggplot2::scale_linetype_manual(values = linetypes, name = NULL)
 
-  facets <- character()
-  if (has_node && length(unique(df$measure)) > 1L) facets <- "measure"
-  if (identical(type, "ridge")) facets <- "measure"
-  if (length(facets) > 0L) {
-    p <- p + ggplot2::facet_wrap(stats::as.formula(paste("~", facets)),
-                                 scales = "free_y")
-  }
-  if ("session" %in% names(df)) {
-    p <- p + ggplot2::facet_wrap(~session, scales = "free_x")
-  }
-
-  p +
+  # A measure facet is needed whenever the series are not the measures
+  # themselves, or the ridge view asks for one; sessions add a second
+  # dimension. One facet call carries both, because a second facet_wrap()
+  # replaces the first and would pool two measures into one line per vertex.
+  by_measure <- identical(type, "ridge") ||
+    (!identical(series$by, "measure") && length(unique(df$measure)) > 1L)
+  p + .metric_facet(by_measure, "session" %in% names(df)) +
     ggplot2::labs(x = sprintf("Time (%s)", attr(x, "time_unit")),
                   y = attr(x, "what")) +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+}
+
+#' Facets for a timed measure
+#'
+#' One facet call carries both dimensions, because a second `facet_wrap()`
+#' replaces the first: faceting by session after faceting by measure would
+#' pool two measures into one line, or one tile, per series.
+#'
+#' @param by_measure Whether measures need panels of their own.
+#' @param by_session Whether sessions need panels of their own.
+#' @return A ggplot facet specification, or `NULL` when neither is needed.
+#' @noRd
+.metric_facet <- function(by_measure, by_session) {
+  if (by_measure && by_session) {
+    ggplot2::facet_grid(measure ~ session, scales = "free")
+  } else if (by_measure) {
+    ggplot2::facet_wrap(~measure, scales = "free_y")
+  } else if (by_session) {
+    ggplot2::facet_wrap(~session, scales = "free_x")
+  }
 }
 
 #' Strip label for a measure name
@@ -539,17 +665,24 @@ plot.dynet_metric <- function(x, type = c("line", "heatmap", "ridge"),
 .measure_strip <- function(measure) gsub("_", " ", measure, fixed = TRUE)
 
 #' Heatmap panel for a temporal measure
-#' @param df Long data frame.
+#'
+#' One row per series: a vertex, a vertex pair, or a measure. Several
+#' measures on one node- or pair-level result, and several sessions, are
+#' faceted, since one tile per series and time cannot carry two values.
+#'
+#' @param df Long data frame carrying the series label in `.grp`.
 #' @param x The originating metric, for labels.
-#' @param has_node Whether the measure is node-level.
 #' @param base_size Base font size.
 #' @return A `ggplot` object.
 #' @noRd
-.plot_heatmap <- function(df, x, has_node, base_size) {
-  df$.row <- if (has_node) df$node else df$measure
+.plot_heatmap <- function(df, x, base_size) {
+  df$.row <- df$.grp
+  stacked <- !identical(df$.grp, df$measure) &&
+    length(unique(df$measure)) > 1L
   ggplot2::ggplot(df, ggplot2::aes(x = time, y = stats::reorder(.row, value),
                                    fill = value)) +
     ggplot2::geom_tile() +
+    .metric_facet(stacked, "session" %in% names(df)) +
     ggplot2::scale_fill_gradient2(low = "#D33F6A", mid = "white",
                                   high = "#4A6FE3",
                                   midpoint = .finite_median(df$value),

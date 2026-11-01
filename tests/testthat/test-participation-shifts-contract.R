@@ -271,7 +271,7 @@ test_that("E01 raw-onset identity honors censoring but ignores other spell field
   edges <- data.frame(
     from = c("A", "B", "C"), to = c("B", "A", "D"),
     start = c(1, 2, 3), end = c(9, 4, 8),
-    weight = c(10, -3, 99), left = c(FALSE, FALSE, TRUE),
+    weight = c(10, 3, 99), left = c(FALSE, FALSE, TRUE),
     right = c(FALSE, TRUE, FALSE)
   )
   dn <- quiet_dynet(

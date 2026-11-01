@@ -12,7 +12,8 @@
 #'   `"observations"` for canonical observed support, `"vertex_spells"` for
 #'   canonical declared vertex activity, `"nodes"` for the vertex table,
 #'   `"bins"` for the measurement grid, or `"network"` for the aggregate edge
-#'   list cograph renders.
+#'   list cograph renders. Any other value raises `dynet_bad_choice`, a
+#'   `dynet_bad_input`.
 #' @param measure Optional centrality measures to annotate the vertex table
 #'   with, valid only for `what = "nodes"`. Each becomes one column holding the
 #'   value over the whole observed period, so the vertex table can be filtered
@@ -88,7 +89,9 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
                                 sessions = c("bounded", "collapse",
                                              "separate"),
                                 start = NULL, end = NULL, ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what, c("edges", "nodes", "bins", "network",
+                                "observations", "observed_edges",
+                                "vertex_spells"), "what")
   if (!is.null(measure) && !identical(what, "nodes")) {
     stop(errorCondition(
       sprintf("`measure` annotates the vertex table; it has no meaning for `what = \"%s\"`.",
@@ -126,7 +129,7 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
         e <- data.frame(
           observation = 1L, start = bounds[["start"]], end = bounds[["end"]],
           duration = bounds[["end"]] - bounds[["start"]],
-          instant = bounds[["start"]] == bounds[["end"]]
+          instant = .time_eq(bounds[["start"]], bounds[["end"]])
         )
       }
       e
@@ -136,7 +139,11 @@ as.data.frame.dynet <- function(x, row.names = NULL, optional = FALSE,
       n <- x$nodes
       n <- n[, setdiff(names(n), c("id", "label", "x", "y")), drop = FALSE]
       if (is.null(measure)) n else
-        .annotate_nodes(x, n, measure, match.arg(sessions), start, end)
+        .annotate_nodes(x, n, measure,
+                        .match_choice(sessions,
+                                      c("bounded", "collapse", "separate"),
+                                      "sessions"),
+                        start, end)
     },
     bins  = .grid_for(.encode(x), x, .window_spec(x)),
     network = {
@@ -440,7 +447,7 @@ summary.dynet <- function(object, temporal_density = FALSE, ...) {
                                  sessions = c("bounded", "collapse", "separate"),
                                  label = "all",
                                  opportunities = NULL) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   opportunities <- opportunities %||%
     .relational_opportunities(enc$n, dn$directed)
   empty <- list(eligible = integer(), occupied = integer())
@@ -501,7 +508,7 @@ summary.dynet <- function(object, temporal_density = FALSE, ...) {
 .raw_endpoint_eligible <- function(dn, enc, rows, time,
                                    sessions = c("bounded", "collapse", "separate"),
                                    label = "all") {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   if (!length(rows)) return(logical())
   activity <- .encode_vertex_activity(dn, enc$names)
   has_sessions <- !is.null(dn$meta$sessions)
@@ -560,7 +567,7 @@ summary.dynet <- function(object, temporal_density = FALSE, ...) {
 .ever_observed_pairs <- function(dn, enc,
                                  sessions = c("bounded", "collapse", "separate"),
                                  label = "all") {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   opportunities <- .relational_opportunities(enc$n, dn$directed)
   if (!nrow(opportunities)) return(integer())
   bounds <- dn$meta$time_range
@@ -606,7 +613,7 @@ summary.dynet <- function(object, temporal_density = FALSE, ...) {
 .temporal_edge_ledger <- function(dn, enc, bin,
                                   sessions = c("bounded", "collapse", "separate"),
                                   label = "all", cohort = NULL) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   opportunities <- .relational_opportunities(enc$n, dn$directed)
   cohort <- cohort %||% .ever_observed_pairs(dn, enc, sessions, label)
   lo <- bin$lo[[1L]]
@@ -740,7 +747,7 @@ print.dynet_paths <- function(x, n = 12L, ...) {
                   sQuote(attr(x, "source")), format(attr(x, "origin"))))
     }
     cat(sprintf("# reaches %d of %d other vertices | time in %s\n",
-                sum(x$reachable) - 1L, nrow(x) - 1L,
+                sum(x$reachable & x$node != attr(x, "source")), nrow(x) - 1L,
                 attr(x, "time_unit")))
     if (identical(mode, "bounded")) {
       cat("# routes are endpoint-specific session-integral optima, not one predecessor tree\n")
@@ -773,7 +780,8 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #' @param optional Ignored; present for compatibility with the generic.
 #' @param what `"paths"`, the default, for the endpoint summary, or `"steps"`
 #'   for the tidy reconstructed optimal routes. The latter includes
-#'   endpoint-local `path_id` values for tied contact sequences.
+#'   endpoint-local `path_id` values for tied contact sequences. Any other
+#'   value raises `dynet_bad_choice`, a `dynet_bad_input`.
 #' @param ... Ignored.
 #' @examples
 #' dn <- dynet(school_contacts)
@@ -794,7 +802,7 @@ print.dynet_paths <- function(x, n = 12L, ...) {
 #' @export
 as.data.frame.dynet_paths <- function(x, row.names = NULL, optional = FALSE,
                                       what = c("paths", "steps"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what, c("paths", "steps"), "what")
   if (identical(what, "steps")) {
     descriptor <- attr(x, "optimal_search")
     out <- if (is.null(descriptor)) attr(x, "steps") else

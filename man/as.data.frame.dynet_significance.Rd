@@ -4,7 +4,13 @@
 \alias{as.data.frame.dynet_significance}
 \title{Coerce a permutation test to a data frame}
 \usage{
-\method{as.data.frame}{dynet_significance}(x, row.names = NULL, optional = FALSE, ...)
+\method{as.data.frame}{dynet_significance}(
+  x,
+  row.names = NULL,
+  optional = FALSE,
+  what = c("result", "null"),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{dynet_significance} from \code{\link[=significance]{significance()}}.}
@@ -13,11 +19,25 @@
 
 \item{optional}{Passed to the data frame method.}
 
+\item{what}{\code{"result"}, the default, for one row per tested cell;
+\code{"null"} for the null distribution, one row per cell and surrogate.}
+
 \item{...}{Ignored.}
 }
 \value{
-A base data frame, one row per tested cell.
+A base data frame. Under \code{what = "result"}, the columns
+\code{\link[=significance]{significance()}} documents. Under \code{what = "null"}, the key columns of
+the statistic (such as \code{time}, \code{node}, \code{measure}), then \code{replicate} (the
+surrogate) and \code{value} (the statistic on it, \code{NA} where the surrogate
+did not produce the cell).
 }
 \description{
 Coerce a permutation test to a data frame
+}
+\examples{
+dn <- dynet(school_contacts)
+tested <- significance(dn, statistic = metrics, measure = "density",
+                       n = 19, seed = 1)
+as.data.frame(tested)
+as.data.frame(tested, what = "null")
 }

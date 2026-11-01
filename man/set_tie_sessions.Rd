@@ -20,11 +20,13 @@ table, not against the data frame the network was built from.}
 orders coincide only when the input was already in that order. To cut
 sessions by time, use \code{breaks} instead.}
 
-\item{breaks}{Optional increasing numeric vector of cut points on the
-network's time axis. A spell belongs to the session of the interval its
+\item{breaks}{Optional strictly increasing cut points on the network's
+time axis: numbers on its own clock, or \code{Date}/\code{POSIXct} values for a
+calendar network. A spell belongs to the session of the interval its
 \code{start} falls in: before the first break, between two breaks, or from the
-last break on, so \code{k} breaks give \code{k + 1} sessions. Mutually exclusive
-with \code{session}.}
+last break on, so \code{k} breaks give \code{k + 1} sessions. A \code{start} equal to a
+break -- to within the package's magnitude-relative time tolerance --
+opens the later session. Mutually exclusive with \code{session}.}
 
 \item{labels}{Optional character vector naming the \code{k + 1} sessions that
 \code{breaks} defines, in time order. The default is \code{session_1},

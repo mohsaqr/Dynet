@@ -79,8 +79,13 @@
 .motif_triples <- function(time, delta, block) {
   n <- length(time)
   if (n < 3L) return(matrix(integer(0), ncol = 3L))
-  # The earliest event still inside the window closing at k.
-  lo <- findInterval(time - delta, time, left.open = TRUE) + 1L
+  # The earliest event still inside the window closing at k. The window test
+  # t_k - t_i <= delta is tolerant, like every time comparison in the package:
+  # 0.4 - 0.1 is not 0.3 in doubles, and at Unix-timestamp magnitude the
+  # spacing of representable times is already ~2e-7. Shifting the lower edge
+  # down by the tolerance admits exactly the events `.time_leq()` would.
+  lo <- findInterval(time - delta - .time_tol(time, delta), time,
+                     left.open = TRUE) + 1L
   per_k <- lapply(seq_len(n), function(k) {
     low <- lo[[k]]
     if (k - low < 2L) return(NULL)
@@ -125,7 +130,10 @@
 #' **The definition.** Three incompatible motif families exist in the
 #' literature. This adopts Paranjape, Benson & Leskovec (2017): exactly three
 #' edge events on at most three distinct vertices, with
-#' `t_last - t_first <= delta` over the three times in sorted order. Kovanen et
+#' `t_last - t_first <= delta` over the three times in sorted order, compared
+#' with the package's relative time tolerance so a window of exactly `delta`
+#' is admitted even when the subtraction rounds (`0.4 - 0.1` is not `0.3` in
+#' floating point). `start` and `end` are compared the same way. Kovanen et
 #' al. (2011) instead allow arbitrary size and bound *consecutive* gaps, which
 #' is a strictly weaker condition and agrees only for two-edge patterns; that
 #' family's instance count is unbounded and does not reduce to a fixed census.
@@ -179,8 +187,8 @@
 motifs <- function(dn, delta, output = c("global", "local"),
                    sessions = c("bounded", "collapse", "separate"),
                    start = NULL, end = NULL) {
-  output <- match.arg(output)
-  sessions <- match.arg(sessions)
+  output <- .match_choice(output)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   if (missing(delta)) {
     stop(errorCondition(
@@ -207,8 +215,8 @@ motifs <- function(dn, delta, output = c("global", "local"),
   per_session <- Map(function(enc, label) {
     keep <- .time_in_observation(dn, enc$raw_event_start) &
       !enc$raw_event_onset_censored & enc$raw_from != enc$raw_to
-    if (!is.null(start)) keep <- keep & enc$raw_event_start >= start
-    if (!is.null(end)) keep <- keep & enc$raw_event_start <= end
+    if (!is.null(start)) keep <- keep & .time_geq(enc$raw_event_start, start)
+    if (!is.null(end)) keep <- keep & .time_leq(enc$raw_event_start, end)
     rows <- which(keep)
     counts <- matrix(0, nrow = enc$n, ncol = 40L)
     totals <- numeric(40L)
@@ -292,7 +300,7 @@ motifs <- function(dn, delta, output = c("global", "local"),
   if (any(out$count > 2^53)) {
     stop(errorCondition(
       "A motif class exceeded 2^53 and can no longer be counted exactly.",
-      class = "dynet_count_overflow", call = NULL))
+      class = c("dynet_count_overflow", "dynet_bad_input"), call = NULL))
   }
   front <- intersect(c("session", "node", "motif", "family", "pattern",
                        "count"), names(out))
@@ -344,7 +352,7 @@ print.dynet_motifs <- function(x, n = 10L, ...) {
 #'   it.
 #' @export
 summary.dynet_motifs <- function(object, by = c("family", "node"), ...) {
-  by <- match.arg(by)
+  by <- .match_choice(by)
   if (identical(by, "node") && !"node" %in% names(object)) {
     stop(errorCondition(
       "by = \"node\" needs a census built with output = \"local\".",

@@ -359,7 +359,7 @@ test_that("D02 ignores every edge property outside universe and horizon", {
   elaborate_edges <- data.frame(
     from = c("A", "A", "B", "A"), to = c("B", "B", "A", "A"),
     start = c(0, 0, 2, 1), end = c(4, 4, 2, 3),
-    weight = c(1, 99, -2, 7), left = c(TRUE, FALSE, FALSE, TRUE),
+    weight = c(1, 99, 0.25, 7), left = c(TRUE, FALSE, FALSE, TRUE),
     right = c(FALSE, TRUE, FALSE, TRUE)
   )
   elaborate <- quiet_dynet(

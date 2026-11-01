@@ -50,6 +50,20 @@ communities are internally than to each other, both normalised by the
 number of pairs available. Positive means segregation exceeds integration.
 }
 \details{
+For communities \eqn{a = 1, \dots, C} of sizes \eqn{N_a}, with
+\eqn{W_a} the ties inside community \eqn{a} and \eqn{B_{ab}} the ties
+between \eqn{a} and \eqn{b} in a bin, the value is
+\deqn{SID = \sum_a \left( \frac{2 W_a}{N_a (N_a - 1)} -
+  \sum_{b \ne a} \frac{B_{ab}}{N_a N_b} \right).}
+Each community's within-density enters once. With two communities this
+equals \code{teneto.networkmeasures.sid(calc = "overtime")} exactly (checked
+against teneto 0.5.3). With three or more it does not: teneto sums the
+pairwise contrast over every ordered pair of communities, so its
+within-density term enters \eqn{C - 1} times and its value is
+\eqn{\sum_a (C - 1) 2 W_a / (N_a (N_a - 1)) - \sum_a \sum_{b \ne a}
+B_{ab} / (N_a N_b)}. Values from the two are comparable only for
+\eqn{C = 2}. A bin with no tie scores zero.
+
 A community of one vertex makes the within-community normaliser
 \code{2 / (N_a (N_a - 1))} a division by zero. Rather than drop the vertex,
 which would change every other community's denominator, the bin returns

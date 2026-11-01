@@ -26,7 +26,7 @@
 #' @param n Number of colours needed, 9 by default; values below one are
 #'   treated as one.
 #' @return A character vector of `max(1, n)` colours. Raises
-#'   `dynet_bad_palette` when `palette` is neither a character vector nor a
+#'   `dynet_bad_palette` (a `dynet_bad_input`) when `palette` is neither a character vector nor a
 #'   function, when a palette function returns too few colours or a
 #'   non-character result, or when any colour given is one R cannot render.
 #'
@@ -64,14 +64,14 @@
       stop(errorCondition(
         sprintf("A palette function must return at least %d colours; it returned %d.",
                 n, length(out)),
-        class = "dynet_bad_palette", call = NULL))
+        class = c("dynet_bad_palette", "dynet_bad_input"), call = NULL))
     }
     return(.check_colours(out[seq_len(n)]))
   }
   if (!is.character(palette) || length(palette) == 0L) {
     stop(errorCondition(
       "`palette` must be \"okabe\", \"extended\", \"many\", a vector of colours, or a function of n.",
-      class = "dynet_bad_palette", call = NULL))
+      class = c("dynet_bad_palette", "dynet_bad_input"), call = NULL))
   }
   if (length(palette) == 1L && palette %in% c("okabe", "extended", "many")) {
     return(switch(palette,
@@ -85,8 +85,8 @@
 
 #' Reject anything R cannot render as a colour
 #' @param x Character vector.
-#' @return `x` with its names dropped. Raises `dynet_bad_palette` naming every
-#'   value `grDevices::col2rgb()` refuses.
+#' @return `x` with its names dropped. Raises `dynet_bad_palette` (a
+#'   `dynet_bad_input`) naming every value `grDevices::col2rgb()` refuses.
 #' @noRd
 .check_colours <- function(x) {
   ok <- vapply(x, function(v) {
@@ -95,7 +95,7 @@
   if (!all(ok)) {
     stop(errorCondition(
       sprintf("Not a colour: %s", paste(unique(x[!ok]), collapse = ", ")),
-      class = "dynet_bad_palette", call = NULL))
+      class = c("dynet_bad_palette", "dynet_bad_input"), call = NULL))
   }
   unname(x)
 }
@@ -195,7 +195,7 @@
 #'   *Color Research and Application*, 24(4), 243-252.
 #' @noRd
 .simulate_cvd <- function(colours, type = c("deutan", "protan")) {
-  type <- match.arg(type)
+  type <- .match_choice(type)
   rgb_in <- t(grDevices::col2rgb(colours)) / 255
   lin <- ifelse(rgb_in <= 0.04045, rgb_in / 12.92, ((rgb_in + 0.055) / 1.055)^2.4)
   to_lms <- matrix(c(17.8824, 43.5161, 4.11935,
@@ -243,4 +243,57 @@
 #' @noRd
 .vertex_colours <- function(vertices, palette = "okabe") {
   stats::setNames(.dyn_palette(palette, length(vertices)), vertices)
+}
+
+
+#' Warn when more series are drawn than the styling can tell apart
+#'
+#' A qualitative palette recycles once it runs out of colours, and so does a
+#' set of line types. That is acceptable only while the combination still
+#' tells every series apart, or something else -- a direct label, an axis
+#' position -- identifies them. Where nothing else does, two series drawn
+#' identically is a silent failure of the picture, so it is reported.
+#'
+#' @param series Labels of the series being drawn, one per series.
+#' @param colours Colour of each series, parallel to `series`.
+#' @param linetypes Optional second channel, parallel to `series`; `NULL`
+#'   when colour is the only one.
+#' @param what Plural noun for the series in the message.
+#' @return `TRUE` invisibly when a warning of class `dynet_palette_recycled`
+#'   was raised, `FALSE` invisibly otherwise.
+#' @noRd
+.warn_recycled_style <- function(series, colours, linetypes = NULL,
+                                 what = "series") {
+  style <- if (is.null(linetypes)) colours else paste(colours, linetypes)
+  n_series <- length(unique(series))
+  n_style <- length(unique(style))
+  if (n_style >= n_series) return(invisible(FALSE))
+  warning(warningCondition(
+    sprintf(paste0(
+      "%d %s but only %d distinct %s, so some are drawn identically. ",
+      "Draw fewer with `top` or `highlight`, or pass `palette = \"many\"`."),
+      n_series, what, n_style,
+      if (is.null(linetypes)) "colours" else "colour and line-type combinations"),
+    class = "dynet_palette_recycled"))
+  invisible(TRUE)
+}
+
+#' Lighten a colour towards white
+#'
+#' Sequential fills start from a pale tint of an Okabe-Ito colour rather than
+#' from pure white, so the smallest drawn value still shows against a white
+#' panel. Deriving the tint keeps every colour in the package traceable to
+#' the Okabe-Ito set instead of to a hand-typed hex code.
+#'
+#' @param colour A single colour R can render.
+#' @param share How much of `colour` to keep, between 0 (white) and 1 (the
+#'   colour itself).
+#' @return A single hex colour string.
+#' @noRd
+.tint <- function(colour, share) {
+  .check("`share` must be one number between 0 and 1." =
+           length(share) == 1L && is.numeric(share) && is.finite(share) &&
+             share >= 0 && share <= 1)
+  mixed <- 255 - share * (255 - grDevices::col2rgb(.check_colours(colour)))
+  grDevices::rgb(mixed[1L], mixed[2L], mixed[3L], maxColorValue = 255)
 }

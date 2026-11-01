@@ -126,7 +126,8 @@
       if (length(unknown) == 1L) "a vertex" else "vertices",
       if (length(unknown) == 1L) "is" else "are",
       paste(sQuote(utils::head(unknown, 5L)), collapse = ", ")),
-      class = "dynet_unknown_node", call = NULL))
+      class = c("dynet_unknown_node", "dynet_bad_input"),
+      call = NULL))
   }
   blocked <- !is.na(supra$blocks[[1L]]$session)
   if (blocked && !"session" %in% names(membership)) {
@@ -256,9 +257,8 @@
 #' @examples
 #' dn <- dynet(school_contacts)
 #' multislice_modularity(dn, step = 5, window = 5)
-#' multislice_modularity(dn, membership = temporal_communities(
-#'   dn, step = 5, window = 5, seeds = 1:3
-#' ), step = 5, window = 5)
+#' found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:3)
+#' multislice_modularity(dn, membership = found, step = 5, window = 5)
 #'
 #' @export
 multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
@@ -267,8 +267,8 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
                                                "separate"),
                                   start = NULL, end = NULL, step = NULL,
                                   window = NULL) {
-  coupling <- match.arg(coupling)
-  sessions <- match.arg(sessions)
+  coupling <- .match_choice(coupling)
+  sessions <- .match_choice(sessions)
   .check(
     "`gamma` must be a single non-negative finite number." =
       is.numeric(gamma) && length(gamma) == 1L && is.finite(gamma) &&
@@ -323,9 +323,15 @@ multislice_modularity <- function(dn, membership = NULL, gamma = 1, omega = 1,
 as.data.frame.dynet_modularity <- function(x, row.names = NULL,
                                            optional = FALSE,
                                            what = c("total", "bins"), ...) {
-  what <- match.arg(what)
-  if (identical(what, "bins")) return(attr(x, "bins"))
-  NextMethod()
+  what <- .match_choice(what)
+  if (identical(what, "bins")) {
+    out <- attr(x, "bins")
+    rownames(out) <- NULL
+    return(out)
+  }
+  # Not NextMethod(): that would forward `what = "total"` to the dynet_metric
+  # method, whose choices do not include it.
+  as.data.frame.dynet_metric(x, ...)
 }
 
 #' The multislice quality function, given assembled slices and labels
@@ -398,7 +404,8 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
   if (!(two_mu > 0)) {
     stop(errorCondition(
       "Multislice modularity is undefined: this grid has no edges and no interlayer coupling, so its normaliser is zero.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"),
+      call = NULL))
   }
   intra <- sum(vapply(per_block, function(x) x$intra, numeric(1L))) / two_mu
   inter <- sum(vapply(per_block, function(x) x$inter, numeric(1L))) / two_mu
@@ -510,18 +517,29 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 
   # Phase two onwards, on the aggregated modularity matrix.
   pass <- 1L
+  # Converged means a pass found nothing left to merge. Running out of passes
+  # first is a different outcome and is reported, not returned as if final.
+  converged <- FALSE
   while (pass < max_passes) {
     codes <- match(memb, sort(unique(memb)))
     n_comm <- max(codes)
-    if (n_comm < 2L) break
+    if (n_comm < 2L) {
+      converged <- TRUE
+      break
+    }
     b <- .aggregate_modularity(layers, codes, k, two_m, gamma, omega,
                                partners, n_comm)
     super <- .louvain_dense(b, tol)
-    if (max(super) == n_comm) break
+    if (max(super) == n_comm) {
+      converged <- TRUE
+      break
+    }
     memb <- super[codes]
     pass <- pass + 1L
   }
-  list(membership = match(memb, sort(unique(memb))), passes = pass)
+  if (!converged && length(unique(memb)) < 2L) converged <- TRUE
+  list(membership = match(memb, sort(unique(memb))), passes = pass,
+       converged = converged)
 }
 
 #' Aggregate the multislice modularity matrix over a partition
@@ -887,7 +905,12 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #'   auditable; and `event` records what happened to this state's community at
 #'   this bin, one of `"born"`, `"persist"`, `"split"` or `"merge"`. The
 #'   community-level lifecycle table, which also carries `"dissolve"`, is
-#'   `as.data.frame(x, what = "events")`.
+#'   `as.data.frame(x, what = "events")`: one row per community per bin with
+#'   `time`, `community` (the matched label), `event`, `size`, `overlap` (the
+#'   score of the pairing that decided the event, zero for a birth) and
+#'   `matched_from`, the matched label of the predecessor -- the community
+#'   itself for a continuation, the parent for a splinter, `NA` for a birth or
+#'   a dissolution.
 #'
 #' @details
 #' Overlaps are computed only over the vertices active in **both** bins, so a
@@ -931,8 +954,8 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 match_communities <- function(x, method = c("hungarian", "greedy"),
                               overlap = c("jaccard", "intersection"),
                               threshold = 0.1) {
-  method <- match.arg(method)
-  overlap <- match.arg(overlap)
+  method <- .match_choice(method)
+  overlap <- .match_choice(overlap)
   .check(
     "`x` must be a data frame with `time`, `node` and `community` columns." =
       is.data.frame(x) && all(c("time", "node", "community") %in% names(x)),
@@ -998,7 +1021,10 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
             target <- as.character(new[[column]])
             inherit[[target]] <- previous$inherit[[as.character(old[[r]])]]
             score[[target]] <- weight[r, column]
-            source[[target]] <- old[[r]]
+            # The predecessor by its matched label, the one the events table
+            # and `community` speak in. Its raw per-bin code would be a
+            # number the caller has no way to look up.
+            source[[target]] <- previous$inherit[[as.character(old[[r]])]]
             kind[[target]] <- if (out_degree[[r]] > 1) {
               "split"
             } else if (in_degree[[column]] > 1) {
@@ -1012,7 +1038,14 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
           for (r in which(out_degree > 1)) {
             for (column in which(weight[r, ] > threshold)) {
               target <- as.character(new[[column]])
-              if (identical(kind[[target]], "born")) kind[[target]] <- "split"
+              if (identical(kind[[target]], "born")) {
+                kind[[target]] <- "split"
+                # A splinter has a parent even though it did not inherit the
+                # label; recording it is what lets the events table be read
+                # as a lineage.
+                score[[target]] <- weight[r, column]
+                source[[target]] <- previous$inherit[[as.character(old[[r]])]]
+              }
             }
           }
         }
@@ -1028,6 +1061,7 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
                                              decreasing = TRUE))[[1L]])
           if (plurality %in% inherit) next
           inherit[[target]] <- plurality
+          source[[target]] <- plurality
           kind[[target]] <- "persist"
         }
       }
@@ -1131,6 +1165,7 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
                              tol = tol, max_passes = max_passes)
     labels <- matrix(fit$membership + offset, n, n_slices,
                      dimnames = list(supra$nodes, NULL))
+    attr(labels, "converged") <- fit$converged
     offset <<- offset + max(fit$membership)
     labels
   })
@@ -1227,10 +1262,21 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
 #' label rather than being dropped, which would break the chain. The `active`
 #' column marks those states.
 #'
+#' *Warnings.* `dynet_single_seed` for one seed; `dynet_no_converge` when a
+#' run hits `max_passes` while its communities are still merging, or when
+#' `method = "consensus"` has not reached agreement after `max_passes` rounds;
+#' `dynet_empty_slice` when `omega = 0` and a bin has no edges, since every
+#' partition of such a bin scores the same and its labels are arbitrary.
+#' `attr(x, "n_empty_slices")` records how many bins had no edges.
+#'
 #' *Reproducibility.* The result is a deterministic function of `seeds`: two
 #' calls with the same seeds return identical frames. The caller's random
 #' stream is saved and restored, so running this verb never changes what the
-#' next `sample()` produces.
+#' next `sample()` produces. A seed fixes a visiting order over the states as
+#' they are indexed, which follows the network's vertex order; renaming the
+#' vertices can therefore change which of several near-equal partitions a
+#' seed lands on. A clear community structure is recovered either way.
+#' An ambiguous one is exactly what a low `stability_ari` flags.
 #'
 #' @references
 #' Mucha, P. J., Richardson, T., Macon, K., Porter, M. A., & Onnela, J.-P.
@@ -1280,9 +1326,9 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
                                  start = NULL, end = NULL, step = NULL,
                                  window = NULL,
                                  max_passes = 20L, tol = 1e-10) {
-  method <- match.arg(method)
-  coupling <- match.arg(coupling)
-  sessions <- match.arg(sessions)
+  method <- .match_choice(method)
+  coupling <- .match_choice(coupling)
+  sessions <- .match_choice(sessions)
   .check(
     "`gamma` must be a single non-negative finite number." =
       is.numeric(gamma) && length(gamma) == 1L && is.finite(gamma) &&
@@ -1318,6 +1364,16 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
                  unique(unlist(lapply(r$labels, as.vector)))))
   })
   q_runs <- vapply(runs, function(r) r$q, numeric(1L))
+  capped <- sum(vapply(runs, function(r) {
+    !all(vapply(r$labels, function(g) isTRUE(attr(g, "converged")),
+                logical(1L)))
+  }, logical(1L)))
+  if (capped > 0L) {
+    warning(warningCondition(sprintf(
+      "%d of %d runs stopped at `max_passes = %d` while their communities were still merging, so the reported partition may not be a local optimum. Raise `max_passes`.",
+      capped, length(runs), as.integer(max_passes)),
+      class = "dynet_no_converge", call = NULL))
+  }
   if (identical(method, "consensus")) {
     labels <- .consensus_partition(supra, flat, gamma, omega, coupling, tol,
                                    max_passes, seeds)
@@ -1355,6 +1411,18 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
   attr(out, "matched") <- FALSE
   attr(out, "time_unit") <- dn$meta$time_unit
   attr(out, "spec") <- list(step = p$meta$step, window = p$meta$window)
+  attr(out, "n_empty_slices") <- quality$n_empty_slices
+  if (omega == 0 && quality$n_empty_slices > 0L) {
+    # Every partition of an edgeless, uncoupled slice scores the same, so the
+    # labels there are whatever the optimiser started from -- singletons --
+    # and matching would read that as every community splitting at once.
+    warning(warningCondition(sprintf(
+      "%d bin%s no edges, and with `omega = 0` nothing ties %s states to a community: every vertex there is its own community, which match_communities() will report as splits and dissolutions. Use `omega > 0` to carry labels through quiet bins, or a coarser grid.",
+      quality$n_empty_slices,
+      if (quality$n_empty_slices == 1L) " has" else "s have",
+      if (quality$n_empty_slices == 1L) "its" else "their"),
+      class = "dynet_empty_slice", call = NULL))
+  }
   if (omega == 0) {
     # Uncoupled slices label each bin on its own, so the integers mean nothing
     # across bins until they are matched. Returning them raw would invite
@@ -1420,7 +1488,8 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
     stop(errorCondition(sprintf(
       "Consensus clustering needs the %d x %d co-classification matrix of all states, which is too large here. Use method = \"louvain\", or a coarser grid.",
       n_states, n_states),
-      class = "dynet_too_large", call = NULL))
+      class = c("dynet_too_large", "dynet_bad_input"),
+      call = NULL))
   }
   runs <- flat
   # Each round re-clusters the agreement of the last; it stops as soon as the
@@ -1447,6 +1516,15 @@ temporal_communities <- function(dn, gamma = 1, omega = 1,
     if (length(unique(lapply(runs, function(g) match(g, unique(g))))) == 1L) {
       break
     }
+  }
+  # Leaving the loop on the round cap with the runs still disagreeing means
+  # there is no consensus, only the first run's answer; say so.
+  canonical <- lapply(runs, function(g) match(g, unique(g)))
+  if (length(unique(canonical)) > 1L) {
+    warning(warningCondition(sprintf(
+      "Consensus clustering did not reach agreement in %d rounds; the partition reported is the first run's. Raise `max_passes` or use method = \"louvain\".",
+      as.integer(max_passes)),
+      class = "dynet_no_converge", call = NULL))
   }
   consensus <- runs[[1L]]
   used <- 0L
@@ -1538,7 +1616,7 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
                                             what = c("membership", "sizes",
                                                      "runs", "events"),
                                             ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   plain <- x
   attributes(plain) <- NULL
   plain <- as.data.frame(unclass(x)[names(x)], stringsAsFactors = FALSE)
@@ -1555,7 +1633,14 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
       counts <- stats::aggregate(list(n_nodes = plain$node), keys, length)
       active <- stats::aggregate(list(n_active = plain$active), keys, sum)
       out <- merge(counts, active, by = names(keys))
-      out[order(out$time, out$community), , drop = FALSE]
+      key <- if ("session" %in% names(out)) {
+        order(out$session, out$time, out$community)
+      } else {
+        order(out$time, out$community)
+      }
+      out <- out[key, , drop = FALSE]
+      rownames(out) <- NULL
+      out
     },
     runs = {
       q_runs <- attr(x, "q_runs")
@@ -1693,7 +1778,7 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
                                             "split_join", "jaccard",
                                             "omega_index", "uami", "iami"),
                              against = c("previous", "first", "all")) {
-  against <- match.arg(against)
+  against <- .match_choice(against)
   .check(
     "`x` must be a data frame with `time`, `node` and `community` columns." =
       is.data.frame(x) && all(c("time", "node", "community") %in% names(x)),
@@ -1707,7 +1792,8 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
     stop(errorCondition(sprintf(
       "Unknown measure %s. Available: %s.",
       paste(sQuote(unknown), collapse = ", "), paste(known, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"),
+      call = NULL))
   }
   active <- if ("active" %in% names(x)) x$active else rep(TRUE, nrow(x))
   blocked <- "session" %in% names(x)
@@ -1835,7 +1921,8 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
   if (n_bins < 2L) {
     stop(errorCondition(
       "Flexibility and persistence compare each bin with the one before it, so they need at least two bins. This partition has one.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"),
+      call = NULL))
   }
   stayed <- labels[, -n_bins, drop = FALSE] == labels[, -1L, drop = FALSE]
   distinct <- vapply(seq_len(n), function(i) length(unique(labels[i, ])),
@@ -1952,8 +2039,9 @@ community_change <- function(x, measure = c("nmi", "ami", "ari", "vi",
 #' @examples
 #' dn <- dynet(school_contacts)
 #' found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
-#' community_trajectory(found)
-#' as.data.frame(community_trajectory(found), what = "time")
+#' trajectory <- community_trajectory(found)
+#' trajectory
+#' as.data.frame(trajectory, what = "time")
 #'
 #' @export
 community_trajectory <- function(x,
@@ -1973,13 +2061,15 @@ community_trajectory <- function(x,
     stop(errorCondition(sprintf(
       "Unknown measure %s. Available: %s.",
       paste(sQuote(unknown), collapse = ", "), paste(known, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"),
+      call = NULL))
   }
   coupled <- isTRUE((attr(x, "omega") %||% 0) > 0)
   if (!coupled && !isTRUE(attr(x, "matched"))) {
     stop(errorCondition(
       "These community labels are not comparable across bins, so every measure here would be counting relabelling noise. Run match_communities() on this partition first, or detect it with temporal_communities(omega > 0), whose coupling matches the labels inside the objective.",
-      class = "dynet_unmatched_labels", call = NULL))
+      class = c("dynet_unmatched_labels", "dynet_bad_input"),
+      call = NULL))
   }
   wants_reference <- any(c("recruitment", "integration") %in% measure)
   groups <- if (wants_reference) .trajectory_reference(x, reference) else NULL
@@ -1990,7 +2080,8 @@ community_trajectory <- function(x,
     stop(errorCondition(sprintf(
       "Recruitment and integration are built from the %d x %d allegiance matrix, which is too large here. Compute them on a subset of the vertices.",
       length(nodes), length(nodes)),
-      class = "dynet_too_large", call = NULL))
+      class = c("dynet_too_large", "dynet_bad_input"),
+      call = NULL))
   }
   inactive <- if ("active" %in% names(x)) sum(!x$active) else 0L
   per_block <- lapply(unique(keys), function(block) {
@@ -2077,7 +2168,8 @@ community_trajectory <- function(x,
     sQuote(as.character(reference)[[1L]]),
     if (length(have)) paste(sQuote(have), collapse = ", ") else
       "no vertex attributes"),
-    class = "dynet_unknown_attribute", call = NULL))
+    class = c("dynet_unknown_attribute", "dynet_bad_input"),
+      call = NULL))
 }
 
 #' Tidy data frame of community trajectories
@@ -2094,7 +2186,7 @@ as.data.frame.dynet_trajectory <- function(x, row.names = NULL,
                                            optional = FALSE,
                                            what = c("node", "time", "global",
                                                     "allegiance"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   blocks <- attr(x, "blocks")
   nodes <- attr(x, "nodes")
   blocked <- isTRUE(attr(x, "blocked"))

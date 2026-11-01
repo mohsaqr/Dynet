@@ -110,9 +110,9 @@ columns hold the fastest journey's departure and its duration. In both
 cases an unattained optimum keeps its limiting departure, arrival and
 duration but has \code{n_hops = NA} and \code{n_paths = 0}. Under
 \code{criterion = "shortest"} a \code{path_cost} column follows \code{n_paths}: the
-summed cost of the cheapest journey, \code{n_hops} is the fewest hops among
-the cheapest journeys (\code{NA} when they differ), and \code{arrival_time} and
-\code{n_paths} describe the cheapest journeys that arrive earliest. Bounded
+summed cost of the cheapest journey, and \code{arrival_time}, \code{n_hops} and
+\code{n_paths} describe the cheapest journeys that arrive earliest, \code{n_hops}
+being \code{NA} when those differ in length. Bounded
 mode adds \code{path_session} and \code{n_best_sessions}; separate mode adds \code{session} and
 \code{origin}, one complete vertex block per session. Use
 \code{as.data.frame(x, what = "steps")} for every reconstructed optimal route:
@@ -200,7 +200,7 @@ at \code{end}; the empty journey departs from \code{from} at \code{end} itself. 
 \code{"minimum"} for the others, and \code{deadline} records the resolved \code{end}.
 
 A shortest query with weight costs is solved by settling vertex
-appearances in order of accumulated cost (Wu et al., 2016): every cost is
+appearances in order of accumulated cost (Wu et al., 2014): every cost is
 positive, so the cheapest open appearance is final when it is settled and
 every predecessor of an appearance is settled before it, which is what
 makes the journey count exact. Two journeys tie when their summed weights
@@ -230,13 +230,12 @@ exactly at the component terminus is allowed. A point event triggers at its
 timestamp and arrives after the same duration; it does not represent
 continued edge activity. The query \code{end} bounds completion, not only entry.
 
-Optimal forward journeys are shortest foremost: final completion is
-minimised first (foremost) and hop count second (shortest). Backward
-journeys mirror it, maximising the departure time first and minimising hop
-count second. There is no criterion argument: this is the only criterion
-\code{paths()} offers, and it is recorded on the result as
-\code{"foremost_then_shortest"}. A fastest journey, which minimises elapsed time
-rather than arrival time, is a different optimum and is not computed here.
+Under the default criterion, optimal forward journeys are shortest
+foremost: final completion is minimised first (foremost) and hop count
+second (shortest). Backward journeys mirror it, maximising the departure
+time first and minimising hop count second; at the same departure value a
+realised departure beats an unattained supremum. The criterion is recorded
+on the result, and the other criteria are described under \code{criterion}.
 Journey identity is the ordered sequence of canonical oriented contacts.
 Duplicate points, overlapping or
 touching interval segmentation, weights, and waiting schedules do not
@@ -244,7 +243,9 @@ multiply paths; genuinely recurrent contacts do. \code{n_paths} is exact through
 \code{2^53}, after which a \code{dynet_path_overflow} condition is raised. The empty
 journey has one path and an unreachable endpoint has none.
 
-Failures are classed. An unknown \code{from} raises \code{dynet_unknown_vertex}; a
+Failures are classed, and every class below also carries
+\code{dynet_bad_input}. An unknown \code{from} raises \code{dynet_unknown_vertex}, which
+is also a \code{dynet_unknown_node} as in the sibling verbs; a
 \code{from} that is not one name, a negative \code{traversal_time}, combining \code{at}
 with \code{start} or \code{end}, or a window that cannot hold a journey, raises
 \code{dynet_bad_input}; a window disjoint from explicit observation raises
@@ -295,8 +296,4 @@ aspects of temporal betweenness. \emph{Network Science}, 12(2), 160-188.
 Wu, H., Cheng, J., Huang, S., Ke, Y., Lu, Y., & Xu, Y. (2014). Path
 problems in temporal graphs. \emph{Proceedings of the VLDB Endowment}, 7(9),
 721-732.
-
-Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest, fastest,
-and foremost journeys in dynamic networks. \emph{International Journal of
-Foundations of Computer Science}, 14(2), 267-285.
 }

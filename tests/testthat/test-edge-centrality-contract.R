@@ -92,3 +92,58 @@ test_that("relabelling vertices changes no contact score", {
     edge_centrality(rename_nodes(dn, c(Ana = "Zara"))))$value
   expect_equal(sort(before), sort(after))
 })
+
+test_that("the default session-bounded call works on a network with sessions", {
+  # Regression: the bounded search keeps one search per session and carries
+  # no atoms of its own, so the census used to fail with an unclassed
+  # data.frame error on every network that has sessions.
+  edges <- data.frame(from = c("A", "B", "A", "B"), to = c("B", "C", "B", "C"),
+                      start = c(1, 2, 11, 12), end = c(1, 2, 11, 12),
+                      session = c("s1", "s1", "s2", "s2"))
+  dn <- quiet_dynet(edges, session = "session")
+  out <- edge_centrality(dn)
+  expect_s3_class(out, "dynet_metric")
+  table <- as.data.frame(out)
+  expect_identical(nrow(table), 4L)
+  # Only the foremost session carries the A -> C journeys.
+  expect_equal(table$value, c(2, 2, 0, 0))
+})
+
+test_that("the vertex identity holds under sessions and vertex spells", {
+  for (seed in 1:4) {
+    edges <- random_edges(n_v = 7L, n_e = 30L, seed = seed)
+    edges$session <- ifelse(edges$start < 10, "s1", "s2")
+    spells <- data.frame(node = paste0("v", 1:7),
+                         start = c(0, 3, 0, 5, 0, 0, 8),
+                         end = c(30, 30, 12, 30, 30, 15, 30))
+    dn <- quiet_dynet(edges, session = "session", vertex_spells = spells)
+    for (scope in c("bounded", "collapse")) {
+      contacts <- as.data.frame(edge_centrality(dn, sessions = scope))
+      nodes <- as.data.frame(path_centrality(dn, measure = "betweenness",
+                                             sessions = scope))
+      reach <- as.data.frame(reachability(dn, measure = "reach_count",
+                                          direction = "backward",
+                                          sessions = scope))
+      into <- vapply(nodes$node, function(v) {
+        sum(contacts$value[contacts$to == v])
+      }, numeric(1L))
+      expect_equal(unname(into),
+                   nodes$value + reach$value[match(nodes$node, reach$node)],
+                   info = paste(seed, scope))
+    }
+  }
+})
+
+test_that("a source departs from its own first presence, as in path_centrality", {
+  # A is present only from t = 5, so its journeys A -> C (6) and A -> C -> D
+  # (7) count; anchoring at the window start used to drop both.
+  dn <- quiet_dynet(
+    data.frame(from = c("A", "A", "B", "C"), to = c("B", "C", "C", "D"),
+               start = c(1, 6, 2, 7), end = c(1, 6, 2, 7)),
+    vertex_spells = data.frame(node = c("A", "B", "C", "D"),
+                               start = c(5, 0, 0, 0), end = 10))
+  out <- as.data.frame(edge_centrality(dn))
+  expect_equal(out$value[out$from == "A" & out$to == "C"], 2)
+  expect_equal(out$value[out$from == "C" & out$to == "D"], 3)
+  expect_equal(out$value[out$from == "A" & out$to == "B"], 0)
+})

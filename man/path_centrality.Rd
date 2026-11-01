@@ -166,8 +166,14 @@ triggers at its timestamp and reaches its endpoint after that duration.
 session outside a one-sided bound contributes zero rows.
 
 Efficiency is the mean reciprocal temporal distance from a vertex to every
-other vertex (\code{mode = "out"}), or to it from every other (\code{mode = "in"}),
-with the distance the \code{criterion} optimises. Unreachable vertices
+other vertex (\code{mode = "out"}), or to it from every other (\code{mode = "in"}).
+The distance is always a hop count: the number of contacts on the journey
+the \code{criterion} selects. Under \code{"min_hops"} that is the fewest hops; under
+the default it is the hop count of the shortest foremost journey, which can
+exceed the fewest, and under \code{"shortest"} with weight costs it is the hop
+count of the cheapest journey. This keeps every reciprocal in \verb{(0, 1]} and
+makes the vertex values average to
+\code{metrics(measure = "temporal_efficiency", basis = "hops")}. Unreachable vertices
 contribute zero rather than being dropped, so it is defined on a
 disconnected network; it is therefore not the reciprocal of closeness,
 which averages over reachable vertices only.

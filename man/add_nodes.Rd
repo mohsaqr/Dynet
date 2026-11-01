@@ -9,8 +9,8 @@ add_nodes(dn, data)
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{data}{A character vector of new node names or a data frame containing
-a \code{name} column and optional static attributes.}
+\item{data}{A character vector or factor of new node names, or a data
+frame containing a \code{name} column and optional static attributes.}
 }
 \value{
 A new \code{dynet} object, of the same class and structure as the input,

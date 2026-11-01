@@ -9,7 +9,8 @@ remove_nodes(dn, nodes, cascade = FALSE)
 \arguments{
 \item{dn}{A temporal network from \code{\link[=dynet]{dynet()}}.}
 
-\item{nodes}{Character node names.}
+\item{nodes}{Node names: a character vector, a factor, or a data frame
+carrying a \code{name} or \code{node} column.}
 
 \item{cascade}{Whether to remove every incident temporal tie and vertex
 activity spell. The safe default, \code{FALSE}, rejects nodes that are not

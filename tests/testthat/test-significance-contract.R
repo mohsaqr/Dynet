@@ -167,3 +167,98 @@ test_that("significance ships the four result methods", {
   skip_if_not_installed("ggplot2")
   expect_s3_class(plot(s), "ggplot")
 })
+
+# ---------------------------------------------------------------------------
+# Regressions from the 2026-11-01 audit
+# ---------------------------------------------------------------------------
+
+test_that("a seed or an unknown correction is refused, not ignored", {
+  dn <- dynet(school_contacts, format = "contact")
+  null <- randomise(dn, method = "times", n = 9, seed = 1)
+  expect_error(significance(null, statistic = metrics, measure = "density",
+                            seed = 5),
+               class = "dynet_bad_input")
+  expect_error(significance(dn, statistic = metrics, measure = "density",
+                            n = 9, seed = 1, p_adjust = "nonsense"),
+               class = "dynet_bad_input")
+})
+
+test_that("a foreign error is raised and a package refusal is counted", {
+  dn <- dynet(school_contacts, format = "contact")
+  null <- randomise(dn, method = "times", n = 8, seed = 1)
+  broken <- function(dn, ...) {
+    if (!is.null(dn$meta$surrogate)) stop("boom")
+    metrics(dn, measure = "density", window = "all")
+  }
+  expect_error(significance(null, statistic = broken),
+               class = "dynet_statistic_failed")
+  refusing <- function(dn, ...) {
+    if (isTRUE(dn$meta$surrogate$replicate %% 2 == 0)) {
+      stop(errorCondition("no bins",
+                          class = c("dynet_empty_result", "dynet_bad_input")))
+    }
+    metrics(dn, measure = "density", window = "all")
+  }
+  expect_warning(s <- significance(null, statistic = refusing),
+                 class = "dynet_null_incomplete")
+  expect_identical(as.data.frame(s)$n_null, 4)
+})
+
+test_that("the null distribution is a tidy table that reproduces the summary", {
+  dn <- dynet(school_contacts, format = "contact")
+  s <- suppressWarnings(significance(
+    dn, statistic = metrics, measure = c("density", "reciprocity"),
+    n = 19, seed = 1))
+  result <- as.data.frame(s)
+  null <- as.data.frame(s, what = "null")
+  expect_identical(names(null), c("time", "measure", "replicate", "value"))
+  expect_identical(nrow(null), nrow(result) * 19L)
+  means <- aggregate(value ~ time + measure, data = null, FUN = mean)
+  both <- merge(means, result, by = c("time", "measure"))
+  expect_equal(both$value, both$null_mean)
+  expect_identical(as.data.frame(s, what = "result"), result)
+})
+
+test_that("a planted signal is detected in the documented direction only", {
+  # Every pair fires eight times within one time unit and twice at random over
+  # a hundred, so its burstiness is far above what time shuffling leaves.
+  old <- if (exists(".Random.seed", globalenv())) get(".Random.seed", globalenv())
+  on.exit(if (!is.null(old)) assign(".Random.seed", old, globalenv()),
+          add = TRUE)
+  set.seed(11)
+  planted <- do.call(rbind, lapply(1:10, function(i) {
+    centre <- stats::runif(1, 0, 100)
+    data.frame(from = paste0("v", i), to = paste0("v", i %% 10 + 1),
+               time = round(sort(c(centre + stats::runif(8, 0, 1),
+                                   stats::runif(2, 0, 100))), 3))
+  }))
+  dn <- quiet_dynet(planted, format = "contact")
+  greater <- as.data.frame(suppressWarnings(significance(
+    dn, statistic = burstiness, measure = "burstiness", n = 199, seed = 1,
+    alternative = "greater")))
+  less <- as.data.frame(suppressWarnings(significance(
+    dn, statistic = burstiness, measure = "burstiness", n = 199, seed = 1,
+    alternative = "less")))
+  expect_true(all(greater$z > 0))
+  expect_lt(stats::median(greater$p), 0.1)
+  expect_gt(min(less$p), 0.5)
+  # Aggregate density over the whole window is invariant under time
+  # shuffling, so its p-value is exactly one whatever the seed.
+  invariant <- as.data.frame(significance(
+    dn, statistic = metrics, measure = "density", window = "all", n = 49,
+    seed = 3))
+  expect_identical(invariant$p, 1)
+  expect_true(is.na(invariant$z))
+})
+
+test_that("the plots build without data-masking warnings", {
+  skip_if_not_installed("ggplot2")
+  dn <- dynet(school_contacts, format = "contact")
+  s <- suppressWarnings(significance(dn, statistic = metrics,
+                                     measure = "density", n = 19, seed = 1))
+  for (type in c("null", "series", "z")) {
+    expect_no_warning(ggplot2::ggplot_build(plot(s, type = type)))
+  }
+  null <- randomise(dn, method = "times", n = 3, seed = 1)
+  expect_no_warning(ggplot2::ggplot_build(plot(null)))
+})

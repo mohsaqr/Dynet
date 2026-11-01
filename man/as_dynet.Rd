@@ -3,11 +3,14 @@
 \name{as_dynet}
 \alias{as_dynet}
 \alias{as_dynet.dynet}
+\alias{as_dynet.default}
 \title{Convert an object to a Dynet temporal network}
 \usage{
 as_dynet(x, ...)
 
 \method{as_dynet}{dynet}(x, ...)
+
+\method{as_dynet}{default}(x, ...)
 }
 \arguments{
 \item{x}{An object representing a temporal network.}
@@ -24,7 +27,10 @@ object that is already a temporal network.
 \description{
 Imports a temporal network held in another R representation, so that every
 Dynet verb applies to it. A method is supplied for \code{networkDynamic}
-objects; the method for \code{dynet} is the identity.
+objects; the method for \code{dynet} is the identity. Any other object raises a
+condition of class \code{dynet_unsupported_class} (inheriting from
+\code{dynet_bad_input}); build a temporal network from a relational log with
+\code{\link[=dynet]{dynet()}} instead.
 }
 \examples{
 dn <- dynet(data.frame(from = "A", to = "B", start = 0, end = 1))

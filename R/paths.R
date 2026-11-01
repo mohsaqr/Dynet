@@ -170,6 +170,23 @@
   enc
 }
 
+#' Tolerant strict ordering of two times
+#'
+#' `a` before `b` and not within their pair's `.time_tol()` of it: the strict
+#' counterpart of `.time_leq()`. A computed arrival such as `0.1 + 0.2` and a
+#' recorded `0.3` are the same instant, so neither is before the other.
+#'
+#' @param a,b Numeric times, recycled as usual.
+#' @return A logical vector, `NA` where either is `NA`.
+#' @noRd
+.path_time_lt <- function(a, b) a < b & !.time_eq(a, b)
+
+#' Tolerant strict "after" of two times
+#' @param a,b Numeric times, recycled as usual.
+#' @return A logical vector, `NA` where either is `NA`.
+#' @noRd
+.path_time_gt <- function(a, b) a > b & !.time_eq(a, b)
+
 #' Whether a vertex is eligible at an exact path time
 #' @param activity Internal V03 activity context, or `NULL`.
 #' @param vertex Integer vertex ID.
@@ -180,14 +197,16 @@
   if (is.null(activity) || !activity$declared[[vertex]]) return(TRUE)
   observations <- activity$observations
   if (!is.null(observations) && !any(
-    time >= observations$start & time <= observations$end
+    .time_geq(time, observations$start) & .time_leq(time, observations$end)
   )) return(TRUE)
   rows <- which(activity$node == vertex)
   if (!length(rows)) return(FALSE)
   positive <- !activity$instant[rows]
-  any((positive & activity$start[rows] <= time &
-         time < activity$end[rows]) |
-        (!positive & activity$start[rows] == time))
+  # `time` is often a computed arrival (entry plus traversal), so it is
+  # compared with the recorded spell bounds under the time tolerance.
+  any((positive & .time_leq(activity$start[rows], time) &
+         .path_time_lt(time, activity$end[rows])) |
+        (!positive & .time_eq(activity$start[rows], time)))
 }
 
 #' Positive activity components that can support interval traversal
@@ -356,11 +375,11 @@
   # accumulated rightmost component.
   for (i in 2:nrow(domains)) {
     last <- nrow(out)
-    if (domains$start[[i]] <= out$end[[last]]) {
-      if (domains$end[[i]] > out$end[[last]]) {
+    if (.time_leq(domains$start[[i]], out$end[[last]])) {
+      if (.path_time_gt(domains$end[[i]], out$end[[last]])) {
         out$end[[last]] <- domains$end[[i]]
         out$end_closed[[last]] <- domains$end_closed[[i]]
-      } else if (domains$end[[i]] == out$end[[last]]) {
+      } else if (.time_eq(domains$end[[i]], out$end[[last]])) {
         out$end_closed[[last]] <- out$end_closed[[last]] ||
           domains$end_closed[[i]]
       }
@@ -436,16 +455,16 @@
       closed <- vapply(seq_along(hi), function(i) {
         x <- hi[[i]]
         y <- x + traversal_time
-        x >= lo[[i]] && .time_leq(y, atoms$end[[row]]) &&
+        .time_geq(x, lo[[i]]) && .time_leq(y, atoms$end[[row]]) &&
           .time_geq(cross$end_tail[[i]], y) && .time_geq(cross$end_head[[i]], y) &&
           .path_vertex_active(activity, from, y) &&
           .path_vertex_active(activity, to, y)
       }, logical(1L))
-      keep <- hi > lo
+      keep <- .path_time_gt(hi, lo)
       if (any(keep)) pieces <- data.frame(
         start = lo[keep], end = hi[keep], end_closed = closed[keep]
       )
-      point <- hi == lo & closed
+      point <- .time_eq(hi, lo) & closed
       if (any(point)) pieces <- rbind(
         pieces, data.frame(start = lo[point], end = hi[point],
                            end_closed = TRUE)
@@ -464,7 +483,7 @@
 .path_forward_entry <- function(domains, ready) {
   if (!nrow(domains)) return(NA_real_)
   candidate <- pmax(ready, domains$start)
-  usable <- candidate < domains$end |
+  usable <- .path_time_lt(candidate, domains$end) |
     (.time_eq(candidate, domains$end) & domains$end_closed)
   if (!any(usable)) return(NA_real_)
   min(candidate[usable])
@@ -490,9 +509,10 @@
     return(c(value = value, attained = !is.na(value)))
   }
   if (!nrow(domains)) return(c(value = NA_real_, attained = FALSE))
-  inside <- domains$start < ready & ready <= domains$end
-  later <- domains$start >= ready &
-    (domains$start < domains$end | domains$end_closed)
+  inside <- .path_time_lt(domains$start, ready) &
+    .time_leq(ready, domains$end)
+  later <- .time_geq(domains$start, ready) &
+    (.path_time_lt(domains$start, domains$end) | domains$end_closed)
   if (any(inside)) return(c(value = ready, attained = FALSE))
   if (!any(later)) return(c(value = NA_real_, attained = FALSE))
   c(value = min(domains$start[later]), attained = TRUE)
@@ -512,12 +532,12 @@
   }
   cap <- bound - traversal_time
   candidate <- pmin(domains$end, cap)
-  membership <- candidate >= domains$start &
-    (candidate < domains$end |
+  membership <- .time_geq(candidate, domains$start) &
+    (.path_time_lt(candidate, domains$end) |
        (.time_eq(candidate, domains$end) & domains$end_closed))
-  downstream <- candidate + traversal_time < bound |
+  downstream <- .path_time_lt(candidate + traversal_time, bound) |
     (.time_eq(candidate + traversal_time, bound) & bound_attained)
-  possible <- candidate > domains$start |
+  possible <- .path_time_gt(candidate, domains$start) |
     (.time_eq(candidate, domains$start) & membership & downstream)
   if (!any(possible)) return(c(value = -Inf, attained = FALSE))
   value <- max(candidate[possible])
@@ -563,7 +583,7 @@
   if (any(left > limit - right)) {
     stop(errorCondition(
       "The number of optimal temporal paths exceeds the exact counting limit (2^53).",
-      class = "dynet_path_overflow", call = NULL
+      class = c("dynet_path_overflow", "dynet_bad_input"), call = NULL
     ))
   }
   left + right
@@ -623,7 +643,7 @@
                                  criterion = "foremost_then_shortest",
                                  max_states = 1e5, origin_attained = TRUE,
                                  prepared = NULL, abandon = NULL) {
-  direction <- match.arg(direction)
+  direction <- .match_choice(direction)
   prepared <- prepared %||% .path_search_tables(enc, traversal_time)
   atoms <- prepared$atoms
   domains <- prepared$domains
@@ -678,20 +698,31 @@
     optimum <- ahead$arrival
     live <- which(is.finite(optimum))
     completion <- matrix(if (forward) -Inf else Inf, n, n)
+    # An optimum that no journey attains (a backward supremum at an
+    # interval's excluded terminus) is approached from below, so the
+    # completion search starts from an open origin; anchored exactly at the
+    # supremum it would refuse the very interval every such journey uses and
+    # prune live prefixes. When even the open anchor is invalid, that
+    # endpoint prunes nothing, which keeps the enumeration exact.
     completion[, live] <- vapply(live, function(endpoint) {
-      .optimal_path_search(
+      open_optimum <- !isTRUE(ahead$attained[[endpoint]])
+      back <- .optimal_path_search(
         enc, endpoint, optimum[[endpoint]],
         if (forward) "backward" else "forward", lower, upper, traversal_time,
-        prepared = prepared
-      )$arrival
+        prepared = prepared, origin_attained = !open_optimum
+      )
+      if (open_optimum && !isTRUE(back$anchor_valid)) {
+        return(rep(if (forward) Inf else -Inf, n))
+      }
+      back$arrival
     }, numeric(n))
   }
   prefix_alive <- function(v, value, set) {
-    if (value == optimum[[v]]) return(TRUE)
+    if (isTRUE(.time_eq(value, optimum[[v]]))) return(TRUE)
     open <- setdiff(live, set)
     if (!length(open)) return(FALSE)
-    if (forward) any(value <= completion[v, open]) else
-      any(value >= completion[v, open])
+    if (forward) any(.time_leq(value, completion[v, open])) else
+      any(.time_geq(value, completion[v, open]))
   }
 
   # Vectorised over candidates: a parent's keys are built in one call.
@@ -737,7 +768,8 @@
           "Raise `max_states` or use criterion = \"foremost_then_shortest\"."),
           sQuote(criterion), sQuote(enc$names[[source]]),
           format(max_states, big.mark = ",")),
-        class = "dynet_path_family_too_large", call = NULL
+        class = c("dynet_path_family_too_large", "dynet_bad_input"),
+        call = NULL
       ))
     }
     vertex[[id]] <<- v
@@ -783,13 +815,15 @@
       e <- single_end[r]
       if (isTRUE(ready_attained)) {
         candidate <- pmax(ready, s)
-        usable <- candidate < e | (.time_eq_each(candidate, e) & single_closed[r])
+        usable <- .path_time_lt(candidate, e) |
+          (.time_eq_each(candidate, e) & single_closed[r])
         candidate[is.na(usable) | !usable] <- NA_real_
         value[one] <- candidate
         realised[one] <- !is.na(candidate)
       } else {
-        inside <- s < ready & ready <= e
-        later <- s >= ready & (s < e | single_closed[r])
+        inside <- .path_time_lt(s, ready) & .time_leq(ready, e)
+        later <- .time_geq(s, ready) &
+          (.path_time_lt(s, e) | single_closed[r])
         value[one] <- ifelse(inside, ready, ifelse(later, s, NA_real_))
         realised[one] <- !inside & later
       }
@@ -817,11 +851,12 @@
       s <- single_start[r]
       e <- single_end[r]
       candidate <- pmin(e, bound - traversal_time)
-      membership <- candidate >= s &
-        (candidate < e | (.time_eq_each(candidate, e) & single_closed[r]))
-      downstream <- candidate + traversal_time < bound |
+      membership <- .time_geq(candidate, s) &
+        (.path_time_lt(candidate, e) |
+           (.time_eq_each(candidate, e) & single_closed[r]))
+      downstream <- .path_time_lt(candidate + traversal_time, bound) |
         (.time_eq_each(candidate + traversal_time, bound) & bound_attained)
-      possible <- candidate > s |
+      possible <- .path_time_gt(candidate, s) |
         (.time_eq_each(candidate, s) & membership & downstream)
       possible <- !is.na(possible) & possible
       value[one] <- ifelse(possible, candidate, -Inf)
@@ -868,7 +903,9 @@
         entry <- forward_entries(rows, time[[parent]], attained[[parent]])
         candidate <- entry$value + traversal_time
         keep <- !is.na(candidate) & .time_leq_each(candidate, upper)
-        if (prune) keep <- keep & candidate < reached_before[atoms$to[rows]]
+        if (prune) {
+          keep <- keep & .path_time_lt(candidate, reached_before[atoms$to[rows]])
+        }
         usable <- which(keep)
         next_vertex <- atoms$to[rows[usable]]
         keys <- state_key(next_vertex, candidate[usable], entry$attained[usable])
@@ -884,8 +921,8 @@
       entry <- backward_entries(rows, time[[parent]], attained[[parent]])
       candidate <- entry$value
       candidate_attained <- entry$attained
-      usable <- which(is.finite(candidate) & (candidate > lower |
-        (candidate == lower & candidate_attained)))
+      usable <- which(is.finite(candidate) & (.path_time_gt(candidate, lower) |
+        (.time_eq(candidate, lower) & candidate_attained)))
       next_vertex <- atoms$from[rows[usable]]
       keys <- state_key(next_vertex, candidate[usable], candidate_attained[usable])
       for (k in seq_along(usable)) {
@@ -959,10 +996,18 @@
     # tolerance; a time or a hop count is compared exactly as before.
     ids <- if (identical(rule$primary, "cost")) {
       ids[.cost_eq(primary, best)]
+    } else if (identical(rule$primary, "time")) {
+      ids[.time_eq(primary, best)]
     } else ids[primary == best]
-    arrival[[endpoint]] <- if (identical(rule$primary, "time")) {
-      best
-    } else if (forward) min(state$time[ids]) else max(state$time[ids])
+    time_first <- identical(rule$primary, "time")
+    if (!time_first) {
+      # The time tie-break of a hop- or cost-primary criterion is applied
+      # before attainment is judged, so `attained` describes the reported
+      # time itself rather than some other, worse time within the family.
+      times <- state$time[ids]
+      ids <- ids[.time_eq(times, if (forward) min(times) else max(times))]
+    }
+    arrival[[endpoint]] <- if (time_first) best else state$time[[ids[[1L]]]]
     # An optimum is attained when some state at it is; otherwise it is a
     # backward supremum or a forward infimum with no realising journey.
     has_optimum <- any(state$attained[ids])
@@ -972,11 +1017,11 @@
     # that approach it are still the answer, so keep their hops, count and
     # predecessors and let `attained` carry the distinction.
     if (has_optimum) ids <- ids[state$attained[ids]]
-    if (!is.null(rule$secondary)) {
+    if (time_first && !is.null(rule$secondary)) {
       secondary <- state[[rule$secondary]][ids]
       take_max2 <- forward == FALSE && identical(rule$secondary, "time")
       best2 <- if (take_max2) max(secondary) else min(secondary)
-      ids <- ids[secondary == best2]
+      ids <- ids[secondary == best2]  # hop counts: integers, exact
     }
     # A family whose journeys differ in length has no single hop count.
     family_hops <- unique(state$hops[ids])
@@ -1238,7 +1283,7 @@
                                      traversal_time = 0,
                                      activity_mode = c("collapse", "separate"),
                                      activity_session = NULL) {
-  activity_mode <- match.arg(activity_mode)
+  activity_mode <- .match_choice(activity_mode)
   stopifnot("`upper` must be a finite deadline" = is.finite(upper))
   n <- enc$n
   search_from <- function(anchor, origin, direction, origin_attained = TRUE) {
@@ -1354,13 +1399,16 @@
   points <- unique(c(all$start, all$end, lower, upper))
   points <- points[is.finite(points)]
   times <- unique(as.vector(outer(points, shifts, `+`)))
-  times <- times[times >= lower & times <= upper]
+  # Shifted candidates are sums, so they meet the bounds and the domain ends
+  # under the time tolerance.
+  times <- times[.time_geq(times, lower) & .time_leq(times, upper)]
   exact <- vapply(times, function(t) {
-    t == lower || any(first$start <= t &
-                        (t < first$end | (t == first$end & first$end_closed)))
+    isTRUE(.time_eq(t, lower)) || any(.time_leq(first$start, t) &
+      (.path_time_lt(t, first$end) |
+         (.time_eq(t, first$end) & first$end_closed)))
   }, logical(1L))
   below <- vapply(times, function(t) {
-    any(first$start < t & t <= first$end)
+    any(.path_time_lt(first$start, t) & .time_leq(t, first$end))
   }, logical(1L))
   out <- rbind(
     data.frame(time = times[below], attained = rep(FALSE, sum(below))),
@@ -1404,7 +1452,7 @@
                             traversal_time = 0,
                             activity_mode = c("collapse", "separate"),
                             activity_session = NULL) {
-  activity_mode <- match.arg(activity_mode)
+  activity_mode <- .match_choice(activity_mode)
   n <- enc$n
   session_walls <- bounded && !is.null(dn$meta$sessions)
   encodings <- if (session_walls) {
@@ -1425,8 +1473,8 @@
   # Candidates are sorted by time with a from-below candidate before the
   # same exact time; "after" is that lexicographic order.
   after <- function(time, attained) {
-    candidates$time > time |
-      (candidates$time == time & candidates$attained & !attained)
+    .path_time_gt(candidates$time, time) |
+      (.time_eq(candidates$time, time) & candidates$attained & !attained)
   }
   span <- max(1, diff(range(c(lower, candidates$time))))
   tolerance <- sqrt(.Machine$double.eps) * span
@@ -1466,7 +1514,7 @@
       arrival <- forward$arrival[[target]]
       if (!is.finite(arrival)) break
       arrival_attained <- forward$attained[[target]]
-      if (arrival == candidates$time[[index]]) {
+      if (isTRUE(.time_eq(arrival, candidates$time[[index]]))) {
         # Arriving when one departed pins the departure: the latest departure
         # lies between the candidate and the arrival, which coincide.
         departure <- arrival
@@ -1523,6 +1571,62 @@
   ))
 }
 
+#' Merge one endpoint's optimum across complete session searches
+#'
+#' A session-bounded query runs one complete search per session and keeps,
+#' for every endpoint, the best of them under the SAME criterion each search
+#' solved: the primary key first (arrival time, hop count or summed cost), a
+#' realised optimum before an unattained supremum at the same time, then the
+#' criterion's own tie-break. An optimum that no session attains still
+#' reports the family that approaches it, exactly as one search does.
+#'
+#' @param per Per-session finalised searches.
+#' @param endpoint Integer endpoint.
+#' @param forward Whether the searches run forward in time.
+#' @param criterion The internal criterion every search solved.
+#' @return A list with `arrival`, `attained`, `n_hops`, `path_cost`,
+#'   `n_paths` and `winners`, the indices of the sessions whose families are
+#'   kept.
+#' @noRd
+.merge_session_endpoint <- function(per, endpoint, forward, criterion) {
+  field <- function(name, value) {
+    vapply(per, function(result) result[[name]][[endpoint]], value)
+  }
+  values <- field("arrival", NA_real_)
+  out <- list(arrival = if (forward) Inf else -Inf, attained = FALSE,
+              n_hops = NA_integer_, path_cost = NA_real_, n_paths = 0,
+              winners = NULL)
+  candidates <- which(is.finite(values))
+  if (!length(candidates)) return(out)
+  hops <- field("n_hops", NA_integer_)
+  if (identical(criterion, "shortest")) {
+    costs <- field("path_cost", NA_real_)
+    cheapest <- min(costs[candidates])
+    candidates <- candidates[.cost_eq(costs[candidates], cheapest)]
+    out$path_cost <- cheapest
+  }
+  if (identical(criterion, "min_hops")) {
+    fewest <- min(hops[candidates])
+    candidates <- candidates[hops[candidates] == fewest]
+  }
+  best <- if (forward) min(values[candidates]) else max(values[candidates])
+  candidates <- candidates[.time_eq(values[candidates], best)]
+  out$arrival <- best
+  realized <- candidates[field("attained", FALSE)[candidates]]
+  out$attained <- length(realized) > 0L
+  if (out$attained) candidates <- realized
+  hop_values <- hops[candidates]
+  winners <- if (identical(criterion, "foremost_then_shortest")) {
+    candidates[hop_values == min(hop_values)]
+  } else candidates
+  family_hops <- unique(hops[winners])
+  out$n_hops <- if (length(family_hops) == 1L) family_hops else NA_integer_
+  out$n_paths <- Reduce(.path_count_add, field("n_paths", 0)[winners],
+                        init = 0)
+  out$winners <- winners
+  out
+}
+
 #' Run an optimal path search with optional session walls
 #' @param dn A `dynet` object.
 #' @param enc Encoded edge list.
@@ -1565,7 +1669,7 @@
                                     criterion = "foremost_then_shortest",
                                     max_states = 1e5, origin_attained = TRUE,
                                     table_cache = NULL, abandon = NULL) {
-  activity_mode <- match.arg(activity_mode)
+  activity_mode <- .match_choice(activity_mode)
   run <- function(sub, session = activity_session,
                   erase_sessions = identical(activity_mode, "collapse"),
                   abandon = NULL) {
@@ -1613,54 +1717,15 @@
   forward <- identical(direction, "forward")
   shortest <- identical(criterion, "shortest")
   n <- enc$n
-  arrival <- rep(if (forward) Inf else -Inf, n)
-  attained <- rep(FALSE, n)
-  n_hops <- rep(NA_integer_, n)
-  path_cost <- rep(NA_real_, n)
-  n_paths <- rep(0, n)
-  best_sessions <- vector("list", n)
-  for (endpoint in seq_len(n)) {
-    values <- vapply(per, function(result) result$arrival[[endpoint]],
-                     numeric(1L))
-    finite <- is.finite(values)
-    if (!any(finite)) next
-    if (shortest) {
-      # The optimum across sessions is the cheapest journey; among the
-      # sessions attaining it, the earliest arrival, as within one search.
-      costs <- vapply(per, function(result) result$path_cost[[endpoint]],
-                      numeric(1L))
-      cheapest <- min(costs[finite])
-      finite <- finite & .cost_eq(costs, cheapest)
-      path_cost[[endpoint]] <- cheapest
-    }
-    best <- if (forward) min(values[finite]) else max(values[finite])
-    candidates <- which(finite & values == best)
-    arrival[[endpoint]] <- best
-    realized <- candidates[vapply(per[candidates], function(result) {
-      result$attained[[endpoint]]
-    }, logical(1L))]
-    attained[[endpoint]] <- length(realized) > 0L
-    if (!length(realized)) next
-    candidates <- realized
-    hop_values <- vapply(per[candidates], function(result) {
-      result$n_hops[[endpoint]]
-    }, integer(1L))
-    if (identical(criterion, "foremost")) {
-      # Every session attaining the optimum contributes its whole family.
-      winners <- candidates
-      family_hops <- unique(hop_values)
-      n_hops[[endpoint]] <- if (length(family_hops) == 1L) family_hops else
-        NA_integer_
-    } else {
-      best_hops <- min(hop_values)
-      winners <- candidates[hop_values == best_hops]
-      n_hops[[endpoint]] <- best_hops
-    }
-    n_paths[[endpoint]] <- Reduce(.path_count_add, vapply(
-      per[winners], function(result) result$n_paths[[endpoint]], numeric(1L)
-    ), init = 0)
-    best_sessions[[endpoint]] <- winners
-  }
+  merged <- lapply(seq_len(n), function(endpoint) {
+    .merge_session_endpoint(per, endpoint, forward, criterion)
+  })
+  arrival <- vapply(merged, `[[`, numeric(1L), "arrival")
+  attained <- vapply(merged, `[[`, logical(1L), "attained")
+  n_hops <- vapply(merged, `[[`, integer(1L), "n_hops")
+  path_cost <- vapply(merged, `[[`, numeric(1L), "path_cost")
+  n_paths <- vapply(merged, `[[`, numeric(1L), "n_paths")
+  best_sessions <- lapply(merged, `[[`, "winners")
   if (any(vapply(per, function(result) result$anchor_valid, logical(1L)))) {
     # The valid empty journey is session-vacuous in bounded mode.
     arrival[[source]] <- origin
@@ -1850,7 +1915,7 @@
                          traversal_time = 0,
                          activity_mode = c("collapse", "separate"),
                          activity_session = NULL) {
-  activity_mode <- match.arg(activity_mode)
+  activity_mode <- .match_choice(activity_mode)
   if (!bounded || is.null(dn$meta$sessions)) {
     enc <- .prepare_path_encoding(
       dn, enc, session = activity_session,
@@ -1879,7 +1944,7 @@
   arr <- do.call(pmin, lapply(per, `[[`, "arrival"))
   best_sessions <- lapply(seq_along(arr), function(v) {
     cand <- vapply(per, function(p) p$arrival[v], numeric(1L))
-    which(is.finite(cand) & cand == arr[v])
+    which(is.finite(cand) & .time_eq(cand, arr[v]))
   })
   best_sessions[[source]] <- integer(0)
   previous <- vapply(seq_along(arr), function(v) {
@@ -1918,7 +1983,7 @@
                                   lower = -Inf, traversal_time = 0,
                                   activity_mode = c("collapse", "separate"),
                                   activity_session = NULL) {
-  activity_mode <- match.arg(activity_mode)
+  activity_mode <- .match_choice(activity_mode)
   if (!bounded || is.null(dn$meta$sessions)) {
     enc <- .prepare_path_encoding(
       dn, enc, session = activity_session,
@@ -1949,7 +2014,7 @@
   latest <- do.call(pmax, lapply(per, `[[`, "arrival"))
   attained <- vapply(seq_along(latest), function(v) {
     any(vapply(per, function(result) {
-      result$arrival[v] == latest[v] && result$attained[v]
+      isTRUE(.time_eq(result$arrival[v], latest[v])) && result$attained[v]
     }, logical(1L)))
   }, logical(1L))
   best_sessions <- lapply(seq_along(latest), function(v) {
@@ -1957,7 +2022,7 @@
     candidate_attained <- vapply(per, function(result) {
       result$attained[v]
     }, logical(1L))
-    which(is.finite(candidate) & candidate == latest[v] &
+    which(is.finite(candidate) & .time_eq(candidate, latest[v]) &
       candidate_attained == attained[v])
   })
   best_sessions[[target]] <- integer(0)
@@ -1993,7 +2058,7 @@
                          default_start = dn$meta$time_range[["start"]],
                          default_end = dn$meta$time_range[["end"]],
                          clamp_missing = FALSE) {
-  direction <- match.arg(direction, c("forward", "backward"))
+  direction <- .match_choice(direction, c("forward", "backward"))
   stopifnot(is.logical(clamp_missing), length(clamp_missing) == 1L,
             !is.na(clamp_missing))
   if (!is.null(at) && (!is.null(start) || !is.null(end))) {
@@ -2059,7 +2124,7 @@
 #' Dynet:::.path_routes(bfs, enc$n, "forward")
 #' @noRd
 .path_routes <- function(bfs, n, direction) {
-  direction <- match.arg(direction, c("forward", "backward"))
+  direction <- .match_choice(direction, c("forward", "backward"))
   lapply(seq_len(n), function(endpoint) {
     if (!is.finite(bfs$arrival[endpoint])) return(list())
     if (endpoint == bfs$source) {
@@ -2106,8 +2171,8 @@
 .paths_tables <- function(enc, bfs, direction,
                           mode = c("collapse", "bounded", "separate"),
                           session_label = NULL) {
-  direction <- match.arg(direction, c("forward", "backward"))
-  mode <- match.arg(mode)
+  direction <- .match_choice(direction, c("forward", "backward"))
+  mode <- .match_choice(mode)
   routes <- .path_routes(bfs, enc$n, direction)
   reachable <- is.finite(bfs$arrival)
   hops <- vapply(seq_len(enc$n), function(endpoint) {
@@ -2326,7 +2391,7 @@
 .optimal_paths_table <- function(search,
                                  mode = c("collapse", "bounded", "separate"),
                                  session_label = NULL) {
-  mode <- match.arg(mode)
+  mode <- .match_choice(mode)
   # A latest-departure search reports its supremum in `departure`; that is
   # what decides reachability there, and `arrival` is already NA when the
   # supremum is not attained.
@@ -2400,7 +2465,8 @@
   if (expansion_size > 1e6) {
     stop(errorCondition(
       "Expanded optimal routes would exceed one million paths; use the compact `n_paths` result instead.",
-      class = "dynet_path_expansion_too_large", call = NULL
+      class = c("dynet_path_expansion_too_large", "dynet_bad_input"),
+      call = NULL
     ))
   }
   frames <- unlist(Map(function(search, session_label) {
@@ -2550,9 +2616,9 @@
 #'   cases an unattained optimum keeps its limiting departure, arrival and
 #'   duration but has `n_hops = NA` and `n_paths = 0`. Under
 #'   `criterion = "shortest"` a `path_cost` column follows `n_paths`: the
-#'   summed cost of the cheapest journey, `n_hops` is the fewest hops among
-#'   the cheapest journeys (`NA` when they differ), and `arrival_time` and
-#'   `n_paths` describe the cheapest journeys that arrive earliest. Bounded
+#'   summed cost of the cheapest journey, and `arrival_time`, `n_hops` and
+#'   `n_paths` describe the cheapest journeys that arrive earliest, `n_hops`
+#'   being `NA` when those differ in length. Bounded
 #'   mode adds `path_session` and `n_best_sessions`; separate mode adds `session` and
 #'   `origin`, one complete vertex block per session. Use
 #'   `as.data.frame(x, what = "steps")` for every reconstructed optimal route:
@@ -2623,7 +2689,7 @@
 #' `"minimum"` for the others, and `deadline` records the resolved `end`.
 #'
 #' A shortest query with weight costs is solved by settling vertex
-#' appearances in order of accumulated cost (Wu et al., 2016): every cost is
+#' appearances in order of accumulated cost (Wu et al., 2014): every cost is
 #' positive, so the cheapest open appearance is final when it is settled and
 #' every predecessor of an appearance is settled before it, which is what
 #' makes the journey count exact. Two journeys tie when their summed weights
@@ -2653,13 +2719,12 @@
 #' timestamp and arrives after the same duration; it does not represent
 #' continued edge activity. The query `end` bounds completion, not only entry.
 #'
-#' Optimal forward journeys are shortest foremost: final completion is
-#' minimised first (foremost) and hop count second (shortest). Backward
-#' journeys mirror it, maximising the departure time first and minimising hop
-#' count second. There is no criterion argument: this is the only criterion
-#' `paths()` offers, and it is recorded on the result as
-#' `"foremost_then_shortest"`. A fastest journey, which minimises elapsed time
-#' rather than arrival time, is a different optimum and is not computed here.
+#' Under the default criterion, optimal forward journeys are shortest
+#' foremost: final completion is minimised first (foremost) and hop count
+#' second (shortest). Backward journeys mirror it, maximising the departure
+#' time first and minimising hop count second; at the same departure value a
+#' realised departure beats an unattained supremum. The criterion is recorded
+#' on the result, and the other criteria are described under `criterion`.
 #' Journey identity is the ordered sequence of canonical oriented contacts.
 #' Duplicate points, overlapping or
 #' touching interval segmentation, weights, and waiting schedules do not
@@ -2667,7 +2732,9 @@
 #' `2^53`, after which a `dynet_path_overflow` condition is raised. The empty
 #' journey has one path and an unreachable endpoint has none.
 #'
-#' Failures are classed. An unknown `from` raises `dynet_unknown_vertex`; a
+#' Failures are classed, and every class below also carries
+#' `dynet_bad_input`. An unknown `from` raises `dynet_unknown_vertex`, which
+#' is also a `dynet_unknown_node` as in the sibling verbs; a
 #' `from` that is not one name, a negative `traversal_time`, combining `at`
 #' with `start` or `end`, or a window that cannot hold a journey, raises
 #' `dynet_bad_input`; a window disjoint from explicit observation raises
@@ -2700,10 +2767,6 @@
 #' problems in temporal graphs. *Proceedings of the VLDB Endowment*, 7(9),
 #' 721-732.
 #'
-#' Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest, fastest,
-#' and foremost journeys in dynamic networks. *International Journal of
-#' Foundations of Computer Science*, 14(2), 267-285.
-#'
 #' @examples
 #' dn <- dynet(school_contacts)
 #'
@@ -2733,10 +2796,10 @@ paths <- function(dn, from, at = NULL,
                       start = NULL, end = NULL, traversal_time = 0,
                       max_states = 1e5, plot = FALSE) {
   budget_given <- !missing(max_states)
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
-  direction <- match.arg(direction)
-  criterion <- match.arg(criterion)
+  direction <- .match_choice(direction)
+  criterion <- .match_choice(criterion)
   cost <- .resolve_path_cost(cost, !missing(cost), criterion, dn)
   latest <- identical(criterion, "latest_departure")
   fastest <- identical(criterion, "fastest")
@@ -2784,7 +2847,9 @@ paths <- function(dn, from, at = NULL,
     stop(errorCondition(
       sprintf("Vertex %s is not in this network. Vertices are: %s",
               sQuote(from), paste(utils::head(base_enc$names, 10), collapse = ", ")),
-      class = "dynet_unknown_vertex", call = NULL))
+      class = c("dynet_unknown_vertex", "dynet_unknown_node",
+                "dynet_bad_input"),
+      call = NULL))
   }
 
   if (identical(sessions, "separate")) {
@@ -2908,7 +2973,7 @@ paths <- function(dn, from, at = NULL,
 #'   cannot be a cost.
 #' @noRd
 .resolve_path_cost <- function(cost, given, criterion, dn) {
-  cost <- match.arg(cost, c("hops", "weight"))
+  cost <- .match_choice(cost, c("hops", "weight"))
   if (given && !identical(criterion, "shortest")) {
     stop(errorCondition(
       "`cost` applies only to `criterion = \"shortest\"`.",
@@ -3137,10 +3202,10 @@ reachability <- function(dn, direction = c("both", "forward", "backward"),
                          measure = "reach",
                          criterion = c("foremost_then_shortest", "min_hops"),
                          plot = FALSE) {
-  sessions <- match.arg(sessions)
-  criterion <- match.arg(criterion)
+  sessions <- .match_choice(sessions)
+  criterion <- .match_choice(criterion)
   .check_dynet(dn, sessions)
-  direction <- match.arg(direction)
+  direction <- .match_choice(direction)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   .check(
     "`measure` must be a character vector." = is.character(measure),
@@ -3154,7 +3219,7 @@ reachability <- function(dn, direction = c("both", "forward", "backward"),
       sprintf("Unknown reach measure %s. Available: %s",
               paste(sQuote(bad), collapse = ", "),
               paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL
     ))
   }
   wanted <- if (identical(direction, "both")) c("forward", "backward") else direction

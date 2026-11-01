@@ -37,7 +37,12 @@ guarantees: \code{community} now carries the matched, time-consistent label;
 auditable; and \code{event} records what happened to this state's community at
 this bin, one of \code{"born"}, \code{"persist"}, \code{"split"} or \code{"merge"}. The
 community-level lifecycle table, which also carries \code{"dissolve"}, is
-\code{as.data.frame(x, what = "events")}.
+\code{as.data.frame(x, what = "events")}: one row per community per bin with
+\code{time}, \code{community} (the matched label), \code{event}, \code{size}, \code{overlap} (the
+score of the pairing that decided the event, zero for a birth) and
+\code{matched_from}, the matched label of the predecessor -- the community
+itself for a continuation, the parent for a splinter, \code{NA} for a birth or
+a dissolution.
 }
 \description{
 A community label is arbitrary within a bin. If bin 3's "community 2" is

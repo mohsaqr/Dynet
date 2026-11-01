@@ -110,3 +110,32 @@ test_that("relabelling vertices permutes the scores and changes no value", {
   after <- as.data.frame(path_centrality(renamed, measure = "katz", beta = 0.1))
   expect_equal(sort(before$value), sort(after$value))
 })
+
+test_that("onsets equal up to rounding are one instant for every stream measure", {
+  # 0.1 + 0.2 is 0.30000000000000004. Read with a bare `!=`, the second
+  # contact fell after the first and the walk A -> B -> C chained; the path
+  # engine treats the two as one time, and so must the stream measures.
+  rounded <- quiet_dynet(data.frame(from = c("A", "B"), to = c("B", "C"),
+                                    start = c(0.3, 0.1 + 0.2),
+                                    end = c(0.3, 0.1 + 0.2)))
+  exact <- quiet_dynet(data.frame(from = c("A", "B"), to = c("B", "C"),
+                                  start = c(0.3, 0.3), end = c(0.3, 0.3)))
+  measures <- c("katz", "pagerank", "walk")
+  got <- as.data.frame(path_centrality(rounded, measure = measures))
+  want <- as.data.frame(path_centrality(exact, measure = measures))
+  expect_equal(got$value, want$value)
+  # Strict batching: C receives only the one-contact walk.
+  katz <- as.data.frame(path_centrality(rounded, measure = "katz"))
+  expect_equal(katz$value[katz$node == "C"], 0.1)
+})
+
+test_that("the stream bounds are closed with the path engine's tolerance", {
+  dn <- quiet_dynet(data.frame(from = c("A", "B"), to = c("B", "C"),
+                               start = c(0.1, 0.1 + 0.2),
+                               end = c(0.1, 0.1 + 0.2)))
+  katz <- as.data.frame(path_centrality(dn, measure = "katz", end = 0.3))
+  # The contact at 0.1 + 0.2 lies inside `end = 0.3`, as it does for paths().
+  expect_equal(katz$value, c(0, 0.1, 0.1 * (0.1 + 1)))
+  expect_error(path_centrality(dn, measure = "katz", beta = 2),
+               class = "dynet_bad_input")
+})

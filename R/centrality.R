@@ -225,6 +225,14 @@
 #' windows. [snapshots()] and the network plots keep full weights per bin, so
 #' their `weight` column is not the input to this strength.
 #'
+#' A self-loop kept with `dynet(loops = TRUE)` counts in `"degree"` (twice on
+#' an undirected network, as in igraph), in `"strength"`, in
+#' `"participation"` and in the prestige variants that say so below. Every
+#' other measure works on the loop-free binary snapshot, so a loop changes
+#' none of them. That differs from igraph in two places: `igraph::page_rank()`
+#' lets a loop return the walker to its own vertex, and `igraph::coreness()`
+#' counts a loop towards the degree it peels on.
+#'
 #' Snapshot `"closeness"` is **not** Freeman's \eqn{1 / \sum_z d_{sz}}, which
 #' is
 #' undefined once a snapshot is disconnected -- and a time bin almost always
@@ -468,7 +476,8 @@ centrality_series <- function(dn,
                               exponent = 1,
                               prestige = "indegree", rescale = FALSE,
                               lambda = 1, groups = NULL, plot = FALSE) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions, c("bounded", "collapse", "separate"),
+                             "sessions")
   .check_dynet(dn, sessions)
   mode  <- .resolve_modes(mode)
   window <- .legacy_sample(window, sample)
@@ -510,7 +519,7 @@ centrality_series <- function(dn,
               if (any(bad %in% c("reach", "reach_count"))) {
                 "; temporal reach is `reachability()`"
               } else ""),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
   # `groups` belongs to participation and to nothing else; supplying it
   # elsewhere is an error rather than a silently ignored argument.
@@ -547,7 +556,7 @@ centrality_series <- function(dn,
         "No vertex attribute %s, and `groups` is not one label per vertex. This network has %s.",
         sQuote(as.character(groups)[[1L]]),
         if (length(have)) paste(have, collapse = ", ") else "no attributes"),
-        class = "dynet_unknown_attribute", call = NULL))
+        class = c("dynet_unknown_attribute", "dynet_bad_input"), call = NULL))
     }
     if (anyNA(group_labels)) {
       stop(errorCondition(
@@ -570,7 +579,7 @@ centrality_series <- function(dn,
       stop(errorCondition(
         sprintf("%s needs a directed network; this one is undirected.",
                 paste(sQuote(directed_only), collapse = ", ")),
-        class = "dynet_needs_directed", call = NULL))
+        class = c("dynet_needs_directed", "dynet_bad_input"), call = NULL))
     }
   }
 
@@ -1044,8 +1053,14 @@ centrality_series <- function(dn,
 #' session outside a one-sided bound contributes zero rows.
 #'
 #' Efficiency is the mean reciprocal temporal distance from a vertex to every
-#' other vertex (`mode = "out"`), or to it from every other (`mode = "in"`),
-#' with the distance the `criterion` optimises. Unreachable vertices
+#' other vertex (`mode = "out"`), or to it from every other (`mode = "in"`).
+#' The distance is always a hop count: the number of contacts on the journey
+#' the `criterion` selects. Under `"min_hops"` that is the fewest hops; under
+#' the default it is the hop count of the shortest foremost journey, which can
+#' exceed the fewest, and under `"shortest"` with weight costs it is the hop
+#' count of the cheapest journey. This keeps every reciprocal in `(0, 1]` and
+#' makes the vertex values average to
+#' `metrics(measure = "temporal_efficiency", basis = "hops")`. Unreachable vertices
 #' contribute zero rather than being dropped, so it is defined on a
 #' disconnected network; it is therefore not the reciprocal of closeness,
 #' which averages over reachable vertices only.
@@ -1184,9 +1199,12 @@ path_centrality <- function(dn, measure = "closeness",
   # longer `missing()`, and these two are rejected only when actually named.
   mode_given <- !missing(mode)
   rescale_given <- !missing(rescale)
-  sessions <- match.arg(sessions)
-  criterion <- match.arg(criterion)
-  mode <- match.arg(mode)
+  sessions <- .match_choice(sessions, c("bounded", "collapse", "separate"),
+                             "sessions")
+  criterion <- .match_choice(criterion, c("foremost_then_shortest", "min_hops",
+                                          "foremost", "fastest", "shortest"),
+                             "criterion")
+  mode <- .match_choice(mode, c("out", "in"), "mode")
   .check_dynet(dn, sessions)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   .check(
@@ -1206,7 +1224,7 @@ path_centrality <- function(dn, measure = "closeness",
               if (any(bad %in% c("reach", "reach_count"))) {
                 "; temporal reach is `reachability()`"
               } else ""),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
   cost <- .resolve_path_cost(cost, !missing(cost), criterion, dn)
   if (identical(criterion, "foremost") && "betweenness" %in% measure) {
@@ -1311,7 +1329,7 @@ dyn_centrality <- function(dn,
                            exponent = 1, traversal_time = 0,
                            prestige = "indegree", rescale = FALSE,
                            lambda = 1, plot = FALSE) {
-  scope <- match.arg(scope)
+  scope <- .match_choice(scope, c("snapshot", "temporal"), "scope")
   warning(warningCondition(sprintf(
     "`dyn_centrality()` is deprecated; use %s.",
     if (identical(scope, "temporal")) {
@@ -1331,7 +1349,8 @@ dyn_centrality <- function(dn,
       rescale = rescale, lambda = lambda, plot = plot
     ))
   }
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions, c("bounded", "collapse", "separate"),
+                             "sessions")
   .check_dynet(dn, sessions)
   traversal_time <- .as_traversal_time(traversal_time, dn)
   if (!identical(.resolve_modes(mode), "all")) {
@@ -1362,7 +1381,7 @@ dyn_centrality <- function(dn,
       sprintf("Unknown measure %s for scope \"temporal\". Available: %s",
               paste(sQuote(bad), collapse = ", "),
               paste(released, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
   .maybe_plot(.temporal_centrality(dn, measure, sessions, start, end,
                                    traversal_time), plot)
@@ -1390,7 +1409,7 @@ dyn_centrality <- function(dn,
   duration <- enc$raw_end - enc$raw_start
   overlap <- pmax(0, pmin(enc$end, bin$hi[[1L]]) -
                      pmax(enc$start, bin$lo[[1L]]))
-  point <- enc$instant | duration <= .time_tol(enc$raw_start, enc$raw_end)
+  point <- enc$instant | duration <= .time_tol_each(enc$raw_start, enc$raw_end)
   share <- rep(1, length(duration))
   share[!point] <- pmin(1, overlap[!point] / duration[!point])
   share
@@ -1875,7 +1894,7 @@ dyn_centrality <- function(dn,
                                            "eigenvector.rowcolnorm"),
                             tol = 1e-10, balance_tol = 1e-12,
                             balance_max_iter = 10000L, warn = TRUE) {
-  definition <- match.arg(definition)
+  definition <- .match_choice(definition)
   b <- (a > 0) * 1
   balance <- NULL
   if (identical(definition, "eigenvector.rownorm")) {
@@ -2368,7 +2387,9 @@ dyn_centrality <- function(dn,
 #'
 #' @param trees List of forward search results, one per source.
 #' @param n Size of the fixed vertex universe.
-#' @param criterion The criterion the searches solved, choosing the distance.
+#' @param criterion The criterion the searches solved. Retained for the
+#'   reducer's common signature; the distance is the hop count of whichever
+#'   journey that criterion selected.
 #' @param mode `"in"` for the incoming mean; anything else is the outgoing one,
 #'   since a journey has a direction and `"all"` has no third reading here.
 #' @return A numeric vector, one value per vertex.
@@ -2380,17 +2401,11 @@ dyn_centrality <- function(dn,
   # is bounded and finite; a latency reading is available at graph level
   # through `metrics(measure = "temporal_efficiency", basis = "latency")`,
   # where the infinite case is warned about rather than hidden.
-  criterion <- "min_hops"
+  # `criterion` is therefore not consulted: the trees already embody it.
   # Row i of `d` is the distance from i to every other vertex. The incoming
   # reading is the column mean of the same matrix, so no extra search runs.
   rows <- lapply(trees, function(tree) {
-    distance <- if (identical(criterion, "min_hops")) {
-      as.numeric(tree$n_hops)
-    } else if (identical(criterion, "shortest")) {
-      tree$path_cost
-    } else {
-      tree$arrival - tree$origin
-    }
+    distance <- as.numeric(tree$n_hops)
     distance[!is.finite(tree$arrival)] <- Inf
     distance[is.na(distance)] <- Inf
     distance
@@ -2446,6 +2461,37 @@ dyn_centrality <- function(dn,
   }, numeric(1L))
   out[c(search$source, endpoint)] <- 0
   out
+}
+
+#' Credit one source's optimal journeys to the contacts that carried them
+#'
+#' For each reachable endpoint the unit dependency is shared over the full
+#' optimal family. A direct search holds that family itself; a
+#' session-bounded search holds it across its winning sessions, so each
+#' winner's session-local fraction is reweighted by its share of the
+#' combined family before it is added.
+#'
+#' @param search A direct or session-bounded result from
+#'   `.optimal_bounded_search()`.
+#' @param n Size of the fixed vertex universe.
+#' @return A list of numeric vectors, one per session block (one block for a
+#'   direct search), each one value per atom of that block.
+#' @noRd
+.search_edge_credit <- function(search, n) {
+  blocks <- search$per_session %||% list(search)
+  empty <- lapply(blocks, function(block) numeric(length(block$atoms$from)))
+  endpoints <- setdiff(which(search$n_paths > 0), search$source)
+  Reduce(function(total, endpoint) {
+    winners <- if (is.null(search$per_session)) 1L else
+      search$best_sessions[[endpoint]]
+    Reduce(function(acc, k) {
+      block <- blocks[[k]]
+      share <- block$n_paths[[endpoint]] / search$n_paths[[endpoint]]
+      acc[[k]] <- acc[[k]] + share *
+        .optimal_edge_dependency(block, endpoint, length(block$atoms$from))
+      acc
+    }, winners, init = total)
+  }, endpoints, init = empty)
 }
 
 #' Credit optimal journeys to the contacts that carried them
@@ -2600,7 +2646,7 @@ dyn_centrality <- function(dn,
     if (any(x > cap)) {
       stop(errorCondition(sprintf(
         "Temporal Katz overflowed at beta = %g; lower `beta` or raise `decay`.",
-        beta), class = "dynet_katz_overflow", call = NULL))
+        beta), class = c("dynet_katz_overflow", "dynet_bad_input"), call = NULL))
     }
   }
   x * phi(upper - last)
@@ -2650,7 +2696,7 @@ dyn_centrality <- function(dn,
   overflow <- function() {
     stop(errorCondition(sprintf(
       "Temporal walk counts overflowed at beta = %g; lower `beta` or narrow the window.",
-      beta), class = "dynet_walk_overflow", call = NULL))
+      beta), class = c("dynet_walk_overflow", "dynet_bad_input"), call = NULL))
   }
   # A stream is sequential by definition: each batch reads the totals the
   # earlier batches wrote. `acc_in[u]` is the weight of every walk that has
@@ -2732,8 +2778,11 @@ dyn_centrality <- function(dn,
 
 #' The eligible contact stream of a temporal network, in canonical order
 #'
-#' Both stream measures read the same slice of the network: uncensored contacts
-#' whose onset falls inside the observation and inside the measurement window.
+#' Every stream measure reads the same slice of the network: uncensored
+#' contacts whose onset falls inside the observation and inside the
+#' measurement window, both bounds closed and compared with the package's
+#' time tolerance. Onsets that agree to within that tolerance are one instant
+#' and are returned with one identical time.
 #' The order is fixed by `(time, from, to)` so a row permutation of the input
 #' cannot change any answer; the batch rule each measure applies then makes the
 #' within-instant order irrelevant as well.
@@ -2745,14 +2794,28 @@ dyn_centrality <- function(dn,
 #'   same length, or all empty when nothing is eligible.
 #' @noRd
 .contact_stream <- function(enc, dn, lower, upper) {
+  onset <- enc$raw_event_start
+  # Tolerant bounds, as the path engine uses: an onset computed as
+  # 0.1 + 0.2 must not fall outside `end = 0.3` here while paths() keeps it.
   eligible <- !enc$raw_event_onset_censored &
-    .time_in_observation(dn, enc$raw_event_start) &
-    enc$raw_event_start >= lower & enc$raw_event_start <= upper
+    .time_in_observation(dn, onset) &
+    .time_geq(onset, lower) & .time_leq(onset, upper)
   from <- enc$raw_from[eligible]
   to <- enc$raw_to[eligible]
-  when <- enc$raw_event_start[eligible]
+  when <- onset[eligible]
   ord <- order(when, from, to)
-  list(from = from[ord], to = to[ord], when = when[ord])
+  from <- from[ord]; to <- to[ord]; when <- when[ord]
+  if (length(when) > 1L) {
+    # Onsets within the time tolerance of their predecessor are one instant.
+    # Each is snapped to the first onset of its instant, so the measures'
+    # exact batch tests (`when[-1] != when[-m]`) see one value per instant and
+    # two contacts that differ only by rounding cannot chain.
+    fresh <- c(TRUE, !.time_eq_each(when[-1L], when[-length(when)]))
+    when <- when[fresh][cumsum(fresh)]
+    ord <- order(when, from, to)
+    from <- from[ord]; to <- to[ord]; when <- when[ord]
+  }
+  list(from = from, to = to, when = when)
 }
 
 #' Temporal PageRank by one pass over the contact stream
@@ -2953,8 +3016,10 @@ edge_centrality <- function(dn, measure = "betweenness",
                                           "min_hops", "foremost", "fastest"),
                             sessions = c("bounded", "collapse", "separate"),
                             start = NULL, end = NULL, traversal_time = 0) {
-  sessions <- match.arg(sessions)
-  criterion <- match.arg(criterion)
+  sessions <- .match_choice(sessions, c("bounded", "collapse", "separate"),
+                             "sessions")
+  criterion <- .match_choice(criterion, c("foremost_then_shortest", "min_hops",
+                                          "foremost", "fastest"), "criterion")
   if (identical(criterion, "foremost")) {
     .stop_intractable_criterion("contact betweenness")
   }
@@ -2972,7 +3037,7 @@ edge_centrality <- function(dn, measure = "betweenness",
       sprintf("Unknown edge measure %s. Available: %s",
               paste(sQuote(bad), collapse = ", "),
               paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
 
   parts <- .split_sessions(dn, sessions)
@@ -2980,15 +3045,26 @@ edge_centrality <- function(dn, measure = "betweenness",
     walk <- .undirect_or_reverse(enc, dn$directed, "forward")
     encoding_range <- .encoding_time_range(dn, enc)
     horizon <- .path_window(
-      dn, "forward", NULL, start, end,
+      dn, "forward", start = start, end = end,
       default_start = encoding_range[["start"]],
       default_end = encoding_range[["end"]],
       clamp_missing = identical(sessions, "separate")
     )
-    searches <- lapply(seq_len(enc$n), function(s)
+    activity <- .prepare_path_encoding(
+      dn, walk,
+      session = if (identical(sessions, "separate")) label else NULL,
+      erase_sessions = !identical(sessions, "separate")
+    )$path_activity
+    searches <- lapply(seq_len(enc$n), function(s) {
+      # Each source departs from its own first presence in the window, as in
+      # path_centrality(), so the two verbs credit the same journeys. A vertex
+      # never present keeps the window bound, where its anchor is invalid and
+      # the search reaches nothing; it still carries the atom tables.
+      anchor <- .presence_anchor(activity, s, "forward", horizon$start,
+                                 horizon$end)
       .optimal_bounded_search(
-        dn, walk, s, horizon$start, "forward",
-        identical(sessions, "bounded"),
+        dn, walk, s, if (is.na(anchor)) horizon$start else anchor,
+        "forward", identical(sessions, "bounded"),
         lower = horizon$start, upper = horizon$end,
         traversal_time = traversal_time,
         activity_mode = if (identical(sessions, "separate")) {
@@ -2998,19 +3074,25 @@ edge_centrality <- function(dn, measure = "betweenness",
         },
         activity_session = if (identical(sessions, "separate")) label else NULL,
         criterion = criterion
-      ))
-    atoms <- searches[[1L]]$atoms
-    n_atoms <- length(atoms$from)
-    credit <- Reduce(`+`, lapply(searches, function(search) {
-      Reduce(`+`, lapply(seq_len(enc$n), function(z) {
-        .optimal_edge_dependency(search, z, n_atoms)
-      }), init = numeric(n_atoms))
-    }), init = numeric(n_atoms))
+      )
+    })
+    # A session-bounded search keeps one direct search per session, each
+    # with its own atoms; otherwise there is one block. Every search of this
+    # encoding shares the same blocks in the same order.
+    blocks <- searches[[1L]]$per_session %||% list(searches[[1L]])
+    credit <- Reduce(function(total, search) {
+      Map(`+`, total, .search_edge_credit(search, enc$n))
+    }, searches, init = lapply(blocks, function(block) {
+      numeric(length(block$atoms$from))
+    }))
+    atoms <- lapply(blocks, `[[`, "atoms")
     data.frame(
       session = label,
-      from = enc$names[atoms$from], to = enc$names[atoms$to],
-      start = atoms$start, end = atoms$end,
-      measure = "betweenness", value = credit,
+      from = enc$names[unlist(lapply(atoms, `[[`, "from"))],
+      to = enc$names[unlist(lapply(atoms, `[[`, "to"))],
+      start = unlist(lapply(atoms, `[[`, "start")),
+      end = unlist(lapply(atoms, `[[`, "end")),
+      measure = "betweenness", value = unlist(credit, use.names = FALSE),
       stringsAsFactors = FALSE
     )
   }, parts, names(parts))

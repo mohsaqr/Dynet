@@ -25,8 +25,11 @@ only the non-destructive measurement view is replaced, so every verb now
 clips exposure and path horizons to this support. Read the components
 back with \code{as.data.frame(x, what = "observations")}, one row per
 component with \code{observation}, \code{start}, \code{end}, \code{duration} and \code{instant}.
+The result is the network \code{\link[=dynet]{dynet()}} builds from the same log with
+\code{observation_spells = data}, or with \verb{observation_start = start, observation_end = end}, so either route measures identically; any
+earlier observation support is replaced, not merged.
 Raises \code{dynet_bad_input} when neither or both of \code{data} and the bounds
-are given.
+are given, or when \code{end} precedes \code{start}.
 }
 \description{
 Replace observation support

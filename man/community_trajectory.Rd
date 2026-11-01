@@ -80,8 +80,9 @@ records how many states that covers, so the reader can judge.
 \examples{
 dn <- dynet(school_contacts)
 found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
-community_trajectory(found)
-as.data.frame(community_trajectory(found), what = "time")
+trajectory <- community_trajectory(found)
+trajectory
+as.data.frame(trajectory, what = "time")
 
 }
 \references{

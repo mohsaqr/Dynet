@@ -13,8 +13,10 @@
 }
 \value{
 A data frame with one row per replicate and columns \code{replicate},
-\code{n_events}, \code{n_pairs}, \code{t_min}, \code{t_max} and \code{mean_duration}, so the
-conservation each method claims is visible.
+\code{n_events}, \code{n_pairs}, \code{t_min}, \code{t_max}, \code{mean_duration} and \code{rejected}
+(the infeasible spells met while drawing that replicate under
+\code{respect}, zero when no constraint binds), so the conservation each
+method claims and the bite of the constraints are visible.
 }
 \description{
 Summarise surrogate networks

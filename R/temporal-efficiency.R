@@ -36,6 +36,7 @@
 #' @noRd
 .temporal_distances <- function(dn, enc, bin, sessions, label, basis,
                                 traversal_time, index) {
+  if (!length(index)) return(matrix(numeric(), 0L, 0L))
   walk <- .undirect_or_reverse(enc, dn$directed, "forward")
   walk <- .prepare_path_encoding(
     dn, walk,

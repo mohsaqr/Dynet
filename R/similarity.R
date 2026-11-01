@@ -39,12 +39,31 @@
 #'   wrapping `plot()` call without changing what comes back. Use `plot()` on
 #'   the result when the figure needs arguments of its own.
 #' @return A `dynet_similarity` data frame with one row per ordered pair of
-#'   time bins and columns `time`, `other`, `measure` and `value`. The
+#'   time bins and columns `time`, `other`, `measure` and `value`. Every bin
+#'   of the grid takes part, including a bin in which no tie is active. The
 #'   diagonal is included and is one for every coefficient except
 #'   `"hamming"`, where identical layers differ in nothing and score zero.
 #'   `"pearson"` reaches one only to floating-point accuracy, so compare it
 #'   with a tolerance rather than with `==`. The frame is returned invisibly
 #'   when `plot = TRUE` has drawn the figure.
+#'
+#'   A bin with no tie has an empty edge set, and the ratios are then 0/0:
+#'   `"jaccard"` is `NA` between two empty bins (and 0 between an empty and a
+#'   non-empty one), while `"overlap"`, `"cosine"` and `"pearson"` are `NA`
+#'   wherever an empty bin takes part, its own diagonal cell included.
+#'   `"pearson"` is likewise `NA` for a complete layer, which has no variance.
+#'   `"hamming"` is always defined.
+#'
+#' @details
+#' Each bin is read as the vector of its eligible pairs: every ordered pair of
+#' distinct vertices for a directed network, every unordered pair for an
+#' undirected one. Loops are excluded, as in [turnover()] and
+#' [persistence()], and a pair is tied in a bin or it is not. On that domain
+#' `"hamming"` is the number of pairs whose tie state differs, and
+#' `"pearson"` is the graph correlation of `sna::gcor()` with its default
+#' `diag = FALSE`; `"hamming"` likewise equals `sna::hdist()`. Counting the
+#' structurally empty diagonal, or both triangles of a symmetric matrix,
+#' would inflate the Hamming count twofold and bias the correlation.
 #'
 #'   The coefficients come from cograph, which is a hard dependency of Dynet;
 #'   a namespace that cannot be loaded raises `dynet_needs_cograph`.
@@ -59,26 +78,37 @@ similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
                                       "cosine", "pearson"),
                        sessions = c("bounded", "collapse", "separate"),
                        start = NULL, end = NULL, step = NULL, window = NULL, plot = FALSE) {
-  .check_dynet(dn, match.arg(sessions))
-  method <- match.arg(method)
+  .check_dynet(dn, .match_choice(sessions))
+  method <- .match_choice(method)
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition(
       "Layer similarity is computed by cograph. Install it with install.packages(\"cograph\").",
-      class = "dynet_needs_cograph", call = NULL))
+      class = c("dynet_needs_cograph", "dynet_bad_input"), call = NULL))
   }
   snaps <- as.data.frame(snapshots(dn, sessions = sessions, start = start,
                                    end = end, step = step, window = window))
-  times <- sort(unique(snaps$time))
+  # The grid, not the snapshot rows, decides which bins exist: a bin with no
+  # tie has no rows, and keying on the rows would silently drop it.
+  bins <- .measure_bin_times(dn, sessions, start, end, step, window)
+  times <- sort(unique(unlist(bins, use.names = FALSE)))
   if (length(times) < 2L) {
     stop(errorCondition(
       "Similarity needs at least two time bins; widen the range or lower `step`.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
-  layers <- .binary_layers(dn, snaps, times)
+  cells <- lapply(.binary_layers(dn, snaps, times), .pair_cells,
+                  directed = dn$directed)
   grid <- expand.grid(i = seq_along(times), j = seq_along(times))
   value <- vapply(seq_len(nrow(grid)), function(k) {
-    cograph::layer_similarity(layers[[grid$i[[k]]]], layers[[grid$j[[k]]]],
-                              method = method)
+    one <- cells[[grid$i[[k]]]]
+    two <- cells[[grid$j[[k]]]]
+    # A layer with every cell equal has no variance, so Pearson's r is 0/0.
+    # Say so directly instead of letting stats::cor() warn and return NA.
+    if (identical(method, "pearson") &&
+        (length(unique(one)) < 2L || length(unique(two)) < 2L)) {
+      return(NA_real_)
+    }
+    cograph::layer_similarity(one, two, method = method)
   }, numeric(1L))
   out <- data.frame(time = times[grid$i], other = times[grid$j],
                     measure = method, value = value,
@@ -86,6 +116,11 @@ similarity <- function(dn, method = c("jaccard", "overlap", "hamming",
   out <- out[order(out$time, out$other), , drop = FALSE]
   rownames(out) <- NULL
   attr(out, "time_unit") <- dn$meta$time_unit
+  attr(out, "empty_bins") <- times[vapply(cells, function(v) !any(v > 0),
+                                          logical(1L))]
+  attr(out, "pair_domain") <- if (dn$directed) {
+    "eligible_nonloop_ordered_pairs"
+  } else "eligible_nonloop_unordered_dyads"
   class(out) <- c("dynet_similarity", "data.frame")
   .maybe_plot(out, plot)
 }
@@ -122,9 +157,17 @@ as.data.frame.dynet_similarity <- function(x, row.names = NULL,
 print.dynet_similarity <- function(x, ...) {
   bins <- length(unique(x$time))
   off <- x$value[x$time != x$other]
+  defined <- off[!is.na(off)]
   cat(sprintf("# %s similarity across %d time bins\n", x$measure[[1L]], bins))
-  cat(sprintf("# off-diagonal mean %.3f, range %.3f to %.3f\n",
-              mean(off), min(off), max(off)))
+  if (length(defined)) {
+    cat(sprintf("# off-diagonal mean %.3f, range %.3f to %.3f\n",
+                mean(defined), min(defined), max(defined)))
+  }
+  if (length(defined) < length(off)) {
+    cat(sprintf("# %d off-diagonal pair%s undefined (NA): a bin with no tie\n",
+                length(off) - length(defined),
+                if (length(off) - length(defined) == 1L) " is" else "s are"))
+  }
   print(utils::head(as.data.frame(x), 10L), ...)
   if (nrow(x) > 10L) cat(sprintf("# %d more rows\n", nrow(x) - 10L))
   invisible(x)
@@ -144,7 +187,7 @@ print.dynet_similarity <- function(x, ...) {
 plot.dynet_similarity <- function(x, base_size = 12, ...) {
   ggplot2::ggplot(as.data.frame(x)) +
     ggplot2::geom_tile(ggplot2::aes(x = time, y = other, fill = value)) +
-    ggplot2::scale_fill_gradient(low = "#DCE9F5", high = "#0072B2",
+    ggplot2::scale_fill_gradient(low = .tint("#0072B2", 0.14), high = "#0072B2",
                                  name = x$measure[[1L]]) +
     ggplot2::labs(
       x = sprintf("Time (%s)", attr(x, "time_unit")),
@@ -176,19 +219,72 @@ summary.dynet_similarity <- function(object, ...) {
   others <- flat[flat$time != flat$other, , drop = FALSE]
   parts <- lapply(sort(unique(flat$time)), function(t) {
     rows <- others[others$time == t, , drop = FALSE]
+    # A bin with no comparable neighbour has nothing to reduce; NA is the
+    # honest read, where min()/max() would warn and return Inf.
+    has <- nrow(rows) > 0L
     data.frame(
       time = t,
-      mean = mean(rows$value), min = suppressWarnings(min(rows$value)),
-      max = suppressWarnings(max(rows$value)),
-      nearest = if (nrow(rows)) rows$other[which.max(rows$value)] else NA_real_
+      mean = mean(rows$value),
+      min = if (has) min(rows$value) else NA_real_,
+      max = if (has) max(rows$value) else NA_real_,
+      nearest = if (has && any(!is.na(rows$value))) {
+        rows$other[which.max(rows$value)]
+      } else NA_real_
     )
   })
   out <- do.call(rbind, parts)
-  # An empty min/max is -Inf/Inf from the base reducers; NA is the honest read.
-  out$min[!is.finite(out$min)] <- NA_real_
-  out$max[!is.finite(out$max)] <- NA_real_
   rownames(out) <- NULL
   out
+}
+
+#' Bin times of the measurement grid, empty bins included
+#'
+#' `snapshots()` returns one row per active pair, so a bin in which nothing is
+#' tied leaves no row behind. Any verb that compares consecutive bins must take
+#' its bins from the grid itself, or an empty bin vanishes and the bins either
+#' side of it are silently treated as neighbours.
+#'
+#' @param dn A `dynet` object.
+#' @param sessions The matched session mode.
+#' @param start,end,step,window The grid arguments, as `snapshots()` takes them.
+#' @return A named list of sorted numeric bin times, one element per block
+#'   `snapshots()` measures: `all` unless `sessions = "separate"`, else one per
+#'   session label.
+#' @noRd
+.measure_bin_times <- function(dn, sessions, start, end, step, window) {
+  spec <- .window_spec(dn, start, end, step, window)
+  lapply(.split_sessions(dn, sessions), function(enc) {
+    sort(unique(.grid_for(enc, dn, spec)$time))
+  })
+}
+
+#' Pair each block's grid bins with its snapshot rows
+#'
+#' @param snaps The tidy frame from `snapshots()`.
+#' @param bins The list from `.measure_bin_times()`.
+#' @param sessions The matched session mode.
+#' @return A named list of `list(label, times, snaps)`, one per block.
+#' @noRd
+.measure_blocks <- function(snaps, bins, sessions) {
+  separate <- identical(sessions, "separate") && "session" %in% names(snaps)
+  Map(function(times, label) {
+    rows <- if (separate) {
+      snaps[snaps$session == label, , drop = FALSE]
+    } else snaps
+    list(label = label, times = times, snaps = rows)
+  }, bins, names(bins))
+}
+
+#' The eligible pair cells of a layer, as a one-column matrix
+#'
+#' @param m A square binary layer.
+#' @param directed Whether ordered pairs are the domain.
+#' @return A one-column numeric matrix: the off-diagonal cells when directed,
+#'   the strict upper triangle when not.
+#' @noRd
+.pair_cells <- function(m, directed) {
+  mask <- if (directed) row(m) != col(m) else upper.tri(m)
+  matrix(m[mask], ncol = 1L)
 }
 
 #' Binary adjacency layers, one per time bin

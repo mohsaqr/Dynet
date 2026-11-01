@@ -5,6 +5,10 @@
 # closes that gap: one call takes a measurement verb and returns the observed
 # value, the null distribution it sits in, an interval and a p-value.
 
+# Column names the plot methods below use inside aes().
+utils::globalVariables(c("events", "replicate", "observed", "flag", "z",
+                         "null_lo", "null_hi"))
+
 #' Compare a measure against a temporal null model
 #'
 #' @description
@@ -24,18 +28,22 @@
 #' @param ... Passed to `statistic`, so `measure = "density"` and friends work
 #'   without a wrapper.
 #' @param method,n,within Null model settings, as in [randomise()]. Supplying
-#'   any of them alongside a `dynet_null` is an error rather than a silent
-#'   override.
-#' @param alternative `"two.sided"`, `"greater"` or `"less"`.
+#'   any of them, or `seed`, alongside a `dynet_null` is an error rather than
+#'   a silent override.
+#' @param alternative `"two.sided"`, `"greater"` or `"less"`. Two-sided counts
+#'   the surrogates at least as far from the null mean as the observed value.
 #' @param conf_level Width of the reported percentile interval of the null.
-#' @param p_adjust Multiplicity correction, passed to [stats::p.adjust()].
+#' @param p_adjust Multiplicity correction over all rows, one of
+#'   [stats::p.adjust.methods]; `"BH"` (Benjamini and Hochberg) by default.
 #' @param seed A single whole number for a reproducible draw, or `NULL`.
 #' @return A `dynet_significance` data frame with one row per cell of the
 #'   observed statistic. It carries every key column the statistic produced,
 #'   then `observed`, `null_mean`, `null_sd`, `null_lo`, `null_hi`, `z`, `p`,
 #'   `p_adj`, `p_mcse`, `n_ties` and `n_null`. `null_lo` and `null_hi` bound
 #'   the null distribution, not the observed value, which is why they are not
-#'   named as a confidence interval for it.
+#'   named as a confidence interval for it. The null distribution itself,
+#'   one row per cell and surrogate, comes out through
+#'   `as.data.frame(x, what = "null")`.
 #' @details
 #' The p-value carries the standard plus-one correction,
 #' \eqn{p = (1 + r) / (1 + n)}, so with 999 surrogates the smallest reportable
@@ -47,6 +55,12 @@
 #' missing, never as zero: a bin with no eligible pairs did not have zero
 #' density, it had no density. `n_null` reports how many surrogates actually
 #' produced each cell.
+#'
+#' A surrogate on which `statistic` raises one of this package's own
+#' conditions (class `dynet_bad_input`, for example an empty bin) counts as
+#' missing for every cell, and a warning of class `dynet_null_incomplete`
+#' reports how many did and the first message. Any other error is a defect,
+#' not a missing value, and is raised with class `dynet_statistic_failed`.
 #'
 #' Under `method = "labels"` every structural measure is exactly invariant, so
 #' every p is exactly one. That is correct, and it is a useful check that the
@@ -62,9 +76,20 @@
 #' p-value tightened from 0.19 to 0.07 over the same increase. A large
 #' `n_ties` relative to `n_null` means more surrogates will not help; a
 #' statistic with finer resolution will.
+#' @section Conditions:
+#' Errors, each also of class `dynet_bad_input`: `dynet_bad_input` for a
+#' malformed argument, null settings given beside a `dynet_null`, or
+#' surrogates kept as spells only; `dynet_bad_statistic` for a statistic
+#' without `measure` and `value` columns; `dynet_statistic_failed` when it
+#' fails on a surrogate with an error that is not one of this package's.
+#' Warning: `dynet_null_incomplete` when a cell is missing from more than a
+#' tenth of the surrogates.
 #' @examples
 #' dn <- dynet(school_contacts)
-#' significance(dn, statistic = metrics, measure = "density", n = 99, seed = 1)
+#' tested <- significance(dn, statistic = metrics, measure = "density",
+#'                        n = 99, seed = 1)
+#' tested
+#' as.data.frame(tested, what = "null")
 #' @seealso [randomise()] for the null models and what each one holds fixed.
 #' @references
 #' Davison, A. C., and Hinkley, D. V. (1997). *Bootstrap Methods and Their
@@ -86,16 +111,19 @@ significance <- function(x, statistic, ...,
                          p_adjust = "BH",
                          within = c("network", "sender", "session"),
                          seed = NULL) {
-  alternative <- match.arg(alternative)
+  alternative <- .match_choice(alternative)
   .check(
     "`statistic` must be a measurement verb, passed as a function." =
       is.function(statistic),
     "`conf_level` must be a single number strictly between 0 and 1." =
       length(conf_level) == 1L && is.numeric(conf_level) &&
-        is.finite(conf_level) && conf_level > 0 && conf_level < 1
+        is.finite(conf_level) && conf_level > 0 && conf_level < 1,
+    "`p_adjust` must be one of stats::p.adjust.methods." =
+      is.character(p_adjust) && length(p_adjust) == 1L &&
+        p_adjust %in% stats::p.adjust.methods
   )
   supplied <- c(method = !missing(method), n = !missing(n),
-                within = !missing(within))
+                within = !missing(within), seed = !missing(seed))
 
   if (inherits(x, "dynet_null")) {
     if (any(supplied)) {
@@ -108,8 +136,8 @@ significance <- function(x, statistic, ...,
     dn <- attr(null, "source")
   } else {
     .check_dynet(x)
-    method <- match.arg(method)
-    within <- match.arg(within)
+    method <- .match_choice(method)
+    within <- .match_choice(within)
     dn <- x
     null <- randomise(dn, method = method, n = n, within = within,
                       keep = "networks", seed = seed)
@@ -125,21 +153,36 @@ significance <- function(x, statistic, ...,
   if (!all(c("measure", "value") %in% names(obs))) {
     stop(errorCondition(
       "`statistic` must return a data frame with `measure` and `value` columns.",
-      class = "dynet_bad_statistic", call = NULL))
+      class = c("dynet_bad_statistic", "dynet_bad_input"), call = NULL))
   }
   keys <- setdiff(names(obs), "value")
   obs_key <- do.call(paste, c(obs[keys], sep = "\r"))
 
-  draws <- vapply(networks, function(net) {
-    got <- try(as.data.frame(statistic(net, ...)), silent = TRUE)
-    if (inherits(got, "try-error")) return(rep(NA_real_, nrow(obs)))
+  # A surrogate the statistic refuses with one of this package's own
+  # conditions (an empty bin, say) has no value for any cell: it is missing,
+  # counted and reported. Any other error is a defect and is raised.
+  refusals <- character(0)
+  draws <- vapply(seq_along(networks), function(i) {
+    got <- tryCatch(
+      as.data.frame(statistic(networks[[i]], ...)),
+      dynet_bad_input = function(e) {
+        refusals[[length(refusals) + 1L]] <<- conditionMessage(e)
+        NULL
+      },
+      error = function(e) {
+        stop(errorCondition(sprintf(
+          "`statistic` failed on surrogate %d: %s", i, conditionMessage(e)),
+          class = c("dynet_statistic_failed", "dynet_bad_input"),
+          call = NULL))
+      })
+    if (is.null(got)) return(rep(NA_real_, nrow(obs)))
     idx <- match(obs_key, do.call(paste, c(got[keys], sep = "\r")))
     as.numeric(got$value[idx])
   }, numeric(nrow(obs)))
   if (is.null(dim(draws))) draws <- matrix(draws, nrow = nrow(obs))
 
   n_null <- rowSums(is.finite(draws))
-  null_mean <- rowMeans(draws, na.rm = TRUE)
+  null_mean <- ifelse(n_null > 0L, rowMeans(draws, na.rm = TRUE), NA_real_)
   null_sd <- apply(draws, 1L, stats::sd, na.rm = TRUE)
   probs <- c((1 - conf_level) / 2, 1 - (1 - conf_level) / 2)
   bounds <- t(apply(draws, 1L, function(v) {
@@ -183,8 +226,12 @@ significance <- function(x, statistic, ...,
   rownames(out) <- NULL
 
   if (any(n_null < 0.9 * attr(null, "n"))) {
-    warning(warningCondition(
-      "Some cells were missing from more than a tenth of the surrogates; see n_null.",
+    warning(warningCondition(paste0(
+      "Some cells were missing from more than a tenth of the surrogates; ",
+      "see n_null.",
+      if (length(refusals)) sprintf(
+        " The statistic refused %d of %d surrogates, first with: %s",
+        length(refusals), length(networks), refusals[[1L]])),
       class = "dynet_null_incomplete"))
   }
 
@@ -244,15 +291,43 @@ summary.dynet_significance <- function(object, ...) {
 #' @param x A `dynet_significance` from [significance()].
 #' @param row.names Passed to the data frame method.
 #' @param optional Passed to the data frame method.
+#' @param what `"result"`, the default, for one row per tested cell;
+#'   `"null"` for the null distribution, one row per cell and surrogate.
 #' @param ... Ignored.
-#' @return A base data frame, one row per tested cell.
+#' @return A base data frame. Under `what = "result"`, the columns
+#'   [significance()] documents. Under `what = "null"`, the key columns of
+#'   the statistic (such as `time`, `node`, `measure`), then `replicate` (the
+#'   surrogate) and `value` (the statistic on it, `NA` where the surrogate
+#'   did not produce the cell).
+#' @examples
+#' dn <- dynet(school_contacts)
+#' tested <- significance(dn, statistic = metrics, measure = "density",
+#'                        n = 19, seed = 1)
+#' as.data.frame(tested)
+#' as.data.frame(tested, what = "null")
 #' @export
 as.data.frame.dynet_significance <- function(x, row.names = NULL,
-                                             optional = FALSE, ...) {
+                                             optional = FALSE,
+                                             what = c("result", "null"),
+                                             ...) {
+  what <- .match_choice(what)
+  draws <- attr(x, "draws")
   attributes(x) <- list(names = names(x), row.names = seq_len(nrow(x)),
                         class = "data.frame")
-  x
+  if (identical(what, "result")) return(x)
+  keys <- x[setdiff(names(x), .significance_columns)]
+  n_rep <- ncol(draws)
+  out <- keys[rep(seq_len(nrow(keys)), times = n_rep), , drop = FALSE]
+  out$replicate <- rep(seq_len(n_rep), each = nrow(keys))
+  out$value <- as.numeric(draws)
+  rownames(out) <- NULL
+  out
 }
+
+# Columns significance() adds after the statistic's own key columns.
+.significance_columns <- c("observed", "null_mean", "null_sd", "null_lo",
+                           "null_hi", "z", "p", "p_adj", "p_mcse", "n_ties",
+                           "n_null")
 
 #' Plot a permutation test
 #'
@@ -266,9 +341,10 @@ as.data.frame.dynet_significance <- function(x, row.names = NULL,
 plot.dynet_significance <- function(x, type = c("null", "series", "z"), ...) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(errorCondition("Plotting needs ggplot2.",
-                        class = "dynet_missing_package", call = NULL))
+                        class = c("dynet_missing_package", "dynet_bad_input"),
+                        call = NULL))
   }
-  type <- match.arg(type)
+  type <- .match_choice(type)
   df <- as.data.frame(x)
   draws <- attr(x, "draws")
   measure <- if ("measure" %in% names(df)) df$measure else rep("value", nrow(df))
@@ -282,14 +358,14 @@ plot.dynet_significance <- function(x, type = c("null", "series", "z"), ...) {
     }
     df$flag <- ifelse(!is.na(df$p_adj) & df$p_adj < 0.05, "outside", "inside")
     return(
-      ggplot2::ggplot(df, ggplot2::aes(x = df$time)) +
+      ggplot2::ggplot(df, ggplot2::aes(x = time)) +
         ggplot2::geom_ribbon(
-          ggplot2::aes(ymin = df$null_lo, ymax = df$null_hi),
+          ggplot2::aes(ymin = null_lo, ymax = null_hi),
           fill = "#999999", alpha = 0.35) +
-        ggplot2::geom_line(ggplot2::aes(y = df$observed),
+        ggplot2::geom_line(ggplot2::aes(y = observed),
                            colour = "#0072B2", linewidth = 0.8) +
         ggplot2::geom_point(
-          ggplot2::aes(y = df$observed, shape = df$flag, colour = df$flag),
+          ggplot2::aes(y = observed, shape = flag, colour = flag),
           size = 2) +
         ggplot2::scale_shape_manual(
           values = c(inside = 1, outside = 17), name = NULL) +
@@ -314,16 +390,16 @@ plot.dynet_significance <- function(x, type = c("null", "series", "z"), ...) {
     if (!nrow(df)) {
       stop(errorCondition(
         "Every z is undefined, so there is nothing to order; the null has no spread.",
-        class = "dynet_empty_result", call = NULL))
+        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
     }
     df$flag <- ifelse(!is.na(df$p_adj) & df$p_adj < 0.05, "outside", "inside")
     df$label <- stats::reorder(df$label, df$z)
     return(
-      ggplot2::ggplot(df, ggplot2::aes(x = df$z, y = df$label)) +
+      ggplot2::ggplot(df, ggplot2::aes(x = z, y = label)) +
         ggplot2::geom_vline(xintercept = 0, colour = "#999999",
                             linetype = "22") +
         ggplot2::geom_point(
-          ggplot2::aes(shape = df$flag, colour = df$flag), size = 2.4) +
+          ggplot2::aes(shape = flag, colour = flag), size = 2.4) +
         ggplot2::scale_shape_manual(
           values = c(inside = 1, outside = 17), name = NULL) +
         ggplot2::scale_colour_manual(
@@ -343,10 +419,10 @@ plot.dynet_significance <- function(x, type = c("null", "series", "z"), ...) {
   pooled <- pooled[is.finite(pooled$value), , drop = FALSE]
   marks <- data.frame(measure = measure, observed = df$observed,
                       stringsAsFactors = FALSE)
-  ggplot2::ggplot(pooled, ggplot2::aes(x = pooled$value)) +
+  ggplot2::ggplot(pooled, ggplot2::aes(x = value)) +
     ggplot2::geom_histogram(bins = 30, fill = "#999999", colour = NA) +
     ggplot2::geom_vline(
-      data = marks, ggplot2::aes(xintercept = marks$observed),
+      data = marks, ggplot2::aes(xintercept = observed),
       colour = "#D55E00", linewidth = 0.8, linetype = "solid") +
     ggplot2::facet_wrap(~ measure, scales = "free") +
     ggplot2::labs(

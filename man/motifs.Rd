@@ -47,7 +47,10 @@ independent implementation index by index.
 \strong{The definition.} Three incompatible motif families exist in the
 literature. This adopts Paranjape, Benson & Leskovec (2017): exactly three
 edge events on at most three distinct vertices, with
-\code{t_last - t_first <= delta} over the three times in sorted order. Kovanen et
+\code{t_last - t_first <= delta} over the three times in sorted order, compared
+with the package's relative time tolerance so a window of exactly \code{delta}
+is admitted even when the subtraction rounds (\code{0.4 - 0.1} is not \code{0.3} in
+floating point). \code{start} and \code{end} are compared the same way. Kovanen et
 al. (2011) instead allow arbitrary size and bound \emph{consecutive} gaps, which
 is a strictly weaker condition and agrees only for two-edge patterns; that
 family's instance count is unbounded and does not reduce to a fixed census.

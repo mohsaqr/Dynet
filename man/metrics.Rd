@@ -160,15 +160,21 @@ two disagree on directed data.
 own closeness (reachable vertices divided by reachable distance, so it is
 defined on a disconnected snapshot), with the theoretical maximum of that
 score: \code{n - 1} for a directed snapshot (a single arc from the centre) and
-\code{n - 2} for an undirected one (one isolated dyad). It matches
-\code{sna::centralization(closeness)} on connected snapshots and not on
-disconnected ones, where sna's closeness is zero everywhere.
+\code{n - 2} for an undirected one (one isolated dyad). Because that maximum
+differs from the connected-graph star maximum \code{sna} uses, the two never
+coincide: on a connected snapshot of \code{n} vertices this value is
+\code{sna::centralization(closeness)} times \code{(n - 1) / n} when directed and
+times \code{(n - 1) / (2 * n - 3)} when undirected, and on a disconnected one
+sna's closeness is zero everywhere.
 
 Krackhardt's four indices -- \code{"connectedness"}, \code{"efficiency"},
 \code{"hierarchy"} and \code{"lubness"} -- describe how far a directed network
-departs from a pure out-tree. \code{"hierarchy"} and \code{"lubness"} are undefined
-on some graphs (no connected pair, no component of three) and report \code{NaN}
-rather than a number that would mislead.
+departs from a pure out-tree. \code{"efficiency"}, \code{"hierarchy"} and
+\code{"lubness"} are undefined on some graphs (no component that could hold an
+arc beyond its spanning tree, no connected pair, no component of three) and
+report \code{NaN}, as \code{sna} does, rather than a number that would mislead. A
+window with no eligible vertex at all reports \code{"efficiency"} as \code{0} and the
+other two as \code{NaN}.
 
 Triad census cost grows with the cube of the vertex count. On a network of
 a few hundred vertices it is the slowest measure here by a wide margin.
@@ -203,7 +209,8 @@ snapshots return zero for all selectors.
 }
 \section{Conditions}{
 
-Errors: \code{dynet_unknown_measure} (a name outside the forty above),
+Errors: \code{dynet_unknown_measure} (a name outside the forty-two above; it also
+carries \code{dynet_bad_input}),
 \code{dynet_needs_directed} (one of the eight direction-reading selectors on an
 undirected network), \code{dynet_no_sessions} (\code{sessions = "separate"} without a
 session column), \code{dynet_outside_observation} (the requested range misses

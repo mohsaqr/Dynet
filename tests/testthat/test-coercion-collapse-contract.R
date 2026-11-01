@@ -60,7 +60,10 @@ test_that("collapse reports union, additive, weighted, and legacy duration field
   expect_equal(ab$weighted_duration, 10)
   expect_equal(ab$latest_weight, 5)
   expect_equal(ab$activity.duration, ab$union_duration)
-  expect_equal(ab$activity.count, ab$spell_count)
+  # networkDynamic merges the overlapping [0, 2) and [1, 3) into one spell and
+  # keeps the point at 4 as a second, so network.collapse() reports 2 runs
+  # where Dynet counts 3 raw spells; the alias follows networkDynamic.
+  expect_equal(ab$activity.count, 2L)
   expect_equal(flat$edges$weight[flat$edges$from == match("A", flat$nodes$name) &
                                    flat$edges$to == match("B", flat$nodes$name)], 3)
 })

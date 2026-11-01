@@ -21,7 +21,8 @@
 
 \item{what}{\code{"paths"}, the default, for the endpoint summary, or \code{"steps"}
 for the tidy reconstructed optimal routes. The latter includes
-endpoint-local \code{path_id} values for tied contact sequences.}
+endpoint-local \code{path_id} values for tied contact sequences. Any other
+value raises \code{dynet_bad_choice}, a \code{dynet_bad_input}.}
 
 \item{...}{Ignored.}
 }

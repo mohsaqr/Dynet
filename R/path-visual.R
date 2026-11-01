@@ -58,6 +58,11 @@
 #' `last_time` retain its temporal range.
 #'
 #' @param x A result from [paths()].
+#' @param session For a result of `paths(sessions = "separate")` only: the
+#'   one session whose routes form the network. Each session there is a
+#'   complete, independent search with its own origin, so the sessions are
+#'   never pooled into one vertex table. Supplying it for any other result is
+#'   an error.
 #' @return A static `dynet_path_network` cograph netobject, whose two tidy
 #'   tables are reached with `as.data.frame(x, what = "edges")` and
 #'   `as.data.frame(x, what = "nodes")`. The edge table has one row per hop
@@ -74,8 +79,12 @@
 #'   target, and its `arrival_time` is that vertex's latest-departure
 #'   supremum, as in [paths()].
 #'
-#'   A result that is not from [paths()] raises `dynet_bad_input`; a path
-#'   result with no reachable vertex raises `dynet_empty_result`.
+#'   A result that is not from [paths()] raises `dynet_bad_input`; a
+#'   separate-session result without `session` raises `dynet_needs_session`,
+#'   a `session` it does not hold raises `dynet_unknown_session`, and a
+#'   `session` given for any other result raises `dynet_bad_input`; a path
+#'   result with no reachable vertex raises `dynet_empty_result`. Every one
+#'   of these also carries `dynet_bad_input`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' routes <- paths(dn, from = "Ana")
@@ -83,18 +92,47 @@
 #' as.data.frame(union_network)
 #' as.data.frame(union_network, what = "nodes")
 #' @export
-path_network <- function(x) {
+path_network <- function(x, session = NULL) {
   if (!inherits(x, "dynet_paths")) {
     stop(errorCondition("`x` must be a result from `paths()`.",
                         class = "dynet_bad_input", call = NULL))
   }
   hops <- .path_hops(x)
   paths <- as.data.frame(x)
+  separate <- "session" %in% names(paths)
+  if (!separate && !is.null(session)) {
+    stop(errorCondition(
+      "`session` applies only to a result of `paths(sessions = \"separate\")`.",
+      class = "dynet_bad_input", call = NULL))
+  }
+  if (separate) {
+    # Every session is an independent search with its own origin; pooling
+    # them would list each vertex once per session in one network.
+    available <- unique(paths$session)
+    if (is.null(session)) {
+      stop(errorCondition(
+        sprintf(paste0("A separate-session path result holds one search per ",
+                       "session; name one with `session =`. Sessions: %s."),
+                paste(available, collapse = ", ")),
+        class = c("dynet_needs_session", "dynet_bad_input"), call = NULL))
+    }
+    .check("`session` must be one session name." =
+             length(session) == 1L && !is.na(session))
+    if (!as.character(session) %in% available) {
+      stop(errorCondition(
+        sprintf("Session %s is not in this path result. Sessions: %s.",
+                sQuote(session), paste(available, collapse = ", ")),
+        class = c("dynet_unknown_session", "dynet_bad_input"), call = NULL))
+    }
+    paths <- paths[paths$session == session, , drop = FALSE]
+    if (nrow(hops)) hops <- hops[hops$session == session, , drop = FALSE]
+  }
   nodes <- paths[paths$reachable, c("node", "arrival_time", "latency",
                                     "n_hops", "n_paths"), drop = FALSE]
   if (!nrow(nodes)) {
     stop(errorCondition("The path result has no reachable vertices.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"),
+                        call = NULL))
   }
   if (nrow(hops)) {
     key <- paste(hops$from, hops$to, sep = "\r")
@@ -140,7 +178,7 @@ path_network <- function(x) {
       source = "dynet", type = "temporal_path_union",
       path_source = attr(x, "source"), direction = attr(x, "direction"),
       criterion = attr(x, "criterion"), path_mode = attr(x, "path_mode"),
-      time_unit = attr(x, "time_unit")
+      session = session, time_unit = attr(x, "time_unit")
     ),
     node_groups = data.frame(node = names, group = as.character(nodes$n_hops),
                              stringsAsFactors = FALSE)
@@ -166,10 +204,21 @@ path_network <- function(x) {
 #' @export
 as.data.frame.dynet_path_network <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   out <- if (identical(what, "edges")) x$data else
     x$nodes[, setdiff(names(x$nodes), c("id", "label", "x", "y")), drop = FALSE]
   rownames(out) <- NULL
   out
 }
 
+
+#' Describe a path network
+#'
+#' @param object A result from [path_network()].
+#' @param ... Ignored.
+#' @return A `data.frame` with columns `property` and `value`, one row per
+#'   property, as for [summary.dynet_collapsed()]; `weight` reads `"hops"`.
+#' @export
+summary.dynet_path_network <- function(object, ...) {
+  .network_summary(object, "hops")
+}

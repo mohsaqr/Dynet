@@ -166,12 +166,17 @@
 #' count. Naming any of those through `...` overrides it.
 #'
 #' Failures are classed conditions. `dynet_bad_input` covers every malformed
-#' argument, `dynet_unknown_plot_arg` a name in `...` no view can read,
+#' argument, `dynet_bad_choice` an unknown `type`, `link`, `time` or `nest`,
+#' `dynet_unknown_plot_arg` a name in `...` no view can read,
 #' `dynet_bad_palette` an unusable `palette`, and `dynet_empty_result` a
 #' window, an `at` or a `step` that leaves nothing to draw. The proximity view
 #' adds `dynet_unknown_measure` and `dynet_needs_directed`. With cograph
 #' absent, the node-link views raise `dynet_needs_cograph` and the
-#' `"layers"`, `"heatmap"` and `"stack"` views `dynet_missing_package`.
+#' `"layers"`, `"heatmap"` and `"stack"` views `dynet_missing_package`. Every
+#' one of these also carries the parent class `dynet_bad_input`, so one
+#' handler catches them all. When vertices are coloured by a `groups`
+#' attribute that has more groups than the palette has colours, the
+#' node-link views warn with `dynet_palette_recycled`.
 #'
 #' @return For `"timeline"`, `"events"`, `"activity"` and `"heatmap"`, a
 #'   `ggplot` object, which prints itself when the call is not assigned. For
@@ -221,11 +226,14 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
                        palette = "okabe", default_dist = 2, base_size = 12,
                        style = .dyn_style(), ...) {
   .check_dynet(x)
-  type <- match.arg(type)
+  type <- .match_choice(type, c("timeline", "events", "activity", "network",
+                                "snapshots", "proximity", "layers",
+                                "heatmap", "stack"), "type")
   .check_plot_dots(list(...), type)
-  link <- match.arg(link)
-  time <- match.arg(time)
-  nest <- match.arg(nest)
+  link <- .match_choice(link, c("hook", "arc", "chevron", "wave", "bracket"),
+                        "link")
+  time <- .match_choice(time, c("bin", "event", "clock"), "time")
+  nest <- .match_choice(nest, c("pair", "column"), "nest")
   # Resolved once here so that an unusable palette is reported immediately,
   # rather than only when a view happens to need a colour from it.
   .dyn_palette(palette, 1L)
@@ -300,7 +308,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (length(blocks) < 2L) {
     stop(errorCondition(
       "A layer view needs at least two time slices; reduce `step`.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   stats::setNames(lapply(blocks, function(block) {
     m <- matrix(0, length(vertices), length(vertices),
@@ -328,7 +336,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 .plot_layer_heatmap <- function(x, step, palette, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The heatmap view needs the cograph package.",
-                        class = "dynet_missing_package", call = NULL))
+                        class = c("dynet_missing_package", "dynet_bad_input"), call = NULL))
   }
   layers <- .dyn_layer_matrices(x, step, prefix = "Slice ")
   # The ramp and legend title are defaults, not decisions: anything the caller
@@ -357,7 +365,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 .plot_layer_stack <- function(x, step, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The stack view needs the cograph package.",
-                        class = "dynet_missing_package", call = NULL))
+                        class = c("dynet_missing_package", "dynet_bad_input"), call = NULL))
   }
   long <- snapshots(x, step = step %||% x$meta$interval)
   vertices <- sort(unique(c(long$from, long$to)))
@@ -413,7 +421,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 .plot_layers <- function(x, step, omega, palette, labels, ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition("The layer view needs the cograph package.",
-                        class = "dynet_missing_package", call = NULL))
+                        class = c("dynet_missing_package", "dynet_bad_input"), call = NULL))
   }
   .check(
     "`omega` must be one non-negative number." =
@@ -468,7 +476,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (is.null(nm) || any(!nzchar(nm))) {
     stop(errorCondition(
       "Every argument passed through `...` to plot() must be named.",
-      class = "dynet_unknown_plot_arg", call = NULL))
+      class = c("dynet_unknown_plot_arg", "dynet_bad_input"), call = NULL))
   }
   known <- names(formals(plot.dynet))
   delegate <- switch(type, layers = "plot_mlna", heatmap = "plot_ml_heatmap",
@@ -491,7 +499,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
           # plot_ml_heatmap() and plot_temporal(), not to splot().
           sprintf(" Drawing arguments are passed to cograph::%s().", delegate)
         else " This view takes no further drawing arguments."),
-      class = "dynet_unknown_plot_arg", call = NULL))
+      class = c("dynet_unknown_plot_arg", "dynet_bad_input"), call = NULL))
   }
   invisible(TRUE)
 }
@@ -522,7 +530,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (is.null(clipped)) {
     stop(errorCondition(
       sprintf("No edge or vertex is active between %s and %s.", from, to),
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   clipped
 }
@@ -666,7 +674,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   e <- as.data.frame(x)
   if (!nrow(e)) {
     stop(errorCondition("The network has no edge spell to draw.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   nodes <- x$nodes$name
   lev <- rev(nodes)
@@ -879,7 +887,8 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (is.numeric(shape)) return(as.integer(shape[[1L]]))
   codes <- c(circle = 21L, square = 22L, diamond = 23L, triangle = 24L,
              triangle_down = 25L)
-  code <- codes[[match.arg(as.character(shape[[1L]]), names(codes))]]
+  code <- codes[[.match_choice(as.character(shape[[1L]]), names(codes),
+                               "node_shape")]]
   code
 }
 
@@ -891,7 +900,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(errorCondition(
       "Network drawing is done by cograph. Install it with install.packages(\"cograph\").",
-      class = "dynet_needs_cograph", call = NULL))
+      class = c("dynet_needs_cograph", "dynet_bad_input"), call = NULL))
   }
   invisible(TRUE)
 }
@@ -997,10 +1006,10 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   if (is.character(theme) && length(theme) == 1L &&
       requireNamespace("cograph", quietly = TRUE)) {
     th <- cograph::get_theme(theme)
-    if (!is.null(th)) {
-      fill <- try(th$get("node_fill"), silent = TRUE)
-      if (!inherits(fill, "try-error") && !is.null(fill)) return(fill)
-    }
+    # A theme's `get()` returns NULL for a key it does not hold rather than
+    # failing, so there is nothing to catch here; a failure is a real one.
+    fill <- if (is.null(th)) NULL else th$get("node_fill")
+    if (!is.null(fill)) return(fill)
   }
   "#FFFFFF"
 }
@@ -1040,12 +1049,17 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #'
 #' @param net A netobject carrying a `groups` column.
 #' @param palette Palette specification, as in [plot.dynet()].
-#' @return A character vector of colours, one per vertex.
+#' @return A character vector of colours, one per vertex. Warns with
+#'   `dynet_palette_recycled` when there are more groups than colours.
 #' @noRd
 .node_fill <- function(net, palette = "okabe") {
   g <- as.character(net$nodes$groups)
   lev <- sort(unique(g))
-  unname(stats::setNames(.dyn_palette(palette, length(lev)), lev)[g])
+  colours <- .dyn_palette(palette, length(lev))
+  # Fill is the only channel a partition has in a node-link view: vertex
+  # labels name vertices, not groups.
+  .warn_recycled_style(lev, colours, what = "vertex groups")
+  unname(stats::setNames(colours, lev)[g])
 }
 
 #' Small multiples, one cograph panel per bin
@@ -1096,15 +1110,16 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 .bin_netobject <- function(x, at) {
   enc <- .encode(x)
   grid <- .grid_for(enc, x)
-  k <- which(grid$lo <= at & grid$hi > at)
-  if (length(k) == 0L && at == max(grid$hi) && isTRUE(grid$closed[nrow(grid)])) {
+  k <- which(.time_leq(grid$lo, at) & !.time_leq(grid$hi, at))
+  if (length(k) == 0L && isTRUE(.time_eq(at, max(grid$hi))) &&
+      isTRUE(grid$closed[nrow(grid)])) {
     k <- nrow(grid)
   }
   if (length(k) == 0L) {
     stop(errorCondition(
       sprintf("No vertex is observed at t = %s, so there is nothing to draw.",
               format(at)),
-      class = "dynet_empty_result", call = NULL
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL
     ))
   }
   .frame_netobject(x, enc, grid[k, , drop = FALSE],
@@ -1140,7 +1155,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     stop(errorCondition(
       sprintf("No vertex is eligible at t = %s, so there is nothing to draw.",
               label %||% format(bin$time)),
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   groups <- if ("groups" %in% names(x$nodes)) "groups" else NULL
   wanted <- if (all_vertices) rep(TRUE, nrow(x$nodes)) else state$eligible
@@ -1172,7 +1187,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
   e <- as.data.frame(x)
   if (!nrow(e)) {
     stop(errorCondition("The network has no edge spell to draw.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
   e$pair <- .pair_label(e$from, e$to, x$directed)
   busiest <- names(sort(table(e$pair), decreasing = TRUE))
@@ -1210,7 +1225,7 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
     ggplot2::geom_tile(ggplot2::aes(x = time, y = pair, fill = value),
                        height = 0.8) +
     ggplot2::scale_fill_gradient(
-      low = "#DCE9F5", high = "#0072B2",
+      low = .tint("#0072B2", 0.14), high = "#0072B2",
       limits = if (pointy) NULL else c(0, 1),
       name = if (pointy) "Contacts in bin" else "Share of bin active") +
     ggplot2::labs(
@@ -1256,9 +1271,9 @@ plot.dynet <- function(x, type = c("timeline", "events", "activity", "network",
 #' promised.
 #'
 #' @param x A `dynet_paths` from [paths()].
-#' @param palette Palette specification, as in [plot.dynet()]. Vertices are
-#'   coloured by how many hops they are from the source. Read only by the
-#'   legacy tree renderer.
+#' @param palette Palette specification, as in [plot.dynet()]. Passed to
+#'   [plot_path_trajectories()], and for a legacy result colours vertices by
+#'   how many hops they are from the source.
 #' @param ... Passed to [plot_path_trajectories()], or to `cograph::splot()`
 #'   for a legacy result.
 #'
@@ -1284,12 +1299,12 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
   # temporal history, rather than one predecessor tree the criterion never
   # promised.
   if (!is.null(attr(x, "criterion"))) {
-    return(plot_path_trajectories(x, ...))
+    return(plot_path_trajectories(x, palette = palette, ...))
   }
   if (!identical(mode, "collapse")) {
     stop(errorCondition(
       "Bounded or separate session paths do not form one predecessor tree. Plot a collapsed path result until session-aware rendering is implemented.",
-      class = "dynet_unsupported_plot", call = NULL
+      class = c("dynet_unsupported_plot", "dynet_bad_input"), call = NULL
     ))
   }
   .need_cograph()
@@ -1306,7 +1321,7 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
     stop(errorCondition(
       sprintf("%s reaches no other vertex, so there is no tree to draw.",
               sQuote(attr(x, "source"))),
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
 
   nm <- df$node
@@ -1345,7 +1360,7 @@ plot.dynet_paths <- function(x, palette = "okabe", ...) {
          # nothing; keep it thin and uniform and let position do the work.
          edge_width = 0.7, edge_width_range = c(0.7, 0.7),
          edge_alpha = 0.75, label_size = 0.7),
-    list(...)))
+    list(...)), palette)
   do.call(cograph::splot, c(list(net), args))
   invisible(x)
 }

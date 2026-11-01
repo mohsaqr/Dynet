@@ -34,7 +34,8 @@
   steps <- as.data.frame(x, what = "steps")
   if (!nrow(steps)) {
     stop(errorCondition("The path result has no route steps to draw.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"),
+                        call = NULL))
   }
   identity_cols <- intersect(
     c("session", "endpoint", "path_id", "path_session"), names(steps)
@@ -61,12 +62,26 @@
 }
 
 #' Format an attained time as a stable token component
+#'
+#' The token is a tree key, so it must be one-to-one on the doubles it
+#' encodes: twelve significant digits merged hop times a millisecond apart on
+#' a Unix-second clock (~1.7e9) into one branch. Fifteen digits are used
+#' where they read the value back exactly, which keeps ordinary times short,
+#' and the round-trip seventeen elsewhere.
+#'
 #' @param time Numeric vector of attained times.
-#' @return A character vector.
+#' @return A character vector that `as.numeric()` reads back to `time`
+#'   exactly, `"NA"` for a missing time.
 #' @noRd
 .path_time_token <- function(time) {
-  out <- sprintf("%.12g", time)
-  out[is.na(time)] <- "NA"
+  out <- rep("NA", length(time))
+  known <- !is.na(time)
+  short <- sprintf("%.15g", time[known])
+  # An exact comparison is the point here: the question is whether the text
+  # reproduces the very same double, not whether it is close to it.
+  exact <- as.numeric(short) == time[known]
+  short[!exact] <- sprintf("%.17g", time[known][!exact])
+  out[known] <- short
   out
 }
 
@@ -103,7 +118,11 @@
   pick <- function(index) vapply(parts, \(one) {
     if (length(one) < index) NA_character_ else one[[index]]
   }, character(1L))
-  time <- suppressWarnings(as.numeric(pick(2L)))
+  raw_time <- pick(2L)
+  time <- rep(NA_real_, length(raw_time))
+  given <- !is.na(raw_time) & nzchar(raw_time)
+  # A malformed token still warns here, so it surfaces instead of becoming NA.
+  time[given] <- as.numeric(raw_time[given])
   session <- pick(3L)
   data.frame(vertex = pick(1L), time = time,
              session = ifelse(is.na(session) | !nzchar(session), NA_character_,
@@ -137,7 +156,8 @@
   min_count <- as.integer(min_count)
   if (!length(sequences)) {
     stop(errorCondition("The path result has no route steps to draw.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"),
+                        call = NULL))
   }
 
   prefixes <- unlist(lapply(sequences, \(one)
@@ -150,7 +170,8 @@
     stop(errorCondition(
       sprintf("No route prefix occurs at least %d times; lower `min_count`.",
               min_count),
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"),
+      call = NULL))
   }
 
   split_prefix <- strsplit(keep, .PATH_JOIN, fixed = TRUE)
@@ -422,8 +443,8 @@ plot_path_trajectories <- function(
     x, measure = c("frequency", "time", "predictability"),
     orientation = c("horizontal", "vertical"), min_count = 1L,
     base_size = 11, palette = "okabe") {
-  measure <- match.arg(measure)
-  orientation <- match.arg(orientation)
+  measure <- .match_choice(measure)
+  orientation <- .match_choice(orientation)
   .check("`base_size` must be one positive number." =
            length(base_size) == 1L && is.numeric(base_size) &&
            is.finite(base_size) && base_size > 0)
@@ -434,7 +455,8 @@ plot_path_trajectories <- function(
   body <- tree[!is_root, , drop = FALSE]
   if (!nrow(body)) {
     stop(errorCondition("The trajectory tree has no route branch to draw.",
-                        class = "dynet_empty_result", call = NULL))
+                        class = c("dynet_empty_result", "dynet_bad_input"),
+                        call = NULL))
   }
 
   fill_value <- switch(measure,
@@ -509,8 +531,8 @@ plot_path_trajectories <- function(
   )
 
   limits <- if (identical(measure, "predictability")) c(0, 1) else NULL
-  ramp <- if (identical(measure, "time")) c("#FBE6D4", "#D55E00") else
-    c("#DCE9F5", "#0072B2")
+  ramp <- if (identical(measure, "time")) c(.tint("#D55E00", 0.15), "#D55E00") else
+    c(.tint("#0072B2", 0.14), "#0072B2")
 
   direction <- attr(tree, "direction") %||% "forward"
   anchor_word <- if (identical(direction, "backward")) "to" else "from"

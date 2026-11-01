@@ -171,6 +171,14 @@ a spell outside the observation period is not reassigned to observed
 windows. \code{\link[=snapshots]{snapshots()}} and the network plots keep full weights per bin, so
 their \code{weight} column is not the input to this strength.
 
+A self-loop kept with \code{dynet(loops = TRUE)} counts in \code{"degree"} (twice on
+an undirected network, as in igraph), in \code{"strength"}, in
+\code{"participation"} and in the prestige variants that say so below. Every
+other measure works on the loop-free binary snapshot, so a loop changes
+none of them. That differs from igraph in two places: \code{igraph::page_rank()}
+lets a loop return the walker to its own vertex, and \code{igraph::coreness()}
+counts a loop towards the degree it peels on.
+
 Snapshot \code{"closeness"} is \strong{not} Freeman's \eqn{1 / \sum_z d_{sz}}, which
 is
 undefined once a snapshot is disconnected -- and a time bin almost always

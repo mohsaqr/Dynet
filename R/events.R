@@ -2,6 +2,38 @@
 # Edge dynamics: formation, dissolution, durations, burstiness
 # ===========================================================================
 
+#' Validate a `measure` argument against the names a verb offers
+#'
+#' One guard for every measurement verb in this file and for [metrics()], so
+#' the four agree on what a broken `measure` raises: an empty, missing or
+#' non-character value is `dynet_bad_input`, and an unknown name is
+#' `dynet_unknown_measure`, which also carries `dynet_bad_input` so a caller
+#' can catch every broken contract with one class. A name given twice is
+#' measured once; repeating it would otherwise duplicate every row.
+#'
+#' @param measure The caller's `measure` argument.
+#' @param allowed Character vector of the names this verb offers.
+#' @return `measure` with duplicates removed, in first-seen order.
+#' @examples
+#' Dynet:::.check_measure(c("a", "a"), c("a", "b"))
+#' @noRd
+.check_measure <- function(measure, allowed) {
+  .check(
+    "`measure` must be a character vector." = is.character(measure),
+    "`measure` must name at least one measure." = length(measure) > 0L,
+    "`measure` must not contain missing values." = !anyNA(measure)
+  )
+  bad <- setdiff(measure, allowed)
+  if (length(bad) > 0L) {
+    stop(errorCondition(
+      sprintf("Unknown measure %s. Available: %s",
+              paste(sQuote(bad), collapse = ", "),
+              paste(allowed, collapse = ", ")),
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
+  }
+  unique(measure)
+}
+
 #' One-sided positive observation state
 #' @param dn Parent temporal network.
 #' @param time Numeric timestamp.
@@ -14,7 +46,7 @@
 #' @noRd
 .one_sided_observation <- function(dn, time,
                                    side = c("before", "after")) {
-  side <- match.arg(side)
+  side <- .match_choice(side)
   observations <- .observation_table(dn)
   if (is.null(observations)) {
     bounds <- dn$meta$time_range
@@ -48,7 +80,7 @@
 .one_sided_vertex_eligibility <- function(
     activity, time, side = c("before", "after"), session = NULL,
     erase_sessions = FALSE) {
-  side <- match.arg(side)
+  side <- .match_choice(side)
   eligible <- !activity$declared
   if (!length(activity$node)) return(eligible)
   session_rows <- if (erase_sessions || all(is.na(activity$session))) {
@@ -86,7 +118,7 @@
 .transition_pair_ledger <- function(
     dn, enc, time, sessions = c("bounded", "collapse", "separate"),
     label = "all") {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   opportunities <- .relational_opportunities(enc$n, dn$directed)
   empty <- list(
     eligible_before = integer(), eligible_after = integer(),
@@ -229,7 +261,7 @@
 .formation_rate_ledger <- function(dn, enc, bin,
                                    sessions = c("bounded", "collapse", "separate"),
                                    label = "all") {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   edge_ledger <- .temporal_edge_ledger(
     dn, enc, bin, sessions = sessions, label = label, cohort = integer()
   )
@@ -271,7 +303,7 @@
 .dissolution_rate_ledger <- function(
     dn, enc, bin, sessions = c("bounded", "collapse", "separate"),
     label = "all") {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   edge_ledger <- .temporal_edge_ledger(
     dn, enc, bin, sessions = sessions, label = label, cohort = integer()
   )
@@ -439,7 +471,7 @@ events <- function(dn,
                        sessions = c("bounded", "collapse", "separate"),
                        start = NULL, end = NULL,
                        step = NULL, window = NULL, plot = FALSE) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   spec <- .window_spec(dn, start, end, step, window)
   allowed <- c(
@@ -447,14 +479,7 @@ events <- function(dn,
     "formation_fraction", "dissolution_fraction", "formation_rate",
     "dissolution_rate"
   )
-  bad <- setdiff(measure, allowed)
-  if (length(bad) > 0L) {
-    stop(errorCondition(
-      sprintf("Unknown measure %s. Available: %s",
-              paste(sQuote(bad), collapse = ", "),
-              paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
-  }
+  measure <- .check_measure(measure, allowed)
   has_fraction <- any(c("formation_fraction", "dissolution_fraction") %in% measure)
   has_formation_rate <- "formation_rate" %in% measure
   has_dissolution_rate <- "dissolution_rate" %in% measure
@@ -721,7 +746,7 @@ events <- function(dn,
 .duration_fragments <- function(dn, enc, session = NULL,
                                 erase_sessions = FALSE,
                                 censored = c("include", "exclude")) {
-  censored <- match.arg(censored)
+  censored <- .match_choice(censored)
   enc <- .prepare_path_encoding(
     dn, enc, session = session, erase_sessions = erase_sessions
   )
@@ -832,7 +857,7 @@ events <- function(dn,
 .vertex_duration_fragments <- function(dn, censored = c("include", "exclude"),
                                        session = NULL,
                                        erase_sessions = TRUE) {
-  censored <- match.arg(censored)
+  censored <- .match_choice(censored)
   spells <- dn$vertex_spells %||% .empty_vertex_spells()
   fragments <- .observed_vertex_fragments(dn)
   if (!erase_sessions && !is.null(session) && nrow(fragments)) {
@@ -938,7 +963,7 @@ events <- function(dn,
 #' @noRd
 .node_tie_fragments <- function(fragments, nodes, directed,
                                 mode = c("out", "in", "all")) {
-  mode <- match.arg(mode)
+  mode <- .match_choice(mode)
   empty <- data.frame(
     node = character(), raw_spell = integer(), stub = character(),
     start = numeric(), end = numeric(), instant = logical(),
@@ -1093,10 +1118,10 @@ durations <- function(dn, measure = c("events", "total", "mean"),
                                    "vertex_spell", "node_ties"),
                           mode = c("out", "in", "all"), plot = FALSE) {
   mode_supplied <- !missing(mode)
-  sessions <- match.arg(sessions)
-  censored <- match.arg(censored)
-  unit <- match.arg(unit)
-  mode <- match.arg(mode)
+  sessions <- .match_choice(sessions)
+  censored <- .match_choice(censored)
+  unit <- .match_choice(unit)
+  mode <- .match_choice(mode)
   .check_dynet(dn, sessions)
   if (mode_supplied && !identical(unit, "node_ties")) {
     stop(errorCondition(
@@ -1119,14 +1144,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
   } else {
     c("duration", "first", "last")
   }
-  bad <- setdiff(measure, allowed)
-  if (length(bad) > 0L) {
-    stop(errorCondition(
-      sprintf("Unknown measure %s. Available: %s",
-              paste(sQuote(bad), collapse = ", "),
-              paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
-  }
+  measure <- .check_measure(measure, allowed)
 
   if (identical(unit, "node_ties")) {
     effective_mode <- if (dn$directed) mode else "all"
@@ -1193,7 +1211,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
       effective_sessions, collapse = "labels_erased",
       bounded = "session_local_then_union", separate = "session_local"
     )
-    return(result)
+    return(.maybe_plot(result, plot))
   }
 
   if (unit %in% c("vertex_activity", "vertex_spell")) {
@@ -1281,7 +1299,7 @@ durations <- function(dn, measure = c("events", "total", "mean"),
       effective_sessions, collapse = "labels_erased",
       bounded = "session_local_then_union", separate = "session_local"
     )
-    return(result)
+    return(.maybe_plot(result, plot))
   }
 
   blocks <- .duration_fragment_blocks(dn, sessions, censored)
@@ -1435,17 +1453,10 @@ durations <- function(dn, measure = c("events", "total", "mean"),
 #' @export
 burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
                            sessions = c("bounded", "collapse", "separate"), plot = FALSE) {
-  sessions <- match.arg(sessions)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   allowed <- c("burstiness", "memory", "events", "mean_gap")
-  bad <- setdiff(measure, allowed)
-  if (length(bad) > 0L) {
-    stop(errorCondition(
-      sprintf("Unknown measure %s. Available: %s",
-              paste(sQuote(bad), collapse = ", "),
-              paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
-  }
+  measure <- .check_measure(measure, allowed)
 
   parts <- .split_sessions(
     dn, if (identical(sessions, "separate")) "separate" else "collapse"
@@ -1657,8 +1668,9 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
 #' @param unit `"node"`, the default, for the gaps between the events incident
 #'   to each vertex, a loop counting once and direction ignored; `"pair"` for
 #'   the gaps between the events of each ordered pair, or each unordered dyad
-#'   on an undirected network. Loops are excluded from `"pair"`, matching
-#'   [durations()].
+#'   on an undirected network. A retained loop (`dynet(loops = TRUE)`) is
+#'   excluded from `"pair"`, unlike [durations()], which reports it as its own
+#'   pair row.
 #' @param sessions How to treat sessions, as in [burstiness()]. `"bounded"`,
 #'   the default, forms gaps inside each session so no gap spans a session
 #'   wall; `"collapse"` erases the labels and pools one calendar sequence;
@@ -1727,9 +1739,9 @@ burstiness <- function(dn, measure = c("burstiness", "memory", "events"),
 gaps <- function(dn, unit = c("node", "pair"),
                  sessions = c("bounded", "collapse", "separate"),
                  censored = c("exclude", "include"), plot = FALSE) {
-  unit <- match.arg(unit)
-  sessions <- match.arg(sessions)
-  censored <- match.arg(censored)
+  unit <- .match_choice(unit)
+  sessions <- .match_choice(sessions)
+  censored <- .match_choice(censored)
   .check_dynet(dn, sessions)
 
   parts <- .split_sessions(

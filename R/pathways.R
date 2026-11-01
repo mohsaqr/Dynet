@@ -3,21 +3,27 @@
 # ===========================================================================
 # path_trajectories() returns the prefix TREE, which shows where routes
 # diverge but spreads a route's frequency along its branch. This file answers
-# the other question: which whole routes are used most. Every leaf of the tree
-# is one complete route and its count is that route's frequency, so the work
-# is to walk each leaf back to the root and tabulate.
+# the other question: which whole routes are used most. Every optimal route
+# of the family -- one per endpoint and tied atom sequence -- is one counted
+# route, read straight from the steps accessor. The leaves of the prefix tree
+# are NOT the routes: the optimal route to a vertex is very often a prefix of
+# the optimal route to a vertex further on, and it is then an inner node.
 
-#' Walk every leaf of a trajectory tree back to its root
+#' Every optimal route of a path family, as vertex and time sequences
 #'
-#' @param tree A `dynet_path_trajectories` data frame.
-#' @return A list of two data frames. `routes` has one row per leaf, with
-#'   `route`, `endpoint`, `count`, `n_hops` and `arrival_time`; `steps` has one
-#'   row per vertex visited, with `route`, `step`, `vertex` and `time`.
+#' @param x A result from [paths()].
+#' @return A list of two data frames. `routes` has one row per optimal route
+#'   (one per endpoint, `path_id`, best session and session), with `route`,
+#'   `endpoint`, `count` (always 1 before merging), `n_hops` and
+#'   `arrival_time`; `steps` has one row per vertex visited, with `route`,
+#'   `step`, `vertex` and `time`. A backward route is read from the queried
+#'   target outwards, so its last vertex is the reached sender and its
+#'   `arrival_time` that sender's latest departure. A result with no route
+#'   step gives two empty frames.
 #' @noRd
-.trajectory_routes <- function(tree) {
-  flat <- as.data.frame(tree)
-  flat <- flat[flat$node != .PATH_ROOT, , drop = FALSE]
-  if (!nrow(flat)) {
+.family_routes <- function(x) {
+  steps <- as.data.frame(x, what = "steps")
+  if (!nrow(steps)) {
     return(list(
       routes = data.frame(
         route = character(), endpoint = character(), count = integer(),
@@ -27,43 +33,39 @@
         time = numeric(), stringsAsFactors = FALSE)
     ))
   }
-  parent_of <- stats::setNames(flat$parent, flat$node)
-  vertex_of <- stats::setNames(flat$vertex, flat$node)
-  leaves <- flat[!flat$node %in% flat$parent, , drop = FALSE]
-
-  time_of <- stats::setNames(flat$time, flat$node)
-  sequences <- lapply(leaves$node, function(id) {
-    vertices <- character(0)
-    times <- numeric(0)
-    # Ancestor chains are short (one element per hop) and each step depends on
-    # the previous, so this walk cannot be vectorised.
-    while (!is.na(id) && nzchar(id) && !identical(id, .PATH_ROOT)) {
-      vertices <- c(vertex_of[[id]], vertices)
-      times <- c(time_of[[id]], times)
-      id <- parent_of[[id]]
-    }
-    list(vertex = vertices, time = times)
-  })
-  vertices <- lapply(sequences, function(s) s$vertex)
+  identity_cols <- intersect(
+    c("session", "endpoint", "path_id", "path_session"), names(steps)
+  )
+  key <- do.call(paste, c(lapply(steps[identity_cols], function(value) {
+    value <- as.character(value)
+    value[is.na(value)] <- "<missing>"
+    value
+  }), sep = "\r"))
+  # Backward routes are listed from the reached vertex towards the target;
+  # reverse them so every route grows away from the queried vertex, as the
+  # trajectory tree does.
+  backward <- identical(attr(x, "direction"), "backward")
+  ordered <- order(key, if (backward) -steps$step else steps$step)
+  groups <- split(ordered, factor(key[ordered], levels = unique(key[ordered])))
+  vertices <- lapply(groups, function(ix) steps$node[ix])
+  times <- lapply(groups, function(ix) steps$time[ix])
+  route <- vapply(vertices, paste, character(1L), collapse = .PATH_JOIN)
   routes <- data.frame(
-    route = vapply(vertices, paste, character(1L), collapse = .PATH_JOIN),
-    endpoint = vapply(vertices, function(v) v[[length(v)]], character(1L)),
-    count = as.integer(leaves$count),
-    n_hops = vapply(vertices, length, integer(1L)) - 1L,
-    arrival_time = leaves$time,
+    route = unname(route),
+    endpoint = unname(vapply(vertices, function(v) v[[length(v)]],
+                             character(1L))),
+    count = 1L,
+    n_hops = unname(lengths(vertices)) - 1L,
+    arrival_time = unname(vapply(times, function(t) t[[length(t)]],
+                                 numeric(1L))),
     stringsAsFactors = FALSE
   )
-  # The per-step detail is what makes a time-respecting drawing possible: a
-  # route is not just a sequence of names, it is a sequence of ARRIVALS.
-  steps <- do.call(rbind, lapply(seq_along(sequences), function(i) {
-    one <- sequences[[i]]
-    data.frame(
-      route = routes$route[[i]], step = seq_along(one$vertex) - 1L,
-      vertex = one$vertex, time = one$time,
-      stringsAsFactors = FALSE
-    )
-  }))
-  list(routes = routes, steps = steps)
+  step_rows <- do.call(rbind, Map(function(v, t, r) data.frame(
+    route = r, step = seq_along(v) - 1L, vertex = v, time = t,
+    stringsAsFactors = FALSE
+  ), vertices, times, route))
+  rownames(step_rows) <- NULL
+  list(routes = routes, steps = step_rows)
 }
 
 #' Most frequent time-respecting routes
@@ -77,12 +79,19 @@
 #' The result is already ordered and already carries the share of the total,
 #' so a caller never sorts or subsets it; `top` limits it in the call.
 #'
+#' Every optimal route that [paths()] counts is one route here, the route to
+#' a vertex that lies on the way to another included, so for one source
+#' `sum(count)` equals the summed `n_paths` of the vertices reached in at
+#' least `min_hops` hops.
+#'
 #' Routes are keyed on their **vertex sequence**. The trajectory tree keys a
 #' node on vertex *and* time, so one sequence realised through different
 #' contacts appears there as several branches; those are one pathway here and
-#' their counts are added. Under the foremost criterion this loses nothing:
-#' only earliest-arrival routes survive to be counted, so duplicates of a
-#' sequence necessarily share an arrival time, and a test asserts it.
+#' their counts are added. The arrival time loses nothing in that merge: a
+#' vertex sequence ends at one endpoint, and every counted route to it attains
+#' the same optimum, which a test asserts. Intermediate hop times can differ
+#' between the merged realisations; the steps table keeps the first in the
+#' order of the path result.
 #'
 #' @param dn A temporal network from [dynet()].
 #' @param from Optional source vertex. A name gives the routes leaving that
@@ -149,7 +158,7 @@ pathways <- function(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FAL
   pooled <- is.null(from)
 
   parts <- lapply(sources, function(source) {
-    found <- .trajectory_routes(path_trajectories(paths(dn, from = source, ...)))
+    found <- .family_routes(paths(dn, from = source, ...))
     if (!nrow(found$routes)) return(NULL)
     list(routes = cbind(from = source, found$routes, stringsAsFactors = FALSE),
          steps = cbind(from = source, found$steps, stringsAsFactors = FALSE))
@@ -160,13 +169,15 @@ pathways <- function(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FAL
   if (is.null(routes) || !nrow(routes)) {
     stop(errorCondition(
       "No route of the requested length was found.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"),
+      call = NULL))
   }
   routes <- routes[routes$n_hops >= min_hops, , drop = FALSE]
   if (!nrow(routes)) {
     stop(errorCondition(
       sprintf("No route of at least %s hop(s) was found.", format(min_hops)),
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"),
+      call = NULL))
   }
 
   # One sequence realised at several times is one pathway; add the counts.
@@ -240,7 +251,7 @@ pathways <- function(dn, from = NULL, top = NULL, min_hops = 1L, ..., plot = FAL
 #' @export
 as.data.frame.dynet_pathways <- function(x, row.names = NULL, optional = FALSE,
                                          what = c("routes", "steps"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   if (identical(what, "steps")) return(attr(x, "steps"))
   out <- x
   attributes(out) <- list(names = names(x), row.names = seq_len(nrow(x)),

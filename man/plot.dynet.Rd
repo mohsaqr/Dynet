@@ -261,12 +261,17 @@ colour edges a neutral grey, and size nodes and arrowheads from the vertex
 count. Naming any of those through \code{...} overrides it.
 
 Failures are classed conditions. \code{dynet_bad_input} covers every malformed
-argument, \code{dynet_unknown_plot_arg} a name in \code{...} no view can read,
+argument, \code{dynet_bad_choice} an unknown \code{type}, \code{link}, \code{time} or \code{nest},
+\code{dynet_unknown_plot_arg} a name in \code{...} no view can read,
 \code{dynet_bad_palette} an unusable \code{palette}, and \code{dynet_empty_result} a
 window, an \code{at} or a \code{step} that leaves nothing to draw. The proximity view
 adds \code{dynet_unknown_measure} and \code{dynet_needs_directed}. With cograph
 absent, the node-link views raise \code{dynet_needs_cograph} and the
-\code{"layers"}, \code{"heatmap"} and \code{"stack"} views \code{dynet_missing_package}.
+\code{"layers"}, \code{"heatmap"} and \code{"stack"} views \code{dynet_missing_package}. Every
+one of these also carries the parent class \code{dynet_bad_input}, so one
+handler catches them all. When vertices are coloured by a \code{groups}
+attribute that has more groups than the palette has colours, the
+node-link views warn with \code{dynet_palette_recycled}.
 }
 \examples{
 dn <- dynet(school_contacts)

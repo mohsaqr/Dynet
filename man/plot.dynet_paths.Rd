@@ -9,9 +9,9 @@
 \arguments{
 \item{x}{A \code{dynet_paths} from \code{\link[=paths]{paths()}}.}
 
-\item{palette}{Palette specification, as in \code{\link[=plot.dynet]{plot.dynet()}}. Vertices are
-coloured by how many hops they are from the source. Read only by the
-legacy tree renderer.}
+\item{palette}{Palette specification, as in \code{\link[=plot.dynet]{plot.dynet()}}. Passed to
+\code{\link[=plot_path_trajectories]{plot_path_trajectories()}}, and for a legacy result colours vertices by
+how many hops they are from the source.}
 
 \item{...}{Passed to \code{\link[=plot_path_trajectories]{plot_path_trajectories()}}, or to \code{cograph::splot()}
 for a legacy result.}

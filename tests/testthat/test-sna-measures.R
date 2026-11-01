@@ -121,3 +121,25 @@ test_that("max flow is symmetric on an undirected graph and honours cuts", {
   expect_equal(.max_flow(b, 1, 3), 0)
   expect_equal(.max_flow(b, 2, 1), 0)
 })
+
+test_that("raw flow betweenness of a complete digraph is (n - 1)(n - 2)", {
+  # Removing one vertex costs every other ordered pair exactly one unit of
+  # maximum flow, the path through it.
+  sizes <- 3:6
+  ok <- vapply(sizes, function(n) {
+    complete <- matrix(1, n, n)
+    diag(complete) <- 0
+    isTRUE(all.equal(unname(.flow_betweenness(complete, directed = TRUE)),
+                     rep((n - 1) * (n - 2), n)))
+  }, logical(1L))
+  expect_true(all(ok))
+})
+
+test_that("flow betweenness is invariant to relabelling the vertices", {
+  set.seed(4)
+  a <- matrix(stats::rbinom(49, 1, 0.4), 7, 7)
+  diag(a) <- 0
+  perm <- c(3, 7, 1, 5, 2, 6, 4)
+  expect_equal(unname(.flow_betweenness(a[perm, perm], directed = TRUE)),
+               unname(.flow_betweenness(a, directed = TRUE))[perm])
+})

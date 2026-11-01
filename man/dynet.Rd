@@ -32,7 +32,8 @@ dynet(
   min_thread_posts = 1L,
   onset_censored = NULL,
   terminus_censored = NULL,
-  vertex_spells = NULL
+  vertex_spells = NULL,
+  keep_isolates = FALSE
 )
 }
 \arguments{
@@ -45,10 +46,18 @@ from \code{from}/\code{to}, \code{source}/\code{target}, \code{sender}/\code{rec
 \item{start, end}{Column names for the start and end of an edge spell.
 Auto-detected from \code{start}/\code{end}, \code{onset}/\code{terminus}, \code{begin}/\code{finish}.}
 
-\item{duration}{Column name for a spell duration, used in place of \code{end}.}
+\item{duration}{Column name for a spell duration, used in place of \code{end}.
+A numeric duration is read in the network's time unit, so for calendar
+times either set \code{time_unit} explicitly or supply a \code{difftime} column,
+which is converted to that unit. Durations must be finite and
+non-negative.}
 
-\item{time}{Column name for an event time, used in place of \code{start}.
-Auto-detected from \code{time}, \code{timestamp}, \code{date}, \code{datetime}.}
+\item{time}{Column name for an event time, used in place of \code{start}
+(for an interval log, \code{time} names the start of each spell when
+\code{start} is not given). Auto-detected from \code{time}, \code{timestamp}, \code{date},
+\code{datetime}. An end column must use the same clock as the start: both
+numeric or both calendar values, otherwise a condition of class
+\code{dynet_mixed_clock} is raised.}
 
 \item{thread}{Column name identifying a conversation thread. Naming it
 selects the threaded format.}
@@ -66,7 +75,9 @@ as walls that time-respecting paths do not cross.}
 
 \item{weight}{Column name for event multiplicity. \code{NULL} auto-detects a
 column named \code{weight}, \code{weights} or \code{strength} (and says so); with none,
-every row counts once.}
+every row counts once. Weights must be finite and non-negative; a
+missing, infinite or negative weight raises a condition of class
+\code{dynet_bad_weight}.}
 
 \item{nodes}{Optional data frame of vertex attributes. The vertex key is
 auto-detected (\code{node}, \code{vertex.id}, \code{id}, \code{name}, ...), or given as the
@@ -74,7 +85,9 @@ first column. When the key is not \code{name} and the table also has a
 \code{name} column, the vertices are named by \code{name}: edge endpoints and
 vertex spells given by key are translated, and the key stays on the
 node table as an attribute. A key with no row in \code{nodes} keeps the key
-as its name, with a \code{dynet_unnamed_nodes} warning.}
+as its name, with a \code{dynet_unnamed_nodes} warning. A vertex named in
+\code{nodes} that has no tie and no row in \code{vertex_spells} is handled by
+\code{keep_isolates}.}
 
 \item{groups}{Name of a column in \code{nodes} to use as the vertex partition.
 Written into the places cograph looks for it, so \code{cograph::splot()}
@@ -147,6 +160,12 @@ carries entry and exit times can be passed as it is. Positive spells
 use \verb{[start,end)} and points are exact. Overlapping and adjacent
 positive spells are unioned independently by node and session. A
 vertex absent from this table remains active at all times.}
+
+\item{keep_isolates}{Whether vertices named in \code{nodes} that take part in
+no tie are kept. \code{FALSE}, the default, leaves them out of the network
+and says so with a message of class \code{dynet_dropped_nodes}; \code{TRUE} keeps
+them as isolates, present at all times unless \code{vertex_spells} says
+otherwise, so measures computed over the vertex set count them.}
 }
 \value{
 An object of class \code{c("dynet", "netobject", "cograph_network")}.

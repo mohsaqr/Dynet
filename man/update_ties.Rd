@@ -12,7 +12,8 @@ update_ties(dn, ties, data, loops = FALSE)
 \item{ties}{Which ties to update: a condition on the spell table,
 evaluated the way \code{\link[=subset]{subset()}} evaluates one, over the columns
 \code{as.data.frame(dn)} returns; or integer row positions or a logical mask
-over that table.}
+over that table. As in \code{\link[=subset]{subset()}}, a condition that is \code{NA} for a spell
+does not select it.}
 
 \item{data}{A data frame with one row or one row per selected tie. Columns
 may be canonical tie fields or arbitrary atomic spell attributes.}
@@ -25,11 +26,15 @@ A new \code{dynet} object, class
 \code{c("dynet", "netobject", "cograph_network")}, holding the unselected
 spells unchanged and the selected spells with the supplied values
 substituted. Because the edited spells are rebuilt together with the
-rest, spell order and the canonical spell identifiers may change. Raises
-\code{dynet_loop_not_allowed} when an endpoint update would create a new
-self-loop without \code{loops = TRUE}, and \code{dynet_bad_input} when the
-selection or \code{data} is malformed, or names the read-only derived columns
-\code{duration} or \code{.raw_spell}.
+rest, spell order and the canonical spell identifiers may change. An
+update that changes only attributes keeps the network's source format;
+one that moves \code{start} or \code{end} records it as \code{"interval"}, as
+\code{\link[=add_ties]{add_ties()}} does. Raises \code{dynet_tie_not_found} when the selection
+matches no spell, \code{dynet_loop_not_allowed} when an endpoint update would
+create a new self-loop without \code{loops = TRUE}, \code{dynet_reserved_column}
+when \code{data} names the read-only derived columns \code{duration} or
+\code{.raw_spell}, and \code{dynet_bad_input} when the selection or \code{data} is
+otherwise malformed.
 }
 \description{
 Update temporal ties and their attributes

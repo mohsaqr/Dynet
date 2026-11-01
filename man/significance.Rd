@@ -27,14 +27,16 @@ significance(
 without a wrapper.}
 
 \item{method, n, within}{Null model settings, as in \code{\link[=randomise]{randomise()}}. Supplying
-any of them alongside a \code{dynet_null} is an error rather than a silent
-override.}
+any of them, or \code{seed}, alongside a \code{dynet_null} is an error rather than
+a silent override.}
 
-\item{alternative}{\code{"two.sided"}, \code{"greater"} or \code{"less"}.}
+\item{alternative}{\code{"two.sided"}, \code{"greater"} or \code{"less"}. Two-sided counts
+the surrogates at least as far from the null mean as the observed value.}
 
 \item{conf_level}{Width of the reported percentile interval of the null.}
 
-\item{p_adjust}{Multiplicity correction, passed to \code{\link[stats:p.adjust]{stats::p.adjust()}}.}
+\item{p_adjust}{Multiplicity correction over all rows, one of
+\link[stats:p.adjust]{stats::p.adjust.methods}; \code{"BH"} (Benjamini and Hochberg) by default.}
 
 \item{seed}{A single whole number for a reproducible draw, or \code{NULL}.}
 }
@@ -44,7 +46,9 @@ observed statistic. It carries every key column the statistic produced,
 then \code{observed}, \code{null_mean}, \code{null_sd}, \code{null_lo}, \code{null_hi}, \code{z}, \code{p},
 \code{p_adj}, \code{p_mcse}, \code{n_ties} and \code{n_null}. \code{null_lo} and \code{null_hi} bound
 the null distribution, not the observed value, which is why they are not
-named as a confidence interval for it.
+named as a confidence interval for it. The null distribution itself,
+one row per cell and surrogate, comes out through
+\code{as.data.frame(x, what = "null")}.
 }
 \description{
 Runs a measurement verb on the observed network and on every surrogate from
@@ -69,6 +73,12 @@ missing, never as zero: a bin with no eligible pairs did not have zero
 density, it had no density. \code{n_null} reports how many surrogates actually
 produced each cell.
 
+A surrogate on which \code{statistic} raises one of this package's own
+conditions (class \code{dynet_bad_input}, for example an empty bin) counts as
+missing for every cell, and a warning of class \code{dynet_null_incomplete}
+reports how many did and the first message. Any other error is a defect,
+not a missing value, and is raised with class \code{dynet_statistic_failed}.
+
 Under \code{method = "labels"} every structural measure is exactly invariant, so
 every p is exactly one. That is correct, and it is a useful check that the
 machinery is aligned rather than a failure.
@@ -84,9 +94,23 @@ p-value tightened from 0.19 to 0.07 over the same increase. A large
 \code{n_ties} relative to \code{n_null} means more surrogates will not help; a
 statistic with finer resolution will.
 }
+\section{Conditions}{
+
+Errors, each also of class \code{dynet_bad_input}: \code{dynet_bad_input} for a
+malformed argument, null settings given beside a \code{dynet_null}, or
+surrogates kept as spells only; \code{dynet_bad_statistic} for a statistic
+without \code{measure} and \code{value} columns; \code{dynet_statistic_failed} when it
+fails on a surrogate with an error that is not one of this package's.
+Warning: \code{dynet_null_incomplete} when a cell is missing from more than a
+tenth of the surrogates.
+}
+
 \examples{
 dn <- dynet(school_contacts)
-significance(dn, statistic = metrics, measure = "density", n = 99, seed = 1)
+tested <- significance(dn, statistic = metrics, measure = "density",
+                       n = 99, seed = 1)
+tested
+as.data.frame(tested, what = "null")
 }
 \references{
 Davison, A. C., and Hinkley, D. V. (1997). \emph{Bootstrap Methods and Their

@@ -220,9 +220,12 @@
 #' Participants in a MOOC discussion forum
 #'
 #' The participant table accompanying [mooc_posts]: every person who appears
-#' as a sender or a receiver there, with the self-reported experience level
-#' as the chapter's integer code and as the label it recodes the code into
-#' and uses as the mixing attribute.
+#' as a sender or a receiver there, plus three participants (`441`, `442`
+#' and `443`) who appear in neither column, with the self-reported
+#' experience level as the chapter's integer code and as the label it
+#' recodes the code into and uses as the mixing attribute. Passed as
+#' `nodes`, the three are left out of the network with a message unless
+#' `keep_isolates = TRUE`.
 #'
 #' @format A data frame with 445 rows and 3 columns:
 #' \describe{

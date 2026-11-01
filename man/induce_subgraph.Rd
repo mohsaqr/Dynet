@@ -22,7 +22,8 @@ evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{course 
 \code{duration > 2 & weight >= 1} -- over the columns \code{as.data.frame(dn)}
 returns, tie attributes included; or integer row positions or a logical
 mask over that same table, in that order, a mask having exactly as many
-elements as there are spells. Default \code{NULL}, meaning every tie. At least
+elements as there are spells; an \code{NA} in it, as in \code{\link[=subset]{subset()}}, does not
+select the spell. Default \code{NULL}, meaning every tie. At least
 one of \code{nodes} and \code{ties} must be supplied.}
 
 \item{keep_isolates}{Whether named nodes without a selected tie remain.

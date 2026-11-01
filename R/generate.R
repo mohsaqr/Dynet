@@ -80,6 +80,38 @@
   out
 }
 
+#' Let a planted partition drift slice by slice
+#'
+#' In every slice after the first, each vertex independently leaves its block
+#' with probability `block_switch` for one of the other blocks, chosen
+#' uniformly. No random number is drawn when `block_switch` is zero or there
+#' is only one block, so a static partition leaves the random stream exactly
+#' as it was.
+#'
+#' @param initial Block label of each vertex in the first slice.
+#' @param times Number of slices.
+#' @param block_switch Per-slice switching probability.
+#' @return A character matrix, one row per vertex and one column per slice.
+#' @noRd
+.drift_membership <- function(initial, times, block_switch) {
+  labels <- unique(initial)
+  if (block_switch <= 0 || length(labels) < 2L || times < 2L) {
+    return(matrix(initial, nrow = length(initial), ncol = times))
+  }
+  step <- function(current, slice) {
+    move <- stats::runif(length(current)) < block_switch
+    current[move] <- vapply(current[move], function(block) {
+      others <- setdiff(labels, block)
+      others[[sample.int(length(others), 1L)]]
+    }, character(1L))
+    current
+  }
+  # Each slice's partition is drawn from the one before it, so the states are
+  # accumulated rather than drawn independently.
+  states <- Reduce(step, seq_len(times - 1L), initial, accumulate = TRUE)
+  do.call(cbind, states)
+}
+
 #' Draw renewal event times for one dyad
 #' @param times Length of the observation window.
 #' @param rate Mean events per unit time.
@@ -140,14 +172,23 @@
 #' @param p_within,p_between Per-slice edge probability inside and between
 #'   blocks.
 #' @param block_switch Per-slice probability a vertex changes block, so the
-#'   planted partition drifts. Zero gives a static partition.
+#'   planted partition drifts. Zero gives a static partition. In each slice
+#'   after the first, a vertex that switches moves to one of the other blocks
+#'   chosen uniformly, and the slice's edge probabilities follow the
+#'   partition of that slice; the node table's `block` then holds the
+#'   partition of the first slice.
 #' @param waiting,shape The renewal gap distribution for `"activation"`.
 #'   Weibull with `shape < 1` is bursty, `shape > 1` regular, `shape = 1`
 #'   Poisson. The scale is set so the mean gap is `1 / rate` at every shape.
 #' @param directed,interval,loops Passed through to [dynet()].
+#'   Probabilities (`p`, `p_within`, `p_between`, `block_switch`, `birth`,
+#'   `persist`) must each be a single number in `[0, 1]`, a vertex count a
+#'   whole number of at least two, and vertex names complete and distinct;
+#'   anything else raises a condition of class `dynet_bad_input`.
 #' @param seed A single whole number for a reproducible draw, or `NULL`.
 #' @return A `dynet`, so every verb, plot and accessor applies with no special
-#'   casing. `"binomial"` and `"block"` produce interval networks;
+#'   casing. Every requested vertex is in it, including any the draw left
+#'   without a tie. `"binomial"` and `"block"` produce interval networks;
 #'   `"poisson"` and `"activation"` produce contact networks. For `"block"`
 #'   the planted partition is written into the node table as `block`, so
 #'   `mixing(dn, attribute = "block")` reads it with no further argument.
@@ -214,8 +255,8 @@ random_dynet <- function(nodes = 20L, times = 20L,
                 blocks = !missing(blocks), p_within = !missing(p_within),
                 p_between = !missing(p_between),
                 block_switch = !missing(block_switch))
-  model <- match.arg(model)
-  waiting <- match.arg(waiting)
+  model <- .match_choice(model)
+  waiting <- .match_choice(waiting)
   slice_model <- model %in% c("binomial", "block")
   .check(
     "`times` must be a single positive whole number." =
@@ -229,6 +270,21 @@ random_dynet <- function(nodes = 20L, times = 20L,
     "`interval` must be a single positive number." =
       length(interval) == 1L && is.numeric(interval) && is.finite(interval) &&
         interval > 0
+  )
+  probability <- function(x) {
+    length(x) == 1L && is.numeric(x) && !is.na(x) && x >= 0 && x <= 1
+  }
+  flag <- function(x) is.logical(x) && length(x) == 1L && !is.na(x)
+  .check(
+    "`p` must be a single probability between 0 and 1." = probability(p),
+    "`p_within` must be a single probability between 0 and 1." =
+      probability(p_within),
+    "`p_between` must be a single probability between 0 and 1." =
+      probability(p_between),
+    "`block_switch` must be a single probability between 0 and 1." =
+      probability(block_switch),
+    "`directed` must be a single TRUE or FALSE." = flag(directed),
+    "`loops` must be a single TRUE or FALSE." = flag(loops)
   )
   # An argument the chosen model ignores is an error, never silently dropped.
   if (supplied[["waiting"]] && !identical(model, "activation")) {
@@ -256,11 +312,12 @@ random_dynet <- function(nodes = 20L, times = 20L,
     .check(
       "`birth` and `persist` must be supplied together." =
         !is.null(birth) && !is.null(persist),
-      "`birth` must be a single probability." =
-        length(birth) == 1L && is.numeric(birth) && birth >= 0 && birth <= 1,
-      "`persist` must be a single probability." =
-        length(persist) == 1L && is.numeric(persist) && persist >= 0 &&
-          persist <= 1
+      "`birth` must be a single probability." = probability(birth),
+      "`persist` must be a single probability." = probability(persist)
+    )
+    .check(
+      "`birth = 0` with `persist = 1` has no stationary distribution to start from." =
+        1 - persist + birth > 0
     )
     if (supplied[["p"]]) {
       stop(errorCondition(
@@ -270,10 +327,14 @@ random_dynet <- function(nodes = 20L, times = 20L,
   }
 
   names <- if (is.character(nodes)) {
+    .check("`nodes` must name at least two distinct vertices, with no missing or empty name." =
+             length(nodes) >= 2L && !anyNA(nodes) && all(nzchar(nodes)) &&
+               !anyDuplicated(nodes))
     nodes
   } else {
     .check("`nodes` must be a count or a character vector of names." =
-             length(nodes) == 1L && is.numeric(nodes) && nodes >= 2)
+             length(nodes) == 1L && is.numeric(nodes) && is.finite(nodes) &&
+               nodes >= 2 && nodes == trunc(nodes))
     sprintf(paste0("n%0", nchar(as.character(as.integer(nodes))), "d"),
             seq_len(as.integer(nodes)))
   }
@@ -284,11 +345,12 @@ random_dynet <- function(nodes = 20L, times = 20L,
   if (identical(model, "block")) {
     membership <- if (is.character(blocks)) {
       .check("`blocks` must give one label per vertex." =
-               length(blocks) == n)
+               length(blocks) == n && !anyNA(blocks))
       blocks
     } else {
       .check("`blocks` must be a count of at least one." =
-               length(blocks) == 1L && is.numeric(blocks) && blocks >= 1)
+               length(blocks) == 1L && is.numeric(blocks) &&
+                 is.finite(blocks) && blocks >= 1 && blocks == trunc(blocks))
       rep_len(sprintf("b%d", seq_len(as.integer(blocks))), n)
     }
   }
@@ -300,11 +362,14 @@ random_dynet <- function(nodes = 20L, times = 20L,
         active <- .draw_activity(nrow(dyads), times, if (is.null(birth)) p,
                                  birth, persist)
       } else {
-        same <- membership[match(dyads$from, names)] ==
-          membership[match(dyads$to, names)]
+        # One block label per vertex and slice; a static partition repeats
+        # the planted one in every column.
+        path <- .drift_membership(membership, times, block_switch)
+        same <- path[match(dyads$from, names), , drop = FALSE] ==
+          path[match(dyads$to, names), , drop = FALSE]
         prob <- ifelse(same, p_within, p_between)
         active <- matrix(
-          stats::rbinom(nrow(dyads) * times, 1L, rep(prob, times = times)) == 1L,
+          stats::rbinom(length(prob), 1L, as.vector(prob)) == 1L,
           nrow = nrow(dyads), ncol = times)
       }
       edges <- .runs_to_spells(active, dyads, interval)
@@ -333,21 +398,25 @@ random_dynet <- function(nodes = 20L, times = 20L,
   if (!nrow(drawn$edges)) {
     stop(errorCondition(sprintf(
       "The draw produced no edges; raise `p` or `rate`, or lengthen `times` (model = \"%s\").",
-      model), class = "dynet_generator_empty", call = NULL))
+      model), class = c("dynet_generator_empty", "dynet_bad_input"),
+      call = NULL))
   }
 
   node_table <- data.frame(name = names, stringsAsFactors = FALSE)
   if (identical(model, "block")) node_table$block <- membership
 
+  # Every requested vertex belongs to the network, tied or not: a sparse draw
+  # that left one isolated must not shrink the vertex set it was drawn on.
   dn <- dynet(drawn$edges, format = drawn$format, nodes = node_table,
               directed = directed, interval = interval, loops = loops,
-              observation_start = 0, observation_end = times * interval)
+              observation_start = 0, observation_end = times * interval,
+              keep_isolates = TRUE)
   dn$meta$source <- "random_dynet"
   dn$meta$generator <- list(
     model = model, nodes = n, times = times, p = if (supplied[["p"]]) p else NULL,
     birth = birth, persist = persist, rate = rate,
     blocks = if (identical(model, "block")) membership,
-    p_within = p_within, p_between = p_between,
+    p_within = p_within, p_between = p_between, block_switch = block_switch,
     waiting = waiting, shape = shape, seed = seed
   )
   dn

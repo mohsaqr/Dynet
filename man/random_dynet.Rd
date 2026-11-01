@@ -52,19 +52,28 @@ is. Supplying either requires both and forbids \code{p}.}
 blocks.}
 
 \item{block_switch}{Per-slice probability a vertex changes block, so the
-planted partition drifts. Zero gives a static partition.}
+planted partition drifts. Zero gives a static partition. In each slice
+after the first, a vertex that switches moves to one of the other blocks
+chosen uniformly, and the slice's edge probabilities follow the
+partition of that slice; the node table's \code{block} then holds the
+partition of the first slice.}
 
 \item{waiting, shape}{The renewal gap distribution for \code{"activation"}.
 Weibull with \code{shape < 1} is bursty, \code{shape > 1} regular, \code{shape = 1}
 Poisson. The scale is set so the mean gap is \code{1 / rate} at every shape.}
 
-\item{directed, interval, loops}{Passed through to \code{\link[=dynet]{dynet()}}.}
+\item{directed, interval, loops}{Passed through to \code{\link[=dynet]{dynet()}}.
+Probabilities (\code{p}, \code{p_within}, \code{p_between}, \code{block_switch}, \code{birth},
+\code{persist}) must each be a single number in \verb{[0, 1]}, a vertex count a
+whole number of at least two, and vertex names complete and distinct;
+anything else raises a condition of class \code{dynet_bad_input}.}
 
 \item{seed}{A single whole number for a reproducible draw, or \code{NULL}.}
 }
 \value{
 A \code{dynet}, so every verb, plot and accessor applies with no special
-casing. \code{"binomial"} and \code{"block"} produce interval networks;
+casing. Every requested vertex is in it, including any the draw left
+without a tie. \code{"binomial"} and \code{"block"} produce interval networks;
 \code{"poisson"} and \code{"activation"} produce contact networks. For \code{"block"}
 the planted partition is written into the node table as \code{block}, so
 \code{mixing(dn, attribute = "block")} reads it with no further argument.

@@ -132,8 +132,8 @@ turnover <- function(dn, measure = c("volatility", "fluctuability"),
                      sessions = c("bounded", "collapse", "separate"),
                      start = NULL, end = NULL, step = NULL, window = NULL,
                      plot = FALSE) {
-  scope <- match.arg(scope)
-  sessions <- match.arg(sessions)
+  scope <- .match_choice(scope)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   allowed <- c("volatility", "fluctuability")
   if (missing(measure)) measure <- "volatility"
@@ -143,7 +143,7 @@ turnover <- function(dn, measure = c("volatility", "fluctuability"),
       sprintf("Unknown measure %s. Available: %s",
               paste(sQuote(bad), collapse = ", "),
               paste(allowed, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
   if (identical(scope, "pertime") && "fluctuability" %in% measure) {
     stop(errorCondition(
@@ -156,26 +156,28 @@ turnover <- function(dn, measure = c("volatility", "fluctuability"),
   if (domain == 0) {
     stop(errorCondition(
       "Turnover needs at least two vertices; the pair domain is empty.",
-      class = "dynet_empty_result", call = NULL))
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
   }
 
   snaps <- as.data.frame(snapshots(dn, sessions = sessions, start = start,
                                    end = end, step = step, window = window))
-  blocks <- if (identical(sessions, "separate") && "session" %in% names(snaps)) {
-    split(snaps, snaps$session)
-  } else {
-    list(all = snaps)
-  }
+  # Bins come from the grid so an empty bin is a layer with no tie, never a
+  # gap that makes its two neighbours look consecutive.
+  blocks <- .measure_blocks(
+    snaps, .measure_bin_times(dn, sessions, start, end, step, window),
+    sessions
+  )
 
-  frames <- Map(function(block, label) {
-    times <- sort(unique(block$time))
+  frames <- lapply(blocks, function(one) {
+    times <- one$times
+    label <- one$label
     if (length(times) < 2L) {
       stop(errorCondition(
         paste0("Turnover needs at least two time bins; a single bin opens no ",
                "transition. Widen the range or lower `step`."),
-        class = "dynet_empty_result", call = NULL))
+        class = c("dynet_empty_result", "dynet_bad_input"), call = NULL))
     }
-    layers <- lapply(.binary_layers(dn, block, times,
+    layers <- lapply(.binary_layers(dn, one$snaps, times,
                                     symmetrise = !dn$directed),
                      function(m) {
                        diag(m) <- 0
@@ -211,7 +213,7 @@ turnover <- function(dn, measure = c("volatility", "fluctuability"),
                  stringsAsFactors = FALSE)
     })
     do.call(rbind, rows)
-  }, blocks, names(blocks))
+  })
 
   out <- .metric(
     do.call(rbind, frames), level = "graph",

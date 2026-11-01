@@ -109,9 +109,8 @@ records this in its \code{symmetrised} attribute.
 \examples{
 dn <- dynet(school_contacts)
 multislice_modularity(dn, step = 5, window = 5)
-multislice_modularity(dn, membership = temporal_communities(
-  dn, step = 5, window = 5, seeds = 1:3
-), step = 5, window = 5)
+found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:3)
+multislice_modularity(dn, membership = found, step = 5, window = 5)
 
 }
 \references{

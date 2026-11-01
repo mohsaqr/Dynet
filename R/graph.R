@@ -164,15 +164,21 @@
 #' own closeness (reachable vertices divided by reachable distance, so it is
 #' defined on a disconnected snapshot), with the theoretical maximum of that
 #' score: `n - 1` for a directed snapshot (a single arc from the centre) and
-#' `n - 2` for an undirected one (one isolated dyad). It matches
-#' `sna::centralization(closeness)` on connected snapshots and not on
-#' disconnected ones, where sna's closeness is zero everywhere.
+#' `n - 2` for an undirected one (one isolated dyad). Because that maximum
+#' differs from the connected-graph star maximum `sna` uses, the two never
+#' coincide: on a connected snapshot of `n` vertices this value is
+#' `sna::centralization(closeness)` times `(n - 1) / n` when directed and
+#' times `(n - 1) / (2 * n - 3)` when undirected, and on a disconnected one
+#' sna's closeness is zero everywhere.
 #'
 #' Krackhardt's four indices -- `"connectedness"`, `"efficiency"`,
 #' `"hierarchy"` and `"lubness"` -- describe how far a directed network
-#' departs from a pure out-tree. `"hierarchy"` and `"lubness"` are undefined
-#' on some graphs (no connected pair, no component of three) and report `NaN`
-#' rather than a number that would mislead.
+#' departs from a pure out-tree. `"efficiency"`, `"hierarchy"` and
+#' `"lubness"` are undefined on some graphs (no component that could hold an
+#' arc beyond its spanning tree, no connected pair, no component of three) and
+#' report `NaN`, as `sna` does, rather than a number that would mislead. A
+#' window with no eligible vertex at all reports `"efficiency"` as `0` and the
+#' other two as `NaN`.
 #'
 #' Triad census cost grows with the cube of the vertex count. On a network of
 #' a few hundred vertices it is the slowest measure here by a wide margin.
@@ -206,7 +212,8 @@
 #' snapshots return zero for all selectors.
 #'
 #' @section Conditions:
-#' Errors: `dynet_unknown_measure` (a name outside the forty above),
+#' Errors: `dynet_unknown_measure` (a name outside the forty-two above; it also
+#' carries `dynet_bad_input`),
 #' `dynet_needs_directed` (one of the eight direction-reading selectors on an
 #' undirected network), `dynet_no_sessions` (`sessions = "separate"` without a
 #' session column), `dynet_outside_observation` (the requested range misses
@@ -273,22 +280,12 @@ metrics <- function(dn, measure = "density",
                         traversal_time = 0, plot = FALSE) {
   basis_supplied <- !missing(basis)
   traversal_supplied <- !missing(traversal_time)
-  basis <- match.arg(basis)
-  sessions <- match.arg(sessions)
+  basis <- .match_choice(basis)
+  sessions <- .match_choice(sessions)
   .check_dynet(dn, sessions)
   window <- .legacy_sample(window, sample)
   spec <- .window_spec(dn, start, end, step, window)
-  .check("`measure` must be a character vector." = is.character(measure),
-            "`measure` must name at least one measure." = length(measure) > 0L)
-
-  bad <- setdiff(measure, .graph_measures)
-  if (length(bad) > 0L) {
-    stop(errorCondition(
-      sprintf("Unknown measure %s. Available: %s",
-              paste(sQuote(bad), collapse = ", "),
-              paste(.graph_measures, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
-  }
+  measure <- .check_measure(measure, .graph_measures)
   wants_paths <- any(measure %in% .path_graph_measures)
   if (!wants_paths && (basis_supplied || traversal_supplied)) {
     stop(errorCondition(
@@ -307,7 +304,7 @@ metrics <- function(dn, measure = "density",
       stop(errorCondition(
         sprintf("%s needs a directed network; this one is undirected.",
                 paste(sQuote(dir_only), collapse = ", ")),
-        class = "dynet_needs_directed", call = NULL))
+        class = c("dynet_needs_directed", "dynet_bad_input"), call = NULL))
     }
   }
 
@@ -332,8 +329,12 @@ metrics <- function(dn, measure = "density",
         .window_concurrency(dn, enc, bin, sessions, label)[state$index]
       }
       path_values <- if (any(measure %in% .path_graph_measures)) {
-        distances <- .temporal_distances(dn, enc, bin, sessions, label, basis,
-                                         traversal_time, state$index)
+        # A window in which no vertex is eligible has no source to search
+        # from; its empty distance matrix summarises to NA like a singleton.
+        distances <- if (length(state$index)) {
+          .temporal_distances(dn, enc, bin, sessions, label, basis,
+                              traversal_time, state$index)
+        } else matrix(numeric(), 0L, 0L)
         summary <- .temporal_path_summary(distances, measure, basis)
         connected_seen[[length(connected_seen) + 1L]] <<- summary$connected
         summary

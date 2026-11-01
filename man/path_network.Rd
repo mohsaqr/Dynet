@@ -4,10 +4,16 @@
 \alias{path_network}
 \title{Build the union network of optimal temporal paths}
 \usage{
-path_network(x)
+path_network(x, session = NULL)
 }
 \arguments{
 \item{x}{A result from \code{\link[=paths]{paths()}}.}
+
+\item{session}{For a result of \code{paths(sessions = "separate")} only: the
+one session whose routes form the network. Each session there is a
+complete, independent search with its own origin, so the sessions are
+never pooled into one vertex table. Supplying it for any other result is
+an error.}
 }
 \value{
 A static \code{dynet_path_network} cograph netobject, whose two tidy
@@ -26,8 +32,12 @@ still point the way time runs, from the sender towards the queried
 target, and its \code{arrival_time} is that vertex's latest-departure
 supremum, as in \code{\link[=paths]{paths()}}.
 
-A result that is not from \code{\link[=paths]{paths()}} raises \code{dynet_bad_input}; a path
-result with no reachable vertex raises \code{dynet_empty_result}.
+A result that is not from \code{\link[=paths]{paths()}} raises \code{dynet_bad_input}; a
+separate-session result without \code{session} raises \code{dynet_needs_session},
+a \code{session} it does not hold raises \code{dynet_unknown_session}, and a
+\code{session} given for any other result raises \code{dynet_bad_input}; a path
+result with no reachable vertex raises \code{dynet_empty_result}. Every one
+of these also carries \code{dynet_bad_input}.
 }
 \description{
 \code{paths()} uses an endpoint-local foremost-then-shortest criterion, so

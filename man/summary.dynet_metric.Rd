@@ -9,22 +9,24 @@
 \arguments{
 \item{object}{A \code{dynet_metric}.}
 
-\item{by}{Grouping for the summary: \code{"node"}, \code{"time"} or \code{"measure"}. The
-default, \code{NULL}, groups by \code{"node"} when the measure has a \code{node} column
-and by \code{"measure"} otherwise. A \code{session} column, when the measure has
-one, and \code{measure} itself are always part of the grouping as well. A
-grouping the measure has no column for -- \code{"node"} on a graph-level
-series, say -- is dropped rather than raising, leaving the grouping the
-measure does carry.}
+\item{by}{Grouping for the summary: \code{"node"}, \code{"time"}, \code{"measure"} or
+\code{"pair"}. The default, \code{NULL}, groups by \code{"node"} when the measure has a
+\code{node} column and by \code{"measure"} otherwise. \code{"pair"} groups a pair-level
+measure, such as \code{\link[=gaps]{gaps()}} with \code{unit = "pair"}, by its \code{from} and \code{to}
+columns. A \code{session} column, when the measure has one, and \code{measure}
+itself are always part of the grouping as well. A grouping the measure
+has no column for -- \code{"node"} on a graph-level series, say -- is dropped
+rather than raising, leaving the grouping the measure does carry. Any
+other value raises \code{dynet_bad_choice}.}
 
 \item{...}{Ignored.}
 }
 \value{
 A \code{data.frame} with the grouping columns plus \code{n}, \code{mean}, \code{sd},
-\code{min}, \code{max} and, when time is available, \code{peak_time}. \code{n} counts the
-measured values the statistics were computed from, so a vertex that was
-inactive for part of the calendar reports fewer than the number of time
-points.
+\code{min}, \code{max} and, when time is available, \code{peak_time}; one row per
+combination of the grouping columns. \code{n} counts the measured values the
+statistics were computed from, so a vertex that was inactive for part of
+the calendar reports fewer than the number of time points.
 }
 \description{
 Collapses the time dimension. Node-level measures are summarised one row

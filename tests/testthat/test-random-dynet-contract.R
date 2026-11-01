@@ -179,3 +179,75 @@ test_that("the Markov variant reaches its stationary activity", {
     numeric(1L))
   expect_lt(abs(mean(d) - target), 4 * stats::sd(d) / sqrt(length(d)))
 })
+
+test_that("an out-of-range or malformed generator argument is a classed error", {
+  expect_error(random_dynet(p = 2, seed = 1), class = "dynet_bad_input")
+  expect_error(random_dynet(p = NA_real_, seed = 1), class = "dynet_bad_input")
+  expect_error(random_dynet(model = "block", p_within = 3, seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(model = "block", p_between = c(0.1, 0.2),
+                            seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(model = "block", block_switch = 2, seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(model = "block", blocks = 2.5, seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(nodes = 2.7, seed = 1), class = "dynet_bad_input")
+  expect_error(random_dynet(nodes = c("a", "a", "b"), seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(nodes = c("a", NA), seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(directed = NA, seed = 1), class = "dynet_bad_input")
+  expect_error(random_dynet(loops = NA, seed = 1), class = "dynet_bad_input")
+  expect_error(random_dynet(birth = 0, persist = 1, seed = 1),
+               class = "dynet_bad_input")
+  expect_error(random_dynet(nodes = 4, times = 3, p = 0, seed = 1),
+               class = "dynet_bad_input")
+})
+
+test_that("every requested vertex is in the network, tied or not", {
+  sizes <- vapply(seq_len(6), function(s) {
+    dn <- random_dynet(nodes = 10, times = 2, model = "binomial", p = 0.03,
+                       seed = s)
+    nrow(as.data.frame(dn, what = "nodes"))
+  }, integer(1L))
+  expect_identical(sizes, rep(10L, 6L))
+  named <- random_dynet(nodes = c("x", "y", "z", "w"), times = 2,
+                        model = "activation", p = 0.2, rate = 2, seed = 3)
+  expect_setequal(as.data.frame(named, what = "nodes")$name,
+                  c("x", "y", "z", "w"))
+})
+
+test_that("block_switch = 0 leaves the planted partition static", {
+  args <- list(nodes = 8, times = 6, model = "block", blocks = 2,
+               p_within = 1, p_between = 0, seed = 4)
+  static <- do.call(random_dynet, args)
+  explicit <- do.call(random_dynet, c(args, block_switch = 0))
+  expect_identical(as.data.frame(explicit), as.data.frame(static))
+  # With certain within-block ties and none between, every within-block pair
+  # is one spell covering the whole window.
+  spells <- as.data.frame(static)
+  expect_equal(unique(spells$start), 0)
+  expect_equal(unique(spells$end), 6)
+})
+
+test_that("a positive block_switch makes the partition drift", {
+  dn <- random_dynet(nodes = 9, times = 12, model = "block", blocks = 3,
+                     p_within = 1, p_between = 0, block_switch = 0.5,
+                     seed = 2)
+  spells <- as.data.frame(dn)
+  # Drift breaks some within-block run before the window ends.
+  expect_true(any(spells$end - spells$start < 12))
+  # Invariant: with p_within = 1 and p_between = 0 each slice is a disjoint
+  # union of cliques, so tie-sharing is transitive within every slice.
+  transitive <- vapply(seq_len(12) - 0.5, function(t) {
+    live <- spells[spells$start <= t & spells$end > t, c("from", "to")]
+    pairs <- unique(c(paste(live$from, live$to), paste(live$to, live$from)))
+    triples <- merge(data.frame(near = live$from, mid = live$to),
+                     data.frame(mid = live$from, far = live$to), by = "mid")
+    triples <- triples[triples$near != triples$far, , drop = FALSE]
+    all(paste(triples$near, triples$far) %in% pairs)
+  }, logical(1L))
+  expect_true(all(transitive))
+  expect_identical(dn$meta$generator$block_switch, 0.5)
+})

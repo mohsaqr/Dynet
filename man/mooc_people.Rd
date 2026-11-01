@@ -23,9 +23,12 @@ mooc_people
 }
 \description{
 The participant table accompanying \link{mooc_posts}: every person who appears
-as a sender or a receiver there, with the self-reported experience level
-as the chapter's integer code and as the label it recodes the code into
-and uses as the mixing attribute.
+as a sender or a receiver there, plus three participants (\code{441}, \code{442}
+and \code{443}) who appear in neither column, with the self-reported
+experience level as the chapter's integer code and as the label it
+recodes the code into and uses as the mixing attribute. Passed as
+\code{nodes}, the three are left out of the network with a message unless
+\code{keep_isolates = TRUE}.
 }
 \examples{
 participants <- dynet(mooc_posts, from = "sender", to = "receiver",

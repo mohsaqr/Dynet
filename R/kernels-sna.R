@@ -63,7 +63,7 @@
 #' @noRd
 .diffusion_degree <- function(a, directed = TRUE,
                               mode = c("all", "out", "in"), lambda = 1) {
-  mode <- match.arg(mode)
+  mode <- .match_choice(mode)
   b <- .binary(a, directed)
   degree <- .margin(b, directed, mode)
   neighbourhood <- if (!directed) {
@@ -91,7 +91,7 @@
 #'   networks. *Social Networks*, 17(1), 57-63.
 #' @noRd
 .harary <- function(a, directed = TRUE, mode = c("all", "out", "in")) {
-  mode <- match.arg(mode)
+  mode <- .match_choice(mode)
   if (directed && identical(mode, "in")) a <- t(a)
   d <- .geodesic(a, directed && !identical(mode, "all"))
   ecc <- apply(d, 1L, max)
@@ -265,11 +265,12 @@
   n <- nrow(cap)
   if (n < 3L) return(stats::setNames(numeric(n), rownames(a)))
   full <- matrix(0, n, n)
-  for (j in seq_len(n)) {
-    for (k in seq_len(n)) {
-      if (j != k && (directed || j < k)) full[j, k] <- .max_flow(cap, j, k)
-    }
-  }
+  # Every ordered pair on a directed network, every unordered one otherwise.
+  pairs <- which(row(full) != col(full) & (directed | row(full) < col(full)),
+                 arr.ind = TRUE)
+  full[pairs] <- vapply(seq_len(nrow(pairs)), function(p) {
+    .max_flow(cap, pairs[p, 1L], pairs[p, 2L])
+  }, numeric(1L))
   flo <- vapply(seq_len(n), function(i) {
     sub <- cap[-i, -i, drop = FALSE]
     idx <- seq_len(n)[-i]

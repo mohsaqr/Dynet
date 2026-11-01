@@ -30,13 +30,18 @@ and \code{"reversal"} runs time backwards.}
 deterministic.}
 
 \item{within}{Scope a shuffle is confined to: the whole network, within each
-sender, or within each session.}
+sender, or within each session. \code{"times"}, \code{"timeline"} and \code{"targets"}
+honour all three (\code{"timeline"} within a sender moves a pair's timeline
+only onto another pair of the same sender); \code{"edges"}, \code{"labels"} and
+\code{"reversal"} act on the whole network, and any other scope raises
+\code{dynet_null_bad_scope} rather than being silently widened.}
 
 \item{transpose}{For \code{"reversal"} only, also swap edge direction.}
 
 \item{swaps}{For \code{"edges"} only, double-edge swaps per distinct pair.}
 
-\item{max_tries}{Iteration cap on the self-loop repair in \code{"targets"}.}
+\item{max_tries}{Iteration cap on the self-loop repair in \code{"targets"} and
+on the constraint repair or redraw under \code{respect}.}
 
 \item{keep}{Retain the surrogate networks so \code{\link[=significance]{significance()}} can reuse one
 set of replicates for many statistics, or drop them to save memory.}
@@ -44,9 +49,9 @@ set of replicates for many statistics, or drop them to save memory.}
 \item{respect}{Constraints a surrogate must satisfy on a network that
 declares them: \code{"activity"} requires both endpoints eligible for the whole
 surrogate spell, \code{"observation"} requires the spell to lie inside an
-observed component, and \code{"none"} shuffles unconstrained. Constrained draws
-are feasible, not uniform over the feasible set, and \code{"none"} on such a
-network gives a biased null.}
+observed component, and \code{"none"} shuffles unconstrained. \code{"none"} on such
+a network gives a biased null. See Details for how each method meets the
+constraints without giving up what it holds fixed.}
 
 \item{seed}{A single whole number for a reproducible draw, or \code{NULL}.}
 }
@@ -89,12 +94,33 @@ correctness test rather than a weak null.}
 On a network that declares vertex activity or observation spells, an
 unconstrained shuffle can place an event while an endpoint is ineligible or
 inside an unobserved gap, and the snapshot machinery would then induce it
-away, biasing the null downward. \code{respect} enforces those constraints by
-rejecting and redrawing infeasible spells. The result is a feasible
-surrogate rather than a uniform draw from the feasible set; \code{summary()}
+away, biasing the null downward. \code{respect} enforces those constraints
+without breaking what the method holds fixed: a surrogate may hold no more
+infeasible spells than the observed network itself does (an observed spell
+outside its endpoints' activity is kept and induced away the same way). \code{"times"} and \code{"targets"}
+re-permute an infeasible spell together with randomly chosen spells of the
+same scope, so the multiset of times (or of each scope's targets) is
+exactly kept; the result is a feasible surrogate rather than a uniform draw
+from the feasible set. \code{"timeline"} and \code{"edges"} move whole pairs, so an
+infeasible surrogate is rejected and redrawn whole, which is uniform over
+the feasible ones. \code{"labels"} and \code{"reversal"} carry vertex activity with
+them (a permuted name keeps its presence; a reversed network has reversed
+presence), so activity never binds them. When \code{max_tries} is exhausted,
+\code{dynet_null_no_valid_draw} is raised. \code{summary()}
 reports how many proposals were rejected so the constraint's bite is
 visible.
 }
+\section{Conditions}{
+
+Errors: \code{dynet_bad_input} for a malformed argument or a \code{transpose} or
+\code{n > 1} that the method cannot use; \code{dynet_null_bad_scope} for a \code{within}
+the method does not define; \code{dynet_no_sessions} for \code{within = "session"}
+on a network without sessions; \code{dynet_null_no_valid_draw} when no
+surrogate satisfying the constraints is found in \code{max_tries}. Every one
+also carries \code{dynet_bad_input}. Warning: \code{dynet_null_poor_mixing} when
+fewer than half the proposed rewirings of \code{"edges"} were accepted.
+}
+
 \examples{
 dn <- dynet(school_contacts)
 randomise(dn, method = "times", n = 9, seed = 1)

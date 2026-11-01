@@ -23,6 +23,17 @@
       class = c("dynet_missing_column", "dynet_bad_input"), call = NULL
     ))
   }
+  # `duration` is derived from start and end, and `.raw_spell` is the
+  # canonical spell identifier; a supplied column of either name would be
+  # silently overwritten on the way out, so it is refused instead.
+  reserved <- intersect(names(data), c("duration", ".raw_spell"))
+  if (length(reserved)) {
+    stop(errorCondition(
+      sprintf("Derived, read-only tie column(s) cannot be supplied: %s.",
+              paste(reserved, collapse = ", ")),
+      class = c("dynet_reserved_column", "dynet_bad_input"), call = NULL
+    ))
+  }
   extra <- setdiff(names(data), c(required, optional))
   n <- nrow(data)
   vector_column <- function(x) is.atomic(x) && is.null(dim(x)) && length(x) == n
@@ -68,9 +79,11 @@
   }
   weight <- if ("weight" %in% names(data)) data$weight else rep(1, n)
   if (!is.numeric(weight) || length(weight) != n || anyNA(weight) ||
-      any(!is.finite(weight))) {
-    stop(errorCondition("`weight` must contain one finite number per tie.",
-                        class = "dynet_bad_input", call = NULL))
+      any(!is.finite(weight)) || any(weight < 0)) {
+    # The same rule as dynet(): a multiplicity is finite and non-negative.
+    stop(errorCondition(
+      "`weight` must contain one finite, non-negative number per tie.",
+      class = c("dynet_bad_weight", "dynet_bad_input"), call = NULL))
   }
 
   existing_sessions <- dn$meta$sessions
@@ -165,7 +178,8 @@
                           nodes = NULL, vertex_spells = NULL, format = NULL) {
   if (!nrow(spells)) {
     stop(errorCondition("Tie mutation cannot leave a Dynet object edgeless.",
-                        class = "dynet_empty_network", call = NULL))
+                        class = c("dynet_empty_network", "dynet_bad_input"),
+                        call = NULL))
   }
   if (!dn$directed) {
     lo <- pmin(spells$from, spells$to)
@@ -260,6 +274,26 @@
   out
 }
 
+#' The vertex attribute a cograph grouping was derived from
+#'
+#' `dynet(groups = )` copies the named attribute into `groups` without
+#' recording which attribute it was, so the source is recovered as the one
+#' other column whose values are identical to `groups`.
+#'
+#' @param nodes Public node table.
+#' @return A character vector naming the source column when exactly one
+#'   matches, otherwise `character(0)` (no grouping, no match, or an
+#'   ambiguous match).
+#' @noRd
+.group_source <- function(nodes) {
+  if (!"groups" %in% names(nodes)) return(character())
+  candidates <- setdiff(names(nodes), c("name", "groups"))
+  source <- candidates[vapply(candidates, function(name) {
+    identical(as.character(nodes[[name]]), as.character(nodes$groups))
+  }, logical(1L))]
+  if (length(source) == 1L) source else character()
+}
+
 #' Bind new node rows while preserving the public attribute schema
 #' @param existing Existing public node table.
 #' @param added New node rows.
@@ -309,8 +343,8 @@
 #' Add nodes to a temporal network
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param data A character vector of new node names or a data frame containing
-#'   a `name` column and optional static attributes.
+#' @param data A character vector or factor of new node names, or a data
+#'   frame containing a `name` column and optional static attributes.
 #' @return A new `dynet` object, of the same class and structure as the input,
 #'   with the added nodes represented as implicit always-active isolates until
 #'   ties or vertex activity are supplied. The input is unchanged.
@@ -325,8 +359,8 @@
 #' @export
 add_nodes <- function(dn, data) {
   .check_dynet(dn, "bounded")
-  added <- if (is.character(data) && is.null(dim(data))) {
-    data.frame(name = data, stringsAsFactors = FALSE)
+  added <- if ((is.character(data) || is.factor(data)) && is.null(dim(data))) {
+    data.frame(name = as.character(data), stringsAsFactors = FALSE)
   } else data
   if (!is.data.frame(added) || !"name" %in% names(added) || !nrow(added)) {
     stop(errorCondition(
@@ -360,10 +394,7 @@ add_nodes <- function(dn, data) {
     ))
   }
   if ("groups" %in% names(existing) && !"groups" %in% names(added)) {
-    candidates <- setdiff(names(existing), c("name", "groups"))
-    source <- candidates[vapply(candidates, function(name) {
-      identical(as.character(existing[[name]]), as.character(existing$groups))
-    }, logical(1L))]
+    source <- .group_source(existing)
     if (length(source) == 1L && source %in% names(added)) {
       added$groups <- as.character(added[[source]])
     } else {
@@ -383,7 +414,8 @@ add_nodes <- function(dn, data) {
 #' Remove nodes from a temporal network
 #'
 #' @param dn A temporal network from [dynet()].
-#' @param nodes Character node names.
+#' @param nodes Node names: a character vector, a factor, or a data frame
+#'   carrying a `name` or `node` column.
 #' @param cascade Whether to remove every incident temporal tie and vertex
 #'   activity spell. The safe default, `FALSE`, rejects nodes that are not
 #'   isolates with a condition of class `dynet_node_not_isolate`.
@@ -400,6 +432,7 @@ remove_nodes <- function(dn, nodes, cascade = FALSE) {
   .check_dynet(dn, "bounded")
   .check("`cascade` must be one non-missing logical value." =
            is.logical(cascade) && length(cascade) == 1L && !is.na(cascade))
+  nodes <- .node_names(nodes, "nodes")
   if (!is.character(nodes) || !length(nodes) || anyNA(nodes)) {
     stop(errorCondition("`nodes` must contain complete node names.",
                         class = "dynet_bad_input", call = NULL))
@@ -423,7 +456,8 @@ remove_nodes <- function(dn, nodes, cascade = FALSE) {
   kept_spells <- dn$spells[!incident, , drop = FALSE]
   if (!nrow(kept_spells)) {
     stop(errorCondition("Node removal cannot leave a Dynet object edgeless.",
-                        class = "dynet_empty_network", call = NULL))
+                        class = c("dynet_empty_network", "dynet_bad_input"),
+                        call = NULL))
   }
   kept_nodes <- as.data.frame(dn, what = "nodes")
   kept_nodes <- kept_nodes[!kept_nodes$name %in% nodes, , drop = FALSE]
@@ -480,7 +514,8 @@ add_ties <- function(dn, data, loops = FALSE) {
 #'   evaluated the way [subset()] evaluates one -- `duration > 2`,
 #'   `course == "g1"` -- over the columns `as.data.frame(dn)` returns, tie
 #'   attributes included; or integer positions or a logical mask over that
-#'   table.
+#'   table. As in [subset()], a condition that is `NA` for a spell does not
+#'   select it.
 #' @param from,to,start,end,session Optional selectors combined by conjunction.
 #'   `start` and `end` match a spell's own boundary, compared with the
 #'   package's magnitude-relative time tolerance rather than exactly, so a
@@ -491,8 +526,10 @@ add_ties <- function(dn, data, loops = FALSE) {
 #'   ignored.
 #' @return A new internally consistent `dynet` object, of the same class and
 #'   structure as the input, without the matched spells. At least one temporal
-#'   tie must remain. A request that matches nothing raises a condition of
-#'   class `dynet_tie_not_found`.
+#'   tie must remain (otherwise `dynet_empty_network`). A `from` or `to` that
+#'   is not a vertex raises `dynet_unknown_node`, a `session` that is not a
+#'   session label raises `dynet_unknown_session`, and a well-formed request
+#'   that matches nothing raises `dynet_tie_not_found`.
 #' @examples
 #' dn <- dynet(data.frame(
 #'   from = c("A", "B"), to = c("B", "C"),
@@ -502,9 +539,26 @@ add_ties <- function(dn, data, loops = FALSE) {
 #' @export
 remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
                         start = NULL, end = NULL, session = NULL) {
+  .check_dynet(dn, "bounded")
   # `ties` may be a condition on the spell table, as in induce_subgraph().
   ties <- .select_ties(dn, substitute(ties), parent.frame())
-  .check_dynet(dn, "bounded")
+  .remove_spells(dn, ties, from, to, start, end, session, match.call())
+}
+
+#' Drop the spells a resolved removal request selects
+#'
+#' The body shared by [remove_ties()] and [remove_arcs()]. It takes `ties`
+#' already evaluated, so that a wrapper never has to hand its own argument on
+#' for a second `substitute()`, where a tie attribute that happens to be named
+#' `ties` would shadow it.
+#'
+#' @param dn A `dynet` object.
+#' @param ties An evaluated selection (`NULL`, positions or a logical mask).
+#' @param from,to,start,end,session Explicit selectors, or `NULL`.
+#' @param call The user-facing call, stored in the result's metadata.
+#' @return A rebuilt `dynet` object without the selected spells.
+#' @noRd
+.remove_spells <- function(dn, ties, from, to, start, end, session, call) {
   selectors <- list(from = from, to = to, start = start, end = end,
                     session = session)
   has_selector <- !vapply(selectors, is.null, logical(1L))
@@ -520,19 +574,7 @@ remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
   n <- nrow(dn$spells)
   remove <- rep(FALSE, n)
   if (!is.null(ties)) {
-    if (is.logical(ties)) {
-      if (length(ties) != n || anyNA(ties)) {
-        stop(errorCondition("A logical `ties` mask must match the tie count.",
-                            class = "dynet_bad_input", call = NULL))
-      }
-      remove <- ties
-    } else if (is.numeric(ties) && all(is.finite(ties)) &&
-               all(ties == as.integer(ties)) && all(ties >= 1L & ties <= n)) {
-      remove[unique(as.integer(ties))] <- TRUE
-    } else {
-      stop(errorCondition("`ties` must contain valid integer row positions.",
-                          class = "dynet_bad_input", call = NULL))
-    }
+    remove[.edit_row_selector(ties, n, "ties")] <- TRUE
   } else {
     if (!dn$directed && xor(is.null(from), is.null(to))) {
       stop(errorCondition(
@@ -546,6 +588,27 @@ remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
         "Undirected endpoint selection accepts one unordered pair at a time.",
         class = "dynet_bad_input", call = NULL
       ))
+    }
+    # A name that is not a vertex can never match; saying so is more useful
+    # than reporting that no tie matched.
+    endpoint <- c(.node_names(from, "from"), .node_names(to, "to"))
+    unknown <- setdiff(as.character(endpoint), dn$nodes$name)
+    if (length(unknown)) {
+      stop(errorCondition(
+        sprintf("Unknown node(s): %s.", paste(sort(unknown), collapse = ", ")),
+        class = c("dynet_unknown_node", "dynet_bad_input"), call = NULL
+      ))
+    }
+    if (!is.null(session)) {
+      unknown_session <- setdiff(as.character(session),
+                                 dn$meta$sessions %||% character())
+      if (length(unknown_session)) {
+        stop(errorCondition(
+          sprintf("Unknown session label(s): %s.",
+                  paste(sort(unknown_session), collapse = ", ")),
+          class = c("dynet_unknown_session", "dynet_bad_input"), call = NULL
+        ))
+      }
     }
     remove[] <- TRUE
     if (!is.null(from) && !is.null(to) && !dn$directed) {
@@ -601,7 +664,7 @@ remove_ties <- function(dn, ties = NULL, from = NULL, to = NULL,
     ))
   }
   .rebuild_ties(
-    dn, kept, identical(dn$meta$raw_censoring, "explicit"), match.call()
+    dn, kept, identical(dn$meta$raw_censoring, "explicit"), call
   )
 }
 
@@ -658,6 +721,5 @@ remove_arcs <- function(dn, ties = NULL, from = NULL, to = NULL,
                         call = NULL))
   }
   ties <- .select_ties(dn, substitute(ties), parent.frame())
-  remove_ties(dn, ties = ties, from = from, to = to, start = start,
-              end = end, session = session)
+  .remove_spells(dn, ties, from, to, start, end, session, match.call())
 }

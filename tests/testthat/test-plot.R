@@ -415,5 +415,7 @@ test_that("a highlight that matches nothing is an error, not a grey plot", {
   dn <- quiet_dynet(school_contacts)
   deg <- centrality_series(dn, measure = "degree")
   expect_error(plot(deg, highlight = "Nobody"), class = "dynet_unknown_highlight")
-  expect_error(plot(deg, highlight = 1), class = "simpleError")
+  # A malformed highlight is a classed bad input (it was an unclassed
+  # stopifnot() simpleError before the 2026-11-01 audit).
+  expect_error(plot(deg, highlight = 1), class = "dynet_bad_input")
 })

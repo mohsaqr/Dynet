@@ -16,12 +16,50 @@
 .clip_collapse_fragments <- function(fragments, start, end) {
   if (!nrow(fragments)) return(fragments)
   point <- fragments$instant
-  keep_point <- point & fragments$start >= start & fragments$start <= end
+  # Tolerant at both bounds: a point stored as 0.1 + 0.2 still sits at a
+  # bound of 0.3, and a spell ending there must not leave a sliver of width
+  # 5e-17 behind as a phantom edge that snapshots() would not draw.
+  keep_point <- point & .time_leq_each(start, fragments$start) &
+    .time_leq_each(fragments$start, end)
   positive <- !point
   fragments$start[positive] <- pmax(fragments$start[positive], start)
   fragments$end[positive] <- pmin(fragments$end[positive], end)
-  keep <- keep_point | (positive & fragments$end > fragments$start)
+  keep <- keep_point |
+    (positive & !.time_leq_each(fragments$end, fragments$start))
   fragments[keep, , drop = FALSE]
+}
+
+#' Count activity runs the way `networkDynamic` stores them
+#'
+#' `networkDynamic` merges the spells of one edge when they overlap or abut,
+#' absorbs a point that falls inside a half-open spell `[a, b)`, keeps a point
+#' at `b` or outside every spell as a run of its own, and stores coincident
+#' points once. `network.collapse()` then reports the number of those merged
+#' spells as `activity.count`. This reproduces that count from the clipped
+#' fragments of one pair, so the alias means what its name promises.
+#'
+#' @param start,end Clipped fragment endpoints for one pair.
+#' @param instant Logical, `TRUE` for a genuine point.
+#' @return A single integer, the number of merged activity runs.
+#' @examples
+#' Dynet:::.collapse_activity_runs(c(0, 1, 4), c(2, 3, 4),
+#'                                 c(FALSE, FALSE, TRUE))
+#' @noRd
+.collapse_activity_runs <- function(start, end, instant) {
+  span_start <- sort(start[!instant])
+  span_end <- end[!instant][order(start[!instant])]
+  reach <- cummax(span_end)
+  runs <- if (length(span_start)) {
+    1L + sum(!.time_leq_each(span_start[-1L], reach[-length(reach)]))
+  } else 0L
+  points <- sort(start[instant])
+  if (!length(points)) return(as.integer(runs))
+  distinct <- points[c(TRUE, !.time_eq_each(points[-1L],
+                                            points[-length(points)]))]
+  covered <- vapply(distinct, function(time) {
+    any(.time_leq_each(span_start, time) & !.time_leq_each(span_end, time))
+  }, logical(1L))
+  as.integer(runs + sum(!covered))
 }
 
 #' Joint activity time available to one vertex pair
@@ -49,7 +87,7 @@
                  by = NULL, suffixes = c("_from", "_to"))
   lo <- pmax(cross$start_from, cross$start_to)
   hi <- pmin(cross$end_from, cross$end_to)
-  keep <- hi > lo
+  keep <- !.time_leq_each(hi, lo)
   if (!any(keep)) return(0)
   .union_duration(lo[keep], hi[keep])
 }
@@ -179,7 +217,10 @@
         weighted_duration = sum(identity$weight * identity$duration),
         latest_weight = latest$weight[[nrow(latest)]],
         first = min(identity$first), last = max(identity$last),
-        activity.duration = union_duration, activity.count = nrow(identity),
+        activity.duration = union_duration,
+        activity.count = .collapse_activity_runs(
+          piece$start, piece$end, piece$instant
+        ),
         stringsAsFactors = FALSE
       )
     })
@@ -235,11 +276,22 @@
 #'   pair was active, overlaps counted once), `total_duration` (summed spell
 #'   lengths, overlaps counted twice), `duration_fraction` (`union_duration`
 #'   over the pair's joint activity opportunity, `NA` when that opportunity is
-#'   zero), `spell_count`, `weight_sum`, `weighted_duration` (weight times
-#'   duration, summed), `latest_weight` (the weight of the last spell to end),
-#'   `first` and `last` (the pair's earliest onset and latest terminus), and
-#'   the `activity.duration` and `activity.count` aliases for compatibility
-#'   with `networkDynamic::network.collapse()`.
+#'   zero), `spell_count` (raw spells touching the range), `weight_sum` (the
+#'   full weight of every such spell, summed, however little of the spell
+#'   falls inside the range, as `networkDynamic::network.collapse()` keeps an
+#'   attribute whole), `weighted_duration` (each spell's weight times the part
+#'   of its duration inside the range, summed; this is the only field that
+#'   shares a weight out by time), `latest_weight` (the weight of the last
+#'   spell to end), `first` and `last` (the pair's earliest onset and latest
+#'   terminus inside the range), and two columns named as
+#'   `networkDynamic::network.collapse(rm.time.info = FALSE)` names them:
+#'   `activity.duration`, equal to `union_duration`, and `activity.count`, the
+#'   number of activity runs after merging spells that overlap or abut and
+#'   absorbing a point that falls inside a spell. `activity.count` therefore
+#'   equals `spell_count` only when no two spells of the pair touch.
+#'
+#'   A spell that only touches a bound, to within the package's time
+#'   tolerance, contributes nothing: it leaves no edge of zero width behind.
 #'
 #'   The node table carries one row per vertex, with `name`, any static vertex
 #'   attributes the network was built with, `activity_duration` (time the
@@ -260,9 +312,9 @@ collapse_network <- function(
                "weighted_duration", "latest_weight"),
     sessions = c("bounded", "collapse", "separate"),
     censored = c("include", "exclude")) {
-  weight <- match.arg(weight)
-  sessions <- match.arg(sessions)
-  censored <- match.arg(censored)
+  weight <- .match_choice(weight)
+  sessions <- .match_choice(sessions)
+  censored <- .match_choice(censored)
   .check_dynet(dn, sessions)
   start <- if (is.null(start)) dn$meta$time_range[["start"]] else
     .as_time(start, dn, "start")
@@ -305,7 +357,7 @@ collapse_network <- function(
 #' @export
 as.data.frame.dynet_collapsed <- function(
     x, row.names = NULL, optional = FALSE, what = c("edges", "nodes"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   out <- if (identical(what, "edges")) x$data else {
     x$nodes[, setdiff(names(x$nodes), c("id", "label", "x", "y")), drop = FALSE]
   }
@@ -440,4 +492,69 @@ summary.dynet_collapsed_list <- function(object, ...) {
   out <- do.call(rbind, parts)
   rownames(out) <- NULL
   out
+}
+
+#' Describe a collapsed temporal network
+#'
+#' @param object A result from [collapse_network()].
+#' @param ... Ignored.
+#' @return A `data.frame` with columns `property` and `value`, one row per
+#'   property: `vertices`, `edges`, `weight` (the rule the edge weights
+#'   follow), `density` (edges over possible non-loop pairs), `total weight`
+#'   and `mean weight`. Both columns are character so the table prints as one
+#'   block.
+#' @examples
+#' dn <- dynet(school_contacts)
+#' flat <- collapse_network(dn)
+#' summary(flat)
+#' @export
+summary.dynet_collapsed <- function(object, ...) {
+  .network_summary(object, object$meta$weight)
+}
+
+#' Draw collapsed networks, one panel per session
+#'
+#' @param x A `dynet_collapsed_list` from
+#'   `collapse_network(sessions = "separate")`.
+#' @param palette Palette specification, as in [plot.dynet()].
+#' @param ... Passed to `cograph::splot()` for every panel; a per-panel
+#'   `title` naming the session is set and can be overridden here.
+#' @return `x`, invisibly; the panels are drawn on the current device.
+#'   Raises `dynet_needs_cograph` when cograph is not installed.
+#' @export
+plot.dynet_collapsed_list <- function(x, palette = "okabe", ...) {
+  .need_cograph()
+  side <- ceiling(sqrt(length(x)))
+  old <- graphics::par(mfrow = c(ceiling(length(x) / side), side))
+  on.exit(graphics::par(old), add = TRUE, after = FALSE)
+  lapply(names(x), function(label) {
+    one <- x[[label]]
+    args <- .splot_args(one, utils::modifyList(list(title = label),
+                                               list(...)), palette)
+    do.call(cograph::splot, c(list(one), args))
+  })
+  invisible(x)
+}
+
+#' Property table for a static netobject
+#' @param net A netobject with `nodes`, `edges` (carrying the drawn
+#'   `weight`) and `directed`.
+#' @param rule Name of the weight rule.
+#' @return A two-column character `data.frame`.
+#' @noRd
+.network_summary <- function(net, rule) {
+  edges <- net$edges
+  n <- nrow(net$nodes)
+  possible <- if (isTRUE(net$directed)) n * (n - 1) else n * (n - 1) / 2
+  w <- edges$weight
+  data.frame(
+    property = c("vertices", "edges", "weight", "density", "total weight",
+                 "mean weight"),
+    value = c(format(n), format(nrow(edges)), rule %||% "count",
+              format(if (possible > 0) round(nrow(edges) / possible, 4)
+                     else NA_real_),
+              format(sum(w)),
+              format(if (length(w)) round(mean(w), 4) else NA_real_)),
+    stringsAsFactors = FALSE
+  )
 }

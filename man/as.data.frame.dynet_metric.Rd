@@ -36,7 +36,9 @@ nonconverged, with \code{session}, \code{time}, \code{stage}, \code{status} and 
 the solver's \code{iterations} and \code{residual}, the \verb{balance_*} family for the
 row-column scaling step, and \code{spectral_radius}, \code{eigenspace_dimension}
 and \code{eigen_residual} for the eigen step. A result with nothing to report
-gives a zero-row frame of those same columns rather than \code{NULL}.}
+gives a zero-row frame of those same columns rather than \code{NULL}. An
+unknown \code{what} or \code{layout} raises \code{dynet_bad_choice}, a
+\code{dynet_bad_input}.}
 
 \item{top}{Keep only the \code{top} vertices with the largest mean value, and
 order the result from largest to smallest. A single positive number;

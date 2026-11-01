@@ -167,3 +167,71 @@ test_that("the four methods exist and behave", {
   expect_s3_class(as.data.frame(out), "data.frame")
   expect_error(summary(out, by = "node"), class = "dynet_bad_input")
 })
+
+# ------------------------------------------- time tolerance (audit 2026-11-01)
+
+test_that("a window of exactly delta is admitted despite floating-point rounding", {
+  # 0.4 - 0.1 is 0.30000000000000004 in doubles; a bare `<=` dropped the
+  # triangle, so the census silently depended on how the times were written.
+  edges <- data.frame(from = c("A", "B", "A"), to = c("B", "C", "C"),
+                      time = c(0.1, 0.2, 0.4))
+  census <- as.data.frame(motifs(directed(edges), delta = 0.3))
+  wider <- as.data.frame(motifs(directed(edges), delta = 0.3 + 1e-9))
+  expect_equal(sum(census$count), 1)
+  expect_identical(census$count, wider$count)
+})
+
+test_that("a census is invariant to shifting every time to Unix magnitude", {
+  set.seed(31)
+  nm <- LETTERS[1:5]
+  edges <- data.frame(from = sample(nm, 30, TRUE), to = sample(nm, 30, TRUE),
+                      time = round(sort(runif(30, 0, 20)), 1))
+  edges <- edges[edges$from != edges$to, ]
+  shifted <- transform(edges, time = time + 1.7e9)
+  for (delta in c(0.5, 2, 5)) {
+    near <- as.data.frame(motifs(directed(edges), delta = delta))
+    far <- as.data.frame(motifs(directed(shifted), delta = delta))
+    expect_identical(far$count, near$count, info = sprintf("delta %s", delta))
+  }
+})
+
+test_that("start and end limits are compared with the time tolerance", {
+  edges <- data.frame(from = c("A", "B", "A"), to = c("B", "C", "C"),
+                      time = c(0.1, 0.2, 0.4))
+  # 0.1 + 0.2 - 0.2 is 0.10000000000000003, not 0.1.
+  limited <- as.data.frame(motifs(directed(edges), delta = 0.3,
+                                  start = 0.1 + 0.2 - 0.2, end = 0.4))
+  expect_equal(sum(limited$count), 1)
+  expect_error(motifs(directed(edges), delta = NA_real_),
+               class = "dynet_bad_input")
+})
+
+test_that("the census total equals a brute-force enumeration of triples", {
+  # Independent of the class table: every triple of distinct events whose
+  # span is within delta and that touches at most three vertices is one
+  # instance; a two-node instance adds one count at each endpoint's class.
+  brute <- function(d, delta) {
+    d <- d[order(d$time, d$from, d$to), ]
+    if (nrow(d) < 3L) return(0)
+    triple <- utils::combn(nrow(d), 3L)
+    inside <- d$time[triple[3L, ]] - d$time[triple[1L, ]] <= delta + 1e-9
+    triple <- triple[, inside, drop = FALSE]
+    width <- apply(triple, 2L, function(ix) {
+      length(unique(c(d$from[ix], d$to[ix])))
+    })
+    sum(width == 3L) + 2 * sum(width == 2L)
+  }
+  for (seed in 1:4) {
+    set.seed(seed)
+    nm <- LETTERS[1:5]
+    edges <- data.frame(from = sample(nm, 25, TRUE), to = sample(nm, 25, TRUE),
+                        time = sample(1:80, 25))
+    edges <- edges[edges$from != edges$to, ]
+    for (delta in c(5, 20)) {
+      census <- as.data.frame(motifs(directed(edges), delta = delta))
+      expect_true(all(census$count >= 0))
+      expect_equal(sum(census$count), brute(edges, delta),
+                   info = sprintf("seed %d delta %d", seed, delta))
+    }
+  }
+})

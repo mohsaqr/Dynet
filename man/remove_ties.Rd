@@ -21,7 +21,8 @@ remove_ties(
 evaluated the way \code{\link[=subset]{subset()}} evaluates one -- \code{duration > 2},
 \code{course == "g1"} -- over the columns \code{as.data.frame(dn)} returns, tie
 attributes included; or integer positions or a logical mask over that
-table.}
+table. As in \code{\link[=subset]{subset()}}, a condition that is \code{NA} for a spell does not
+select it.}
 
 \item{from, to, start, end, session}{Optional selectors combined by conjunction.
 \code{start} and \code{end} match a spell's own boundary, compared with the
@@ -35,8 +36,10 @@ ignored.}
 \value{
 A new internally consistent \code{dynet} object, of the same class and
 structure as the input, without the matched spells. At least one temporal
-tie must remain. A request that matches nothing raises a condition of
-class \code{dynet_tie_not_found}.
+tie must remain (otherwise \code{dynet_empty_network}). A \code{from} or \code{to} that
+is not a vertex raises \code{dynet_unknown_node}, a \code{session} that is not a
+session label raises \code{dynet_unknown_session}, and a well-formed request
+that matches nothing raises \code{dynet_tie_not_found}.
 }
 \description{
 Remove temporal ties

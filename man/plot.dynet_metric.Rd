@@ -18,25 +18,31 @@
 \item{x}{A \code{dynet_metric}.}
 
 \item{type}{\code{"line"} for trajectories over time, \code{"heatmap"} for a
-vertex-by-time tile plot, \code{"ridge"} for small multiples per measure.
-Ignored for a measure with no time axis.}
+series-by-time tile plot (one row per vertex, pair or measure),
+\code{"ridge"} for small multiples per measure. Ignored for a measure with no
+time axis. Any other value raises \code{dynet_bad_choice}.}
 
 \item{highlight}{Optional character vector naming the series to draw in
 colour, with everything else in grey: vertex names for a node-level
-measure, measure names for a graph-level one. For a \code{\link[=mixing]{mixing()}} result a
-group name selects every flow into or out of that group, so
-\code{highlight = "Teacher"} colours the teacher rows and columns of the mixing
-table. A name that matches nothing raises an error of class
+measure, measure names for a graph-level one. For a pair-level measure a
+vertex name selects every pair that vertex belongs to, and for a
+\code{\link[=mixing]{mixing()}} result a group name selects every flow into or out of that
+group, so \code{highlight = "Teacher"} colours the teacher rows and columns of
+the mixing table. A name that matches nothing raises an error of class
 \code{dynet_unknown_highlight}. Ignored for a measure with no time axis.}
 
-\item{top}{How many rows to draw. For a measure taken over time, the \code{top}
-vertices with the largest mean value; \code{NULL}, the default, draws every
-vertex. For a measure with no time axis, the \code{top} rows with the largest
-absolute value, defaulting to \code{30}, with a subtitle naming how many of
-how many are shown.}
+\item{top}{How many series to draw. For a measure taken over time, the
+\code{top} vertices (or pairs, for a pair-level measure) with the largest
+mean value; \code{NULL}, the default, draws every one. A graph-level series
+ignores it. For a measure with no time axis, the \code{top} rows with the
+largest absolute value, defaulting to \code{30}, with a subtitle naming how
+many of how many are shown.}
 
 \item{palette}{Colours for the series: \code{"okabe"} (the default),
-\code{"extended"}, \code{"many"}, your own vector of colours, or a function of \code{n}.}
+\code{"extended"}, \code{"many"}, your own vector of colours, or a function of \code{n}.
+Okabe-Ito has nine colours and the lines six types, so eighteen series
+can be told apart; beyond that a \code{dynet_palette_recycled} warning
+suggests \code{top}, \code{highlight} or \code{palette = "many"}.}
 
 \item{base_size}{Base font size.}
 
@@ -48,8 +54,13 @@ the plot is the return value here rather than a side effect.
 }
 \description{
 Draws the quantity against time. Node-level measures are drawn as one line
-per vertex; graph-level measures as one line per measure. Distinctions are
-carried by colour and line type together, never by colour alone.
+per vertex, pair-level measures as one marked line per vertex pair (each
+observation is a point, so a pair observed once is still drawn), and
+graph-level measures as one line per measure. Distinctions are carried by
+colour and line type together, never by colour alone; when there are more
+series than distinct colour and line-type combinations, a
+\code{dynet_palette_recycled} warning says so rather than letting two series
+look identical in silence.
 }
 \details{
 A measure with no time axis, such as reachability or \code{\link[=durations]{durations()}}, has no

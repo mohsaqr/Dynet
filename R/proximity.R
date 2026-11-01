@@ -72,6 +72,15 @@
     state <- .snapshot_state(x, enc, bin, w, "bounded", "all")
     full <- .adjacency(enc, state$active, x$directed)
     a <- full[state$index, state$index, drop = FALSE]
+    # Strength reads spell weights, shared by the part of each spell inside
+    # the slice, exactly as centrality_series() does. The adjacency above
+    # counts spells instead, which would make strength a spell count.
+    measured_a <- if (identical(measure, "strength")) {
+      shared <- enc
+      shared$weight <- enc$weight * .window_weight_share(enc, bin, w)
+      valued <- .adjacency(shared, state$active, x$directed, weighted = TRUE)
+      valued[state$index, state$index, drop = FALSE]
+    } else a
     pos <- rep(NA_real_, enc$n)
     weight <- rep(NA_real_, enc$n)
     if (length(state$index)) {
@@ -79,7 +88,7 @@
         a, default_dist, length(state$index), times[k]
       )
       weight[state$index] <- .snapshot_measure(
-        measure, a, x$directed, 0.85
+        measure, measured_a, x$directed, 0.85
       )
     }
     list(pos = pos, w = weight)
@@ -137,7 +146,7 @@
       warning(warningCondition(
         sprintf("Scaling failed for the slice at t = %s (%s); its vertices are placed at zero.",
                 format(at), conditionMessage(e)),
-        class = "dynet_scaling_failed"), call. = FALSE)
+        class = "dynet_scaling_failed", call = NULL))
       NULL
     })
   if (is.null(fit) || length(fit) != n) return(rep(0, n))
@@ -235,17 +244,24 @@
   if (networks) .need_cograph()
   # The measure is read straight off each slice rather than through
   # centrality_series(), so it has to be validated here.
-  if (!measure %in% .node_measures || length(measure) != 1L) {
+  # Length first: `%in%` on a vector would hand `||` a vector, which is an
+  # unclassed R error rather than this contract's condition.
+  .check("`measure` must be a single measure name." =
+           is.character(measure) && length(measure) == 1L && !is.na(measure))
+  # Participation needs one group label per vertex, which this view has no
+  # argument to receive; without it every line width would be NaN.
+  proximity_measures <- setdiff(.node_measures, "participation")
+  if (!measure %in% proximity_measures) {
     stop(errorCondition(
       sprintf("`measure` must be one of %s.",
-              paste(.node_measures, collapse = ", ")),
-      class = "dynet_unknown_measure", call = NULL))
+              paste(proximity_measures, collapse = ", ")),
+      class = c("dynet_unknown_measure", "dynet_bad_input"), call = NULL))
   }
   if (!x$directed && measure %in% .directed_only_measures) {
     stop(errorCondition(
       sprintf("%s needs a directed network; this one is undirected.",
               sQuote(measure)),
-      class = "dynet_needs_directed", call = NULL))
+      class = c("dynet_needs_directed", "dynet_bad_input"), call = NULL))
   }
   .check(
     "`slices` must be NULL or a single number of at least two." =
@@ -369,7 +385,7 @@
       sprintf("The device is %.1f by %.1f inches; this figure needs about %.1f by %.1f. Enlarge the device%s.",
               din[1L], din[2L], need_w, need_h,
               if (right > 1.5) ", or set labels = FALSE" else ""),
-      class = "dynet_device_too_small", call = NULL))
+      class = c("dynet_device_too_small", "dynet_bad_input"), call = NULL))
   }
   invisible(NULL)
 }

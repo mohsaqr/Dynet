@@ -231,7 +231,7 @@
 #' @noRd
 .place_measure_rows <- function(tbl, dn, bins) {
   row <- vapply(tbl$time, function(t) {
-    hit <- which(abs(bins$time - t) <= .time_tol(t, bins$time))
+    hit <- which(.time_eq(bins$time, t))
     if (length(hit)) hit[[1L]] else NA_integer_
   }, integer(1L))
   col <- match(tbl$node, dn$nodes$name)
@@ -347,7 +347,7 @@
 #'   easing curve) and `time` (the timeline marker, linear in phase).
 #' @noRd
 .frame_schedule <- function(bins, tween, ease = c("dwell", "continuous")) {
-  ease <- match.arg(ease)
+  ease <- .match_choice(ease)
   n_bins <- nrow(bins)
   bin <- rep(seq_len(n_bins), each = tween)
   phase <- rep(seq_len(tween) - 1L, times = n_bins) / tween
@@ -746,7 +746,7 @@
 #'   or `cooling`. Empty by default. A larger `repulsion` opens a dense
 #'   core.
 #' @param seed Seed for the spring layouts, so `"spring"` and `"relaxed"` are
-#'   reproducible; `42` by default. Under a seed the caller's random state is
+#'   reproducible; one whole number, `42` by default. Under a seed the caller's random state is
 #'   restored on exit. `NULL` draws from the current random state instead and
 #'   leaves it advanced, which is what makes successive unseeded calls differ.
 #' @param ... Passed to `cograph::splot()` for every frame, so the whole
@@ -791,7 +791,8 @@
 #' node-level or lands on none of the bins, and a warning of class
 #' `dynet_partial_measure` when it lands on only some; and `dynet_bad_input` for a non-positive
 #' `fps`, `tween`, `width`, `height` or `res`, an odd video size, a `loop`
-#' that is neither logical nor a positive whole number, or a negative
+#' that is neither logical nor a positive whole number, a `seed` that is not
+#' one whole number, or a negative
 #' `max_displacement` or `anchor_strength`.
 #'
 #' @seealso [snapshots()] for the same grid as a table, [plot.dynet()] with
@@ -829,14 +830,14 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
                     ease = c("dwell", "continuous"),
                     max_displacement = 0.08, anchor_strength = 1,
                     layout_args = list(), seed = 42L, ...) {
-  sessions <- match.arg(sessions)
-  absent <- match.arg(absent)
-  isolates <- match.arg(isolates)
-  ease <- match.arg(ease)
+  sessions <- .match_choice(sessions)
+  absent <- .match_choice(absent)
+  isolates <- .match_choice(isolates)
+  ease <- .match_choice(ease)
   .check_dynet(dn, sessions)
   .need_cograph()
   if (!is.data.frame(layout)) {
-    layout <- match.arg(layout, .animation_layouts_named)
+    layout <- .match_choice(layout, .animation_layouts_named)
   }
   positive_scalar <- function(value) {
     is.numeric(value) && length(value) == 1L && is.finite(value) && value > 0
@@ -869,9 +870,9 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
     "`layout_args` must be a list of named arguments." =
       is.list(layout_args) && (!length(layout_args) ||
                                  !is.null(names(layout_args))),
-    "`seed` must be NULL or one number." =
+    "`seed` must be NULL or one whole number." =
       is.null(seed) || (is.numeric(seed) && length(seed) == 1L &&
-        is.finite(seed))
+        is.finite(seed) && seed == trunc(seed))
   )
   format <- .animation_format(file)
   tween <- as.integer(tween)
@@ -890,7 +891,7 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
   if (nrow(grid) == 0L) {
     stop(errorCondition(
       "The measurement grid holds no bin, so there is nothing to animate.",
-      class = "dynet_empty_result", call = NULL
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL
     ))
   }
 
@@ -909,7 +910,7 @@ animate <- function(dn, start = NULL, end = NULL, step = NULL,
   if (!any(drawable)) {
     stop(errorCondition(
       "No bin of the measurement grid holds a vertex to draw.",
-      class = "dynet_empty_result", call = NULL
+      class = c("dynet_empty_result", "dynet_bad_input"), call = NULL
     ))
   }
   if (any(!drawable)) {
@@ -1254,7 +1255,7 @@ summary.dynet_animation <- function(object, ...) {
 as.data.frame.dynet_animation <- function(x, row.names = NULL,
                                           optional = FALSE,
                                           what = c("bins", "frames"), ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   if (identical(what, "frames")) {
     out <- attr(x, "frames")
     rownames(out) <- NULL
@@ -1264,4 +1265,37 @@ as.data.frame.dynet_animation <- function(x, row.names = NULL,
   attributes(out) <- list(names = names(x), row.names = seq_len(nrow(x)),
     class = "data.frame")
   out
+}
+
+#' Plot the bin-by-bin record of an animation
+#'
+#' The film itself is the file [animate()] wrote; this draws what it shows
+#' per bin: ties active, ties forming and ties dissolving, told apart by line
+#' type and point shape.
+#'
+#' @param x A `dynet_animation` from [animate()].
+#' @param base_size Base font size.
+#' @param ... Ignored.
+#' @return A `ggplot` object.
+#' @export
+plot.dynet_animation <- function(x, base_size = 12, ...) {
+  bins <- as.data.frame(x)
+  counts <- c("ties", "forming", "dissolving")
+  long <- data.frame(
+    time = rep(bins$time, times = length(counts)),
+    measure = rep(counts, each = nrow(bins)),
+    value = unlist(bins[counts], use.names = FALSE),
+    stringsAsFactors = FALSE
+  )
+  # The first bin has no predecessor to form against and the last no
+  # successor to dissolve into: those cells are NA by construction.
+  long <- long[!is.na(long$value), , drop = FALSE]
+  ggplot2::ggplot(long, ggplot2::aes(x = time, y = value, linetype = measure,
+                                     shape = measure)) +
+    ggplot2::geom_line(colour = "#0072B2") +
+    ggplot2::geom_point(colour = "#0072B2", size = 2) +
+    ggplot2::labs(x = sprintf("Time (%s)", attr(x, "time_unit") %||% ""),
+                  y = "Ties", linetype = NULL, shape = NULL,
+                  title = "What each frame of the animation shows") +
+    ggplot2::theme_minimal(base_size = base_size)
 }

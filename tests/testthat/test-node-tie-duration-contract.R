@@ -11,7 +11,7 @@ test_that("D03 directed out, in, and all incidence is literal", {
     to = c("B", "C", "B", "A", "A", "D", "C", "A"),
     start = c(0, 0, 2, 1, 6, 7, 3, 8),
     end = c(4, 4, 6, 5, 9, 10, 3, 10),
-    weight = c(2, 50, -1, 4, 3, 8, 99, 7)
+    weight = c(2, 50, 0.5, 4, 3, 8, 99, 7)
   )
   dn <- quiet_dynet(
     edges, weight = "weight", loops = TRUE,
@@ -304,7 +304,7 @@ test_that("D03 helper, defaults, metadata, validation and coordinates are exact"
 
   coordinate_edges <- data.frame(
     from = c("A", "A", "B"), to = c("B", "C", "A"),
-    start = c(0, 1, 2), end = c(4, 3, 4), weight = c(1, 9, -2)
+    start = c(0, 1, 2), end = c(4, 3, 4), weight = c(1, 9, 0.25)
   )
   coordinate <- quiet_dynet(
     coordinate_edges, weight = "weight",

@@ -36,7 +36,7 @@ test_that("gaps refuses a unit it does not own", {
   dn <- quiet_dynet(school_contacts, format = "contact")
   # match.arg() raises a plain error, not a classed one. Assert what is
   # actually raised rather than pretending the condition carries a class.
-  expect_error(gaps(dn, unit = "session"), "'arg' should be one of")
+  expect_error(gaps(dn, unit = "session"), class = "dynet_bad_choice")
 })
 
 test_that("gaps refuses separate without sessions", {

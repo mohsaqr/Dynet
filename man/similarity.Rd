@@ -46,15 +46,20 @@ the result when the figure needs arguments of its own.}
 }
 \value{
 A \code{dynet_similarity} data frame with one row per ordered pair of
-time bins and columns \code{time}, \code{other}, \code{measure} and \code{value}. The
+time bins and columns \code{time}, \code{other}, \code{measure} and \code{value}. Every bin
+of the grid takes part, including a bin in which no tie is active. The
 diagonal is included and is one for every coefficient except
 \code{"hamming"}, where identical layers differ in nothing and score zero.
 \code{"pearson"} reaches one only to floating-point accuracy, so compare it
 with a tolerance rather than with \code{==}. The frame is returned invisibly
 when \code{plot = TRUE} has drawn the figure.
 
-The coefficients come from cograph, which is a hard dependency of Dynet;
-a namespace that cannot be loaded raises \code{dynet_needs_cograph}.
+A bin with no tie has an empty edge set, and the ratios are then 0/0:
+\code{"jaccard"} is \code{NA} between two empty bins (and 0 between an empty and a
+non-empty one), while \code{"overlap"}, \code{"cosine"} and \code{"pearson"} are \code{NA}
+wherever an empty bin takes part, its own diagonal cell included.
+\code{"pearson"} is likewise \code{NA} for a complete layer, which has no variance.
+\code{"hamming"} is always defined.
 }
 \description{
 Compares the edge set at every time bin with the edge set at every other,
@@ -64,6 +69,20 @@ single-bin measure reports and which the formation and dissolution
 quantities in \code{\link[=events]{events()}} only address between neighbouring bins.
 
 Coefficients are computed by \code{cograph::layer_similarity()}.
+}
+\details{
+Each bin is read as the vector of its eligible pairs: every ordered pair of
+distinct vertices for a directed network, every unordered pair for an
+undirected one. Loops are excluded, as in \code{\link[=turnover]{turnover()}} and
+\code{\link[=persistence]{persistence()}}, and a pair is tied in a bin or it is not. On that domain
+\code{"hamming"} is the number of pairs whose tie state differs, and
+\code{"pearson"} is the graph correlation of \code{sna::gcor()} with its default
+\code{diag = FALSE}; \code{"hamming"} likewise equals \code{sna::hdist()}. Counting the
+structurally empty diagonal, or both triangles of a symmetric matrix,
+would inflate the Hamming count twofold and bias the correlation.
+
+The coefficients come from cograph, which is a hard dependency of Dynet;
+a namespace that cannot be loaded raises \code{dynet_needs_cograph}.
 }
 \examples{
 dn <- dynet(school_contacts)

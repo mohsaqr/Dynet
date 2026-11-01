@@ -24,6 +24,21 @@
   normalized$spells
 }
 
+#' Refuse a vertex-spell selection that selects nothing
+#' @param index Integer positions from `.edit_row_selector()`.
+#' @return `TRUE`, invisibly; raises `dynet_vertex_spell_not_found` (also
+#'   `dynet_bad_input`) when `index` is empty.
+#' @noRd
+.require_vertex_selection <- function(index) {
+  if (!length(index)) {
+    stop(errorCondition(
+      "The `spells` selection matches no declared vertex-activity component.",
+      class = c("dynet_vertex_spell_not_found", "dynet_bad_input"),
+      call = NULL))
+  }
+  invisible(TRUE)
+}
+
 #' Each vertex's span from its first tie to its last
 #' @param dn A temporal network.
 #' @return A data frame with `node`, `start` (the earliest start among the
@@ -115,25 +130,6 @@ add_vertex_spells <- function(dn, data) {
     stop(errorCondition("`data` must be a nonempty vertex-spell data frame.",
                         class = "dynet_bad_input", call = NULL))
   }
-  existing <- .vertex_spells_input(dn$vertex_spells)
-  # Reconcile optional columns before binding; the normalizer supplies false
-  # censor flags and a global session when they are absent.
-  canonical <- c("node", "start", "end", "session",
-                 "onset_censored", "terminus_censored")
-  bind_vertex <- function(x, prototype) {
-    missing <- setdiff(canonical, names(x))
-    for (name in missing) {
-      x[[name]] <- if (identical(name, "session")) {
-        rep(NA_character_, nrow(x))
-      } else if (name %in% c("onset_censored", "terminus_censored")) {
-        rep(FALSE, nrow(x))
-      } else prototype[[name]][rep(NA_integer_, nrow(x))]
-    }
-    x[canonical]
-  }
-  existing <- bind_vertex(existing, data)
-  added <- bind_vertex(data, existing)
-  combined <- rbind(existing, added)
   if (is.null(dn$meta$sessions)) {
     # Silently dropping the label would accept a declaration the network
     # cannot represent and return something the caller did not ask for. The
@@ -145,8 +141,17 @@ add_vertex_spells <- function(dn, data) {
         class = c("dynet_incompatible_vertex_spells", "dynet_bad_vertex_spells",
                   "dynet_bad_input"), call = NULL))
     }
-    combined$session <- NULL
+    data$session <- NULL
   }
+  # The new rows are put on the network's clock *before* they meet the
+  # existing ones: the stored spells are numeric offsets from the origin, and
+  # binding a `Date` column onto them would read the date as days since 1970.
+  added <- .normalize_edited_vertex_spells(dn, data)
+  columns <- c("node", "start", "end", "session",
+               "onset_censored", "terminus_censored")
+  combined <- rbind(dn$vertex_spells[, columns, drop = FALSE],
+                    added[, columns, drop = FALSE])
+  if (all(is.na(combined$session))) combined$session <- NULL
   set_vertex_spells(dn, combined)
 }
 
@@ -161,7 +166,9 @@ add_vertex_spells <- function(dn, data) {
 #'   components dropped and the rest canonicalised again, so the remaining
 #'   spell identifiers renumber. A node with no remaining declaration becomes
 #'   implicitly always active over observation support. Raises
-#'   `dynet_bad_input` when `spells` is not a valid selection.
+#'   `dynet_vertex_spell_not_found` when `spells` selects no component (an
+#'   all-`FALSE` mask), and `dynet_bad_input` when `spells` is not a valid
+#'   selection.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
@@ -172,6 +179,9 @@ add_vertex_spells <- function(dn, data) {
 remove_vertex_spells <- function(dn, spells) {
   .check_dynet(dn, "bounded")
   index <- .edit_row_selector(spells, nrow(dn$vertex_spells), "spells")
+  # `x[-integer(0), ]` is the empty table: an all-FALSE mask used to clear
+  # every declared spell instead of removing none.
+  .require_vertex_selection(index)
   kept <- dn$vertex_spells[-index, , drop = FALSE]
   set_vertex_spells(
     dn, if (nrow(kept)) .vertex_spells_input(kept) else NULL
@@ -191,10 +201,12 @@ remove_vertex_spells <- function(dn, spells) {
 #' @return A new `dynet` object, class
 #'   `c("dynet", "netobject", "cograph_network")`. Updated components are
 #'   canonicalised with the retained components, so overlaps can merge and
-#'   spell identifiers can change. Raises `dynet_bad_input` when `spells` is
-#'   not a valid selection, when `data` is malformed or of the wrong height,
-#'   or when it names the read-only derived columns `vertex_spell`,
-#'   `duration` or `instant`.
+#'   spell identifiers can change. `start` and `end` may be given on the
+#'   network's own clock, `Date` or `POSIXct` for a calendar network. Raises
+#'   `dynet_vertex_spell_not_found` when `spells` selects no component, and
+#'   `dynet_bad_input` when `spells` is not a valid selection, when `data` is
+#'   malformed or of the wrong height, or when it names the read-only derived
+#'   columns `vertex_spell`, `duration` or `instant`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' present <- data.frame(node = c("Ana", "Ben"), start = 0, end = 10)
@@ -206,6 +218,7 @@ remove_vertex_spells <- function(dn, spells) {
 update_vertex_spells <- function(dn, spells, data) {
   .check_dynet(dn, "bounded")
   index <- .edit_row_selector(spells, nrow(dn$vertex_spells), "spells")
+  .require_vertex_selection(index)
   if (!is.data.frame(data) || !nrow(data) || !ncol(data) ||
       anyDuplicated(names(data))) {
     stop(errorCondition("`data` must be a nonempty update data frame.",
@@ -238,6 +251,18 @@ update_vertex_spells <- function(dn, spells, data) {
               paste(sQuote(unknown), collapse = ", ")),
       class = c("dynet_unknown_column", "dynet_bad_input"), call = NULL))
   }
+  # The stored times are offsets on the network's clock and the stored
+  # labels are character; a `Date` or a factor written straight in would land
+  # as days since 1970 or as integer codes.
+  data[] <- lapply(data, function(value) {
+    if (is.factor(value)) as.character(value) else value
+  })
+  times <- intersect(c("start", "end"), names(data))
+  data[times] <- lapply(times, function(field) {
+    vapply(seq_along(data[[field]]), function(i) {
+      .as_time(data[[field]][i], dn, paste0("data$", field))
+    }, numeric(1L))
+  })
   # A fold over the named fields, not a loop: each writes one column.
   current[names(data)] <- lapply(names(data), function(attribute) {
     replaced <- current[[attribute]]
@@ -245,30 +270,6 @@ update_vertex_spells <- function(dn, spells, data) {
     replaced
   })
   set_vertex_spells(dn, current)
-}
-
-.set_observation_meta <- function(dn, observations, call) {
-  meta <- dn$meta
-  meta$event_range <- c(start = min(dn$spells$start), end = max(dn$spells$end))
-  meta$observations <- observations
-  meta$time_range <- c(start = min(observations$start), end = max(observations$end))
-  meta$observation <- meta$time_range
-  meta$observation_explicit <- TRUE
-  meta$observation_interval <- "positive_half_open_instant_closed"
-  meta$observation_clipping <- "non_destructive_measurement_view"
-  meta$boundary_events <- "raw_not_fabricated"
-  meta$censoring <- "not_inferred"
-  meta$observation_duration <- sum(observations$duration)
-  meta$observation_spells_explicit <- TRUE
-  meta$observation_gap_waiting <- "allowed"
-  meta$latency_clock <- "calendar"
-  meta$n_bins <- sum(pmax(
-    1L, as.integer(ceiling(observations$duration / meta$interval - 1e-9))
-  ))
-  meta$call <- call
-  out <- dn
-  out$meta <- meta
-  out
 }
 
 #' Replace observation support
@@ -287,8 +288,12 @@ update_vertex_spells <- function(dn, spells, data) {
 #'   clips exposure and path horizons to this support. Read the components
 #'   back with `as.data.frame(x, what = "observations")`, one row per
 #'   component with `observation`, `start`, `end`, `duration` and `instant`.
+#'   The result is the network [dynet()] builds from the same log with
+#'   `observation_spells = data`, or with `observation_start = start,
+#'   observation_end = end`, so either route measures identically; any
+#'   earlier observation support is replaced, not merged.
 #'   Raises `dynet_bad_input` when neither or both of `data` and the bounds
-#'   are given.
+#'   are given, or when `end` precedes `start`.
 #' @examples
 #' dn <- dynet(school_contacts)
 #' first_week <- set_observations(dn, start = 0, end = 7)
@@ -304,20 +309,43 @@ set_observations <- function(dn, data = NULL, start = NULL, end = NULL) {
       class = "dynet_bad_input", call = NULL
     ))
   }
+  # Start from the implicit view so that no field of an earlier observation
+  # scheme survives, then set exactly the fields dynet() sets for the same
+  # declaration: scalar bounds carry no observation-component table, so they
+  # must not acquire one here either.
+  meta <- clear_observations(dn)$meta
+  raw_range <- c(start = min(dn$spells$start), end = max(dn$spells$end))
   observations <- if (use_data) {
-    .normalize_observation_spells(data, dn$meta$origin, dn$meta$time_unit)
+    .normalize_observation_spells(data, meta$origin, meta$time_unit)
+  } else NULL
+  observation <- if (use_data) {
+    c(start = min(observations$start), end = max(observations$end))
   } else {
-    raw_range <- c(start = min(dn$spells$start), end = max(dn$spells$end))
-    bounds <- .observation_bounds(
-      raw_range, dn$meta$origin, dn$meta$time_unit, start, end
-    )
-    data.frame(
-      observation = 1L, start = bounds[["start"]], end = bounds[["end"]],
-      duration = bounds[["end"]] - bounds[["start"]],
-      instant = bounds[["start"]] == bounds[["end"]]
-    )
+    .observation_bounds(raw_range, meta$origin, meta$time_unit, start, end)
   }
-  .set_observation_meta(dn, observations, match.call())
+  meta$time_range <- observation
+  meta$n_bins <- max(1L, as.integer(ceiling(
+    (observation[["end"]] - observation[["start"]]) / meta$interval
+  )))
+  meta$event_range <- raw_range
+  meta$observation <- observation
+  meta$observation_explicit <- TRUE
+  meta$observation_interval <- "positive_half_open_instant_closed"
+  meta$observation_clipping <- "non_destructive_measurement_view"
+  meta$boundary_events <- "raw_not_fabricated"
+  meta$censoring <- "not_inferred"
+  if (use_data) {
+    meta$observations <- observations
+    meta$observation_duration <- sum(observations$duration)
+    meta$observation_spells_explicit <- TRUE
+    meta$observation_gap_waiting <- "allowed"
+    meta$latency_clock <- "calendar"
+    meta$n_bins <- sum(.grid_bins(observations$duration, meta$interval))
+  }
+  meta$call <- match.call()
+  out <- dn
+  out$meta <- meta
+  out
 }
 
 #' Restore implicit observation support
@@ -370,11 +398,13 @@ clear_observations <- function(dn) {
 #'   [dynet()] sorts spells by `start`, `end`, `from` and `to`, so the two
 #'   orders coincide only when the input was already in that order. To cut
 #'   sessions by time, use `breaks` instead.
-#' @param breaks Optional increasing numeric vector of cut points on the
-#'   network's time axis. A spell belongs to the session of the interval its
+#' @param breaks Optional strictly increasing cut points on the network's
+#'   time axis: numbers on its own clock, or `Date`/`POSIXct` values for a
+#'   calendar network. A spell belongs to the session of the interval its
 #'   `start` falls in: before the first break, between two breaks, or from the
-#'   last break on, so `k` breaks give `k + 1` sessions. Mutually exclusive
-#'   with `session`.
+#'   last break on, so `k` breaks give `k + 1` sessions. A `start` equal to a
+#'   break -- to within the package's magnitude-relative time tolerance --
+#'   opens the later session. Mutually exclusive with `session`.
 #' @param labels Optional character vector naming the `k + 1` sessions that
 #'   `breaks` defines, in time order. The default is `session_1`,
 #'   `session_2` and so on.
@@ -401,6 +431,12 @@ set_tie_sessions <- function(dn, session = NULL, breaks = NULL, labels = NULL) {
       class = "dynet_bad_input", call = NULL))
   }
   if (!is.null(breaks)) {
+    if ((inherits(breaks, "Date") || inherits(breaks, "POSIXt")) &&
+        length(breaks) && !anyNA(breaks)) {
+      breaks <- vapply(seq_along(breaks), function(i) {
+        .as_time(breaks[i], dn, "breaks")
+      }, numeric(1L))
+    }
     if (!is.numeric(breaks) || !length(breaks) || anyNA(breaks) ||
         any(!is.finite(breaks)) || is.unsorted(breaks, strictly = TRUE)) {
       stop(errorCondition(
@@ -415,12 +451,19 @@ set_tie_sessions <- function(dn, session = NULL, breaks = NULL, labels = NULL) {
         sprintf("`labels` must give %d distinct nonempty names, one per session.", k),
         class = "dynet_bad_input", call = NULL))
     }
-    session <- labels[findInterval(dn$spells$start, breaks) + 1L]
+    # `findInterval()` compares exactly, so a start that accumulated as
+    # 0.7 - 0.4 fell before a break at 0.3. Count the breaks each start has
+    # reached under the package's time tolerance instead.
+    starts <- dn$spells$start
+    reached <- Reduce(function(count, cut) {
+      count + .time_leq_each(rep(cut, n), starts)
+    }, breaks, integer(n))
+    session <- labels[reached + 1L]
   }
   if (is.null(session)) {
     value <- rep(NA_character_, n)
   } else {
-    if (!is.atomic(session) || is.null(dim(session)) == FALSE ||
+    if (!is.atomic(session) || !is.null(dim(session)) ||
         !length(session) || !(length(session) %in% c(1L, n))) {
       stop(errorCondition(
         "`session` must have length one or the raw tie count.",

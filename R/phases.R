@@ -13,13 +13,30 @@
 #' @param method The similarity method used, which decides the conversion.
 #' @param possible Number of vertex pairs that could carry a tie, used to put
 #'   the Hamming count on the unit scale.
+#' @param empty Bin times in which no tie is active.
 #' @return A symmetric numeric matrix with the bin times as dimnames.
 #' @noRd
-.similarity_distance <- function(s, method, possible) {
+.similarity_distance <- function(s, method, possible, empty = numeric()) {
   times <- sort(unique(c(s$time, s$other)))
   d <- matrix(0, length(times), length(times),
               dimnames = list(format(times), format(times)))
   d[cbind(match(s$time, times), match(s$other, times))] <- s$value
+  # Two bins with no tie are the same network, so they are at distance zero
+  # whatever the coefficient makes of 0/0. Set as agreement here, before the
+  # conversion below turns agreement into distance.
+  none <- times %in% empty
+  d[none, none] <- if (identical(method, "hamming")) 0 else 1
+  undefined <- is.na(d)
+  if (any(undefined)) {
+    stop(errorCondition(sprintf(paste0(
+      "`method = \"%s\"` is undefined between a bin with no tie and a bin ",
+      "with ties (bins %s). Use method = \"jaccard\" or \"hamming\", which ",
+      "are defined for an empty bin, or a grid without empty bins."),
+      method, paste(format(times[which(colSums(undefined) > 0)]),
+                    collapse = ", ")),
+      class = c("dynet_undefined_similarity", "dynet_bad_input"),
+      call = NULL))
+  }
   # Every method but Hamming reports agreement, whose diagonal is one;
   # Hamming already reports disagreement, whose diagonal is zero. Subtracting
   # it from one as well would invert the result and look entirely plausible.
@@ -144,10 +161,12 @@
 #' @param step Spacing between bin starts.
 #' @param window Width represented by each bin.
 #'
-#' @return A `dynet_phases` frame, one row per time bin: `session` (only when
-#'   the network has sessions), `time`, `phase`, `boundary` (is this the first
-#'   bin of its phase) and `silhouette` (this bin's width under the chosen
-#'   `k`). Print it, [plot()] it, or take the plain frame with
+#' @return A `dynet_phases` frame, one row per time bin of the grid, a bin
+#'   with no tie included: `time`, `phase`, `boundary` (is this the first bin
+#'   of its phase) and `silhouette` (this bin's width under the chosen `k`).
+#'   There is no `session` column: [similarity()] keys its layers on time
+#'   alone, so under `sessions = "separate"` two session-local bins sharing a
+#'   time are one layer here too. Print it, [plot()] it, or take the plain frame with
 #'   [as.data.frame()], which also serves `what = "profile"` for the
 #'   \eqn{k}-by-\eqn{k} sensitivity table and `what = "phases"` for one row
 #'   per phase.
@@ -155,8 +174,13 @@
 #' @details
 #' The distance between two bins is `1 - similarity` for every method except
 #' `"hamming"`, which already reports disagreement and is instead divided by
-#' the number of vertex pairs that could carry a tie. Getting that one
-#' backwards would silently invert the answer, so it is handled explicitly.
+#' the number of vertex pairs that could carry a tie, so it lies in
+#' \eqn{[0, 1]}. Getting that one backwards would silently invert the
+#' answer, so it is handled explicitly. Two bins with no tie are the same
+#' network and sit at distance zero. A bin with no tie against one with ties
+#' leaves `"overlap"`, `"cosine"` and `"pearson"` undefined, and the verb then
+#' raises `dynet_undefined_similarity` rather than guess a distance;
+#' `"jaccard"` and `"hamming"` are defined for every pair of bins.
 #' `"pearson"` similarity can be negative, so its distance runs in
 #' \eqn{[0, 2]} rather than \eqn{[0, 1]}; that is a valid distance, but do not
 #' expect the unit scale.
@@ -212,9 +236,9 @@ phases <- function(dn, k = NULL,
                    contiguous = TRUE, k_max = 10L,
                    sessions = c("bounded", "collapse", "separate"),
                    start = NULL, end = NULL, step = NULL, window = NULL) {
-  method <- match.arg(method)
-  linkage <- match.arg(linkage)
-  sessions <- match.arg(sessions)
+  method <- .match_choice(method)
+  linkage <- .match_choice(linkage)
+  sessions <- .match_choice(sessions)
   .check(
     "`contiguous` must be a single non-missing logical value." =
       is.logical(contiguous) && length(contiguous) == 1L && !is.na(contiguous),
@@ -232,6 +256,7 @@ phases <- function(dn, k = NULL,
   }
   s <- similarity(dn, method = method, sessions = sessions, start = start,
                   end = end, step = step, window = window)
+  empty <- attr(s, "empty_bins")
   frame <- as.data.frame(s)
   blocked <- "session" %in% names(frame)
   keys <- if (blocked) as.character(frame$session) else rep("", nrow(frame))
@@ -240,14 +265,15 @@ phases <- function(dn, k = NULL,
     n_nodes * (n_nodes - 1L) / 2L
   results <- lapply(unique(keys), function(block) {
     d <- .similarity_distance(frame[keys == block, , drop = FALSE], method,
-                              possible)
+                              possible, empty)
     times <- sort(unique(c(frame$time[keys == block],
                            frame$other[keys == block])))
     n_bins <- length(times)
     if (n_bins < 3L) {
       stop(errorCondition(sprintf(
         "Phase detection needs at least three bins to have anything to divide; this grid has %d. Use a smaller `step`.",
-        n_bins), class = "dynet_empty_result", call = NULL))
+        n_bins), class = c("dynet_empty_result", "dynet_bad_input"),
+        call = NULL))
     }
     if (!is.null(k) && k >= n_bins) {
       stop(errorCondition(sprintf(
@@ -340,7 +366,7 @@ print.dynet_phases <- function(x, ...) {
 as.data.frame.dynet_phases <- function(x, row.names = NULL, optional = FALSE,
                                        what = c("bins", "profile", "phases"),
                                        ...) {
-  what <- match.arg(what)
+  what <- .match_choice(what)
   blocked <- isTRUE(attr(x, "blocked"))
   if (identical(what, "bins")) {
     plain <- as.data.frame(unclass(x)[names(x)], stringsAsFactors = FALSE)
@@ -401,7 +427,7 @@ plot.dynet_phases <- function(x, base_size = 12, ...) {
       data = spans, ggplot2::aes(x = mid, y = mid, label = phase),
       colour = "#D55E00", fontface = "bold", size = base_size / 2.6,
       inherit.aes = FALSE) +
-    ggplot2::scale_fill_gradient(low = "#0072B2", high = "#DCE9F5",
+    ggplot2::scale_fill_gradient(low = "#0072B2", high = .tint("#0072B2", 0.14),
                                  name = "distance") +
     ggplot2::labs(
       x = sprintf("Time (%s)", attr(x, "time_unit")),
@@ -415,4 +441,15 @@ plot.dynet_phases <- function(x, base_size = 12, ...) {
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(panel.grid = ggplot2::element_blank(),
                    plot.title = ggplot2::element_text(face = "bold"))
+}
+
+#' Summarise temporal phases
+#'
+#' @param object A `dynet_phases` from [phases()].
+#' @param ... Ignored.
+#' @return A `data.frame` with one row per phase: `phase`, `start`, `end`,
+#'   `n_bins` and `cohesion`, as `as.data.frame(object, what = "phases")`.
+#' @export
+summary.dynet_phases <- function(object, ...) {
+  as.data.frame(object, what = "phases")
 }

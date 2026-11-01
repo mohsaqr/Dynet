@@ -365,7 +365,7 @@ test_that("T03 transformations preserve numerator and rescale inverse time", {
   expect_equal(scaled, base / 3)
 
   reweighted <- edges
-  reweighted$weight <- c(-100, 0, 1e6, 2, 4, 7, 9, 11, 13)
+  reweighted$weight <- c(500, 0, 1e6, 2, 4, 7, 9, 11, 13)
   expect_equal(.t03_value(make(reweighted)), base)
 
   transposed <- edges

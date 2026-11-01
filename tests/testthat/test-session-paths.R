@@ -194,12 +194,19 @@ test_that("bounded backward routes do not merge predecessor sessions", {
 
   expect_equal(primary$arrival_time, c(7, 9, 9))
   expect_identical(primary$attained, c(FALSE, TRUE, TRUE))
-  expect_identical(primary$path_session, c(NA_character_, "s1", NA_character_))
-  expect_equal(primary$n_hops, c(NA_integer_, 1L, 0L))
-  expect_equal(primary$n_paths, c(0, 1, 1))
+  # A's optimum is the unattained supremum 7 of s2. Like a single search, the
+  # bounded merge keeps the family approaching it (2026-11 audit: bounded
+  # mode used to drop it, so a one-session network disagreed with collapse
+  # mode), and that route stays inside s2 even though B's own best is s1.
+  expect_identical(primary$path_session, c("s2", "s1", NA_character_))
+  expect_equal(primary$n_hops, c(2L, 1L, 0L))
+  expect_equal(primary$n_paths, c(1, 1, 1))
 
   to_a <- route_steps(paths, "A", "s2")
-  expect_equal(nrow(to_a), 0L)
+  expect_identical(to_a$node, c("A", "B", "T"))
+  expect_equal(to_a$time, c(7, 9, 9))
+  expect_identical(to_a$attained, c(FALSE, FALSE, TRUE))
+  expect_equal(nrow(route_steps(paths, "A", "s1")), 0L)
 
   to_b <- route_steps(paths, "B", "s1")
   expect_identical(to_b$node, c("B", "T"))
@@ -235,7 +242,7 @@ test_that("attainment resolves a backward session tie before session identity", 
   expect_identical(unique(steps$path_session), "s1")
 })
 
-test_that("unattained backward session ties have no maximizing family", {
+test_that("unattained backward session ties keep every approaching family", {
   spells <- data.frame(
     from = c("A", "A"), to = c("T", "T"),
     start = c(0, 1), end = c(5, 5), session = c("s1", "s2"),
@@ -248,14 +255,17 @@ test_that("unattained backward session ties have no maximizing family", {
   )
   actor <- path_rows(paths, "A")
 
+  # Both sessions approach the same supremum 5 from below, so both families
+  # are kept, as a single search keeps a tied unattained family.
   expect_equal(actor$arrival_time, 5)
   expect_false(actor$attained)
   expect_true(is.na(actor$path_session))
-  expect_equal(actor$n_best_sessions, 0L)
-  expect_true(is.na(actor$n_hops))
-  expect_equal(actor$n_paths, 0)
+  expect_equal(actor$n_best_sessions, 2L)
+  expect_identical(actor$n_hops, 1L)
+  expect_equal(actor$n_paths, 2)
   steps <- route_steps(paths, "A")
-  expect_equal(nrow(steps), 0L)
+  expect_setequal(unique(steps$path_session), c("s1", "s2"))
+  expect_false(any(steps$attained[steps$node == "A"]))
 })
 
 test_that("session optima are selected after applying path bounds", {
