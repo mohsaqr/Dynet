@@ -204,10 +204,17 @@ contributes zero rows.
 
 Efficiency is the mean reciprocal temporal distance from a vertex to
 every other vertex (`mode = "out"`), or to it from every other
-(`mode = "in"`), with the distance the `criterion` optimises.
-Unreachable vertices contribute zero rather than being dropped, so it is
-defined on a disconnected network; it is therefore not the reciprocal of
-closeness, which averages over reachable vertices only.
+(`mode = "in"`). The distance is always a hop count: the number of
+contacts on the journey the `criterion` selects. Under `"min_hops"` that
+is the fewest hops; under the default it is the hop count of the
+shortest foremost journey, which can exceed the fewest, and under
+`"shortest"` with weight costs it is the hop count of the cheapest
+journey. This keeps every reciprocal in `(0, 1]` and makes the vertex
+values average to
+`metrics(measure = "temporal_efficiency", basis = "hops")`. Unreachable
+vertices contribute zero rather than being dropped, so it is defined on
+a disconnected network; it is therefore not the reciprocal of closeness,
+which averages over reachable vertices only.
 
 Temporal Katz centrality is the attenuated, time-decayed count of
 temporal walks ending at each vertex (Beres et al., 2018): each contact

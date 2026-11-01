@@ -170,10 +170,10 @@ animate(
 - seed:
 
   Seed for the spring layouts, so `"spring"` and `"relaxed"` are
-  reproducible; `42` by default. Under a seed the caller's random state
-  is restored on exit. `NULL` draws from the current random state
-  instead and leaves it advanced, which is what makes successive
-  unseeded calls differ.
+  reproducible; one whole number, `42` by default. Under a seed the
+  caller's random state is restored on exit. `NULL` draws from the
+  current random state instead and leaves it advanced, which is what
+  makes successive unseeded calls differ.
 
 - ...:
 
@@ -292,8 +292,8 @@ result that is not node-level or lands on none of the bins, and a
 warning of class `dynet_partial_measure` when it lands on only some; and
 `dynet_bad_input` for a non-positive `fps`, `tween`, `width`, `height`
 or `res`, an odd video size, a `loop` that is neither logical nor a
-positive whole number, or a negative `max_displacement` or
-`anchor_strength`.
+positive whole number, a `seed` that is not one whole number, or a
+negative `max_displacement` or `anchor_strength`.
 
 ## See also
 
@@ -316,8 +316,8 @@ if (requireNamespace("gifski", quietly = TRUE) &&
 }
 #>   bins frames fps seconds tween  ease layout format measure first_time
 #> 1    3      6  12     0.5     2 dwell spring    gif    <NA>          0
-#>   last_time min_ties max_ties  turnover                                file
-#> 1         8       29       50 0.6133333 /tmp/RtmpZBgSqH/file1d9b871eb3f.gif
+#>   last_time min_ties max_ties  turnover                                 file
+#> 1         8       29       50 0.6133333 /tmp/RtmpYQknW4/file1d2713b29248.gif
 # \donttest{
 if (requireNamespace("av", quietly = TRUE) &&
   requireNamespace("cograph", quietly = TRUE)) {
@@ -329,6 +329,6 @@ if (requireNamespace("av", quietly = TRUE) &&
 #>   bins frames fps seconds tween  ease layout format measure first_time
 #> 1    3      6  12     0.5     2 dwell spring    mp4  degree          0
 #>   last_time min_ties max_ties  turnover                                 file
-#> 1         8       29       50 0.6133333 /tmp/RtmpZBgSqH/file1d9b5f746f1d.mp4
+#> 1         8       29       50 0.6133333 /tmp/RtmpYQknW4/file1d27284d49e1.mp4
 # }
 ```

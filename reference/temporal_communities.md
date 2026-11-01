@@ -141,10 +141,23 @@ lets a vertex wait through inactivity. It is therefore carried along by
 the coupling and receives a label rather than being dropped, which would
 break the chain. The `active` column marks those states.
 
+*Warnings.* `dynet_single_seed` for one seed; `dynet_no_converge` when a
+run hits `max_passes` while its communities are still merging, or when
+`method = "consensus"` has not reached agreement after `max_passes`
+rounds; `dynet_empty_slice` when `omega = 0` and a bin has no edges,
+since every partition of such a bin scores the same and its labels are
+arbitrary. `attr(x, "n_empty_slices")` records how many bins had no
+edges.
+
 *Reproducibility.* The result is a deterministic function of `seeds`:
 two calls with the same seeds return identical frames. The caller's
 random stream is saved and restored, so running this verb never changes
 what the next [`sample()`](https://rdrr.io/r/base/sample.html) produces.
+A seed fixes a visiting order over the states as they are indexed, which
+follows the network's vertex order; renaming the vertices can therefore
+change which of several near-equal partitions a seed lands on. A clear
+community structure is recovered either way. An ambiguous one is exactly
+what a low `stability_ari` flags.
 
 ## References
 
@@ -220,16 +233,16 @@ as.data.frame(found, what = "sizes")
 #> 1     0         1       5        5
 #> 2     0         2       5        5
 #> 3     0         3       4        4
-#> 13    5         1       5        5
-#> 14    5         2       5        5
-#> 15    5         3       4        4
-#> 4    10         1       5        5
-#> 5    10         2       5        5
-#> 6    10         3       4        4
-#> 7    15         1       5        5
-#> 8    15         2       5        5
-#> 9    15         3       4        4
-#> 10   20         1       5        5
-#> 11   20         2       5        5
-#> 12   20         3       4        4
+#> 4     5         1       5        5
+#> 5     5         2       5        5
+#> 6     5         3       4        4
+#> 7    10         1       5        5
+#> 8    10         2       5        5
+#> 9    10         3       4        4
+#> 10   15         1       5        5
+#> 11   15         2       5        5
+#> 12   15         3       4        4
+#> 13   20         1       5        5
+#> 14   20         2       5        5
+#> 15   20         3       4        4
 ```

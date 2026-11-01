@@ -2,9 +2,12 @@
 
 The participant table accompanying
 [mooc_posts](https://pak.dynasite.org/Dynet/reference/mooc_posts.md):
-every person who appears as a sender or a receiver there, with the
-self-reported experience level as the chapter's integer code and as the
-label it recodes the code into and uses as the mixing attribute.
+every person who appears as a sender or a receiver there, plus three
+participants (`441`, `442` and `443`) who appear in neither column, with
+the self-reported experience level as the chapter's integer code and as
+the label it recodes the code into and uses as the mixing attribute.
+Passed as `nodes`, the three are left out of the network with a message
+unless `keep_isolates = TRUE`.
 
 ## Usage
 
@@ -50,6 +53,7 @@ participants <- dynet(mooc_posts, from = "sender", to = "receiver",
                       time = "timestamp", thread = "discussion",
                       nodes = mooc_people)
 #> Dropped 86 self-loop event(s). Use loops = TRUE to keep them.
+#> 3 vertex/vertices in `nodes` take part in no tie and are left out: 441, 442, 443. Use keep_isolates = TRUE to keep them.
 as.data.frame(participants, what = "nodes")
 #>     name experience expert_level
 #> 1      1          1       Expert

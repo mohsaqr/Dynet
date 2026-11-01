@@ -34,7 +34,9 @@ remove_arcs(
   way [`subset()`](https://rdrr.io/r/base/subset.html) evaluates one –
   `duration > 2`, `course == "g1"` – over the columns
   `as.data.frame(dn)` returns, tie attributes included; or integer
-  positions or a logical mask over that table.
+  positions or a logical mask over that table. As in
+  [`subset()`](https://rdrr.io/r/base/subset.html), a condition that is
+  `NA` for a spell does not select it.
 
 - from, to, start, end, session:
 

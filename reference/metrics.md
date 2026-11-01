@@ -197,15 +197,21 @@ package's own closeness (reachable vertices divided by reachable
 distance, so it is defined on a disconnected snapshot), with the
 theoretical maximum of that score: `n - 1` for a directed snapshot (a
 single arc from the centre) and `n - 2` for an undirected one (one
-isolated dyad). It matches `sna::centralization(closeness)` on connected
-snapshots and not on disconnected ones, where sna's closeness is zero
+isolated dyad). Because that maximum differs from the connected-graph
+star maximum `sna` uses, the two never coincide: on a connected snapshot
+of `n` vertices this value is `sna::centralization(closeness)` times
+`(n - 1) / n` when directed and times `(n - 1) / (2 * n - 3)` when
+undirected, and on a disconnected one sna's closeness is zero
 everywhere.
 
 Krackhardt's four indices – `"connectedness"`, `"efficiency"`,
 `"hierarchy"` and `"lubness"` – describe how far a directed network
-departs from a pure out-tree. `"hierarchy"` and `"lubness"` are
-undefined on some graphs (no connected pair, no component of three) and
-report `NaN` rather than a number that would mislead.
+departs from a pure out-tree. `"efficiency"`, `"hierarchy"` and
+`"lubness"` are undefined on some graphs (no component that could hold
+an arc beyond its spanning tree, no connected pair, no component of
+three) and report `NaN`, as `sna` does, rather than a number that would
+mislead. A window with no eligible vertex at all reports `"efficiency"`
+as `0` and the other two as `NaN`.
 
 Triad census cost grows with the cube of the vertex count. On a network
 of a few hundred vertices it is the slowest measure here by a wide
@@ -242,15 +248,16 @@ snapshots return zero for all selectors.
 
 ## Conditions
 
-Errors: `dynet_unknown_measure` (a name outside the forty above),
-`dynet_needs_directed` (one of the eight direction-reading selectors on
-an undirected network), `dynet_no_sessions` (`sessions = "separate"`
-without a session column), `dynet_outside_observation` (the requested
-range misses observed support; it also carries `dynet_bad_input`), and
-`dynet_bad_input` for every other broken contract – `dn` not a `dynet`,
-a non-character `measure`, an empty `measure`, an out-of-range `start`,
-`end`, `step` or `window`, `end` before `start`, and `step` combined
-with `window = "all"`.
+Errors: `dynet_unknown_measure` (a name outside the forty-two above; it
+also carries `dynet_bad_input`), `dynet_needs_directed` (one of the
+eight direction-reading selectors on an undirected network),
+`dynet_no_sessions` (`sessions = "separate"` without a session column),
+`dynet_outside_observation` (the requested range misses observed
+support; it also carries `dynet_bad_input`), and `dynet_bad_input` for
+every other broken contract – `dn` not a `dynet`, a non-character
+`measure`, an empty `measure`, an out-of-range `start`, `end`, `step` or
+`window`, `end` before `start`, and `step` combined with
+`window = "all"`.
 
 Warning: `dynet_deprecated` for the retired `sample` argument.
 

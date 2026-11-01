@@ -974,34 +974,34 @@ top_routes <- pathways(dn, top = 12)
 top_routes
 ```
 
-    ## # Time-respecting pathways (69 distinct routes, showing 12)
-    ## # 208 optimal routes counted, pooled over 9 source vertices
-    ##         from                                            route     endpoint
-    ##  Socialising           Socialising -> Resourcing -> Inquiring    Inquiring
-    ##    Inquiring             Inquiring -> Resourcing -> Approving    Approving
-    ##   Resourcing                           Resourcing -> Drafting     Drafting
-    ##  Socialising           Socialising -> Resourcing -> Approving    Approving
-    ##   Resourcing                            Resourcing -> Arguing      Arguing
-    ##   Resourcing                          Resourcing -> Inquiring    Inquiring
-    ##     Tutoring                           Tutoring -> Resourcing   Resourcing
-    ##  Socialising              Socialising -> Arguing -> Inquiring    Inquiring
-    ##      Arguing Arguing -> Resourcing -> Socialising -> Tutoring     Tutoring
-    ##   Resourcing                          Resourcing -> Approving    Approving
-    ##    Approving          Approving -> Resourcing -> Coordinating Coordinating
-    ##      Arguing            Arguing -> Resourcing -> Coordinating Coordinating
-    ##  count      share n_hops arrival_time
-    ##     14 0.06730769      2            0
-    ##     10 0.04807692      2            0
-    ##      9 0.04326923      1            0
-    ##      9 0.04326923      2            0
-    ##      8 0.03846154      1            0
-    ##      8 0.03846154      1            0
-    ##      6 0.02884615      1            0
-    ##      6 0.02884615      2            0
-    ##      6 0.02884615      3            0
-    ##      5 0.02403846      1            0
-    ##      5 0.02403846      2            0
-    ##      5 0.02403846      2            0
+    ## # Time-respecting pathways (97 distinct routes, showing 12)
+    ## # 315 optimal routes counted, pooled over 9 source vertices
+    ##         from                                  route   endpoint count      share
+    ##  Socialising Socialising -> Resourcing -> Inquiring  Inquiring    14 0.04444444
+    ##    Inquiring   Inquiring -> Resourcing -> Approving  Approving    10 0.03174603
+    ##      Arguing                  Arguing -> Resourcing Resourcing     9 0.02857143
+    ##     Drafting                 Drafting -> Resourcing Resourcing     9 0.02857143
+    ##    Inquiring                Inquiring -> Resourcing Resourcing     9 0.02857143
+    ##   Resourcing                 Resourcing -> Drafting   Drafting     9 0.02857143
+    ##  Socialising              Socialising -> Resourcing Resourcing     9 0.02857143
+    ##  Socialising Socialising -> Resourcing -> Approving  Approving     9 0.02857143
+    ##   Resourcing                  Resourcing -> Arguing    Arguing     8 0.02539683
+    ##   Resourcing                Resourcing -> Inquiring  Inquiring     8 0.02539683
+    ##    Approving                Approving -> Resourcing Resourcing     7 0.02222222
+    ##      Arguing                   Arguing -> Inquiring  Inquiring     7 0.02222222
+    ##  n_hops arrival_time
+    ##       2            0
+    ##       2            0
+    ##       1            0
+    ##       1            0
+    ##       1            0
+    ##       1            0
+    ##       1            0
+    ##       2            0
+    ##       1            0
+    ##       1            0
+    ##       1            0
+    ##       1            0
 
 ``` r
 

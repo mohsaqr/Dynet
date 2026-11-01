@@ -537,7 +537,7 @@ static
 #>  activity.count
 #>               1
 #>               3
-#>               5
+#>               4
 #>               1
 #>               4
 #>               1

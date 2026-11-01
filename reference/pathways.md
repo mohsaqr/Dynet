@@ -84,13 +84,20 @@ The result is already ordered and already carries the share of the
 total, so a caller never sorts or subsets it; `top` limits it in the
 call.
 
+Every optimal route that
+[`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) counts is
+one route here, the route to a vertex that lies on the way to another
+included, so for one source `sum(count)` equals the summed `n_paths` of
+the vertices reached in at least `min_hops` hops.
+
 Routes are keyed on their **vertex sequence**. The trajectory tree keys
 a node on vertex *and* time, so one sequence realised through different
 contacts appears there as several branches; those are one pathway here
-and their counts are added. Under the foremost criterion this loses
-nothing: only earliest-arrival routes survive to be counted, so
-duplicates of a sequence necessarily share an arrival time, and a test
-asserts it.
+and their counts are added. The arrival time loses nothing in that
+merge: a vertex sequence ends at one endpoint, and every counted route
+to it attains the same optimum, which a test asserts. Intermediate hop
+times can differ between the merged realisations; the steps table keeps
+the first in the order of the path result.
 
 ## See also
 
@@ -104,33 +111,48 @@ for the prefix tree those routes share.
 ``` r
 dn <- dynet(school_contacts)
 pathways(dn, from = "Ana")
-#> # Time-respecting pathways (5 distinct routes)
-#> # 7 optimal routes counted
-#>                               route endpoint count     share n_hops
-#>  Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.4285714      4
-#>                 Ana -> Mira -> Gita     Gita     1 0.1428571      2
-#>         Ana -> Cara -> Finn -> Iris     Iris     1 0.1428571      3
-#>          Ana -> Cara -> Finn -> Leo      Leo     1 0.1428571      3
-#>  Ana -> Cara -> Nils -> Hugo -> Dan      Dan     1 0.1428571      4
+#> # Time-respecting pathways (13 distinct routes)
+#> # 18 optimal routes counted
+#>                               route endpoint count      share n_hops
+#>         Ana -> Jonas -> Kira -> Ben      Ben     3 0.16666667      3
+#>  Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.16666667      4
+#>                Ana -> Jonas -> Kira     Kira     2 0.11111111      2
+#>                         Ana -> Cara     Cara     1 0.05555556      1
+#>                        Ana -> Jonas    Jonas     1 0.05555556      1
+#>                         Ana -> Mira     Mira     1 0.05555556      1
+#>                 Ana -> Cara -> Finn     Finn     1 0.05555556      2
+#>                 Ana -> Cara -> Nils     Nils     1 0.05555556      2
+#>                 Ana -> Mira -> Gita     Gita     1 0.05555556      2
+#>         Ana -> Cara -> Finn -> Iris     Iris     1 0.05555556      3
+#>          Ana -> Cara -> Finn -> Leo      Leo     1 0.05555556      3
+#>         Ana -> Cara -> Nils -> Hugo     Hugo     1 0.05555556      3
 #>  arrival_time
+#>          9.59
 #>         11.66
+#>          6.12
+#>          6.67
+#>          2.12
+#>          6.36
+#>          6.96
+#>          7.51
 #>          6.36
 #>         10.00
 #>          9.65
 #>          7.98
+#> # 1 more of the 13 kept. Use top = to keep a different number.
 pathways(dn, from = c("Ana", "Ben", "Kira"), top = 5)
-#> # Time-respecting pathways (22 distinct routes, showing 5)
-#> # 30 optimal routes counted
+#> # Time-respecting pathways (41 distinct routes, showing 5)
+#> # 53 optimal routes counted
 #>                               route endpoint count      share n_hops
-#>         Kira -> Leo -> Finn -> Nils     Nils     3 0.10000000      3
-#>  Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.10000000      4
-#>                 Kira -> Leo -> Iris     Iris     2 0.06666667      2
-#>          Kira -> Leo -> Hugo -> Dan      Dan     2 0.06666667      3
-#>   Ben -> Eve -> Kira -> Leo -> Hugo     Hugo     2 0.06666667      4
+#>         Ana -> Jonas -> Kira -> Ben      Ben     3 0.05660377      3
+#>         Kira -> Leo -> Finn -> Nils     Nils     3 0.05660377      3
+#>  Ana -> Jonas -> Kira -> Ben -> Eve      Eve     3 0.05660377      4
+#>                Ana -> Jonas -> Kira     Kira     2 0.03773585      2
+#>                 Kira -> Leo -> Hugo     Hugo     2 0.03773585      2
 #>  arrival_time
+#>          9.59
 #>          6.31
 #>         11.66
-#>          6.13
-#>          7.79
+#>          6.12
 #>          6.76
 ```

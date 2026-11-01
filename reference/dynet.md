@@ -110,7 +110,8 @@ dynet(
   min_thread_posts = 1L,
   onset_censored = NULL,
   terminus_censored = NULL,
-  vertex_spells = NULL
+  vertex_spells = NULL,
+  keep_isolates = FALSE
 )
 ```
 
@@ -133,12 +134,19 @@ dynet(
 
 - duration:
 
-  Column name for a spell duration, used in place of `end`.
+  Column name for a spell duration, used in place of `end`. A numeric
+  duration is read in the network's time unit, so for calendar times
+  either set `time_unit` explicitly or supply a `difftime` column, which
+  is converted to that unit. Durations must be finite and non-negative.
 
 - time:
 
-  Column name for an event time, used in place of `start`. Auto-detected
-  from `time`, `timestamp`, `date`, `datetime`.
+  Column name for an event time, used in place of `start` (for an
+  interval log, `time` names the start of each spell when `start` is not
+  given). Auto-detected from `time`, `timestamp`, `date`, `datetime`. An
+  end column must use the same clock as the start: both numeric or both
+  calendar values, otherwise a condition of class `dynet_mixed_clock` is
+  raised.
 
 - thread:
 
@@ -164,7 +172,9 @@ dynet(
 
   Column name for event multiplicity. `NULL` auto-detects a column named
   `weight`, `weights` or `strength` (and says so); with none, every row
-  counts once.
+  counts once. Weights must be finite and non-negative; a missing,
+  infinite or negative weight raises a condition of class
+  `dynet_bad_weight`.
 
 - nodes:
 
@@ -174,7 +184,9 @@ dynet(
   `name` column, the vertices are named by `name`: edge endpoints and
   vertex spells given by key are translated, and the key stays on the
   node table as an attribute. A key with no row in `nodes` keeps the key
-  as its name, with a `dynet_unnamed_nodes` warning.
+  as its name, with a `dynet_unnamed_nodes` warning. A vertex named in
+  `nodes` that has no tie and no row in `vertex_spells` is handled by
+  `keep_isolates`.
 
 - groups:
 
@@ -273,6 +285,14 @@ dynet(
   and points are exact. Overlapping and adjacent positive spells are
   unioned independently by node and session. A vertex absent from this
   table remains active at all times.
+
+- keep_isolates:
+
+  Whether vertices named in `nodes` that take part in no tie are kept.
+  `FALSE`, the default, leaves them out of the network and says so with
+  a message of class `dynet_dropped_nodes`; `TRUE` keeps them as
+  isolates, present at all times unless `vertex_spells` says otherwise,
+  so measures computed over the vertex set count them.
 
 ## Value
 

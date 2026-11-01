@@ -77,7 +77,11 @@ random_dynet(
 - block_switch:
 
   Per-slice probability a vertex changes block, so the planted partition
-  drifts. Zero gives a static partition.
+  drifts. Zero gives a static partition. In each slice after the first,
+  a vertex that switches moves to one of the other blocks chosen
+  uniformly, and the slice's edge probabilities follow the partition of
+  that slice; the node table's `block` then holds the partition of the
+  first slice.
 
 - waiting, shape:
 
@@ -89,6 +93,10 @@ random_dynet(
 
   Passed through to
   [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md).
+  Probabilities (`p`, `p_within`, `p_between`, `block_switch`, `birth`,
+  `persist`) must each be a single number in `[0, 1]`, a vertex count a
+  whole number of at least two, and vertex names complete and distinct;
+  anything else raises a condition of class `dynet_bad_input`.
 
 - seed:
 
@@ -97,7 +105,8 @@ random_dynet(
 ## Value
 
 A `dynet`, so every verb, plot and accessor applies with no special
-casing. `"binomial"` and `"block"` produce interval networks;
+casing. Every requested vertex is in it, including any the draw left
+without a tie. `"binomial"` and `"block"` produce interval networks;
 `"poisson"` and `"activation"` produce contact networks. For `"block"`
 the planted partition is written into the node table as `block`, so
 `mixing(dn, attribute = "block")` reads it with no further argument.

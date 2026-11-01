@@ -26,9 +26,12 @@ A new `dynet` object, class
 vertex activity and metadata as `dn` and the supplied attributes added
 to or replaced on the named vertices. Unnamed vertices keep their
 existing values, gaining `NA` in any column the network did not already
-have. Raises `dynet_unknown_node` when a name is not a vertex, and
-`dynet_bad_input` when `data` is malformed or names a cograph structural
-column (`id`, `label`, `x`, `y`).
+have. When the network carries a cograph grouping derived from an
+attribute (`dynet(groups = )`) and `data` updates that attribute without
+supplying `groups`, the grouping follows the attribute, so `groups` and
+the source never disagree. Raises `dynet_unknown_node` when a name is
+not a vertex, and `dynet_bad_input` when `data` is malformed or names a
+cograph structural column (`id`, `label`, `x`, `y`).
 
 ## Examples
 

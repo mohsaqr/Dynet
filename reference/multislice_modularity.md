@@ -173,9 +173,8 @@ multislice_modularity(dn, step = 5, window = 5)
 #>          two_mu 379.0000000
 #>   n_communities   1.0000000
 #>  n_empty_slices   0.0000000
-multislice_modularity(dn, membership = temporal_communities(
-  dn, step = 5, window = 5, seeds = 1:3
-), step = 5, window = 5)
+found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:3)
+multislice_modularity(dn, membership = found, step = 5, window = 5)
 #> # Multislice modularity (graph-level)
 #> # time in step
 #> # measures: q, q_intra, q_inter, two_mu, n_communities, n_empty_slices

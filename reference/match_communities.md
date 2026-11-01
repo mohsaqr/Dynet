@@ -61,7 +61,12 @@ guarantees: `community` now carries the matched, time-consistent label;
 auditable; and `event` records what happened to this state's community
 at this bin, one of `"born"`, `"persist"`, `"split"` or `"merge"`. The
 community-level lifecycle table, which also carries `"dissolve"`, is
-`as.data.frame(x, what = "events")`.
+`as.data.frame(x, what = "events")`: one row per community per bin with
+`time`, `community` (the matched label), `event`, `size`, `overlap` (the
+score of the pairing that decided the event, zero for a birth) and
+`matched_from`, the matched label of the predecessor – the community
+itself for a continuation, the parent for a splinter, `NA` for a birth
+or a dissolution.
 
 ## Details
 

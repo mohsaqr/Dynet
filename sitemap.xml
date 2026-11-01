@@ -81,7 +81,9 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/persistence.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/phases.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_animation.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed_list.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_communities.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_event_graph.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_metric.html</loc></url>
@@ -92,6 +94,7 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_paths.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_pathways.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_phases.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_projection.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_pshifts.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_significance.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/plot.dynet_similarity.html</loc></url>
@@ -137,15 +140,18 @@
 <url><loc>https://pak.dynasite.org/Dynet/reference/snapshots.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_animation.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed_list.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_communities.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_event_graph.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_metric.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_motifs.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_null.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_path_network.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_path_trajectories.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_paths.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_pathways.html</loc></url>
+<url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_phases.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_projection.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_pshifts.html</loc></url>
 <url><loc>https://pak.dynasite.org/Dynet/reference/summary.dynet_significance.html</loc></url>

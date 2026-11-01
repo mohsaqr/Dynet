@@ -20,13 +20,17 @@ summary(object, by = NULL, ...)
 
 - by:
 
-  Grouping for the summary: `"node"`, `"time"` or `"measure"`. The
-  default, `NULL`, groups by `"node"` when the measure has a `node`
-  column and by `"measure"` otherwise. A `session` column, when the
-  measure has one, and `measure` itself are always part of the grouping
-  as well. A grouping the measure has no column for – `"node"` on a
-  graph-level series, say – is dropped rather than raising, leaving the
-  grouping the measure does carry.
+  Grouping for the summary: `"node"`, `"time"`, `"measure"` or `"pair"`.
+  The default, `NULL`, groups by `"node"` when the measure has a `node`
+  column and by `"measure"` otherwise. `"pair"` groups a pair-level
+  measure, such as
+  [`gaps()`](https://pak.dynasite.org/Dynet/reference/gaps.md) with
+  `unit = "pair"`, by its `from` and `to` columns. A `session` column,
+  when the measure has one, and `measure` itself are always part of the
+  grouping as well. A grouping the measure has no column for – `"node"`
+  on a graph-level series, say – is dropped rather than raising, leaving
+  the grouping the measure does carry. Any other value raises
+  `dynet_bad_choice`.
 
 - ...:
 
@@ -35,9 +39,10 @@ summary(object, by = NULL, ...)
 ## Value
 
 A `data.frame` with the grouping columns plus `n`, `mean`, `sd`, `min`,
-`max` and, when time is available, `peak_time`. `n` counts the measured
-values the statistics were computed from, so a vertex that was inactive
-for part of the calendar reports fewer than the number of time points.
+`max` and, when time is available, `peak_time`; one row per combination
+of the grouping columns. `n` counts the measured values the statistics
+were computed from, so a vertex that was inactive for part of the
+calendar reports fewer than the number of time points.
 
 ## Examples
 

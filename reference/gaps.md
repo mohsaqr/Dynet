@@ -31,9 +31,10 @@ gaps(
   `"node"`, the default, for the gaps between the events incident to
   each vertex, a loop counting once and direction ignored; `"pair"` for
   the gaps between the events of each ordered pair, or each unordered
-  dyad on an undirected network. Loops are excluded from `"pair"`,
-  matching
-  [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md).
+  dyad on an undirected network. A retained loop (`dynet(loops = TRUE)`)
+  is excluded from `"pair"`, unlike
+  [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md),
+  which reports it as its own pair row.
 
 - sessions:
 

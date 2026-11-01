@@ -66,11 +66,14 @@ plain frame with
 **The definition.** Three incompatible motif families exist in the
 literature. This adopts Paranjape, Benson & Leskovec (2017): exactly
 three edge events on at most three distinct vertices, with
-`t_last - t_first <= delta` over the three times in sorted order.
-Kovanen et al. (2011) instead allow arbitrary size and bound
-*consecutive* gaps, which is a strictly weaker condition and agrees only
-for two-edge patterns; that family's instance count is unbounded and
-does not reduce to a fixed census.
+`t_last - t_first <= delta` over the three times in sorted order,
+compared with the package's relative time tolerance so a window of
+exactly `delta` is admitted even when the subtraction rounds
+(`0.4 - 0.1` is not `0.3` in floating point). `start` and `end` are
+compared the same way. Kovanen et al. (2011) instead allow arbitrary
+size and bound *consecutive* gaps, which is a strictly weaker condition
+and agrees only for two-edge patterns; that family's instance count is
+unbounded and does not reduce to a fixed census.
 
 The three edges are three distinct *events*; the same pair may repeat,
 which is exactly what the two-node classes are. Loops are excluded, and
@@ -128,7 +131,7 @@ dn <- dynet(school_contacts)
 census <- motifs(dn, delta = 2)
 census
 #> # Temporal motifs (Paranjape 2017, 40 classes), delta = 2 step
-#> # 1471 instances across 40 non-zero classes | global output
+#> # 1472 instances across 40 non-zero classes | global output
 #>  motif    family     pattern count
 #>     15  star_mid         OOI    60
 #>     14  star_mid         OIO    55

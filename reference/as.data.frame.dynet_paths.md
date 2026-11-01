@@ -33,7 +33,8 @@ as.data.frame(
 
   `"paths"`, the default, for the endpoint summary, or `"steps"` for the
   tidy reconstructed optimal routes. The latter includes endpoint-local
-  `path_id` values for tied contact sequences.
+  `path_id` values for tied contact sequences. Any other value raises
+  `dynet_bad_choice`, a `dynet_bad_input`.
 
 - ...:
 

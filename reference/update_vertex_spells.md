@@ -32,10 +32,12 @@ update_vertex_spells(dn, spells, data)
 A new `dynet` object, class
 `c("dynet", "netobject", "cograph_network")`. Updated components are
 canonicalised with the retained components, so overlaps can merge and
-spell identifiers can change. Raises `dynet_bad_input` when `spells` is
-not a valid selection, when `data` is malformed or of the wrong height,
-or when it names the read-only derived columns `vertex_spell`,
-`duration` or `instant`.
+spell identifiers can change. `start` and `end` may be given on the
+network's own clock, `Date` or `POSIXct` for a calendar network. Raises
+`dynet_vertex_spell_not_found` when `spells` selects no component, and
+`dynet_bad_input` when `spells` is not a valid selection, when `data` is
+malformed or of the wrong height, or when it names the read-only derived
+columns `vertex_spell`, `duration` or `instant`.
 
 ## Examples
 

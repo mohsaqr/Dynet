@@ -66,12 +66,24 @@ once, so choosing one does not discard the others: `from`, `to`,
 pair was active, overlaps counted once), `total_duration` (summed spell
 lengths, overlaps counted twice), `duration_fraction` (`union_duration`
 over the pair's joint activity opportunity, `NA` when that opportunity
-is zero), `spell_count`, `weight_sum`, `weighted_duration` (weight times
-duration, summed), `latest_weight` (the weight of the last spell to
-end), `first` and `last` (the pair's earliest onset and latest
-terminus), and the `activity.duration` and `activity.count` aliases for
-compatibility with
-[`networkDynamic::network.collapse()`](https://rdrr.io/pkg/networkDynamic/man/network.collapse.html).
+is zero), `spell_count` (raw spells touching the range), `weight_sum`
+(the full weight of every such spell, summed, however little of the
+spell falls inside the range, as
+[`networkDynamic::network.collapse()`](https://rdrr.io/pkg/networkDynamic/man/network.collapse.html)
+keeps an attribute whole), `weighted_duration` (each spell's weight
+times the part of its duration inside the range, summed; this is the
+only field that shares a weight out by time), `latest_weight` (the
+weight of the last spell to end), `first` and `last` (the pair's
+earliest onset and latest terminus inside the range), and two columns
+named as `networkDynamic::network.collapse(rm.time.info = FALSE)` names
+them: `activity.duration`, equal to `union_duration`, and
+`activity.count`, the number of activity runs after merging spells that
+overlap or abut and absorbing a point that falls inside a spell.
+`activity.count` therefore equals `spell_count` only when no two spells
+of the pair touch.
+
+A spell that only touches a bound, to within the package's time
+tolerance, contributes nothing: it leaves no edge of zero width behind.
 
 The node table carries one row per vertex, with `name`, any static
 vertex attributes the network was built with, `activity_duration` (time
@@ -92,5 +104,5 @@ as.data.frame(flat)
 #>   weight_sum weighted_duration latest_weight first last activity.duration
 #> 1          2                 4             1     0    3                 3
 #>   activity.count
-#> 1              2
+#> 1              1
 ```

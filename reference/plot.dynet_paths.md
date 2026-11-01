@@ -34,8 +34,10 @@ plot(x, palette = "okabe", ...)
 
   Palette specification, as in
   [`plot.dynet()`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md).
-  Vertices are coloured by how many hops they are from the source. Read
-  only by the legacy tree renderer.
+  Passed to
+  [`plot_path_trajectories()`](https://pak.dynasite.org/Dynet/reference/plot_path_trajectories.md),
+  and for a legacy result colours vertices by how many hops they are
+  from the source.
 
 - ...:
 

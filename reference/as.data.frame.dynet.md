@@ -42,7 +42,8 @@ as.data.frame(
   for canonical observed support, `"vertex_spells"` for canonical
   declared vertex activity, `"nodes"` for the vertex table, `"bins"` for
   the measurement grid, or `"network"` for the aggregate edge list
-  cograph renders.
+  cograph renders. Any other value raises `dynet_bad_choice`, a
+  `dynet_bad_input`.
 
 - measure:
 

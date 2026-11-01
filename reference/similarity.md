@@ -79,12 +79,36 @@ similarity(
 ## Value
 
 A `dynet_similarity` data frame with one row per ordered pair of time
-bins and columns `time`, `other`, `measure` and `value`. The diagonal is
-included and is one for every coefficient except `"hamming"`, where
-identical layers differ in nothing and score zero. `"pearson"` reaches
-one only to floating-point accuracy, so compare it with a tolerance
-rather than with `==`. The frame is returned invisibly when
-`plot = TRUE` has drawn the figure.
+bins and columns `time`, `other`, `measure` and `value`. Every bin of
+the grid takes part, including a bin in which no tie is active. The
+diagonal is included and is one for every coefficient except
+`"hamming"`, where identical layers differ in nothing and score zero.
+`"pearson"` reaches one only to floating-point accuracy, so compare it
+with a tolerance rather than with `==`. The frame is returned invisibly
+when `plot = TRUE` has drawn the figure.
+
+A bin with no tie has an empty edge set, and the ratios are then 0/0:
+`"jaccard"` is `NA` between two empty bins (and 0 between an empty and a
+non-empty one), while `"overlap"`, `"cosine"` and `"pearson"` are `NA`
+wherever an empty bin takes part, its own diagonal cell included.
+`"pearson"` is likewise `NA` for a complete layer, which has no
+variance. `"hamming"` is always defined.
+
+## Details
+
+Each bin is read as the vector of its eligible pairs: every ordered pair
+of distinct vertices for a directed network, every unordered pair for an
+undirected one. Loops are excluded, as in
+[`turnover()`](https://pak.dynasite.org/Dynet/reference/turnover.md) and
+[`persistence()`](https://pak.dynasite.org/Dynet/reference/persistence.md),
+and a pair is tied in a bin or it is not. On that domain `"hamming"` is
+the number of pairs whose tie state differs, and `"pearson"` is the
+graph correlation of
+[`sna::gcor()`](https://rdrr.io/pkg/sna/man/gcor.html) with its default
+`diag = FALSE`; `"hamming"` likewise equals
+[`sna::hdist()`](https://rdrr.io/pkg/sna/man/hdist.html). Counting the
+structurally empty diagonal, or both triangles of a symmetric matrix,
+would inflate the Hamming count twofold and bias the correlation.
 
 The coefficients come from cograph, which is a hard dependency of Dynet;
 a namespace that cannot be loaded raises `dynet_needs_cograph`.

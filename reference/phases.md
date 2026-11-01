@@ -81,11 +81,15 @@ phases(
 
 ## Value
 
-A `dynet_phases` frame, one row per time bin: `session` (only when the
-network has sessions), `time`, `phase`, `boundary` (is this the first
-bin of its phase) and `silhouette` (this bin's width under the chosen
-`k`). Print it, [`plot()`](https://rdrr.io/r/graphics/plot.default.html)
-it, or take the plain frame with
+A `dynet_phases` frame, one row per time bin of the grid, a bin with no
+tie included: `time`, `phase`, `boundary` (is this the first bin of its
+phase) and `silhouette` (this bin's width under the chosen `k`). There
+is no `session` column:
+[`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
+keys its layers on time alone, so under `sessions = "separate"` two
+session-local bins sharing a time are one layer here too. Print it,
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) it, or take the
+plain frame with
 [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html), which
 also serves `what = "profile"` for the \\k\\-by-\\k\\ sensitivity table
 and `what = "phases"` for one row per phase.
@@ -94,11 +98,16 @@ and `what = "phases"` for one row per phase.
 
 The distance between two bins is `1 - similarity` for every method
 except `"hamming"`, which already reports disagreement and is instead
-divided by the number of vertex pairs that could carry a tie. Getting
-that one backwards would silently invert the answer, so it is handled
-explicitly. `"pearson"` similarity can be negative, so its distance runs
-in \\\[0, 2\]\\ rather than \\\[0, 1\]\\; that is a valid distance, but
-do not expect the unit scale.
+divided by the number of vertex pairs that could carry a tie, so it lies
+in \\\[0, 1\]\\. Getting that one backwards would silently invert the
+answer, so it is handled explicitly. Two bins with no tie are the same
+network and sit at distance zero. A bin with no tie against one with
+ties leaves `"overlap"`, `"cosine"` and `"pearson"` undefined, and the
+verb then raises `dynet_undefined_similarity` rather than guess a
+distance; `"jaccard"` and `"hamming"` are defined for every pair of
+bins. `"pearson"` similarity can be negative, so its distance runs in
+\\\[0, 2\]\\ rather than \\\[0, 1\]\\; that is a valid distance, but do
+not expect the unit scale.
 
 With `contiguous = TRUE` the bins are partitioned by Fisher's (1958)
 dynamic program, which minimises total within-phase scatter over all

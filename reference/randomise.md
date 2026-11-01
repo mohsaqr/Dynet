@@ -51,7 +51,11 @@ randomise(
 - within:
 
   Scope a shuffle is confined to: the whole network, within each sender,
-  or within each session.
+  or within each session. `"times"`, `"timeline"` and `"targets"` honour
+  all three (`"timeline"` within a sender moves a pair's timeline only
+  onto another pair of the same sender); `"edges"`, `"labels"` and
+  `"reversal"` act on the whole network, and any other scope raises
+  `dynet_null_bad_scope` rather than being silently widened.
 
 - transpose:
 
@@ -63,7 +67,8 @@ randomise(
 
 - max_tries:
 
-  Iteration cap on the self-loop repair in `"targets"`.
+  Iteration cap on the self-loop repair in `"targets"` and on the
+  constraint repair or redraw under `respect`.
 
 - keep:
 
@@ -77,9 +82,9 @@ randomise(
   Constraints a surrogate must satisfy on a network that declares them:
   `"activity"` requires both endpoints eligible for the whole surrogate
   spell, `"observation"` requires the spell to lie inside an observed
-  component, and `"none"` shuffles unconstrained. Constrained draws are
-  feasible, not uniform over the feasible set, and `"none"` on such a
-  network gives a biased null.
+  component, and `"none"` shuffles unconstrained. `"none"` on such a
+  network gives a biased null. See Details for how each method meets the
+  constraints without giving up what it holds fixed.
 
 - seed:
 
@@ -135,10 +140,32 @@ On a network that declares vertex activity or observation spells, an
 unconstrained shuffle can place an event while an endpoint is ineligible
 or inside an unobserved gap, and the snapshot machinery would then
 induce it away, biasing the null downward. `respect` enforces those
-constraints by rejecting and redrawing infeasible spells. The result is
-a feasible surrogate rather than a uniform draw from the feasible set;
+constraints without breaking what the method holds fixed: a surrogate
+may hold no more infeasible spells than the observed network itself does
+(an observed spell outside its endpoints' activity is kept and induced
+away the same way). `"times"` and `"targets"` re-permute an infeasible
+spell together with randomly chosen spells of the same scope, so the
+multiset of times (or of each scope's targets) is exactly kept; the
+result is a feasible surrogate rather than a uniform draw from the
+feasible set. `"timeline"` and `"edges"` move whole pairs, so an
+infeasible surrogate is rejected and redrawn whole, which is uniform
+over the feasible ones. `"labels"` and `"reversal"` carry vertex
+activity with them (a permuted name keeps its presence; a reversed
+network has reversed presence), so activity never binds them. When
+`max_tries` is exhausted, `dynet_null_no_valid_draw` is raised.
 [`summary()`](https://rdrr.io/r/base/summary.html) reports how many
 proposals were rejected so the constraint's bite is visible.
+
+## Conditions
+
+Errors: `dynet_bad_input` for a malformed argument or a `transpose` or
+`n > 1` that the method cannot use; `dynet_null_bad_scope` for a
+`within` the method does not define; `dynet_no_sessions` for
+`within = "session"` on a network without sessions;
+`dynet_null_no_valid_draw` when no surrogate satisfying the constraints
+is found in `max_tries`. Every one also carries `dynet_bad_input`.
+Warning: `dynet_null_poor_mixing` when fewer than half the proposed
+rewirings of `"edges"` were accepted.
 
 ## References
 

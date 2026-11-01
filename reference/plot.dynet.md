@@ -372,13 +372,17 @@ own `TRUE`), colour edges a neutral grey, and size nodes and arrowheads
 from the vertex count. Naming any of those through `...` overrides it.
 
 Failures are classed conditions. `dynet_bad_input` covers every
-malformed argument, `dynet_unknown_plot_arg` a name in `...` no view can
-read, `dynet_bad_palette` an unusable `palette`, and
-`dynet_empty_result` a window, an `at` or a `step` that leaves nothing
-to draw. The proximity view adds `dynet_unknown_measure` and
-`dynet_needs_directed`. With cograph absent, the node-link views raise
-`dynet_needs_cograph` and the `"layers"`, `"heatmap"` and `"stack"`
-views `dynet_missing_package`.
+malformed argument, `dynet_bad_choice` an unknown `type`, `link`, `time`
+or `nest`, `dynet_unknown_plot_arg` a name in `...` no view can read,
+`dynet_bad_palette` an unusable `palette`, and `dynet_empty_result` a
+window, an `at` or a `step` that leaves nothing to draw. The proximity
+view adds `dynet_unknown_measure` and `dynet_needs_directed`. With
+cograph absent, the node-link views raise `dynet_needs_cograph` and the
+`"layers"`, `"heatmap"` and `"stack"` views `dynet_missing_package`.
+Every one of these also carries the parent class `dynet_bad_input`, so
+one handler catches them all. When vertices are coloured by a `groups`
+attribute that has more groups than the palette has colours, the
+node-link views warn with `dynet_palette_recycled`.
 
 ## References
 

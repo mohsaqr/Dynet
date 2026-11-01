@@ -27,7 +27,9 @@ A new `dynet` object, class
 components dropped and the rest canonicalised again, so the remaining
 spell identifiers renumber. A node with no remaining declaration becomes
 implicitly always active over observation support. Raises
-`dynet_bad_input` when `spells` is not a valid selection.
+`dynet_vertex_spell_not_found` when `spells` selects no component (an
+all-`FALSE` mask), and `dynet_bad_input` when `spells` is not a valid
+selection.
 
 ## Examples
 

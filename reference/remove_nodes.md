@@ -17,7 +17,8 @@ remove_nodes(dn, nodes, cascade = FALSE)
 
 - nodes:
 
-  Character node names.
+  Node names: a character vector, a factor, or a data frame carrying a
+  `name` or `node` column.
 
 - cascade:
 

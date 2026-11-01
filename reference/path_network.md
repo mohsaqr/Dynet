@@ -10,7 +10,7 @@ retain its temporal range.
 ## Usage
 
 ``` r
-path_network(x)
+path_network(x, session = NULL)
 ```
 
 ## Arguments
@@ -19,6 +19,14 @@ path_network(x)
 
   A result from
   [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md).
+
+- session:
+
+  For a result of `paths(sessions = "separate")` only: the one session
+  whose routes form the network. Each session there is a complete,
+  independent search with its own origin, so the sessions are never
+  pooled into one vertex table. Supplying it for any other result is an
+  error.
 
 ## Value
 
@@ -41,8 +49,11 @@ supremum, as in
 
 A result that is not from
 [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) raises
-`dynet_bad_input`; a path result with no reachable vertex raises
-`dynet_empty_result`.
+`dynet_bad_input`; a separate-session result without `session` raises
+`dynet_needs_session`, a `session` it does not hold raises
+`dynet_unknown_session`, and a `session` given for any other result
+raises `dynet_bad_input`; a path result with no reachable vertex raises
+`dynet_empty_result`. Every one of these also carries `dynet_bad_input`.
 
 ## Examples
 

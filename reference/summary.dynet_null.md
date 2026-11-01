@@ -23,5 +23,7 @@ summary(object, ...)
 ## Value
 
 A data frame with one row per replicate and columns `replicate`,
-`n_events`, `n_pairs`, `t_min`, `t_max` and `mean_duration`, so the
-conservation each method claims is visible.
+`n_events`, `n_pairs`, `t_min`, `t_max`, `mean_duration` and `rejected`
+(the infeasible spells met while drawing that replicate under `respect`,
+zero when no constraint binds), so the conservation each method claims
+and the bite of the constraints are visible.

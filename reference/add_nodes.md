@@ -17,8 +17,8 @@ add_nodes(dn, data)
 
 - data:
 
-  A character vector of new node names or a data frame containing a
-  `name` column and optional static attributes.
+  A character vector or factor of new node names, or a data frame
+  containing a `name` column and optional static attributes.
 
 ## Value
 

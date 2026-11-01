@@ -117,7 +117,8 @@ temporal network theory. *Network Neuroscience*, 1(2), 69-99.
 ``` r
 dn <- dynet(school_contacts)
 found <- temporal_communities(dn, step = 5, window = 5, seeds = 1:5)
-community_trajectory(found)
+trajectory <- community_trajectory(found)
+trajectory
 #> # Community trajectory (node-level)
 #> # 14 vertices | time in step
 #> # measures: flexibility, promiscuity, persistence
@@ -135,7 +136,7 @@ community_trajectory(found)
 #>   Kira flexibility     0
 #>    Leo flexibility     0
 #> # 30 more rows. summary() aggregates them; plot() draws them.
-as.data.frame(community_trajectory(found), what = "time")
+as.data.frame(trajectory, what = "time")
 #>   time     measure value
 #> 1    0 persistence    NA
 #> 2    5 persistence     1

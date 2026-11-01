@@ -157,13 +157,13 @@ then (earliest arrival, then fewest hops, within that family). Under
 departure and its duration. In both cases an unattained optimum keeps
 its limiting departure, arrival and duration but has `n_hops = NA` and
 `n_paths = 0`. Under `criterion = "shortest"` a `path_cost` column
-follows `n_paths`: the summed cost of the cheapest journey, `n_hops` is
-the fewest hops among the cheapest journeys (`NA` when they differ), and
-`arrival_time` and `n_paths` describe the cheapest journeys that arrive
-earliest. Bounded mode adds `path_session` and `n_best_sessions`;
-separate mode adds `session` and `origin`, one complete vertex block per
-session. Use `as.data.frame(x, what = "steps")` for every reconstructed
-optimal route: one row per vertex visited, with `endpoint`, `path_id`
+follows `n_paths`: the summed cost of the cheapest journey, and
+`arrival_time`, `n_hops` and `n_paths` describe the cheapest journeys
+that arrive earliest, `n_hops` being `NA` when those differ in length.
+Bounded mode adds `path_session` and `n_best_sessions`; separate mode
+adds `session` and `origin`, one complete vertex block per session. Use
+`as.data.frame(x, what = "steps")` for every reconstructed optimal
+route: one row per vertex visited, with `endpoint`, `path_id`
 (endpoint-local, distinguishing tied atom sequences), `path_session`,
 `step`, `node`, `time` and `attained`, preceded by `session` in separate
 mode.
@@ -236,7 +236,7 @@ for this criterion and `"minimum"` for the others, and `deadline`
 records the resolved `end`.
 
 A shortest query with weight costs is solved by settling vertex
-appearances in order of accumulated cost (Wu et al., 2016): every cost
+appearances in order of accumulated cost (Wu et al., 2014): every cost
 is positive, so the cheapest open appearance is final when it is settled
 and every predecessor of an appearance is settled before it, which is
 what makes the journey count exact. Two journeys tie when their summed
@@ -269,23 +269,24 @@ triggers at its timestamp and arrives after the same duration; it does
 not represent continued edge activity. The query `end` bounds
 completion, not only entry.
 
-Optimal forward journeys are shortest foremost: final completion is
-minimised first (foremost) and hop count second (shortest). Backward
-journeys mirror it, maximising the departure time first and minimising
-hop count second. There is no criterion argument: this is the only
-criterion `paths()` offers, and it is recorded on the result as
-`"foremost_then_shortest"`. A fastest journey, which minimises elapsed
-time rather than arrival time, is a different optimum and is not
-computed here. Journey identity is the ordered sequence of canonical
+Under the default criterion, optimal forward journeys are shortest
+foremost: final completion is minimised first (foremost) and hop count
+second (shortest). Backward journeys mirror it, maximising the departure
+time first and minimising hop count second; at the same departure value
+a realised departure beats an unattained supremum. The criterion is
+recorded on the result, and the other criteria are described under
+`criterion`. Journey identity is the ordered sequence of canonical
 oriented contacts. Duplicate points, overlapping or touching interval
 segmentation, weights, and waiting schedules do not multiply paths;
 genuinely recurrent contacts do. `n_paths` is exact through `2^53`,
 after which a `dynet_path_overflow` condition is raised. The empty
 journey has one path and an unreachable endpoint has none.
 
-Failures are classed. An unknown `from` raises `dynet_unknown_vertex`; a
-`from` that is not one name, a negative `traversal_time`, combining `at`
-with `start` or `end`, or a window that cannot hold a journey, raises
+Failures are classed, and every class below also carries
+`dynet_bad_input`. An unknown `from` raises `dynet_unknown_vertex`,
+which is also a `dynet_unknown_node` as in the sibling verbs; a `from`
+that is not one name, a negative `traversal_time`, combining `at` with
+`start` or `end`, or a window that cannot hold a journey, raises
 `dynet_bad_input`; a window disjoint from explicit observation raises
 `dynet_outside_observation`; a count beyond `2^53` raises
 `dynet_path_overflow`; and expanding more than a million routes through
@@ -316,10 +317,6 @@ aspects of temporal betweenness. *Network Science*, 12(2), 160-188.
 Wu, H., Cheng, J., Huang, S., Ke, Y., Lu, Y., & Xu, Y. (2014). Path
 problems in temporal graphs. *Proceedings of the VLDB Endowment*, 7(9),
 721-732.
-
-Bui-Xuan, B., Ferreira, A., & Jarry, A. (2003). Computing shortest,
-fastest, and foremost journeys in dynamic networks. *International
-Journal of Foundations of Computer Science*, 14(2), 267-285.
 
 ## Examples
 

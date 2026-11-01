@@ -259,6 +259,9 @@ Print, summary, plot and as.data.frame for every result class.
 - [`summary(`*`<dynet_animation>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_animation.md)
   : Summarise an animation
 
+- [`summary(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed.md)
+  : Describe a collapsed temporal network
+
 - [`summary(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_collapsed_list.md)
   : Summarise session-specific collapsed networks
 
@@ -277,6 +280,9 @@ Print, summary, plot and as.data.frame for every result class.
 - [`summary(`*`<dynet_null>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_null.md)
   : Summarise surrogate networks
 
+- [`summary(`*`<dynet_path_network>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_path_network.md)
+  : Describe a path network
+
 - [`summary(`*`<dynet_path_trajectories>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_path_trajectories.md)
   : Summarise path trajectories
 
@@ -285,6 +291,9 @@ Print, summary, plot and as.data.frame for every result class.
 
 - [`summary(`*`<dynet_pathways>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_pathways.md)
   : Summarise ranked pathways
+
+- [`summary(`*`<dynet_phases>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_phases.md)
+  : Summarise temporal phases
 
 - [`summary(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/summary.dynet_projection.md)
   : Summarise a time projection
@@ -304,8 +313,14 @@ Print, summary, plot and as.data.frame for every result class.
 - [`plot(`*`<dynet>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet.md)
   : Draw a temporal network
 
+- [`plot(`*`<dynet_animation>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_animation.md)
+  : Plot the bin-by-bin record of an animation
+
 - [`plot(`*`<dynet_collapsed>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed.md)
   : Draw a collapsed temporal network
+
+- [`plot(`*`<dynet_collapsed_list>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_collapsed_list.md)
+  : Draw collapsed networks, one panel per session
 
 - [`plot(`*`<dynet_communities>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_communities.md)
   : Draw community membership as ribbons over time
@@ -336,6 +351,9 @@ Print, summary, plot and as.data.frame for every result class.
 
 - [`plot(`*`<dynet_phases>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_phases.md)
   : Draw detected phases over the between-bin similarity heatmap
+
+- [`plot(`*`<dynet_projection>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_projection.md)
+  : Draw a time-projected network
 
 - [`plot(`*`<dynet_pshifts>`*`)`](https://pak.dynasite.org/Dynet/reference/plot.dynet_pshifts.md)
   : Plot participation shift counts

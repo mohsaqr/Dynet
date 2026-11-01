@@ -1,9 +1,13 @@
 # Plot a temporal measure
 
 Draws the quantity against time. Node-level measures are drawn as one
-line per vertex; graph-level measures as one line per measure.
-Distinctions are carried by colour and line type together, never by
-colour alone.
+line per vertex, pair-level measures as one marked line per vertex pair
+(each observation is a point, so a pair observed once is still drawn),
+and graph-level measures as one line per measure. Distinctions are
+carried by colour and line type together, never by colour alone; when
+there are more series than distinct colour and line-type combinations, a
+`dynet_palette_recycled` warning says so rather than letting two series
+look identical in silence.
 
 ## Usage
 
@@ -28,15 +32,17 @@ plot(
 
 - type:
 
-  `"line"` for trajectories over time, `"heatmap"` for a vertex-by-time
-  tile plot, `"ridge"` for small multiples per measure. Ignored for a
-  measure with no time axis.
+  `"line"` for trajectories over time, `"heatmap"` for a series-by-time
+  tile plot (one row per vertex, pair or measure), `"ridge"` for small
+  multiples per measure. Ignored for a measure with no time axis. Any
+  other value raises `dynet_bad_choice`.
 
 - highlight:
 
   Optional character vector naming the series to draw in colour, with
   everything else in grey: vertex names for a node-level measure,
-  measure names for a graph-level one. For a
+  measure names for a graph-level one. For a pair-level measure a vertex
+  name selects every pair that vertex belongs to, and for a
   [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
   result a group name selects every flow into or out of that group, so
   `highlight = "Teacher"` colours the teacher rows and columns of the
@@ -45,16 +51,20 @@ plot(
 
 - top:
 
-  How many rows to draw. For a measure taken over time, the `top`
-  vertices with the largest mean value; `NULL`, the default, draws every
-  vertex. For a measure with no time axis, the `top` rows with the
+  How many series to draw. For a measure taken over time, the `top`
+  vertices (or pairs, for a pair-level measure) with the largest mean
+  value; `NULL`, the default, draws every one. A graph-level series
+  ignores it. For a measure with no time axis, the `top` rows with the
   largest absolute value, defaulting to `30`, with a subtitle naming how
   many of how many are shown.
 
 - palette:
 
   Colours for the series: `"okabe"` (the default), `"extended"`,
-  `"many"`, your own vector of colours, or a function of `n`.
+  `"many"`, your own vector of colours, or a function of `n`. Okabe-Ito
+  has nine colours and the lines six types, so eighteen series can be
+  told apart; beyond that a `dynet_palette_recycled` warning suggests
+  `top`, `highlight` or `palette = "many"`.
 
 - base_size:
 

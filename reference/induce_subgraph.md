@@ -31,9 +31,10 @@ induce_subgraph(dn, nodes = NULL, ties = NULL, keep_isolates = FALSE)
   – `course == "g1"`, `duration > 2 & weight >= 1` – over the columns
   `as.data.frame(dn)` returns, tie attributes included; or integer row
   positions or a logical mask over that same table, in that order, a
-  mask having exactly as many elements as there are spells. Default
-  `NULL`, meaning every tie. At least one of `nodes` and `ties` must be
-  supplied.
+  mask having exactly as many elements as there are spells; an `NA` in
+  it, as in [`subset()`](https://rdrr.io/r/base/subset.html), does not
+  select the spell. Default `NULL`, meaning every tie. At least one of
+  `nodes` and `ties` must be supplied.
 
 - keep_isolates:
 

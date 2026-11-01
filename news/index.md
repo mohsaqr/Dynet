@@ -1,5 +1,206 @@
 # Changelog
 
+## Dynet 0.8.0
+
+A whole-package audit: every exported verb and every S3 method was run
+against synthetic data, an oracle (tsna, networkDynamic, igraph, sna,
+teneto, raphtory, Reticula, or a brute-force enumeration) and a set of
+invariants. The fixes below change numbers in the cases they describe;
+everything else is unchanged to within floating-point tolerance.
+
+### Measurement grid and time
+
+- The grid counted its default `end` from the data’s first time instead
+  of from `start`, so a `start` off the data’s own lattice dropped the
+  last window. Bins now match
+  [`tsna::tSnaStats()`](https://rdrr.io/pkg/tsna/man/tSnaStats.html) bin
+  for bin.
+- Time comparisons use one tolerance per pair of values. Previously a
+  Unix timestamp anywhere in a vector loosened every comparison in it,
+  and grids at Unix scale could gain a spurious bin. A network shifted
+  by 1.7e9 now gives the same results as the unshifted one.
+- Vertex-spell boundaries are grid anchors, so a vertex arriving at 0.3
+  is no longer counted present in \[0.2, 0.3).
+- `.check_dynet()` rejects a structurally corrupt object with
+  `dynet_corrupt_object` instead of returning wrong numbers.
+
+### Construction and editing
+
+- [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md):
+  `time =` in an interval log and `start =` in a contact log were
+  ignored; a detected `start` column no longer overrides an explicit
+  `time`. NA or negative weights, which silently removed a pair from the
+  aggregate network, are refused (`dynet_bad_weight`), as is a weight
+  given through
+  [`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md).
+  Mixed clocks (numeric start, Date end) raise `dynet_mixed_clock`; an
+  infinite spell end raises `dynet_unbounded_spell`. Vertices named only
+  in `nodes` are reported with a message and kept with the new
+  `keep_isolates = TRUE`. Co-presence groups spanning two session labels
+  now error instead of taking the first.
+- [`random_dynet()`](https://pak.dynasite.org/Dynet/reference/random_dynet.md):
+  `block_switch` was documented but never used and is now implemented;
+  sparse draws keep every requested vertex; arguments are validated.
+- [`as_dynet()`](https://pak.dynasite.org/Dynet/reference/as_dynet.md)
+  gains a default method raising `dynet_unsupported_class`.
+- Editing verbs:
+  [`remove_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/remove_vertex_spells.md)
+  and
+  [`update_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/update_vertex_spells.md)
+  with a mask matching nothing deleted every vertex spell; they now
+  raise `dynet_vertex_spell_not_found`.
+  [`add_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/add_vertex_spells.md)
+  and
+  [`update_vertex_spells()`](https://pak.dynasite.org/Dynet/reference/update_vertex_spells.md)
+  stored Date values as days since 1970.
+  [`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md)
+  wrote factor codes into character columns and left `node_groups`
+  stale.
+  [`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md)
+  silently overwrote a `duration` column (`dynet_reserved_column`).
+  `set_tie_sessions(breaks = )` is time-tolerant and accepts
+  Date/POSIXct breaks.
+  [`set_observations()`](https://pak.dynasite.org/Dynet/reference/set_observations.md)
+  sets the same metadata as
+  [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md), so
+  both routes give identical
+  [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md).
+
+### Paths
+
+- With sessions, bounded mode chose each vertex’s winning session by
+  arrival for every criterion, so `shortest` could prefer a 2-hop route
+  over a 1-hop one. Backward searches no longer drop routes behind a
+  latest departure that no journey attains, no longer mark such a time
+  `attained`, and `foremost` no longer under-counts tied journeys.
+- [`pathways()`](https://pak.dynasite.org/Dynet/reference/pathways.md)
+  counted only the leaves of the route tree (7 routes for Ana in
+  `school_contacts` where
+  [`paths()`](https://pak.dynasite.org/Dynet/reference/paths.md) has 18)
+  and lost endpoints.
+- [`path_network()`](https://pak.dynasite.org/Dynet/reference/path_network.md)
+  on a `sessions = "separate"` result built duplicate node names; it
+  gains `session =`.
+  [`path_trajectories()`](https://pak.dynasite.org/Dynet/reference/path_trajectories.md)
+  no longer merges hop times 1 ms apart at Unix-second scale.
+
+### Centrality
+
+- [`edge_centrality()`](https://pak.dynasite.org/Dynet/reference/edge_centrality.md)
+  crashed on any network with sessions under its default
+  `sessions = "bounded"` and ignored vertex presence; it now agrees with
+  [`path_centrality()`](https://pak.dynasite.org/Dynet/reference/path_centrality.md).
+- The stream measures (`katz`, `pagerank`, `walk`) compared onsets with
+  bare operators, so contacts at 0.3 and 0.1 + 0.2 were two instants and
+  chained.
+- The proximity view takes a vector `measure`, draws strength from
+  weights rather than spell counts, and no longer produces NaN line
+  widths.
+
+### Events, metrics, mixing, snapshots
+
+- [`metrics()`](https://pak.dynasite.org/Dynet/reference/metrics.md),
+  [`events()`](https://pak.dynasite.org/Dynet/reference/events.md),
+  [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
+  and
+  [`burstiness()`](https://pak.dynasite.org/Dynet/reference/burstiness.md)
+  validate `measure` through one helper: an empty, NA or repeated name
+  is refused with a classed error instead of an unclassed one or
+  duplicated rows.
+- [`durations()`](https://pak.dynasite.org/Dynet/reference/durations.md)
+  honours `plot` for the `node_ties` and `vertex` units.
+- `snapshots(at = )` is time-tolerant at bin edges.
+- `temporal_efficiency` and `temporal_diameter` no longer fail on a bin
+  with no eligible vertex.
+- Documentation: closeness centralisation differs from sna by a stated
+  factor; Krackhardt efficiency can be NaN.
+
+### Communities and motifs
+
+- [`match_communities()`](https://pak.dynasite.org/Dynet/reference/match_communities.md)
+  events table: `matched_from` held a raw per-bin code instead of the
+  matched label, and splinters had no recorded parent.
+- Hitting `max_passes` in Louvain, or consensus that never agrees,
+  raises a `dynet_no_converge` warning. An edgeless slice with
+  `omega = 0` raises `dynet_empty_slice` and is counted in
+  `n_empty_slices` instead of producing arbitrary singleton labels and
+  spurious splits.
+- [`motifs()`](https://pak.dynasite.org/Dynet/reference/motifs.md): the
+  delta window and the `start`/`end` filters are time-tolerant, so a
+  window of exactly `delta` is kept.
+- `as.data.frame(<modularity>, what = "total")` works; the `sizes` table
+  is sorted by session, time and community with clean row names.
+
+### Structure and dynamics descriptors
+
+- [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md),
+  [`turnover()`](https://pak.dynasite.org/Dynet/reference/turnover.md),
+  [`persistence()`](https://pak.dynasite.org/Dynet/reference/persistence.md),
+  [`segregation()`](https://pak.dynasite.org/Dynet/reference/segregation.md)
+  and [`phases()`](https://pak.dynasite.org/Dynet/reference/phases.md)
+  measure every bin of the grid, including bins with no tie. Previously
+  an empty bin was dropped and its neighbours were compared as
+  consecutive (verified against teneto).
+- [`similarity()`](https://pak.dynasite.org/Dynet/reference/similarity.md)
+  Pearson and Hamming counted the diagonal and both triangles; they now
+  equal [`sna::gcor`](https://rdrr.io/pkg/sna/man/gcor.html) and
+  [`sna::hdist`](https://rdrr.io/pkg/sna/man/hdist.html), which halves
+  Hamming on undirected networks and keeps the
+  [`phases()`](https://pak.dynasite.org/Dynet/reference/phases.md)
+  Hamming distance in \[0, 1\].
+- [`collapse_network()`](https://pak.dynasite.org/Dynet/reference/collapse_network.md)’s
+  `activity.count` equals
+  [`networkDynamic::network.collapse()`](https://rdrr.io/pkg/networkDynamic/man/network.collapse.html)
+  when spells overlap or touch. Collapse and
+  [`pshifts()`](https://pak.dynasite.org/Dynet/reference/pshifts.md)
+  bounds are time-tolerant.
+  [`projection()`](https://pak.dynasite.org/Dynet/reference/projection.md)
+  is vectorised (3.1 s to 0.21 s on 60 vertices, identical output).
+- [`segregation()`](https://pak.dynasite.org/Dynet/reference/segregation.md)
+  with three or more communities differs from teneto by a documented
+  factor; the formula is now in the help page.
+
+### Null models and significance
+
+- [`randomise()`](https://pak.dynasite.org/Dynet/reference/randomise.md):
+  undirected `"edges"` rewiring now preserves every degree (it did in 5
+  of 25 seeds); `within` is refused for the scopes that ignored it
+  (`dynet_null_bad_scope`); activity-constrained repairs keep what each
+  method holds fixed; `labels` and `reversal` move vertex activity with
+  the vertices; [`summary()`](https://rdrr.io/r/base/summary.html)
+  reports rejections. Constrained surrogates may hold as many infeasible
+  spells as the observed network, and no more.
+- [`significance()`](https://pak.dynasite.org/Dynet/reference/significance.md):
+  `seed` is honoured with pre-drawn surrogates; an invalid `p_adjust` is
+  a classed error; a statistic’s own error is raised as
+  `dynet_statistic_failed` instead of being swallowed; the null
+  distribution comes out through `as.data.frame(x, what = "null")`.
+- [`animate()`](https://pak.dynasite.org/Dynet/reference/animate.md)
+  rejects a fractional `seed`.
+
+### Result classes and methods
+
+- Every result class now answers `print`, `summary`, `plot` and
+  `as.data.frame`: new
+  [`summary()`](https://rdrr.io/r/base/summary.html) for collapsed
+  networks, path networks and phases, new
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) for
+  projections, collapsed-network lists and animations.
+- Every unknown choice (`what`, `type`, `sessions`, `method`, `measure`,
+  `direction`, …) raises `dynet_bad_choice`, a `dynet_bad_input`, in
+  place of [`match.arg()`](https://rdrr.io/r/base/match.arg.html)’s
+  unclassed error. Every error condition in the package now carries the
+  `dynet_bad_input` parent.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a
+  `dynet_metric`: two measures with `sessions = "separate"` draw a
+  measure-by-session grid instead of mixing measures in one panel;
+  pair-level series are drawn one per pair with `top` honoured; more
+  series than the palette holds raise `dynet_palette_recycled`.
+  `plot.dynet_paths` forwards `palette`. `summary.dynet_metric` gains
+  `by = "pair"`.
+- [`print()`](https://rdrr.io/r/base/print.html) of a `dynet_paths` from
+  a source with no valid anchor no longer reports “reaches -1”.
+
 ## Dynet 0.7.3
 
 - [`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) gains

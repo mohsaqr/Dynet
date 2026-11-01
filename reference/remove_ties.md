@@ -29,7 +29,9 @@ remove_ties(
   way [`subset()`](https://rdrr.io/r/base/subset.html) evaluates one –
   `duration > 2`, `course == "g1"` – over the columns
   `as.data.frame(dn)` returns, tie attributes included; or integer
-  positions or a logical mask over that table.
+  positions or a logical mask over that table. As in
+  [`subset()`](https://rdrr.io/r/base/subset.html), a condition that is
+  `NA` for a spell does not select it.
 
 - from, to, start, end, session:
 
@@ -44,8 +46,10 @@ remove_ties(
 
 A new internally consistent `dynet` object, of the same class and
 structure as the input, without the matched spells. At least one
-temporal tie must remain. A request that matches nothing raises a
-condition of class `dynet_tie_not_found`.
+temporal tie must remain (otherwise `dynet_empty_network`). A `from` or
+`to` that is not a vertex raises `dynet_unknown_node`, a `session` that
+is not a session label raises `dynet_unknown_session`, and a well-formed
+request that matches nothing raises `dynet_tie_not_found`.
 
 ## Examples
 

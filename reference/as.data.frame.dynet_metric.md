@@ -50,7 +50,9 @@ as.data.frame(
   `iterations` and `residual`, the `balance_*` family for the row-column
   scaling step, and `spectral_radius`, `eigenspace_dimension` and
   `eigen_residual` for the eigen step. A result with nothing to report
-  gives a zero-row frame of those same columns rather than `NULL`.
+  gives a zero-row frame of those same columns rather than `NULL`. An
+  unknown `what` or `layout` raises `dynet_bad_choice`, a
+  `dynet_bad_input`.
 
 - top:
 

@@ -82,6 +82,7 @@ dn_full <- dynet(mooc_posts, from = "sender", to = "receiver",
                  min_thread_posts = 2)
 #> Dropped 86 self-loop event(s). Use loops = TRUE to keep them.
 #> Dropped 37 thread(s) with fewer than 2 post(s), 37 post(s) in all.
+#> 4 vertex/vertices in `nodes` take part in no tie and are left out: 263, 441, 442, 443. Use keep_isolates = TRUE to keep them.
 summary(dn_full)
 #>                 property                    value
 #> 1                 format                 threaded

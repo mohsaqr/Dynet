@@ -2,7 +2,11 @@
 
 Imports a temporal network held in another R representation, so that
 every Dynet verb applies to it. A method is supplied for
-`networkDynamic` objects; the method for `dynet` is the identity.
+`networkDynamic` objects; the method for `dynet` is the identity. Any
+other object raises a condition of class `dynet_unsupported_class`
+(inheriting from `dynet_bad_input`); build a temporal network from a
+relational log with
+[`dynet()`](https://pak.dynasite.org/Dynet/reference/dynet.md) instead.
 
 ## Usage
 
@@ -10,6 +14,9 @@ every Dynet verb applies to it. A method is supplied for
 as_dynet(x, ...)
 
 # S3 method for class 'dynet'
+as_dynet(x, ...)
+
+# Default S3 method
 as_dynet(x, ...)
 ```
 

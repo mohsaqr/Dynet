@@ -30,11 +30,13 @@ set_tie_sessions(dn, session = NULL, breaks = NULL, labels = NULL)
 
 - breaks:
 
-  Optional increasing numeric vector of cut points on the network's time
-  axis. A spell belongs to the session of the interval its `start` falls
-  in: before the first break, between two breaks, or from the last break
-  on, so `k` breaks give `k + 1` sessions. Mutually exclusive with
-  `session`.
+  Optional strictly increasing cut points on the network's time axis:
+  numbers on its own clock, or `Date`/`POSIXct` values for a calendar
+  network. A spell belongs to the session of the interval its `start`
+  falls in: before the first break, between two breaks, or from the last
+  break on, so `k` breaks give `k + 1` sessions. A `start` equal to a
+  break – to within the package's magnitude-relative time tolerance –
+  opens the later session. Mutually exclusive with `session`.
 
 - labels:
 

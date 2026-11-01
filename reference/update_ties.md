@@ -19,7 +19,9 @@ update_ties(dn, ties, data, loops = FALSE)
   Which ties to update: a condition on the spell table, evaluated the
   way [`subset()`](https://rdrr.io/r/base/subset.html) evaluates one,
   over the columns `as.data.frame(dn)` returns; or integer row positions
-  or a logical mask over that table.
+  or a logical mask over that table. As in
+  [`subset()`](https://rdrr.io/r/base/subset.html), a condition that is
+  `NA` for a spell does not select it.
 
 - data:
 
@@ -37,11 +39,15 @@ A new `dynet` object, class
 `c("dynet", "netobject", "cograph_network")`, holding the unselected
 spells unchanged and the selected spells with the supplied values
 substituted. Because the edited spells are rebuilt together with the
-rest, spell order and the canonical spell identifiers may change. Raises
+rest, spell order and the canonical spell identifiers may change. An
+update that changes only attributes keeps the network's source format;
+one that moves `start` or `end` records it as `"interval"`, as
+[`add_ties()`](https://pak.dynasite.org/Dynet/reference/add_ties.md)
+does. Raises `dynet_tie_not_found` when the selection matches no spell,
 `dynet_loop_not_allowed` when an endpoint update would create a new
-self-loop without `loops = TRUE`, and `dynet_bad_input` when the
-selection or `data` is malformed, or names the read-only derived columns
-`duration` or `.raw_spell`.
+self-loop without `loops = TRUE`, `dynet_reserved_column` when `data`
+names the read-only derived columns `duration` or `.raw_spell`, and
+`dynet_bad_input` when the selection or `data` is otherwise malformed.
 
 ## Examples
 

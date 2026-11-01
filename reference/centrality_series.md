@@ -209,6 +209,16 @@ is not reassigned to observed windows.
 and the network plots keep full weights per bin, so their `weight`
 column is not the input to this strength.
 
+A self-loop kept with `dynet(loops = TRUE)` counts in `"degree"` (twice
+on an undirected network, as in igraph), in `"strength"`, in
+`"participation"` and in the prestige variants that say so below. Every
+other measure works on the loop-free binary snapshot, so a loop changes
+none of them. That differs from igraph in two places:
+[`igraph::page_rank()`](https://r.igraph.org/reference/page_rank.html)
+lets a loop return the walker to its own vertex, and
+[`igraph::coreness()`](https://r.igraph.org/reference/coreness.html)
+counts a loop towards the degree it peels on.
+
 Snapshot `"closeness"` is **not** Freeman's \\1 / \sum_z d\_{sz}\\,
 which is undefined once a snapshot is disconnected – and a time bin
 almost always is. It is the reciprocal of the mean geodesic distance to
