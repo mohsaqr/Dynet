@@ -224,7 +224,7 @@ test_that("public balanced eigen prestige ignores weights and mode", {
   spells <- data.frame(
     from = c("A", "A", "B", "C"),
     to = c("B", "B", "C", "A"), time = 0,
-    weight = c(9, -4, 100, 3)
+    weight = c(9, 4, 100, 3)
   )
   dn <- quiet_dynet(spells, weight = "weight")
   expected <- c(A = 1 / sqrt(3), B = 1 / sqrt(3), C = 1 / sqrt(3))

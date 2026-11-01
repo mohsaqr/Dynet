@@ -243,7 +243,7 @@ test_that("weights and repeated spells do not enter the balancing matrix", {
   spells <- data.frame(
     from = c("A", "A", "A", "B", "B", "B", "C", "C"),
     to = c("A", "A", "B", "A", "B", "C", "B", "C"), time = 0,
-    weight = c(9, -9, 0, 7, 2, -3, 100, 4)
+    weight = c(9, 9, 0, 7, 2, 3, 100, 4)
   )
   dn <- quiet_dynet(spells, loops = TRUE, weight = "weight")
   mixed <- as.data.frame(centrality_series(

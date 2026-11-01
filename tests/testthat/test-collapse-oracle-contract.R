@@ -111,7 +111,7 @@ test_that("the collapsed object is a cograph network cograph can use", {
   flat <- collapse_network(quiet_dynet(random_edges(seed = 3)),
                            weight = "union_duration")
   expect_s3_class(flat, "cograph_network")
-  expect_output(summary(flat))
+  expect_s3_class(summary(flat), "data.frame")
   pdf(NULL)
   on.exit(grDevices::dev.off(), add = TRUE)
   expect_no_error(plot(flat))

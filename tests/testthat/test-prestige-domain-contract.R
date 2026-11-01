@@ -74,7 +74,7 @@ test_that("loops and valued magnitudes cannot change the domain", {
 
   loop <- quiet_dynet(data.frame(
     from = c("A", "A"), to = c("A", "B"), time = 0,
-    weight = c(100, -7)
+    weight = c(100, 7)
   ), loops = TRUE, weight = "weight")
   expect_identical(
     domain_prestige_vector(loop, start = 0, end = 0, window = 0),

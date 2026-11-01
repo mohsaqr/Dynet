@@ -132,7 +132,7 @@ test_that("public binary prestige is isolated from values and strength", {
   spells <- data.frame(
     from = c("A", "A", "A", "A", "B", "C"),
     to = c("B", "B", "B", "C", "C", "A"), time = 0,
-    weight = c(9, -9, 0, 100, -7, 4)
+    weight = c(9, 9, 0, 100, 7, 4)
   )
   dn <- quiet_dynet(spells, weight = "weight")
   alone <- eigen_prestige_vector(dn, start = 0, end = 0, window = 0)

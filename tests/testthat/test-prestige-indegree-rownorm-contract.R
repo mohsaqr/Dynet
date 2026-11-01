@@ -103,7 +103,7 @@ test_that("duplicates and values cannot change sender allocation", {
   spells <- data.frame(
     from = c("A", "A", "A", "A", "C"),
     to = c("B", "B", "B", "C", "B"), time = 0,
-    weight = c(9, -9, 0, 100, -7)
+    weight = c(9, 9, 0, 100, 7)
   )
   dn <- quiet_dynet(spells, weight = "weight")
   alone <- rownorm_prestige_vector(

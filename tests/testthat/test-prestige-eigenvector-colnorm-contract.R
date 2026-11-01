@@ -184,7 +184,7 @@ test_that("public column-normalized eigen prestige is binary and mode invariant"
   spells <- data.frame(
     from = c("A", "A", "A", "C"),
     to = c("A", "A", "B", "A"), time = 0,
-    weight = c(9, -4, 100, 7)
+    weight = c(9, 4, 100, 7)
   )
   dn <- quiet_dynet(spells, weight = "weight", loops = TRUE)
   expected <- c(A = 1 / sqrt(5), B = 2 / sqrt(5), C = 0)

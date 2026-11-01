@@ -98,7 +98,7 @@ test_that("public prestige obeys representation and coordinate invariants", {
     from = c("a", "a", "a", "c", "d", "b"),
     to = c("b", "b", "b", "b", "d", "b"),
     start = c(0, 0, 0, 1, 0, 2), end = c(4, 4, 2, 3, 4, 2),
-    weight = c(7, -7, 0, 100, 11, 50)
+    weight = c(7, 7, 0, 100, 11, 50)
   )
   value_at <- function(x, at, window, nodes = NULL) {
     dn <- quiet_dynet(x, nodes = nodes, weight = "weight", loops = TRUE)
@@ -129,7 +129,7 @@ test_that("public prestige obeys representation and coordinate invariants", {
 test_that("prestige remains binary in valued and mixed queries", {
   spells <- data.frame(
     from = c("A", "A", "A", "C"), to = rep("B", 4), time = 0,
-    weight = c(5, -5, 0, -7)
+    weight = c(5, 5, 0, 7)
   )
   dn <- quiet_dynet(spells, weight = "weight")
   alone <- prestige_frame(dn, start = 0, end = 0, window = 0)

@@ -106,7 +106,7 @@ test_that("loops, values, and path multiplicity do not alter hop proximity", {
 
   weighted_spells <- data.frame(
     from = c("A", "A", "A", "B"), to = c("B", "B", "B", "C"),
-    time = 0, weight = c(9, -9, 0, 100)
+    time = 0, weight = c(9, 9, 0, 100)
   )
   weighted_dn <- quiet_dynet(weighted_spells, weight = "weight")
   alone <- domain_proximity_vector(

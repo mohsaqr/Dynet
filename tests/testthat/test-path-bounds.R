@@ -28,7 +28,7 @@ test_that("path windows resolve canonical bounds and compatibility aliases", {
   expect_identical(.path_window(
     dn, "backward", start = 9, clamp_missing = TRUE
   ), list(start = 9, end = 9))
-  expect_error(.path_window(dn, "sideways"), class = "simpleError")
+  expect_error(.path_window(dn, "sideways"), class = "dynet_bad_choice")
 })
 
 test_that("canonical anchors preserve at and both-direction behavior", {
