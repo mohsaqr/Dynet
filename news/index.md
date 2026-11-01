@@ -1,6 +1,6 @@
 # Changelog
 
-## Dynet 0.8.0
+## Dynet 0.8.1
 
 A whole-package audit: every exported verb and every S3 method was run
 against synthetic data, an oracle (tsna, networkDynamic, igraph, sna,

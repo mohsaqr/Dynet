@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,10 +41,10 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.8.0" id="dynet-080">Dynet 0.8.0<a class="anchor" aria-label="anchor" href="#dynet-080"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.8.1" id="dynet-081">Dynet 0.8.1<a class="anchor" aria-label="anchor" href="#dynet-081"></a></h2>
 <p>A whole-package audit: every exported verb and every S3 method was run against synthetic data, an oracle (tsna, networkDynamic, igraph, sna, teneto, raphtory, Reticula, or a brute-force enumeration) and a set of invariants. The fixes below change numbers in the cases they describe; everything else is unchanged to within floating-point tolerance.</p>
 <div class="section level3">
-<h3 id="measurement-grid-and-time-0-8-0">Measurement grid and time<a class="anchor" aria-label="anchor" href="#measurement-grid-and-time-0-8-0"></a></h3>
+<h3 id="measurement-grid-and-time-0-8-1">Measurement grid and time<a class="anchor" aria-label="anchor" href="#measurement-grid-and-time-0-8-1"></a></h3>
 <ul><li>The grid counted its default <code>end</code> from the data’s first time instead of from <code>start</code>, so a <code>start</code> off the data’s own lattice dropped the last window. Bins now match <code><a href="https://rdrr.io/pkg/tsna/man/tSnaStats.html" class="external-link">tsna::tSnaStats()</a></code> bin for bin.</li>
 <li>Time comparisons use one tolerance per pair of values. Previously a Unix timestamp anywhere in a vector loosened every comparison in it, and grids at Unix scale could gain a spurious bin. A network shifted by 1.7e9 now gives the same results as the unshifted one.</li>
 <li>Vertex-spell boundaries are grid anchors, so a vertex arriving at 0.3 is no longer counted present in [0.2, 0.3).</li>
@@ -52,7 +52,7 @@
 <code>.check_dynet()</code> rejects a structurally corrupt object with <code>dynet_corrupt_object</code> instead of returning wrong numbers.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="construction-and-editing-0-8-0">Construction and editing<a class="anchor" aria-label="anchor" href="#construction-and-editing-0-8-0"></a></h3>
+<h3 id="construction-and-editing-0-8-1">Construction and editing<a class="anchor" aria-label="anchor" href="#construction-and-editing-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/dynet.html">dynet()</a></code>: <code>time =</code> in an interval log and <code>start =</code> in a contact log were ignored; a detected <code>start</code> column no longer overrides an explicit <code>time</code>. NA or negative weights, which silently removed a pair from the aggregate network, are refused (<code>dynet_bad_weight</code>), as is a weight given through <code><a href="../reference/add_ties.html">add_ties()</a></code>. Mixed clocks (numeric start, Date end) raise <code>dynet_mixed_clock</code>; an infinite spell end raises <code>dynet_unbounded_spell</code>. Vertices named only in <code>nodes</code> are reported with a message and kept with the new <code>keep_isolates = TRUE</code>. Co-presence groups spanning two session labels now error instead of taking the first.</li>
 <li>
@@ -62,7 +62,7 @@
 <li>Editing verbs: <code><a href="../reference/remove_vertex_spells.html">remove_vertex_spells()</a></code> and <code><a href="../reference/update_vertex_spells.html">update_vertex_spells()</a></code> with a mask matching nothing deleted every vertex spell; they now raise <code>dynet_vertex_spell_not_found</code>. <code><a href="../reference/add_vertex_spells.html">add_vertex_spells()</a></code> and <code><a href="../reference/update_vertex_spells.html">update_vertex_spells()</a></code> stored Date values as days since 1970. <code><a href="../reference/update_nodes.html">update_nodes()</a></code> wrote factor codes into character columns and left <code>node_groups</code> stale. <code><a href="../reference/add_ties.html">add_ties()</a></code> silently overwrote a <code>duration</code> column (<code>dynet_reserved_column</code>). <code>set_tie_sessions(breaks = )</code> is time-tolerant and accepts Date/POSIXct breaks. <code><a href="../reference/set_observations.html">set_observations()</a></code> sets the same metadata as <code><a href="../reference/dynet.html">dynet()</a></code>, so both routes give identical <code><a href="../reference/metrics.html">metrics()</a></code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="paths-0-8-0">Paths<a class="anchor" aria-label="anchor" href="#paths-0-8-0"></a></h3>
+<h3 id="paths-0-8-1">Paths<a class="anchor" aria-label="anchor" href="#paths-0-8-1"></a></h3>
 <ul><li>With sessions, bounded mode chose each vertex’s winning session by arrival for every criterion, so <code>shortest</code> could prefer a 2-hop route over a 1-hop one. Backward searches no longer drop routes behind a latest departure that no journey attains, no longer mark such a time <code>attained</code>, and <code>foremost</code> no longer under-counts tied journeys.</li>
 <li>
 <code><a href="../reference/pathways.html">pathways()</a></code> counted only the leaves of the route tree (7 routes for Ana in <code>school_contacts</code> where <code><a href="../reference/paths.html">paths()</a></code> has 18) and lost endpoints.</li>
@@ -70,14 +70,14 @@
 <code><a href="../reference/path_network.html">path_network()</a></code> on a <code>sessions = "separate"</code> result built duplicate node names; it gains <code>session =</code>. <code><a href="../reference/path_trajectories.html">path_trajectories()</a></code> no longer merges hop times 1 ms apart at Unix-second scale.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="centrality-0-8-0">Centrality<a class="anchor" aria-label="anchor" href="#centrality-0-8-0"></a></h3>
+<h3 id="centrality-0-8-1">Centrality<a class="anchor" aria-label="anchor" href="#centrality-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/edge_centrality.html">edge_centrality()</a></code> crashed on any network with sessions under its default <code>sessions = "bounded"</code> and ignored vertex presence; it now agrees with <code><a href="../reference/path_centrality.html">path_centrality()</a></code>.</li>
 <li>The stream measures (<code>katz</code>, <code>pagerank</code>, <code>walk</code>) compared onsets with bare operators, so contacts at 0.3 and 0.1 + 0.2 were two instants and chained.</li>
 <li>The proximity view takes a vector <code>measure</code>, draws strength from weights rather than spell counts, and no longer produces NaN line widths.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="events-metrics-mixing-snapshots-0-8-0">Events, metrics, mixing, snapshots<a class="anchor" aria-label="anchor" href="#events-metrics-mixing-snapshots-0-8-0"></a></h3>
+<h3 id="events-metrics-mixing-snapshots-0-8-1">Events, metrics, mixing, snapshots<a class="anchor" aria-label="anchor" href="#events-metrics-mixing-snapshots-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/metrics.html">metrics()</a></code>, <code><a href="../reference/events.html">events()</a></code>, <code><a href="../reference/durations.html">durations()</a></code> and <code><a href="../reference/burstiness.html">burstiness()</a></code> validate <code>measure</code> through one helper: an empty, NA or repeated name is refused with a classed error instead of an unclassed one or duplicated rows.</li>
 <li>
@@ -89,7 +89,7 @@
 <li>Documentation: closeness centralisation differs from sna by a stated factor; Krackhardt efficiency can be NaN.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="communities-and-motifs-0-8-0">Communities and motifs<a class="anchor" aria-label="anchor" href="#communities-and-motifs-0-8-0"></a></h3>
+<h3 id="communities-and-motifs-0-8-1">Communities and motifs<a class="anchor" aria-label="anchor" href="#communities-and-motifs-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/match_communities.html">match_communities()</a></code> events table: <code>matched_from</code> held a raw per-bin code instead of the matched label, and splinters had no recorded parent.</li>
 <li>Hitting <code>max_passes</code> in Louvain, or consensus that never agrees, raises a <code>dynet_no_converge</code> warning. An edgeless slice with <code>omega = 0</code> raises <code>dynet_empty_slice</code> and is counted in <code>n_empty_slices</code> instead of producing arbitrary singleton labels and spurious splits.</li>
@@ -99,7 +99,7 @@
 <code>as.data.frame(&lt;modularity&gt;, what = "total")</code> works; the <code>sizes</code> table is sorted by session, time and community with clean row names.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="structure-and-dynamics-descriptors-0-8-0">Structure and dynamics descriptors<a class="anchor" aria-label="anchor" href="#structure-and-dynamics-descriptors-0-8-0"></a></h3>
+<h3 id="structure-and-dynamics-descriptors-0-8-1">Structure and dynamics descriptors<a class="anchor" aria-label="anchor" href="#structure-and-dynamics-descriptors-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/similarity.html">similarity()</a></code>, <code><a href="../reference/turnover.html">turnover()</a></code>, <code><a href="../reference/persistence.html">persistence()</a></code>, <code><a href="../reference/segregation.html">segregation()</a></code> and <code><a href="../reference/phases.html">phases()</a></code> measure every bin of the grid, including bins with no tie. Previously an empty bin was dropped and its neighbours were compared as consecutive (verified against teneto).</li>
 <li>
@@ -110,7 +110,7 @@
 <code><a href="../reference/segregation.html">segregation()</a></code> with three or more communities differs from teneto by a documented factor; the formula is now in the help page.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="null-models-and-significance-0-8-0">Null models and significance<a class="anchor" aria-label="anchor" href="#null-models-and-significance-0-8-0"></a></h3>
+<h3 id="null-models-and-significance-0-8-1">Null models and significance<a class="anchor" aria-label="anchor" href="#null-models-and-significance-0-8-1"></a></h3>
 <ul><li>
 <code><a href="../reference/randomise.html">randomise()</a></code>: undirected <code>"edges"</code> rewiring now preserves every degree (it did in 5 of 25 seeds); <code>within</code> is refused for the scopes that ignored it (<code>dynet_null_bad_scope</code>); activity-constrained repairs keep what each method holds fixed; <code>labels</code> and <code>reversal</code> move vertex activity with the vertices; <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports rejections. Constrained surrogates may hold as many infeasible spells as the observed network, and no more.</li>
 <li>
@@ -119,7 +119,7 @@
 <code><a href="../reference/animate.html">animate()</a></code> rejects a fractional <code>seed</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="result-classes-and-methods-0-8-0">Result classes and methods<a class="anchor" aria-label="anchor" href="#result-classes-and-methods-0-8-0"></a></h3>
+<h3 id="result-classes-and-methods-0-8-1">Result classes and methods<a class="anchor" aria-label="anchor" href="#result-classes-and-methods-0-8-1"></a></h3>
 <ul><li>Every result class now answers <code>print</code>, <code>summary</code>, <code>plot</code> and <code>as.data.frame</code>: new <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> for collapsed networks, path networks and phases, new <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> for projections, collapsed-network lists and animations.</li>
 <li>Every unknown choice (<code>what</code>, <code>type</code>, <code>sessions</code>, <code>method</code>, <code>measure</code>, <code>direction</code>, …) raises <code>dynet_bad_choice</code>, a <code>dynet_bad_input</code>, in place of <code><a href="https://rdrr.io/r/base/match.arg.html" class="external-link">match.arg()</a></code>’s unclassed error. Every error condition in the package now carries the <code>dynet_bad_input</code> parent.</li>
 <li>
