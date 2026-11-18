@@ -1,0 +1,58 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> network
+# Temporal network (interval format, directed) | a cograph netobject
+# 14 vertices | 240 edge spells | 110 distinct pairs
+# observed from 0 to 21.52 step, binned every 1
+
+  from   to start  end duration weight
+ Jonas  Dan  0.00 1.10     1.10      1
+  Gita  Ana  0.14 0.98     0.84      1
+   Leo Mira  0.15 0.42     0.27      1
+   Leo Iris  0.15 0.96     0.81      1
+  Kira  Ben  0.33 0.69     0.36      1
+   Leo Iris  0.38 0.50     0.12      1
+# 234 more spells. summary() describes the network; plot() draws it.
+
+> overview <- summary(network)
+
+> overview
+                property        value
+1                 format     interval
+2               directed          yes
+3               vertices           14
+4            edge spells          240
+5         distinct pairs          110
+6              time unit         step
+7          observed from            0
+8            observed to        21.52
+9                   span        21.52
+10             bin width            1
+11             time bins           22
+12 mean snapshot density       0.0829
+13      temporal density not computed
+14              sessions         none
+15     vertex attributes         none
+
+> counts <- subset(overview, property %in% c("vertices", "edge spells", "distinct pairs",
++                                             "observed from", "observed to", "span", "time bins"))
+
+> ties <- as.data.frame(durations(network, measure = c("events", "total", "union", "mean")))
+
+> head(ties)
+  from    to measure value
+1  Ana  Cara  events     1
+2  Ana   Dan  events     3
+3  Ana  Gita  events     5
+4  Ana  Iris  events     1
+5  Ana Jonas  events     4
+6  Ana  Kira  events     1
+
+> result <- rbind(
++   subset(transform(counts, quantity = property, kind = "network", value = as.numeric(value)),
++          select = c(quantity, kind, value)),
++   subset(transform(ties, quantity = sprintf("%s: %s -> %s", measure, from, to), kind = measure),
++          select = c(quantity, kind, value)))

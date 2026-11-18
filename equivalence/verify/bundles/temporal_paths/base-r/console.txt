@@ -1,0 +1,119 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> people <- sort(unique(c(contacts$from, contacts$to)))
+
+> # Earliest arrival at every vertex from `source`, present from `origin` on.
+> earliest <- function(source, origin) {
++   arrival <- setNames(rep(Inf, length(people)), people)
++   arrival[source] <- origin
++   repeat {
++     enterable <- arrival[contacts$from] < contacts$end
++     entered <- pmax(arrival[contacts$from], contacts$start)[enterable]
++     best <- tapply(entered, contacts$to[enterable], min)
++     improved <- pmin(arrival[names(best)], best)
++     if (identical(unname(improved), unname(arrival[names(best)]))) break
++     arrival[names(best)] <- improved
++   }
++   arrival
++ }
+
+> from_ana <- earliest("Ana", min(contacts$start))
+
+> from_ana
+  Ana   Ben  Cara   Dan   Eve  Finn  Gita  Hugo  Iris Jonas  Kira   Leo  Mira 
+ 0.00  9.59  6.67  7.98 11.66  6.96  6.36  7.98 10.00  2.12  6.12  9.65  6.36 
+ Nils 
+ 7.51 
+
+> late <- vapply(people, earliest, numeric(length(people)), origin = 18)
+
+> dimnames(late) <- list(to = people, from = people)
+
+> reached <- is.finite(late) & row(late) != col(late)
+
+> latency <- ifelse(reached, late - 18, 0)
+
+> result <- rbind(
++   data.frame(quantity = sprintf("arrival_time from Ana: %s", people), kind = "arrival_time", value = unname(from_ana)),
++   data.frame(quantity = sprintf("latency from Ana: %s", people), kind = "latency",
++              value = unname(from_ana) - min(contacts$start)),
++   data.frame(quantity = sprintf("forward_reach_count from t=18: %s", people), kind = "forward_reach_count",
++              value = colSums(reached)),
++   data.frame(quantity = sprintf("backward_reach_count from t=18: %s", people), kind = "backward_reach_count",
++              value = rowSums(reached)),
++   data.frame(quantity = sprintf("temporal closeness from t=18: %s", people), kind = "temporal_closeness",
++              value = ifelse(colSums(reached) > 0, colSums(reached) / colSums(latency), 0)))
+
+> result
+                                    quantity                 kind      value
+1                 arrival_time from Ana: Ana         arrival_time  0.0000000
+2                 arrival_time from Ana: Ben         arrival_time  9.5900000
+3                arrival_time from Ana: Cara         arrival_time  6.6700000
+4                 arrival_time from Ana: Dan         arrival_time  7.9800000
+5                 arrival_time from Ana: Eve         arrival_time 11.6600000
+6                arrival_time from Ana: Finn         arrival_time  6.9600000
+7                arrival_time from Ana: Gita         arrival_time  6.3600000
+8                arrival_time from Ana: Hugo         arrival_time  7.9800000
+9                arrival_time from Ana: Iris         arrival_time 10.0000000
+10              arrival_time from Ana: Jonas         arrival_time  2.1200000
+11               arrival_time from Ana: Kira         arrival_time  6.1200000
+12                arrival_time from Ana: Leo         arrival_time  9.6500000
+13               arrival_time from Ana: Mira         arrival_time  6.3600000
+14               arrival_time from Ana: Nils         arrival_time  7.5100000
+15                     latency from Ana: Ana              latency  0.0000000
+16                     latency from Ana: Ben              latency  9.5900000
+17                    latency from Ana: Cara              latency  6.6700000
+18                     latency from Ana: Dan              latency  7.9800000
+19                     latency from Ana: Eve              latency 11.6600000
+20                    latency from Ana: Finn              latency  6.9600000
+21                    latency from Ana: Gita              latency  6.3600000
+22                    latency from Ana: Hugo              latency  7.9800000
+23                    latency from Ana: Iris              latency 10.0000000
+24                   latency from Ana: Jonas              latency  2.1200000
+25                    latency from Ana: Kira              latency  6.1200000
+26                     latency from Ana: Leo              latency  9.6500000
+27                    latency from Ana: Mira              latency  6.3600000
+28                    latency from Ana: Nils              latency  7.5100000
+Ana       forward_reach_count from t=18: Ana  forward_reach_count  5.0000000
+Ben       forward_reach_count from t=18: Ben  forward_reach_count  0.0000000
+Cara     forward_reach_count from t=18: Cara  forward_reach_count  5.0000000
+Dan       forward_reach_count from t=18: Dan  forward_reach_count  7.0000000
+Eve       forward_reach_count from t=18: Eve  forward_reach_count  3.0000000
+Finn     forward_reach_count from t=18: Finn  forward_reach_count  7.0000000
+Gita     forward_reach_count from t=18: Gita  forward_reach_count  1.0000000
+Hugo     forward_reach_count from t=18: Hugo  forward_reach_count  7.0000000
+Iris     forward_reach_count from t=18: Iris  forward_reach_count  4.0000000
+Jonas   forward_reach_count from t=18: Jonas  forward_reach_count  7.0000000
+Kira     forward_reach_count from t=18: Kira  forward_reach_count  2.0000000
+Leo       forward_reach_count from t=18: Leo  forward_reach_count  0.0000000
+Mira     forward_reach_count from t=18: Mira  forward_reach_count  1.0000000
+Nils     forward_reach_count from t=18: Nils  forward_reach_count  3.0000000
+Ana1     backward_reach_count from t=18: Ana backward_reach_count  5.0000000
+Ben1     backward_reach_count from t=18: Ben backward_reach_count  7.0000000
+Cara1   backward_reach_count from t=18: Cara backward_reach_count  6.0000000
+Dan1     backward_reach_count from t=18: Dan backward_reach_count  5.0000000
+Eve1     backward_reach_count from t=18: Eve backward_reach_count  1.0000000
+Finn1   backward_reach_count from t=18: Finn backward_reach_count  0.0000000
+Gita1   backward_reach_count from t=18: Gita backward_reach_count  0.0000000
+Hugo1   backward_reach_count from t=18: Hugo backward_reach_count  4.0000000
+Iris1   backward_reach_count from t=18: Iris backward_reach_count  0.0000000
+Jonas1 backward_reach_count from t=18: Jonas backward_reach_count  1.0000000
+Kira1   backward_reach_count from t=18: Kira backward_reach_count  4.0000000
+Leo1     backward_reach_count from t=18: Leo backward_reach_count  6.0000000
+Mira1   backward_reach_count from t=18: Mira backward_reach_count  7.0000000
+Nils1   backward_reach_count from t=18: Nils backward_reach_count  6.0000000
+Ana2       temporal closeness from t=18: Ana   temporal_closeness  0.4156276
+Ben2       temporal closeness from t=18: Ben   temporal_closeness  0.0000000
+Cara2     temporal closeness from t=18: Cara   temporal_closeness  0.5506608
+Dan2       temporal closeness from t=18: Dan   temporal_closeness  0.5299016
+Eve2       temporal closeness from t=18: Eve   temporal_closeness  0.3906250
+Finn2     temporal closeness from t=18: Finn   temporal_closeness  0.5838198
+Gita2     temporal closeness from t=18: Gita   temporal_closeness  0.5524862
+Hugo2     temporal closeness from t=18: Hugo   temporal_closeness  0.4507405
+Iris2     temporal closeness from t=18: Iris   temporal_closeness  0.5532503
+Jonas2   temporal closeness from t=18: Jonas   temporal_closeness  0.4827586
+Kira2     temporal closeness from t=18: Kira   temporal_closeness  0.6535948
+Leo2       temporal closeness from t=18: Leo   temporal_closeness  0.0000000
+Mira2     temporal closeness from t=18: Mira   temporal_closeness  1.0526316
+Nils2     temporal closeness from t=18: Nils   temporal_closeness  0.4411765

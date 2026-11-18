@@ -1,0 +1,31 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> union_length <- function(start, end) {
++   by_onset <- order(start)
++   start <- start[by_onset]
++   reach <- cummax(end[by_onset])
++   opens <- c(TRUE, start[-1] > head(reach, -1))
++   sum(tapply(reach, cumsum(opens), max) - start[opens])
++ }
+
+> contacts$duration <- contacts$end - contacts$start
+
+> pair <- paste(contacts$from, "->", contacts$to)
+
+> result <- data.frame(
++   pair = sort(unique(pair)),
++   spell_count = as.numeric(tapply(contacts$duration, pair, length)),
++   total_duration = as.numeric(tapply(contacts$duration, pair, sum)),
++   union_duration = vapply(split(contacts, pair), function(spells) union_length(spells$start, spells$end), numeric(1)),
++   first = as.numeric(tapply(contacts$start, pair, min)),
++   last = as.numeric(tapply(contacts$end, pair, max)))
+
+> head(result)
+                     pair spell_count total_duration union_duration first  last
+Ana -> Cara   Ana -> Cara           1           0.10           0.10  6.67  6.77
+Ana -> Dan     Ana -> Dan           3           1.02           1.02 12.04 20.10
+Ana -> Gita   Ana -> Gita           5           2.11           1.99  6.57 14.16
+Ana -> Iris   Ana -> Iris           1           0.50           0.50 13.80 14.30
+Ana -> Jonas Ana -> Jonas           4           2.34           2.34  2.12  9.13
+Ana -> Kira   Ana -> Kira           1           0.11           0.11 11.60 11.71

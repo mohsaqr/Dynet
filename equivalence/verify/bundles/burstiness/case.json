@@ -1,0 +1,836 @@
+{
+  "schema": "prova.verification-case/1",
+  "title": "Burstiness, memory and inter-event gaps",
+  "description": "For every pupil: the number of incident events, the mean gap between consecutive events, the burstiness B = (sigma - mu) / (sigma + mu) of those gaps with the population standard deviation, and the memory coefficient, the Pearson correlation of consecutive gaps (Goh and Barabasi, 2008). The reference computes them from the sorted onset times with base R and stats::cor().",
+  "covers": [
+    "burstiness()",
+    "gaps()"
+  ],
+  "generator": "Dynet equivalence/verify/export-bundles.R",
+  "created_at": "2026-11-18",
+  "sides": [
+    {
+      "id": "dynet",
+      "name": "Dynet",
+      "version": "0.8.1",
+      "primary": true,
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23"
+    },
+    {
+      "id": "base-r",
+      "name": "base R, from the definition",
+      "version": "4.6.2",
+      "authority": "independent",
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23",
+      "role": "definition-level oracle"
+    }
+  ],
+  "sections": [
+    {
+      "id": "code",
+      "title": "Code",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/script.R",
+          "bytes": 326,
+          "sha256": "925c024f1b3338d3d4d6114fde99466f93d8defce9ed2bc8b763e333241463bc",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "base-r",
+          "path": "base-r/script.R",
+          "bytes": 717,
+          "sha256": "65c2df578f9e7a55643daaf762020053cf482d767ba12ffc92ed46556619811d",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Raw output",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/console.txt",
+          "bytes": 1735,
+          "sha256": "af291775edfabbde2298585c7040c03b161f97e9afbd687a39a7c2684583212b",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "base-r",
+          "path": "base-r/console.txt",
+          "bytes": 1454,
+          "sha256": "8e98455eb3f30e6d9a1d2e77d97ccc8aebf3c07ee083b447d6578d2f4a756e5f",
+          "label": "R console",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Data",
+      "items": [
+        {
+          "path": "data/school_contacts.tsv",
+          "bytes": 4888,
+          "sha256": "2c96a182478b20c23d768c0b709f8aab45525c65cf628586a1533603aac05967",
+          "label": "School contacts (spell list)"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "quantity": "events: Ana",
+      "kind": "events",
+      "values": {
+        "dynet": 36,
+        "base-r": 36
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Ben",
+      "kind": "events",
+      "values": {
+        "dynet": 34,
+        "base-r": 34
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Cara",
+      "kind": "events",
+      "values": {
+        "dynet": 35,
+        "base-r": 35
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Dan",
+      "kind": "events",
+      "values": {
+        "dynet": 35,
+        "base-r": 35
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Eve",
+      "kind": "events",
+      "values": {
+        "dynet": 34,
+        "base-r": 34
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Finn",
+      "kind": "events",
+      "values": {
+        "dynet": 29,
+        "base-r": 29
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Gita",
+      "kind": "events",
+      "values": {
+        "dynet": 31,
+        "base-r": 31
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Hugo",
+      "kind": "events",
+      "values": {
+        "dynet": 34,
+        "base-r": 34
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Iris",
+      "kind": "events",
+      "values": {
+        "dynet": 30,
+        "base-r": 30
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Jonas",
+      "kind": "events",
+      "values": {
+        "dynet": 46,
+        "base-r": 46
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Kira",
+      "kind": "events",
+      "values": {
+        "dynet": 38,
+        "base-r": 38
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Leo",
+      "kind": "events",
+      "values": {
+        "dynet": 28,
+        "base-r": 28
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Mira",
+      "kind": "events",
+      "values": {
+        "dynet": 36,
+        "base-r": 36
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "events: Nils",
+      "kind": "events",
+      "values": {
+        "dynet": 34,
+        "base-r": 34
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Ana",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.594571428571429,
+        "base-r": 0.594571428571429
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Ben",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.610909090909091,
+        "base-r": 0.610909090909091
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Cara",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.578529411764706,
+        "base-r": 0.578529411764706
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Dan",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.616176470588235,
+        "base-r": 0.616176470588235
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Eve",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.616363636363636,
+        "base-r": 0.616363636363636
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Finn",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.685,
+        "base-r": 0.685
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Gita",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.655666666666667,
+        "base-r": 0.655666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Hugo",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.62,
+        "base-r": 0.62
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Iris",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.651034482758621,
+        "base-r": 0.651034482758621
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Jonas",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.455333333333333,
+        "base-r": 0.455333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Kira",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.555675675675676,
+        "base-r": 0.555675675675676
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Leo",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.747407407407407,
+        "base-r": 0.747407407407407
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Mira",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.579428571428571,
+        "base-r": 0.579428571428571
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_gap: Nils",
+      "kind": "mean_gap",
+      "values": {
+        "dynet": 0.563939393939394,
+        "base-r": 0.563939393939394
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Ana",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.245753240761262,
+        "base-r": 0.245753240761262
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Ben",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0328861091493906,
+        "base-r": 0.0328861091493906
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Cara",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.0561092372019492,
+        "base-r": -0.0561092372019492
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Dan",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.0506177217483232,
+        "base-r": -0.0506177217483232
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Eve",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0921790559861362,
+        "base-r": 0.0921790559861362
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Finn",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0293850690318148,
+        "base-r": 0.0293850690318148
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Gita",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0610420015639985,
+        "base-r": 0.0610420015639985
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Hugo",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0988544294578686,
+        "base-r": 0.0988544294578686
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Iris",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.059680683467897,
+        "base-r": -0.059680683467897
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Jonas",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.0275054859988298,
+        "base-r": -0.0275054859988298
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Kira",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.0704826486389028,
+        "base-r": -0.0704826486389028
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Leo",
+      "kind": "burstiness",
+      "values": {
+        "dynet": -0.0102026531971269,
+        "base-r": -0.0102026531971269
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Mira",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0996854719838978,
+        "base-r": 0.0996854719838978
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "burstiness: Nils",
+      "kind": "burstiness",
+      "values": {
+        "dynet": 0.0840876050442502,
+        "base-r": 0.0840876050442502
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Ana",
+      "kind": "memory",
+      "values": {
+        "dynet": -0.0312824337602571,
+        "base-r": -0.0312824337602571
+      },
+      "difference": 2.77555756156289e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Ben",
+      "kind": "memory",
+      "values": {
+        "dynet": -0.199263432697178,
+        "base-r": -0.199263432697178
+      },
+      "difference": 2.77555756156289e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Cara",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.0745805424671103,
+        "base-r": 0.0745805424671103
+      },
+      "difference": 2.77555756156289e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Dan",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.216543104420363,
+        "base-r": 0.216543104420363
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Eve",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.258825086898054,
+        "base-r": 0.258825086898054
+      },
+      "difference": 1.11022302462516e-16,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Finn",
+      "kind": "memory",
+      "values": {
+        "dynet": -0.22653753505575,
+        "base-r": -0.22653753505575
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Gita",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.211656902032541,
+        "base-r": 0.211656902032541
+      },
+      "difference": 5.55111512312578e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Hugo",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.112836999680245,
+        "base-r": 0.112836999680245
+      },
+      "difference": 9.71445146547012e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Iris",
+      "kind": "memory",
+      "values": {
+        "dynet": -0.0935697215939023,
+        "base-r": -0.0935697215939023
+      },
+      "difference": 1.38777878078145e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Jonas",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.233919574492981,
+        "base-r": 0.233919574492981
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Kira",
+      "kind": "memory",
+      "values": {
+        "dynet": -0.149727257720332,
+        "base-r": -0.149727257720332
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Leo",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.480019119013604,
+        "base-r": 0.480019119013603
+      },
+      "difference": 1.11022302462516e-16,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Mira",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.186911592938807,
+        "base-r": 0.186911592938806
+      },
+      "difference": 5.55111512312578e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "memory: Nils",
+      "kind": "memory",
+      "values": {
+        "dynet": 0.227847326681125,
+        "base-r": 0.227847326681125
+      },
+      "difference": 1.11022302462516e-16,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    }
+  ]
+}

@@ -1,0 +1,835 @@
+{
+  "schema": "prova.verification-case/1",
+  "title": "PageRank over time",
+  "description": "PageRank (damping 0.85) of every pupil in each seven-unit window, against igraph::page_rank() on the binary directed snapshot of the same window.",
+  "covers": [
+    "centrality_series()"
+  ],
+  "generator": "Dynet equivalence/verify/export-bundles.R",
+  "created_at": "2026-11-18",
+  "sides": [
+    {
+      "id": "dynet",
+      "name": "Dynet",
+      "version": "0.8.1",
+      "primary": true,
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23"
+    },
+    {
+      "id": "igraph",
+      "name": "igraph",
+      "version": "2.3.4",
+      "authority": "open-source",
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23",
+      "url": "https://cran.r-project.org/package=igraph"
+    }
+  ],
+  "sections": [
+    {
+      "id": "code",
+      "title": "Code",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/script.R",
+          "bytes": 342,
+          "sha256": "d40c9c5082870599f92b8cf93a4e2cc1a2af06db13173379461d514538c024ab",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/script.R",
+          "bytes": 696,
+          "sha256": "54e74779a209a3b3e3ace940afbd098da762c40c4c68bf141f42651ffc280ffb",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Raw output",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/console.txt",
+          "bytes": 902,
+          "sha256": "a80a3b30b8c0c89ca15050ba3942e122c6dbf28cbf92ae1de3f3040574ab1c48",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/console.txt",
+          "bytes": 1566,
+          "sha256": "61fbd8406c34dfb051f396565ee7352308e6362bd2def1fb6d7500ca973eb1f4",
+          "label": "R console",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Data",
+      "items": [
+        {
+          "path": "data/school_contacts.tsv",
+          "bytes": 4888,
+          "sha256": "2c96a182478b20c23d768c0b709f8aab45525c65cf628586a1533603aac05967",
+          "label": "School contacts (spell list)"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "quantity": "pagerank t=0: Ana",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0761744377470232,
+        "igraph": 0.0761744377469279
+      },
+      "difference": 9.53126466640697e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Ben",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.05970497660061,
+        "igraph": 0.0597049766003894
+      },
+      "difference": 2.20552742735691e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Cara",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0648667368425883,
+        "igraph": 0.0648667368426643
+      },
+      "difference": 7.59808882477842e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Dan",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0324671797189086,
+        "igraph": 0.0324671797190145
+      },
+      "difference": 1.05901398761432e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Eve",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0985405470693867,
+        "igraph": 0.098540547069367
+      },
+      "difference": 1.97203364749043e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Finn",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0767864295221788,
+        "igraph": 0.0767864295223423
+      },
+      "difference": 1.63494218163862e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Gita",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.105446920842925,
+        "igraph": 0.105446920842846
+      },
+      "difference": 7.93115573216596e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Hugo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0446995482153673,
+        "igraph": 0.0446995482155912
+      },
+      "difference": 2.23904228491278e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Iris",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0596693367303318,
+        "igraph": 0.0596693367304388
+      },
+      "difference": 1.0696304952873e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Jonas",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.10236656002231,
+        "igraph": 0.102366560022253
+      },
+      "difference": 5.74679193121597e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Kira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.100769424879819,
+        "igraph": 0.100769424879902
+      },
+      "difference": 8.32528490590789e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Leo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0428148764589652,
+        "igraph": 0.0428148764587166
+      },
+      "difference": 2.48544240744053e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Mira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0845963161438928,
+        "igraph": 0.0845963161440277
+      },
+      "difference": 1.3493373085538e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=0: Nils",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0510967092056932,
+        "igraph": 0.0510967092055195
+      },
+      "difference": 1.73736025566029e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Ana",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0710205131812273,
+        "igraph": 0.071020513181303
+      },
+      "difference": 7.56755769160122e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Ben",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0330835628810571,
+        "igraph": 0.0330835628811033
+      },
+      "difference": 4.62060945061182e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Cara",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0637276921698016,
+        "igraph": 0.0637276921696238
+      },
+      "difference": 1.77774461818103e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Dan",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0905316240679965,
+        "igraph": 0.0905316240679955
+      },
+      "difference": 9.99200722162641e-16,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Eve",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0821896036358688,
+        "igraph": 0.0821896036357347
+      },
+      "difference": 1.34156574738142e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Finn",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0285728307032759,
+        "igraph": 0.0285728307031289
+      },
+      "difference": 1.47021284035986e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Gita",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0629250565421526,
+        "igraph": 0.0629250565422144
+      },
+      "difference": 6.18116668960056e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Hugo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0910677083322999,
+        "igraph": 0.0910677083322845
+      },
+      "difference": 1.54598556179053e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Iris",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0467904661593759,
+        "igraph": 0.0467904661592544
+      },
+      "difference": 1.21409826636665e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Jonas",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.148109387921152,
+        "igraph": 0.148109387921435
+      },
+      "difference": 2.83634227216112e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Kira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0758665741221954,
+        "igraph": 0.075866574122208
+      },
+      "difference": 1.25871535416877e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Leo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0311663126994966,
+        "igraph": 0.0311663126993404
+      },
+      "difference": 1.56194501776952e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Mira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0969442946873028,
+        "igraph": 0.0969442946875556
+      },
+      "difference": 2.5278390491934e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=7: Nils",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0780043728967979,
+        "igraph": 0.0780043728968183
+      },
+      "difference": 2.03864702896794e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Ana",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0850011445343669,
+        "igraph": 0.0850011445341426
+      },
+      "difference": 2.24278928762089e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Ben",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.105602769117086,
+        "igraph": 0.105602769117358
+      },
+      "difference": 2.71754840852623e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Cara",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0469274925822133,
+        "igraph": 0.046927492582233
+      },
+      "difference": 1.97342142627122e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Dan",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0899660183224864,
+        "igraph": 0.0899660183219631
+      },
+      "difference": 5.23275867081452e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Eve",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.116701144252425,
+        "igraph": 0.116701144253133
+      },
+      "difference": 7.08558212103583e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Finn",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0265539943494616,
+        "igraph": 0.0265539943493941
+      },
+      "difference": 6.75154376850173e-14,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Gita",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.054847274137772,
+        "igraph": 0.0548472741373639
+      },
+      "difference": 4.08090228276592e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Hugo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.105577081435862,
+        "igraph": 0.105577081436275
+      },
+      "difference": 4.12267442406744e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Iris",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0381339637290997,
+        "igraph": 0.0381339637289739
+      },
+      "difference": 1.25816024265646e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Jonas",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0749377830256984,
+        "igraph": 0.0749377830253759
+      },
+      "difference": 3.22450399714569e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Kira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.06622481306019,
+        "igraph": 0.0662248130605826
+      },
+      "difference": 3.92588739295263e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Leo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.044616737563075,
+        "igraph": 0.0446167375628994
+      },
+      "difference": 1.7560258802618e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Mira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0434661145491256,
+        "igraph": 0.0434661145486998
+      },
+      "difference": 4.25805224413267e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=14: Nils",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.101443669341138,
+        "igraph": 0.101443669341605
+      },
+      "difference": 4.67806349213618e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Ana",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0431018185942758,
+        "igraph": 0.0431018185942758
+      },
+      "difference": 1.38777878078145e-17,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Ben",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Cara",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Dan",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Eve",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Finn",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Gita",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Hugo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.294294067215998,
+        "igraph": 0.294294067215539
+      },
+      "difference": 4.59299265287427e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Iris",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Jonas",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Kira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.280396847374346,
+        "igraph": 0.280396847374805
+      },
+      "difference": 4.59188242984965e-13,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Leo",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0668834360467314,
+        "igraph": 0.0668834360467314
+      },
+      "difference": 1.38777878078145e-17,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Mira",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.030246890241597,
+        "igraph": 0.030246890241597
+      },
+      "difference": 6.93889390390723e-18,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "pagerank t=21: Nils",
+      "kind": "pagerank",
+      "values": {
+        "dynet": 0.0431018185942758,
+        "igraph": 0.0431018185942758
+      },
+      "difference": 1.38777878078145e-17,
+      "measure": "absolute",
+      "tolerance": 1e-06,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    }
+  ]
+}

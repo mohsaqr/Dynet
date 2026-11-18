@@ -1,0 +1,1511 @@
+{
+  "schema": "prova.verification-case/1",
+  "title": "Graph-level structure over time",
+  "description": "Edges, density, edgewise reciprocity, weak and strong components, isolates, the dyad census, mean geodesic distance, diameter and the sixteen-class triad census of each seven-unit window, against igraph on the binary directed snapshot of the same window.",
+  "covers": [
+    "metrics()"
+  ],
+  "generator": "Dynet equivalence/verify/export-bundles.R",
+  "created_at": "2026-11-18",
+  "sides": [
+    {
+      "id": "dynet",
+      "name": "Dynet",
+      "version": "0.8.1",
+      "primary": true,
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23"
+    },
+    {
+      "id": "igraph",
+      "name": "igraph",
+      "version": "2.3.4",
+      "authority": "open-source",
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23",
+      "url": "https://cran.r-project.org/package=igraph"
+    }
+  ],
+  "sections": [
+    {
+      "id": "code",
+      "title": "Code",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/script.R",
+          "bytes": 508,
+          "sha256": "35aec145df79f7fa4dc670cff92fe3add3e2fe314208559f56f701e8ee73a6c0",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/script.R",
+          "bytes": 1550,
+          "sha256": "541f38071d926a8db7dbcb234475f9705797352ec9b7460e8464698e086a2611",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Raw output",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/console.txt",
+          "bytes": 1421,
+          "sha256": "3e0176d90966dffd4104391f8c7518e8b82442e81f7cdb9d04fd8976c51b9d97",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/console.txt",
+          "bytes": 3310,
+          "sha256": "255a4aa0ad9a234d6abdeea08e14b818c04010dc4c9933ad60900a93eb45e8ab",
+          "label": "R console",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Data",
+      "items": [
+        {
+          "path": "data/school_contacts.tsv",
+          "bytes": 4888,
+          "sha256": "2c96a182478b20c23d768c0b709f8aab45525c65cf628586a1533603aac05967",
+          "label": "School contacts (spell list)"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "quantity": "edges t=0",
+      "kind": "edges",
+      "values": {
+        "dynet": 59,
+        "igraph": 59
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "density t=0",
+      "kind": "density",
+      "values": {
+        "dynet": 0.324175824175824,
+        "igraph": 0.324175824175824
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "reciprocity t=0",
+      "kind": "reciprocity",
+      "values": {
+        "dynet": 0.372881355932203,
+        "igraph": 0.372881355932203
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components t=0",
+      "kind": "components",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components_strong t=0",
+      "kind": "components_strong",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "isolates t=0",
+      "kind": "isolates",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mutual t=0",
+      "kind": "mutual",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "asymmetric t=0",
+      "kind": "asymmetric",
+      "values": {
+        "dynet": 37,
+        "igraph": 37
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "null t=0",
+      "kind": "null",
+      "values": {
+        "dynet": 43,
+        "igraph": 43
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_distance t=0",
+      "kind": "mean_distance",
+      "values": {
+        "dynet": 1.85714285714286,
+        "igraph": 1.85714285714286
+      },
+      "difference": 2.22044604925031e-16,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "diameter t=0",
+      "kind": "diameter",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_003 t=0",
+      "kind": "triad_003",
+      "values": {
+        "dynet": 33,
+        "igraph": 33
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_012 t=0",
+      "kind": "triad_012",
+      "values": {
+        "dynet": 93,
+        "igraph": 93
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_102 t=0",
+      "kind": "triad_102",
+      "values": {
+        "dynet": 34,
+        "igraph": 34
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021D t=0",
+      "kind": "triad_021D",
+      "values": {
+        "dynet": 31,
+        "igraph": 31
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021U t=0",
+      "kind": "triad_021U",
+      "values": {
+        "dynet": 27,
+        "igraph": 27
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021C t=0",
+      "kind": "triad_021C",
+      "values": {
+        "dynet": 44,
+        "igraph": 44
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111D t=0",
+      "kind": "triad_111D",
+      "values": {
+        "dynet": 32,
+        "igraph": 32
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111U t=0",
+      "kind": "triad_111U",
+      "values": {
+        "dynet": 25,
+        "igraph": 25
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030T t=0",
+      "kind": "triad_030T",
+      "values": {
+        "dynet": 12,
+        "igraph": 12
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030C t=0",
+      "kind": "triad_030C",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_201 t=0",
+      "kind": "triad_201",
+      "values": {
+        "dynet": 4,
+        "igraph": 4
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120D t=0",
+      "kind": "triad_120D",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120U t=0",
+      "kind": "triad_120U",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120C t=0",
+      "kind": "triad_120C",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_210 t=0",
+      "kind": "triad_210",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_300 t=0",
+      "kind": "triad_300",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "edges t=7",
+      "kind": "edges",
+      "values": {
+        "dynet": 69,
+        "igraph": 69
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "density t=7",
+      "kind": "density",
+      "values": {
+        "dynet": 0.379120879120879,
+        "igraph": 0.379120879120879
+      },
+      "difference": 5.55111512312578e-17,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "reciprocity t=7",
+      "kind": "reciprocity",
+      "values": {
+        "dynet": 0.666666666666667,
+        "igraph": 0.666666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components t=7",
+      "kind": "components",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components_strong t=7",
+      "kind": "components_strong",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "isolates t=7",
+      "kind": "isolates",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mutual t=7",
+      "kind": "mutual",
+      "values": {
+        "dynet": 23,
+        "igraph": 23
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "asymmetric t=7",
+      "kind": "asymmetric",
+      "values": {
+        "dynet": 23,
+        "igraph": 23
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "null t=7",
+      "kind": "null",
+      "values": {
+        "dynet": 45,
+        "igraph": 45
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_distance t=7",
+      "kind": "mean_distance",
+      "values": {
+        "dynet": 1.78021978021978,
+        "igraph": 1.78021978021978
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "diameter t=7",
+      "kind": "diameter",
+      "values": {
+        "dynet": 4,
+        "igraph": 4
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_003 t=7",
+      "kind": "triad_003",
+      "values": {
+        "dynet": 37,
+        "igraph": 37
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_012 t=7",
+      "kind": "triad_012",
+      "values": {
+        "dynet": 62,
+        "igraph": 62
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_102 t=7",
+      "kind": "triad_102",
+      "values": {
+        "dynet": 85,
+        "igraph": 85
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021D t=7",
+      "kind": "triad_021D",
+      "values": {
+        "dynet": 15,
+        "igraph": 15
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021U t=7",
+      "kind": "triad_021U",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021C t=7",
+      "kind": "triad_021C",
+      "values": {
+        "dynet": 13,
+        "igraph": 13
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111D t=7",
+      "kind": "triad_111D",
+      "values": {
+        "dynet": 39,
+        "igraph": 39
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111U t=7",
+      "kind": "triad_111U",
+      "values": {
+        "dynet": 33,
+        "igraph": 33
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030T t=7",
+      "kind": "triad_030T",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030C t=7",
+      "kind": "triad_030C",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_201 t=7",
+      "kind": "triad_201",
+      "values": {
+        "dynet": 24,
+        "igraph": 24
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120D t=7",
+      "kind": "triad_120D",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120U t=7",
+      "kind": "triad_120U",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120C t=7",
+      "kind": "triad_120C",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_210 t=7",
+      "kind": "triad_210",
+      "values": {
+        "dynet": 20,
+        "igraph": 20
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_300 t=7",
+      "kind": "triad_300",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "edges t=14",
+      "kind": "edges",
+      "values": {
+        "dynet": 57,
+        "igraph": 57
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "density t=14",
+      "kind": "density",
+      "values": {
+        "dynet": 0.313186813186813,
+        "igraph": 0.313186813186813
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "reciprocity t=14",
+      "kind": "reciprocity",
+      "values": {
+        "dynet": 0.491228070175439,
+        "igraph": 0.491228070175439
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components t=14",
+      "kind": "components",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components_strong t=14",
+      "kind": "components_strong",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "isolates t=14",
+      "kind": "isolates",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mutual t=14",
+      "kind": "mutual",
+      "values": {
+        "dynet": 14,
+        "igraph": 14
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "asymmetric t=14",
+      "kind": "asymmetric",
+      "values": {
+        "dynet": 29,
+        "igraph": 29
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "null t=14",
+      "kind": "null",
+      "values": {
+        "dynet": 48,
+        "igraph": 48
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_distance t=14",
+      "kind": "mean_distance",
+      "values": {
+        "dynet": 1.84023668639053,
+        "igraph": 1.84023668639053
+      },
+      "difference": 2.22044604925031e-16,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "diameter t=14",
+      "kind": "diameter",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_003 t=14",
+      "kind": "triad_003",
+      "values": {
+        "dynet": 46,
+        "igraph": 46
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_012 t=14",
+      "kind": "triad_012",
+      "values": {
+        "dynet": 101,
+        "igraph": 101
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_102 t=14",
+      "kind": "triad_102",
+      "values": {
+        "dynet": 58,
+        "igraph": 58
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021D t=14",
+      "kind": "triad_021D",
+      "values": {
+        "dynet": 15,
+        "igraph": 15
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021U t=14",
+      "kind": "triad_021U",
+      "values": {
+        "dynet": 13,
+        "igraph": 13
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021C t=14",
+      "kind": "triad_021C",
+      "values": {
+        "dynet": 32,
+        "igraph": 32
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111D t=14",
+      "kind": "triad_111D",
+      "values": {
+        "dynet": 24,
+        "igraph": 24
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111U t=14",
+      "kind": "triad_111U",
+      "values": {
+        "dynet": 26,
+        "igraph": 26
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030T t=14",
+      "kind": "triad_030T",
+      "values": {
+        "dynet": 12,
+        "igraph": 12
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030C t=14",
+      "kind": "triad_030C",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_201 t=14",
+      "kind": "triad_201",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120D t=14",
+      "kind": "triad_120D",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120U t=14",
+      "kind": "triad_120U",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120C t=14",
+      "kind": "triad_120C",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_210 t=14",
+      "kind": "triad_210",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_300 t=14",
+      "kind": "triad_300",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "edges t=21",
+      "kind": "edges",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "density t=21",
+      "kind": "density",
+      "values": {
+        "dynet": 0.032967032967033,
+        "igraph": 0.032967032967033
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "reciprocity t=21",
+      "kind": "reciprocity",
+      "values": {
+        "dynet": 0.333333333333333,
+        "igraph": 0.333333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components t=21",
+      "kind": "components",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "components_strong t=21",
+      "kind": "components_strong",
+      "values": {
+        "dynet": 13,
+        "igraph": 13
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "isolates t=21",
+      "kind": "isolates",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mutual t=21",
+      "kind": "mutual",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "asymmetric t=21",
+      "kind": "asymmetric",
+      "values": {
+        "dynet": 4,
+        "igraph": 4
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "null t=21",
+      "kind": "null",
+      "values": {
+        "dynet": 86,
+        "igraph": 86
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "mean_distance t=21",
+      "kind": "mean_distance",
+      "values": {
+        "dynet": 1.25,
+        "igraph": 1.25
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "diameter t=21",
+      "kind": "diameter",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_003 t=21",
+      "kind": "triad_003",
+      "values": {
+        "dynet": 307,
+        "igraph": 307
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_012 t=21",
+      "kind": "triad_012",
+      "values": {
+        "dynet": 43,
+        "igraph": 43
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_102 t=21",
+      "kind": "triad_102",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021D t=21",
+      "kind": "triad_021D",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021U t=21",
+      "kind": "triad_021U",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_021C t=21",
+      "kind": "triad_021C",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111D t=21",
+      "kind": "triad_111D",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_111U t=21",
+      "kind": "triad_111U",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030T t=21",
+      "kind": "triad_030T",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_030C t=21",
+      "kind": "triad_030C",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_201 t=21",
+      "kind": "triad_201",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120D t=21",
+      "kind": "triad_120D",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120U t=21",
+      "kind": "triad_120U",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_120C t=21",
+      "kind": "triad_120C",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_210 t=21",
+      "kind": "triad_210",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "triad_300 t=21",
+      "kind": "triad_300",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    }
+  ]
+}

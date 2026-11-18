@@ -1,0 +1,132 @@
+
+> library(igraph)
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> people <- sort(unique(c(contacts$from, contacts$to)))
+
+> spells <- graph_from_data_frame(data.frame(contacts[c("from", "to")], weight = 1), directed = TRUE,
++                                 vertices = people)
+
+> graph <- simplify(spells, edge.attr.comb = list(weight = "sum"))
+
+> graph
+IGRAPH d481ba0 DNW- 14 110 -- 
++ attr: name (v/c), weight (e/n)
++ edges from d481ba0 (vertex names):
+ [1] Ana ->Cara  Ana ->Dan   Ana ->Gita  Ana ->Iris  Ana ->Jonas Ana ->Kira 
+ [7] Ana ->Leo   Ana ->Mira  Ben ->Eve   Ben ->Finn  Ben ->Gita  Ben ->Hugo 
+[13] Ben ->Iris  Ben ->Jonas Ben ->Kira  Ben ->Nils  Cara->Ana   Cara->Ben  
+[19] Cara->Dan   Cara->Eve   Cara->Finn  Cara->Hugo  Cara->Iris  Cara->Kira 
+[25] Cara->Leo   Cara->Nils  Dan ->Ana   Dan ->Eve   Dan ->Finn  Dan ->Gita 
+[31] Dan ->Hugo  Dan ->Iris  Dan ->Jonas Dan ->Leo   Dan ->Mira  Dan ->Nils 
+[37] Eve ->Ben   Eve ->Cara  Eve ->Hugo  Eve ->Iris  Eve ->Jonas Eve ->Kira 
+[43] Eve ->Nils  Finn->Cara  Finn->Dan   Finn->Eve   Finn->Iris  Finn->Jonas
++ ... omitted several edges
+
+> near <- closeness(graph, mode = "out", normalized = TRUE, weights = NA)
+
+> near[is.nan(near)] <- 0
+
+> nodes <- list(degree = degree(graph, mode = "all"), strength = strength(graph, mode = "all"),
++               betweenness = betweenness(graph, directed = TRUE, weights = NA),
++               coreness = coreness(graph, mode = "all"), closeness = near)
+
+> whole <- c(edges = ecount(graph), density = edge_density(graph), reciprocity = reciprocity(graph),
++            mean_distance = mean_distance(graph, directed = TRUE, unconnected = TRUE, weights = NA),
++            diameter = diameter(graph, directed = TRUE, unconnected = TRUE, weights = NA))
+
+> result <- rbind(
++   do.call(rbind, Map(function(value, measure) {
++     data.frame(quantity = sprintf("%s: %s", measure, people), kind = measure, value = as.numeric(value))
++   }, nodes, names(nodes))),
++   data.frame(quantity = names(whole), kind = "graph", value = unname(whole)))
+
+> result
+                         quantity        kind       value
+degree.1              degree: Ana      degree  16.0000000
+degree.2              degree: Ben      degree  15.0000000
+degree.3             degree: Cara      degree  17.0000000
+degree.4              degree: Dan      degree  18.0000000
+degree.5              degree: Eve      degree  17.0000000
+degree.6             degree: Finn      degree  15.0000000
+degree.7             degree: Gita      degree  13.0000000
+degree.8             degree: Hugo      degree  15.0000000
+degree.9             degree: Iris      degree  15.0000000
+degree.10           degree: Jonas      degree  18.0000000
+degree.11            degree: Kira      degree  17.0000000
+degree.12             degree: Leo      degree  12.0000000
+degree.13            degree: Mira      degree  16.0000000
+degree.14            degree: Nils      degree  16.0000000
+strength.1          strength: Ana    strength  36.0000000
+strength.2          strength: Ben    strength  34.0000000
+strength.3         strength: Cara    strength  35.0000000
+strength.4          strength: Dan    strength  35.0000000
+strength.5          strength: Eve    strength  34.0000000
+strength.6         strength: Finn    strength  29.0000000
+strength.7         strength: Gita    strength  31.0000000
+strength.8         strength: Hugo    strength  34.0000000
+strength.9         strength: Iris    strength  30.0000000
+strength.10       strength: Jonas    strength  46.0000000
+strength.11        strength: Kira    strength  38.0000000
+strength.12         strength: Leo    strength  28.0000000
+strength.13        strength: Mira    strength  36.0000000
+strength.14        strength: Nils    strength  34.0000000
+betweenness.1    betweenness: Ana betweenness   6.6619048
+betweenness.2    betweenness: Ben betweenness   4.1357143
+betweenness.3   betweenness: Cara betweenness   6.1619048
+betweenness.4    betweenness: Dan betweenness   8.8452381
+betweenness.5    betweenness: Eve betweenness   4.6238095
+betweenness.6   betweenness: Finn betweenness   4.0619048
+betweenness.7   betweenness: Gita betweenness   2.3261905
+betweenness.8   betweenness: Hugo betweenness   3.8285714
+betweenness.9   betweenness: Iris betweenness   4.7523810
+betweenness.10 betweenness: Jonas betweenness   6.8547619
+betweenness.11  betweenness: Kira betweenness   5.8714286
+betweenness.12   betweenness: Leo betweenness   2.5023810
+betweenness.13  betweenness: Mira betweenness   5.9023810
+betweenness.14  betweenness: Nils betweenness   5.4714286
+coreness.1          coreness: Ana    coreness  13.0000000
+coreness.2          coreness: Ben    coreness  13.0000000
+coreness.3         coreness: Cara    coreness  13.0000000
+coreness.4          coreness: Dan    coreness  13.0000000
+coreness.5          coreness: Eve    coreness  13.0000000
+coreness.6         coreness: Finn    coreness  13.0000000
+coreness.7         coreness: Gita    coreness  13.0000000
+coreness.8         coreness: Hugo    coreness  13.0000000
+coreness.9         coreness: Iris    coreness  13.0000000
+coreness.10       coreness: Jonas    coreness  13.0000000
+coreness.11        coreness: Kira    coreness  13.0000000
+coreness.12         coreness: Leo    coreness  12.0000000
+coreness.13        coreness: Mira    coreness  13.0000000
+coreness.14        coreness: Nils    coreness  13.0000000
+closeness.1        closeness: Ana   closeness   0.7222222
+closeness.2        closeness: Ben   closeness   0.7222222
+closeness.3       closeness: Cara   closeness   0.8125000
+closeness.4        closeness: Dan   closeness   0.8125000
+closeness.5        closeness: Eve   closeness   0.6842105
+closeness.6       closeness: Finn   closeness   0.7647059
+closeness.7       closeness: Gita   closeness   0.6190476
+closeness.8       closeness: Hugo   closeness   0.6842105
+closeness.9       closeness: Iris   closeness   0.7222222
+closeness.10     closeness: Jonas   closeness   0.7647059
+closeness.11      closeness: Kira   closeness   0.7222222
+closeness.12       closeness: Leo   closeness   0.6500000
+closeness.13      closeness: Mira   closeness   0.7222222
+closeness.14      closeness: Nils   closeness   0.6842105
+1                           edges       graph 110.0000000
+2                         density       graph   0.6043956
+3                     reciprocity       graph   0.7272727
+4                   mean_distance       graph   1.3956044
+5                        diameter       graph   2.0000000

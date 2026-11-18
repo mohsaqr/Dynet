@@ -37,3 +37,4 @@
 ^CRAN-SUBMISSION$
 ^\.agents$
 ^skills-lock\.json$
+^equivalence$

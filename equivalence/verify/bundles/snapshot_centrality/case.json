@@ -1,0 +1,3019 @@
+{
+  "schema": "prova.verification-case/1",
+  "title": "Centrality over time, in tiled seven-unit windows",
+  "description": "Degree, betweenness, closeness and coreness of every pupil in each seven-unit window of the school contacts (0, 7, 14, 21), against igraph on the binary directed snapshot of the same window. Closeness is reachable vertices over summed geodesic distance, which is igraph's normalised out-closeness with an isolate set to zero.",
+  "covers": [
+    "centrality_series()"
+  ],
+  "generator": "Dynet equivalence/verify/export-bundles.R",
+  "created_at": "2026-11-18",
+  "sides": [
+    {
+      "id": "dynet",
+      "name": "Dynet",
+      "version": "0.8.1",
+      "primary": true,
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23"
+    },
+    {
+      "id": "igraph",
+      "name": "igraph",
+      "version": "2.3.4",
+      "authority": "open-source",
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23",
+      "url": "https://cran.r-project.org/package=igraph"
+    }
+  ],
+  "sections": [
+    {
+      "id": "code",
+      "title": "Code",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/script.R",
+          "bytes": 673,
+          "sha256": "c967ba0753f69333a865421ace5e55898fa1d80ebba50216cf6f81b9aee015b3",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/script.R",
+          "bytes": 967,
+          "sha256": "37ddcc692f0b3b1bda0291ddd22ed8c08ed503cb15197685c342b393d48170a3",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Raw output",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/console.txt",
+          "bytes": 1222,
+          "sha256": "5ce2eff6f25c6600bdc58f6d73b19f26d62f853ec548c75361bc27f5e00d38db",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "igraph",
+          "path": "igraph/console.txt",
+          "bytes": 1714,
+          "sha256": "5499ebcb78974263cd8c0659013851d0595c7404d51989af8d92b272b52d008b",
+          "label": "R console",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Data",
+      "items": [
+        {
+          "path": "data/school_contacts.tsv",
+          "bytes": 4888,
+          "sha256": "2c96a182478b20c23d768c0b709f8aab45525c65cf628586a1533603aac05967",
+          "label": "School contacts (spell list)"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "quantity": "degree t=0: Ana",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Ben",
+      "kind": "degree",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Cara",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Dan",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Eve",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Finn",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Gita",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Hugo",
+      "kind": "degree",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Iris",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Jonas",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Kira",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Leo",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Mira",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=0: Nils",
+      "kind": "degree",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Ana",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 7.96785714285714,
+        "igraph": 7.96785714285714
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Ben",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 6.7,
+        "igraph": 6.7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Cara",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 12.475,
+        "igraph": 12.475
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Dan",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 5.50833333333333,
+        "igraph": 5.50833333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Eve",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 18.9833333333333,
+        "igraph": 18.9833333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Finn",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 11.4666666666667,
+        "igraph": 11.4666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Gita",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 7.26190476190476,
+        "igraph": 7.26190476190476
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Hugo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 7.57857142857143,
+        "igraph": 7.57857142857143
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Iris",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 8.51785714285714,
+        "igraph": 8.51785714285714
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Jonas",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 22.7190476190476,
+        "igraph": 22.7190476190476
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Kira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 22.5369047619048,
+        "igraph": 22.5369047619048
+      },
+      "difference": 3.5527136788005e-15,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Leo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 11.2178571428571,
+        "igraph": 11.2178571428571
+      },
+      "difference": 1.77635683940025e-15,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Mira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 9.325,
+        "igraph": 9.325
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=0: Nils",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 3.74166666666667,
+        "igraph": 3.74166666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Ana",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Ben",
+      "kind": "coreness",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Cara",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Dan",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Eve",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Finn",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Gita",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Hugo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Iris",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Jonas",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Kira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Leo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Mira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=0: Nils",
+      "kind": "coreness",
+      "values": {
+        "dynet": 5,
+        "igraph": 5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Ana",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Ben",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Cara",
+      "kind": "degree",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Dan",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Eve",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Finn",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Gita",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Hugo",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Iris",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Jonas",
+      "kind": "degree",
+      "values": {
+        "dynet": 14,
+        "igraph": 14
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Kira",
+      "kind": "degree",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Leo",
+      "kind": "degree",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Mira",
+      "kind": "degree",
+      "values": {
+        "dynet": 11,
+        "igraph": 11
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=7: Nils",
+      "kind": "degree",
+      "values": {
+        "dynet": 13,
+        "igraph": 13
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Ana",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 10.1190476190476,
+        "igraph": 10.1190476190476
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Ben",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 3.25952380952381,
+        "igraph": 3.25952380952381
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Cara",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 21.102380952381,
+        "igraph": 21.102380952381
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Dan",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 2.06904761904762,
+        "igraph": 2.06904761904762
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Eve",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 9.32619047619047,
+        "igraph": 9.32619047619047
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Finn",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 6.9952380952381,
+        "igraph": 6.9952380952381
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Gita",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 3.49285714285714,
+        "igraph": 3.49285714285714
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Hugo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 4.26904761904762,
+        "igraph": 4.26904761904762
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Iris",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 13.8357142857143,
+        "igraph": 13.8357142857143
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Jonas",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 22.6166666666667,
+        "igraph": 22.6166666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Kira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 10.8595238095238,
+        "igraph": 10.8595238095238
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Leo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 1.45,
+        "igraph": 1.45
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Mira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 10.002380952381,
+        "igraph": 10.002380952381
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=7: Nils",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 22.602380952381,
+        "igraph": 22.602380952381
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Ana",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Ben",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Cara",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Dan",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Eve",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Finn",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Gita",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Hugo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Iris",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Jonas",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Kira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Leo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Mira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=7: Nils",
+      "kind": "coreness",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Ana",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Ben",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Cara",
+      "kind": "degree",
+      "values": {
+        "dynet": 9,
+        "igraph": 9
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Dan",
+      "kind": "degree",
+      "values": {
+        "dynet": 12,
+        "igraph": 12
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Eve",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Finn",
+      "kind": "degree",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Gita",
+      "kind": "degree",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Hugo",
+      "kind": "degree",
+      "values": {
+        "dynet": 8,
+        "igraph": 8
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Iris",
+      "kind": "degree",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Jonas",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Kira",
+      "kind": "degree",
+      "values": {
+        "dynet": 7,
+        "igraph": 7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Leo",
+      "kind": "degree",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Mira",
+      "kind": "degree",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=14: Nils",
+      "kind": "degree",
+      "values": {
+        "dynet": 10,
+        "igraph": 10
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Ana",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 17.7,
+        "igraph": 17.7
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Ben",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 5.65,
+        "igraph": 5.65
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Cara",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 18.8166666666667,
+        "igraph": 18.8166666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Dan",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 20.7833333333333,
+        "igraph": 20.7833333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Eve",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 10.3666666666667,
+        "igraph": 10.3666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Finn",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 4.45,
+        "igraph": 4.45
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Gita",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 2.53333333333333,
+        "igraph": 2.53333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Hugo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 11.35,
+        "igraph": 11.35
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Iris",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 7.06666666666667,
+        "igraph": 7.06666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Jonas",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 16.3333333333333,
+        "igraph": 16.3333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Kira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 2.83333333333333,
+        "igraph": 2.83333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Leo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Mira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 2.65,
+        "igraph": 2.65
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=14: Nils",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 21.4666666666667,
+        "igraph": 21.4666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Ana",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Ben",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Cara",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Dan",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Eve",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Finn",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Gita",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Hugo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Iris",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Jonas",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Kira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Leo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Mira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=14: Nils",
+      "kind": "coreness",
+      "values": {
+        "dynet": 6,
+        "igraph": 6
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Ana",
+      "kind": "degree",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Ben",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Cara",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Dan",
+      "kind": "degree",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Eve",
+      "kind": "degree",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Finn",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Gita",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Hugo",
+      "kind": "degree",
+      "values": {
+        "dynet": 3,
+        "igraph": 3
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Iris",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Jonas",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Kira",
+      "kind": "degree",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Leo",
+      "kind": "degree",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Mira",
+      "kind": "degree",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "degree t=21: Nils",
+      "kind": "degree",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Ana",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Ben",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Cara",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Dan",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Eve",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Finn",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Gita",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Hugo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Iris",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Jonas",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Kira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Leo",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Mira",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "betweenness t=21: Nils",
+      "kind": "betweenness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Ana",
+      "kind": "coreness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Ben",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Cara",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Dan",
+      "kind": "coreness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Eve",
+      "kind": "coreness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Finn",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Gita",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Hugo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Iris",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Jonas",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Kira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 2,
+        "igraph": 2
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Leo",
+      "kind": "coreness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Mira",
+      "kind": "coreness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "coreness t=21: Nils",
+      "kind": "coreness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Ana",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.541666666666667,
+        "igraph": 0.541666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Ben",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Cara",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.590909090909091,
+        "igraph": 0.590909090909091
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Dan",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.684210526315789,
+        "igraph": 0.684210526315789
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Eve",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Finn",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.481481481481481,
+        "igraph": 0.481481481481481
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Gita",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.464285714285714,
+        "igraph": 0.464285714285714
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Hugo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.565217391304348,
+        "igraph": 0.565217391304348
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Iris",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.590909090909091,
+        "igraph": 0.590909090909091
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Jonas",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Kira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.590909090909091,
+        "igraph": 0.590909090909091
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Leo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Mira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=0: Nils",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.433333333333333,
+        "igraph": 0.433333333333333
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Ana",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Ben",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Cara",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Dan",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.40625,
+        "igraph": 0.40625
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Eve",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Finn",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.684210526315789,
+        "igraph": 0.684210526315789
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Gita",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.541666666666667,
+        "igraph": 0.541666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Hugo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Iris",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Jonas",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.590909090909091,
+        "igraph": 0.590909090909091
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Kira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.565217391304348,
+        "igraph": 0.565217391304348
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Leo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.5,
+        "igraph": 0.5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Mira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=7: Nils",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.684210526315789,
+        "igraph": 0.684210526315789
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Ana",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.541666666666667,
+        "igraph": 0.541666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Ben",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.464285714285714,
+        "igraph": 0.464285714285714
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Cara",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.65,
+        "igraph": 0.65
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Dan",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Eve",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.5,
+        "igraph": 0.5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Finn",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.565217391304348,
+        "igraph": 0.565217391304348
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Gita",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.52,
+        "igraph": 0.52
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Hugo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.5,
+        "igraph": 0.5
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Iris",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.565217391304348,
+        "igraph": 0.565217391304348
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Jonas",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.65,
+        "igraph": 0.65
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Kira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.481481481481481,
+        "igraph": 0.481481481481481
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Leo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Mira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.481481481481481,
+        "igraph": 0.481481481481481
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=14: Nils",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.619047619047619,
+        "igraph": 0.619047619047619
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Ana",
+      "kind": "closeness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Ben",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Cara",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Dan",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.75,
+        "igraph": 0.75
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Eve",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0.666666666666667,
+        "igraph": 0.666666666666667
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Finn",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Gita",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Hugo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Iris",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Jonas",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Kira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 1,
+        "igraph": 1
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Leo",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Mira",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "closeness t=21: Nils",
+      "kind": "closeness",
+      "values": {
+        "dynet": 0,
+        "igraph": 0
+      },
+      "difference": 0,
+      "measure": "absolute",
+      "tolerance": 1e-10,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    }
+  ]
+}

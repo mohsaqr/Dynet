@@ -1,0 +1,205 @@
+{
+  "schema": "prova.verification-case/1",
+  "title": "Temporal density, whole period and tiled windows",
+  "description": "The share of ordered-pair time during which a tie is up, overlapping spells of one pair counted once, over the whole observed period and in each seven-unit window, the last cut where the data end (21.52). Dynet against the change-point integral written out in base R and against the values tsna::tEdgeDensity(agg.unit = \"dyad\") gave on 2026-11-01, which the package's test suite pins as literals. tsna is not installed on this machine, so its side is retained, not rerun.",
+  "covers": [
+    "metrics()"
+  ],
+  "generator": "Dynet equivalence/verify/export-bundles.R",
+  "created_at": "2026-11-18",
+  "sides": [
+    {
+      "id": "dynet",
+      "name": "Dynet",
+      "version": "0.8.1",
+      "primary": true,
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23"
+    },
+    {
+      "id": "base-r",
+      "name": "base R, from the definition",
+      "version": "4.6.2",
+      "authority": "independent",
+      "source": "live",
+      "run_at": "2026-11-18",
+      "platform": "R version 4.6.2 (2026-10-29), aarch64-apple-darwin23",
+      "role": "definition-level oracle"
+    },
+    {
+      "id": "tsna",
+      "name": "tsna",
+      "version": "0.3.6",
+      "authority": "open-source",
+      "source": "retained",
+      "run_at": "2026-11-01",
+      "command": "tsna::tEdgeDensity(nd, agg.unit = \"dyad\")",
+      "url": "https://cran.r-project.org/package=tsna",
+      "role": "values pinned in tests/testthat/test-temporal-density-span-contract.R"
+    }
+  ],
+  "sections": [
+    {
+      "id": "code",
+      "title": "Code",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/script.R",
+          "bytes": 479,
+          "sha256": "39ef37c4d6b396e2fc65013bdabf6471d2bae1d8d4594794c2da76b0bc95af51",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "base-r",
+          "path": "base-r/script.R",
+          "bytes": 1222,
+          "sha256": "d5ff19b18ef71c6e7796b1f14a85ca2c2dca86d4bbf0e0a1b3273ea7580e8d3e",
+          "label": "Script",
+          "type": "code",
+          "language": "r",
+          "run": {
+            "engine": "r",
+            "result": "result",
+            "reads": [
+              "data/school_contacts.tsv"
+            ]
+          }
+        },
+        {
+          "side": "tsna",
+          "path": "tsna/pinned-test.R",
+          "bytes": 1012,
+          "sha256": "04e2c8e2a8e64cb3a5bd2218006938b20497907c068d0951d9e88a5e6a5fefc0",
+          "type": "code",
+          "language": "r",
+          "label": "The package test that pins tsna's values, with how they were produced"
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Raw output",
+      "items": [
+        {
+          "side": "dynet",
+          "path": "dynet/console.txt",
+          "bytes": 881,
+          "sha256": "4df9cd23515959710ce403f283229c035dc4620a7b4a42b89fb46b92771b17f6",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "base-r",
+          "path": "base-r/console.txt",
+          "bytes": 1693,
+          "sha256": "531967b2451ea4736fc781bb4b5d39e7982c52d82b8a191735bf7192f33b6a27",
+          "label": "R console",
+          "type": "text"
+        },
+        {
+          "side": "tsna",
+          "path": "tsna/values.tsv",
+          "bytes": 310,
+          "sha256": "0fc650b13af74ab51370365d439fb110e23f7ef3d3c98b007a6d417962436d48",
+          "type": "table",
+          "label": "Retained values (tsna 0.3.6, 2026-11-01)"
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Data",
+      "items": [
+        {
+          "path": "data/school_contacts.tsv",
+          "bytes": 4888,
+          "sha256": "2c96a182478b20c23d768c0b709f8aab45525c65cf628586a1533603aac05967",
+          "label": "School contacts (spell list)"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "quantity": "temporal_density whole period",
+      "kind": "temporal_density",
+      "values": {
+        "dynet": 0.0285448751991503,
+        "base-r": 0.0285448751991503,
+        "tsna": 0.02854487519915
+      },
+      "difference": 3.15719672627779e-16,
+      "measure": "absolute",
+      "tolerance": 1e-12,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "temporal_density t=0",
+      "kind": "temporal_density",
+      "values": {
+        "dynet": 0.0242857142857143,
+        "base-r": 0.0242857142857143,
+        "tsna": 0.024285714285714
+      },
+      "difference": 3.01841884819964e-16,
+      "measure": "absolute",
+      "tolerance": 1e-12,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "temporal_density t=7",
+      "kind": "temporal_density",
+      "values": {
+        "dynet": 0.0386028257456829,
+        "base-r": 0.0386028257456829,
+        "tsna": 0.038602825745683
+      },
+      "difference": 1.38777878078145e-16,
+      "measure": "absolute",
+      "tolerance": 1e-12,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "temporal_density t=14",
+      "kind": "temporal_density",
+      "values": {
+        "dynet": 0.0235243328100471,
+        "base-r": 0.0235243328100471,
+        "tsna": 0.023524332810047
+      },
+      "difference": 1.04083408558608e-16,
+      "measure": "absolute",
+      "tolerance": 1e-12,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    },
+    {
+      "quantity": "temporal_density t=21",
+      "kind": "temporal_density",
+      "values": {
+        "dynet": 0.0180684699915469,
+        "base-r": 0.0180684699915469,
+        "tsna": 0.018068469991547
+      },
+      "difference": 1.00613961606655e-16,
+      "measure": "absolute",
+      "tolerance": 1e-12,
+      "rule": "largest difference between any two sides",
+      "status": "agree"
+    }
+  ]
+}

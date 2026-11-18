@@ -1,0 +1,55 @@
+
+> library(igraph)
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> people <- sort(unique(c(contacts$from, contacts$to)))
+
+> snapshot <- function(lo, hi) {
++   active <- contacts[contacts$start < hi & contacts$end > lo, c("from", "to")]
++   simplify(graph_from_data_frame(active, directed = TRUE, vertices = people))
++ }
+
+> long <- function(time, measure, name, value) {
++   data.frame(quantity = sprintf("%s t=%g: %s", measure, time, name), kind = measure, value = as.numeric(value))
++ }
+
+> one_window <- function(lo) {
++   graph <- snapshot(lo, lo + 7)
++   near <- closeness(graph, mode = "out", normalized = TRUE)
++   near[is.nan(near)] <- 0
++   rbind(long(lo, "degree", people, degree(graph, mode = "all")),
++         long(lo, "betweenness", people, betweenness(graph, directed = TRUE)),
++         long(lo, "closeness", people, near),
++         long(lo, "coreness", people, coreness(graph, mode = "all")))
++ }
+
+> result <- do.call(rbind, lapply(c(0, 7, 14, 21), one_window))
+
+> head(result, 14)
+            quantity   kind value
+1    degree t=0: Ana degree     9
+2    degree t=0: Ben degree     6
+3   degree t=0: Cara degree     9
+4    degree t=0: Dan degree     8
+5    degree t=0: Eve degree     9
+6   degree t=0: Finn degree     9
+7   degree t=0: Gita degree    10
+8   degree t=0: Hugo degree     7
+9   degree t=0: Iris degree     9
+10 degree t=0: Jonas degree    10
+11  degree t=0: Kira degree    10
+12   degree t=0: Leo degree     9
+13  degree t=0: Mira degree     8
+14  degree t=0: Nils degree     5

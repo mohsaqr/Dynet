@@ -1,0 +1,49 @@
+
+> library(igraph)
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> people <- sort(unique(c(contacts$from, contacts$to)))
+
+> snapshot <- function(lo, hi) {
++   active <- contacts[contacts$start < hi & contacts$end > lo, c("from", "to")]
++   simplify(graph_from_data_frame(active, directed = TRUE, vertices = people))
++ }
+
+> long <- function(time, measure, name, value) {
++   data.frame(quantity = sprintf("%s t=%g: %s", measure, time, name), kind = measure, value = as.numeric(value))
++ }
+
+> one_window <- function(lo) {
++   long(lo, "pagerank", people, page_rank(snapshot(lo, lo + 7), directed = TRUE, damping = 0.85)$vector)
++ }
+
+> result <- do.call(rbind, lapply(c(0, 7, 14, 21), one_window))
+
+> head(result, 14)
+              quantity     kind      value
+1    pagerank t=0: Ana pagerank 0.07617444
+2    pagerank t=0: Ben pagerank 0.05970498
+3   pagerank t=0: Cara pagerank 0.06486674
+4    pagerank t=0: Dan pagerank 0.03246718
+5    pagerank t=0: Eve pagerank 0.09854055
+6   pagerank t=0: Finn pagerank 0.07678643
+7   pagerank t=0: Gita pagerank 0.10544692
+8   pagerank t=0: Hugo pagerank 0.04469955
+9   pagerank t=0: Iris pagerank 0.05966934
+10 pagerank t=0: Jonas pagerank 0.10236656
+11  pagerank t=0: Kira pagerank 0.10076942
+12   pagerank t=0: Leo pagerank 0.04281488
+13  pagerank t=0: Mira pagerank 0.08459632
+14  pagerank t=0: Nils pagerank 0.05109671

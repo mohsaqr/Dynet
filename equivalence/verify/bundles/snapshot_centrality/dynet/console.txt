@@ -1,0 +1,34 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> series <- centrality_series(network, measure = c("degree", "betweenness", "closeness", "coreness"),
++                             mode = "all", step = 7, window = 7)
+
+> series
+# Centrality (node-level)
+# 14 vertices | 4 time points, 7 per bin | time in step
+# measures: degree, betweenness, closeness, coreness
+ time  node measure value
+    0   Ana  degree     9
+    0   Ben  degree     6
+    0  Cara  degree     9
+    0   Dan  degree     8
+    0   Eve  degree     9
+    0  Finn  degree     9
+    0  Gita  degree    10
+    0  Hugo  degree     7
+    0  Iris  degree     9
+    0 Jonas  degree    10
+    0  Kira  degree    10
+    0   Leo  degree     9
+# 212 more rows. summary() aggregates them; plot() draws them.
+
+> out_closeness <- centrality_series(network, measure = "closeness", mode = "out", step = 7, window = 7)
+
+> result <- rbind(
++   transform(subset(as.data.frame(series), measure != "closeness"),
++             quantity = sprintf("%s t=%g: %s", measure, time, node), kind = measure),
++   transform(as.data.frame(out_closeness),
++             quantity = sprintf("%s t=%g: %s", measure, time, node), kind = measure))

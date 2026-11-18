@@ -1,0 +1,45 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> rhythm <- burstiness(network, measure = c("events", "mean_gap", "burstiness", "memory"))
+
+> rhythm
+# Burstiness (node-level)
+# 14 vertices | time in step
+# measures: events, mean_gap, burstiness, memory
+# 1 is the bursty limit, 0 is the Poisson reference, -1 is regular
+  node measure value
+   Ana  events    36
+   Ben  events    34
+  Cara  events    35
+   Dan  events    35
+   Eve  events    34
+  Finn  events    29
+  Gita  events    31
+  Hugo  events    34
+  Iris  events    30
+ Jonas  events    46
+  Kira  events    38
+   Leo  events    28
+# 44 more rows. summary() aggregates them; plot() draws them.
+
+> summary(gaps(network))
+    node measure  n      mean        sd  min  max peak_time
+1    Ana     gap 35 0.5945714 0.9963620 0.01 5.53     19.54
+2    Ben     gap 33 0.6109091 0.6625725 0.02 2.76      3.09
+3   Cara     gap 34 0.5785294 0.5248326 0.01 2.48      4.55
+4    Dan     gap 34 0.6161765 0.5651764 0.00 2.03      2.03
+5    Eve     gap 33 0.6163636 0.7530306 0.01 3.70     18.66
+6   Finn     gap 28 0.6850000 0.7398073 0.01 3.04     20.01
+7   Gita     gap 30 0.6556667 0.7535831 0.02 2.45     16.61
+8   Hugo     gap 33 0.6200000 0.7677483 0.03 2.67      5.58
+9   Iris     gap 29 0.6510345 0.5879282 0.00 2.41     18.66
+10 Jonas     gap 45 0.4553333 0.4358252 0.02 2.01     18.62
+11  Kira     gap 37 0.5556757 0.4891577 0.01 2.03      8.35
+12   Leo     gap 27 0.7474074 0.7462604 0.00 2.95     18.36
+13  Mira     gap 35 0.5794286 0.7180732 0.01 3.08      4.31
+14  Nils     gap 33 0.5639394 0.6778364 0.00 2.28      4.53
+
+> result <- transform(as.data.frame(rhythm), quantity = sprintf("%s: %s", measure, node), kind = measure)

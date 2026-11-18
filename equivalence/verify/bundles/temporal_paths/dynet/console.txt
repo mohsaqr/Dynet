@@ -1,0 +1,79 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> journeys <- paths(network, from = "Ana")
+
+> journeys
+# Time-respecting paths from ‘Ana’, from t = 0
+# reaches 13 of 13 other vertices | time in step
+  node reachable arrival_time attained latency n_hops n_paths
+   Ana      TRUE         0.00     TRUE    0.00      0       1
+   Ben      TRUE         9.59     TRUE    9.59      3       3
+  Cara      TRUE         6.67     TRUE    6.67      1       1
+   Dan      TRUE         7.98     TRUE    7.98      4       1
+   Eve      TRUE        11.66     TRUE   11.66      4       3
+  Finn      TRUE         6.96     TRUE    6.96      2       1
+  Gita      TRUE         6.36     TRUE    6.36      2       1
+  Hugo      TRUE         7.98     TRUE    7.98      3       1
+  Iris      TRUE        10.00     TRUE   10.00      3       1
+ Jonas      TRUE         2.12     TRUE    2.12      1       1
+  Kira      TRUE         6.12     TRUE    6.12      2       2
+   Leo      TRUE         9.65     TRUE    9.65      3       1
+# 2 more rows. summary() aggregates them; plot() draws the tree.
+
+> reach <- reachability(network, direction = "both", start = 18, measure = "reach_count")
+
+> reach
+# Reachability (node-level)
+# 14 vertices | time in step
+# measures: forward_reach_count, backward_reach_count
+# number of other vertices joined by a time-respecting path
+  node             measure value
+   Ana forward_reach_count     5
+   Ben forward_reach_count     0
+  Cara forward_reach_count     5
+   Dan forward_reach_count     7
+   Eve forward_reach_count     3
+  Finn forward_reach_count     7
+  Gita forward_reach_count     1
+  Hugo forward_reach_count     7
+  Iris forward_reach_count     4
+ Jonas forward_reach_count     7
+  Kira forward_reach_count     2
+   Leo forward_reach_count     0
+# 16 more rows. summary() aggregates them; plot() draws them.
+
+> closeness <- path_centrality(network, measure = "closeness", start = 18)
+
+> closeness
+# Closeness (node-level)
+# 14 vertices | time in step
+# computed on time-respecting paths within the requested traversal window
+  node   measure     value
+   Ana closeness 0.4156276
+   Ben closeness 0.0000000
+  Cara closeness 0.5506608
+   Dan closeness 0.5299016
+   Eve closeness 0.3906250
+  Finn closeness 0.5838198
+  Gita closeness 0.5524862
+  Hugo closeness 0.4507405
+  Iris closeness 0.5532503
+ Jonas closeness 0.4827586
+  Kira closeness 0.6535948
+   Leo closeness 0.0000000
+# 2 more rows. summary() aggregates them; plot() draws them.
+
+> arrivals <- as.data.frame(journeys)
+
+> result <- rbind(
++   subset(transform(arrivals, quantity = sprintf("arrival_time from Ana: %s", node), kind = "arrival_time",
++                    value = arrival_time), select = c(quantity, kind, value)),
++   subset(transform(arrivals, quantity = sprintf("latency from Ana: %s", node), kind = "latency",
++                    value = latency), select = c(quantity, kind, value)),
++   subset(transform(as.data.frame(reach), quantity = sprintf("%s from t=18: %s", measure, node), kind = measure),
++          select = c(quantity, kind, value)),
++   subset(transform(as.data.frame(closeness), quantity = sprintf("temporal closeness from t=18: %s", node),
++                    kind = "temporal_closeness"), select = c(quantity, kind, value)))

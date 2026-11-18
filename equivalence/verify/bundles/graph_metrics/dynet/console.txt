@@ -1,0 +1,29 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> series <- metrics(network, measure = c("edges", "density", "reciprocity", "components", "components_strong",
++                                        "isolates", "mutual", "asymmetric", "null", "mean_distance",
++                                        "diameter", "triads"), step = 7, window = 7)
+
+> series
+# Graph structure (graph-level)
+# 4 time points, 7 per bin | time in step
+# measures: edges, density, reciprocity, components, components_strong, isolates, mutual, asymmetric, null, mean_distance, diameter, triad_003, triad_012, triad_102, triad_021D, triad_021U, triad_021C, triad_111D, triad_111U, triad_030T, triad_030C, triad_201, triad_120D, triad_120U, triad_120C, triad_210, triad_300
+ time           measure      value
+    0             edges 59.0000000
+    0           density  0.3241758
+    0       reciprocity  0.3728814
+    0        components  1.0000000
+    0 components_strong  1.0000000
+    0          isolates  0.0000000
+    0            mutual 11.0000000
+    0        asymmetric 37.0000000
+    0              null 43.0000000
+    0     mean_distance  1.8571429
+    0          diameter  3.0000000
+    0         triad_003 33.0000000
+# 96 more rows. summary() aggregates them; plot() draws them.
+
+> result <- transform(as.data.frame(series), quantity = sprintf("%s t=%g", measure, time), kind = measure)

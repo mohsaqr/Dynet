@@ -1,0 +1,27 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> series <- centrality_series(network, measure = "pagerank", damping = 0.85, step = 7, window = 7)
+
+> series
+# PageRank (node-level)
+# 14 vertices | 4 time points, 7 per bin | time in step
+ time  node  measure      value
+    0   Ana pagerank 0.07617444
+    0   Ben pagerank 0.05970498
+    0  Cara pagerank 0.06486674
+    0   Dan pagerank 0.03246718
+    0   Eve pagerank 0.09854055
+    0  Finn pagerank 0.07678643
+    0  Gita pagerank 0.10544692
+    0  Hugo pagerank 0.04469955
+    0  Iris pagerank 0.05966934
+    0 Jonas pagerank 0.10236656
+    0  Kira pagerank 0.10076942
+    0   Leo pagerank 0.04281488
+# 44 more rows. summary() aggregates them; plot() draws them.
+
+> result <- transform(as.data.frame(series), quantity = sprintf("%s t=%g: %s", measure, time, node),
++                     kind = measure)

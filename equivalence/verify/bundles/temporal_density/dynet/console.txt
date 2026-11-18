@@ -1,0 +1,27 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> whole <- metrics(network, measure = "temporal_density", window = "all")
+
+> whole
+# Temporal density (graph-level)
+# 1 time points, 21.52 per bin | time in step
+ time          measure      value
+    0 temporal_density 0.02854488
+
+> tiled <- metrics(network, measure = "temporal_density", step = 7, window = 7)
+
+> tiled
+# Temporal density (graph-level)
+# 4 time points, 7 per bin | time in step
+ time          measure      value
+    0 temporal_density 0.02428571
+    7 temporal_density 0.03860283
+   14 temporal_density 0.02352433
+   21 temporal_density 0.01806847
+
+> result <- rbind(
++   transform(as.data.frame(whole), quantity = "temporal_density whole period", kind = measure),
++   transform(as.data.frame(tiled), quantity = sprintf("temporal_density t=%g", time), kind = measure))

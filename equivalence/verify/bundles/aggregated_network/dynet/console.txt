@@ -1,0 +1,65 @@
+
+> contacts <- utils::read.delim("../data/school_contacts.tsv")
+
+> network <- dynet(contacts)
+
+> nodes <- centrality_series(network, measure = c("degree", "strength", "betweenness", "coreness"),
++                            mode = "all", window = "all")
+
+> nodes
+# Centrality (node-level)
+# 14 vertices | 1 time points, 21.52 per bin | time in step
+# measures: degree, strength, betweenness, coreness
+ time  node measure value
+    0   Ana  degree    16
+    0   Ben  degree    15
+    0  Cara  degree    17
+    0   Dan  degree    18
+    0   Eve  degree    17
+    0  Finn  degree    15
+    0  Gita  degree    13
+    0  Hugo  degree    15
+    0  Iris  degree    15
+    0 Jonas  degree    18
+    0  Kira  degree    17
+    0   Leo  degree    12
+# 44 more rows. summary() aggregates them; plot() draws them.
+
+> near <- centrality_series(network, measure = "closeness", mode = "out", window = "all")
+
+> near
+# Closeness (node-level)
+# 14 vertices | 1 time points, 21.52 per bin | mode out | time in step
+ time  node   measure     value
+    0   Ana closeness 0.7222222
+    0   Ben closeness 0.7222222
+    0  Cara closeness 0.8125000
+    0   Dan closeness 0.8125000
+    0   Eve closeness 0.6842105
+    0  Finn closeness 0.7647059
+    0  Gita closeness 0.6190476
+    0  Hugo closeness 0.6842105
+    0  Iris closeness 0.7222222
+    0 Jonas closeness 0.7647059
+    0  Kira closeness 0.7222222
+    0   Leo closeness 0.6500000
+# 2 more rows. summary() aggregates them; plot() draws them.
+
+> graph <- metrics(network, measure = c("edges", "density", "reciprocity", "mean_distance", "diameter"),
++                  window = "all")
+
+> graph
+# Graph structure (graph-level)
+# 1 time points, 21.52 per bin | time in step
+# measures: edges, density, reciprocity, mean_distance, diameter
+ time       measure       value
+    0         edges 110.0000000
+    0       density   0.6043956
+    0   reciprocity   0.7272727
+    0 mean_distance   1.3956044
+    0      diameter   2.0000000
+
+> result <- rbind(
++   transform(as.data.frame(nodes), quantity = sprintf("%s: %s", measure, node), kind = measure, node = NULL),
++   transform(as.data.frame(near), quantity = sprintf("%s: %s", measure, node), kind = measure, node = NULL),
++   transform(as.data.frame(graph), quantity = measure, kind = "graph"))
