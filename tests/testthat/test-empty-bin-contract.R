@@ -73,26 +73,6 @@ test_that("segregation scores the empty bin zero and matches teneto at C = 2", {
                tolerance = 1e-12)
 })
 
-test_that("similarity agrees with sna::gcor and sna::hdist on the pair domain", {
-  skip_if_not_installed("sna")
-  dn <- empty_bin_network()
-  layers <- lapply(c(0, 1), function(t) {
-    m <- matrix(0, 6, 6, dimnames = list(LETTERS[1:6], LETTERS[1:6]))
-    snap <- as.data.frame(snapshots(dn, at = t + 0.5, step = 1, window = 1))
-    m[cbind(snap$from, snap$to)] <- 1
-    pmax(m, t(m))
-  })
-  grid <- list(start = 0, end = 1, step = 1, window = 1)
-  pearson <- as.data.frame(do.call(similarity,
-                                   c(list(dn, method = "pearson"), grid)))
-  hamming <- as.data.frame(do.call(similarity,
-                                   c(list(dn, method = "hamming"), grid)))
-  expect_equal(pearson$value[[2L]],
-               sna::gcor(layers, mode = "graph")[1L, 2L], tolerance = 1e-12)
-  expect_equal(hamming$value[[2L]],
-               sna::hdist(layers, mode = "graph")[1L, 2L])
-})
-
 # ---------------------------------------------------------------- contract
 
 test_that("similarity has one row per ordered pair of grid bins", {

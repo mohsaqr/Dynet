@@ -1,5 +1,6 @@
 # Participation shifts against a hand-classified turn sequence, and the
-# vectorised time projection against tsna. Audit 2026-11-01.
+# vectorised time projection (its comparison with tsna is in tests/equivalence).
+# Audit 2026-11-01.
 
 gibson_turns <- function() {
   # One turn per row; a speaker naming two recipients at one instant is a
@@ -50,29 +51,6 @@ test_that("an inclusive query limit is tolerant of float arithmetic", {
   census <- as.data.frame(pshifts(dn, start = 0.1, end = 0.3))
   # Three turns, two transitions: AB-BA then AB-BA.
   expect_identical(sum(census$value), 2L)
-})
-
-test_that("the projection's arcs equal tsna::timeProjectedNetwork()'s", {
-  skip_if_not_installed("tsna")
-  skip_if_not_installed("networkDynamic")
-  e <- data.frame(from = c("A", "B", "C", "A"), to = c("B", "C", "A", "B"),
-                  start = c(0, 1, 2, 2.5), end = c(1, 2, 3, 3))
-  dn <- quiet_dynet(e, directed = TRUE, observation_start = 0,
-                    observation_end = 3)
-  projected <- projection(dn, start = 0, end = 2, step = 1, window = 1)
-  arcs <- as.data.frame(projected, what = "edges")
-  nd <- suppressMessages(networkDynamic::networkDynamic(
-    edge.spells = data.frame(onset = e$start, terminus = e$end,
-                             tail = match(e$from, LETTERS),
-                             head = match(e$to, LETTERS)),
-    vertex.spells = data.frame(onset = 0, terminus = 3, vertex.id = 1:3),
-    verbose = FALSE
-  ))
-  oracle <- network::as.edgelist(
-    tsna::timeProjectedNetwork(nd, start = 0, end = 3, time.increment = 1)
-  )
-  expect_setequal(paste(arcs$from_state, arcs$to_state),
-                  paste(oracle[, 1L], oracle[, 2L]))
 })
 
 test_that("categorical coupling joins every slice pair, ordinal the next", {

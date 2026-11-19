@@ -1,3 +1,13 @@
+# Dynet 0.8.2
+
+* No change to the package. Every comparison with a reference package or an
+  independent computation is now a declared equivalence test in
+  `tests/equivalence/` (excluded from the build): 17 files, 10,246 compared
+  numbers against igraph, tsna, sna, networkDynamic, networkx, ergm, aricode,
+  scikit-learn, clue, cluster and computations written from the definitions,
+  each covering named exported functions. The comparisons that lived in
+  `tests/testthat` moved there; the contract tests stay.
+
 # Dynet 0.8.1
 
 A whole-package audit: every exported verb and every S3 method was run

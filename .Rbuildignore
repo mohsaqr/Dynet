@@ -37,3 +37,6 @@
 ^CRAN-SUBMISSION$
 ^\.agents$
 ^skills-lock\.json$
+^tests/equivalence$
+^\.ci$
+^\.mini-ci$

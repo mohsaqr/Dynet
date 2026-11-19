@@ -1,49 +1,8 @@
-# collapse_network() against networkDynamic::network.collapse(), and the
-# boundary tolerance of its clipping. Audit 2026-11-01.
-
-nd_collapse_counts <- function(e, onset, terminus) {
-  verts <- sort(unique(c(e$from, e$to)))
-  nd <- suppressMessages(networkDynamic::networkDynamic(
-    edge.spells = data.frame(onset = e$start, terminus = e$end,
-                             tail = match(e$from, verts),
-                             head = match(e$to, verts)),
-    vertex.spells = data.frame(onset = -100, terminus = 100,
-                               vertex.id = seq_along(verts)),
-    verbose = FALSE
-  ))
-  flat <- networkDynamic::network.collapse(nd, onset = onset,
-                                           terminus = terminus,
-                                           rm.time.info = FALSE)
-  c(count = network::get.edge.attribute(flat, "activity.count"),
-    duration = network::get.edge.attribute(flat, "activity.duration"))
-}
+# collapse_network(): its edge set over a window and the boundary tolerance of
+# its clipping. Audit 2026-11-01. The comparison with
+# networkDynamic::network.collapse() is in tests/equivalence.
 
 # ---------------------------------------------------------------- oracle
-
-test_that("activity.count and activity.duration match network.collapse()", {
-  skip_if_not_installed("networkDynamic")
-  # Overlap, abutment, a gap, nesting, and a point outside every spell: the
-  # five ways networkDynamic merges or keeps spells apart.
-  cases <- list(
-    overlap = data.frame(from = "A", to = "B", start = c(0, 1), end = c(2, 3)),
-    abut = data.frame(from = "A", to = "B", start = c(0, 2), end = c(2, 3)),
-    gap = data.frame(from = "A", to = "B", start = c(0, 2.5), end = c(2, 3)),
-    nested = data.frame(from = "A", to = "B", start = c(0, 1, 4),
-                        end = c(5, 2, 6)),
-    point = data.frame(from = "A", to = "B", start = c(0, 3), end = c(2, 3))
-  )
-  invisible(lapply(cases, function(e) {
-    dn <- quiet_dynet(e, directed = TRUE)
-    flat <- collapse_network(dn, start = 0, end = 10)
-    mine <- as.data.frame(flat)
-    oracle <- nd_collapse_counts(e, 0, 10)
-    expect_identical(mine$activity.count, as.integer(oracle[["count"]]))
-    expect_equal(mine$activity.duration, oracle[["duration"]],
-                 tolerance = 1e-12)
-    # spell_count stays the raw count, whatever networkDynamic merges.
-    expect_identical(mine$spell_count, nrow(e))
-  }))
-})
 
 test_that("the collapsed edge set equals network.collapse() over a window", {
   skip_if_not_installed("networkDynamic")

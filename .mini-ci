@@ -1,0 +1,25 @@
+# How Dynet is tested on the Mac mini (ci VM). Run in the repo: mini-ci [job]
+#   job NAME COMMAND (first = default) · env KEY=VALUE · sibling ../DIR · include PATH
+#   fetch PATH · report cvs · node mac|X.Y.Z|system (mac = the same Node version as this Mac)
+node system
+
+# R package: dependencies (incl. Suggests) come from DESCRIPTION. A local package this one
+# needs unreleased goes in as: sibling ../DIR
+job test   Rscript -e 'testthat::test_local(stop_on_failure = TRUE)'
+job check  Rscript -e 'r <- rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "never"); print(r); if (r$status != 0 || length(r$errors) || length(r$warnings)) quit(status = 1)'
+
+# Prova Verify: capture of the equivalence scripts and tests, run as
+#   mini-ci -- Rscript ../equivalence/dynet/import-tests.R capture [file-regex]
+# (the scripts are the copy kept in ../equivalence/dynet/local; the driver copies it into the package root)
+include ../equivalence/dynet/local
+include ../equivalence/dynet/import-tests.R
+include ../equivalence/dynet/run-local-scripts.R
+include ../equivalence/import-tests-common.R
+include ../prova/reporters/verify-capture.R
+fetch .ci/verify-capture
+
+# The declared equivalence tests (tests/equivalence, the standard: ../equivalence/STANDARD.md): every
+# comparison with a reference, recorded in .ci/verify-capture/capture.json. Then, on the Mac:
+#   sh ../equivalence/push.sh dynet
+# ~/equiv-py/bin is put on the PATH for the tests that run python3 (networkx).
+job verify PATH="$HOME/equiv-py/bin:$PATH" Rscript -e 'source("tests/equivalence/helper-verify.R"); verify_tests(lib = "~/equiv-lib")'

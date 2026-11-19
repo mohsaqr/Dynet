@@ -38,23 +38,6 @@ test_that("a negative traversal time is still dynet_bad_input", {
                class = "dynet_bad_input")
 })
 
-test_that("closeness centralisation is sna's rescaled by the two maxima", {
-  # sna::centralization(a, sna::closeness) on the whole-period union of
-  # school_contacts, produced 2026-11-01 with sna 2.8: 0.106681485009658
-  # (digraph) and 0.117613017429194 (graph). Both snapshots are connected.
-  # Dynet's maximum is n - 1 (directed) or n - 2 (undirected) against sna's
-  # (n - 1)^2 / n and (n - 1)(n - 2) / (2n - 3), so with n = 14 the ratios
-  # are 13/14 and 13/25.
-  directed <- quiet_dynet(school_contacts)
-  undirected <- quiet_dynet(school_contacts, directed = FALSE)
-  d <- as.data.frame(metrics(directed, "centralization_closeness",
-                             window = "all"))
-  u <- as.data.frame(metrics(undirected, "centralization_closeness",
-                             window = "all"))
-  expect_equal(d$value, 0.106681485009658 * 13 / 14, tolerance = 1e-12)
-  expect_equal(u$value, 0.117613017429194 * 13 / 25, tolerance = 1e-12)
-})
-
 test_that("closeness centralisation stays in [0, 1] on every bin", {
   dn <- quiet_dynet(random_edges(seed = 8L))
   got <- as.data.frame(metrics(dn, "centralization_closeness", step = 2))
