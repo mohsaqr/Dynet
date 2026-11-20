@@ -1,4 +1,4 @@
-# prova-verify-helper 1.2.0 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
+# prova-verify-helper 1.3.0 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
 #
 # Declared equivalence tests for Prova Verify (the standard: equivalence/STANDARD.md).
 # Every comparison of a package with a reference goes through one verb that ASSERTS
@@ -7,11 +7,12 @@
 #   expect_reference(actual, expected, reference, covers, quantity, tolerance)
 #   expect_reference(..., defect = "<what is wrong>")   a declared defect: recorded as a disagreement, job stays green
 #   expect_known_difference(..., reason, agrees_with)   recorded, does not fail the test
+#   expect_defect_error(expr, defect, covers, quantity)   a declared defect that raises an error
 #   expect_differs(...)                      a negative control: must differ
 #   expect_not_comparable(..., reason)       not defined on this input: recorded, not judged
-#   skip_without_reference(package)          a recorded skip
-#   reference_fixture(path)                  a stored reference, with provenance
-#   reference_data(path)                     an input data file of the test
+#   skip_without_reference(package, python)  a recorded skip (an R package or a Python module)
+#   reference_fixture(path, redistributable) a stored reference, with provenance
+#   reference_data(path, redistributable)    an input data file of the test
 #   verify_exports_check()                   verify.json against NAMESPACE
 #   verify_tests()                             runs tests/equivalence, writes the capture
 #   verify_rerun(file, reference)           one side's values (the re-run in Prova)
@@ -25,7 +26,7 @@
 #' Version of this helper
 #'
 #' @return A length-one character vector, the version on the file's first line.
-verify_helper_version <- function() "1.2.0"
+verify_helper_version <- function() "1.3.0"
 
 .vx_kinds <- c("reference", "known_difference", "differs", "not_comparable")
 .vx_measures <- c("absolute", "relative", "scaled")
@@ -34,6 +35,49 @@ verify_helper_version <- function() "1.2.0"
 .vx_provenance <- c("program", "version", "generated_by", "generated_at", "data")
 # S3 methods of these generics return no numbers; verify.json need not list them.
 .vx_display_generics <- c("print", "format", "plot", "autoplot", "toString", "str", "knit_print")
+
+#' Whether names are functions as `verify.json` writes them
+#'
+#' `name()`, or an entry of a verb with a catalogue argument, `name(argument = value)`
+#' (`centrality(measures = "onion")`), whose verb is `name()`.
+#' @param x A character vector.
+#' @return A logical vector.
+.vx_is_entry <- function(x) grepl("\\(\\)$", x) | grepl("^[^(]+\\(.+\\)$", x)
+
+#' The verb of an entry: `name()` of `name(argument = value)`; `name()` itself
+#'
+#' @param x A character vector of names written `name()` or `name(argument = value)`.
+#' @return A character vector of the same length.
+.vx_verb <- function(x) sub("^([^(]+)\\(.+\\)$", "\\1()", x)
+
+#' The functions of `covers` that `exports.covered` does not list
+#'
+#' An entry `name(argument = value)` is listed when it is, or when its verb `name()` is.
+#' @param covers The declared functions.
+#' @param config The parsed `verify.json`.
+#' @return A character vector.
+.vx_unlisted <- function(covers, config) {
+  covered <- as.character(unlist(config$exports$covered))
+  covers[!(covers %in% covered | .vx_verb(covers) %in% covered)]
+}
+
+#' Fix Python's hash seed for the reference runs of this session
+#'
+#' A Python reference started from the tests (reticulate, or an interpreter run
+#' with system2()) inherits `PYTHONHASHSEED=0`, so that a computation whose
+#' result follows the order of a set or a dict is the same run after run. An
+#' interpreter started with `-I` or `-E` ignores the variable. A value set by the
+#' caller is kept. The variable is restored when the run ends.
+#' @param envir The frame whose exit restores the variable.
+#' @return The previous value, invisibly (`NA` when it was not set).
+.vx_python_hash_seed <- function(envir = parent.frame()) {
+  before <- Sys.getenv("PYTHONHASHSEED", unset = NA)
+  if (is.na(before)) {
+    Sys.setenv(PYTHONHASHSEED = "0")
+    do.call(on.exit, list(quote(Sys.unsetenv("PYTHONHASHSEED")), add = TRUE, after = FALSE), envir = envir)
+  }
+  invisible(before)
+}
 
 #' Raise a classed error
 #'
@@ -113,20 +157,93 @@ verify_helper_version <- function() "1.2.0"
   found
 }
 
-#' The installed version of a reference that is an R package
+# What has been learnt of Python modules in this session: module -> list(available, version).
+.vx_python_seen <- new.env(parent = emptyenv())
+
+#' The Python interpreter a reference is run with
 #'
+#' `RETICULATE_PYTHON` when it names an interpreter, else `python3` or `python`
+#' on the PATH.
+#' @return A path, or `""` when there is none.
+.vx_python <- function() {
+  given <- Sys.getenv("RETICULATE_PYTHON")
+  if (nzchar(given) && file.exists(given)) return(given)
+  found <- Sys.which(c("python3", "python"))
+  found <- found[nzchar(found)]
+  if (length(found)) unname(found[[1L]]) else ""
+}
+
+#' Whether a Python module can be imported, and its version
+#'
+#' Through reticulate when it is installed (the Python the test itself would
+#' use), else by running the interpreter of `.vx_python()` once. The answer is
+#' kept for the session.
+#' @param module A Python module name.
+#' @return A list: `available` (TRUE/FALSE), `version` (a string, `""` when the
+#'   module states none), `python` (the interpreter asked, or `"reticulate"`).
+.vx_python_module <- function(module) {
+  stopifnot("`module` must be one Python module name" = is.character(module) && length(module) == 1L &&
+              grepl("^[A-Za-z_][A-Za-z0-9_.]*$", module))
+  if (!is.null(.vx_python_seen[[module]])) return(.vx_python_seen[[module]])
+  quoted <- as.character(jsonlite::toJSON(module, auto_unbox = TRUE))
+  found <- if (requireNamespace("reticulate", quietly = TRUE)) {
+    available <- isTRUE(reticulate::py_module_available(module))
+    version <- if (available) {
+      reticulate::py_eval(sprintf("str(getattr(__import__('importlib').import_module(%s), '__version__', ''))", quoted))
+    } else ""
+    list(available = available, version = as.character(version), python = "reticulate")
+  } else {
+    python <- .vx_python()
+    if (!nzchar(python)) {
+      list(available = FALSE, version = "", python = "")
+    } else {
+      code <- paste(c(
+        "import importlib, importlib.util, json",
+        sprintf("name = %s", quoted),
+        "try:",
+        "    found = importlib.util.find_spec(name) is not None",
+        "except (ImportError, ValueError):",
+        "    found = False",
+        "version = ''",
+        "if found:",
+        "    try:",
+        "        version = str(getattr(importlib.import_module(name), '__version__', ''))",
+        "    except ImportError:",
+        "        found = False",
+        "print(json.dumps({'available': found, 'version': version}))"), collapse = "\n")
+      # system2() warns "had status 1" for an interpreter that fails; the status is read just below instead
+      said <- suppressWarnings(system2(python, c("-c", shQuote(code)), stdout = TRUE, stderr = FALSE))
+      answer <- if (length(said) && is.null(attr(said, "status"))) jsonlite::fromJSON(said[[length(said)]]) else list(available = FALSE, version = "")
+      list(available = isTRUE(answer$available), version = as.character(answer$version %||% ""), python = python)
+    }
+  }
+  assign(module, found, envir = .vx_python_seen)
+  found
+}
+
+#' The installed version of a reference
+#'
+#' An R package's version; for a Python reference (`references$<name>$python`
+#' in `verify.json` names its module, or the module was checked by
+#' skip_without_reference(python = ) in this session) the module's version.
 #' @param reference The reference's name.
 #' @param config The parsed `verify.json` (`references$<name>$package` names the
-#'   package when the reference's name is not the package's; `version` states it
-#'   for a program).
+#'   package when the reference's name is not the package's; `python` names a
+#'   Python module; `version` states it for a program).
 #' @return A version string, or `NULL`.
 .vx_version <- function(reference, config) {
   entry <- config$references[[reference]]
   if (!is.null(entry$version)) return(as.character(entry$version))
+  if (!is.null(entry$python)) {
+    found <- .vx_python_module(entry$python)
+    return(if (nzchar(found$version)) found$version)
+  }
   package <- entry$package %||% reference
   if (grepl("^[A-Za-z][A-Za-z0-9.]*$", package) && nzchar(system.file(package = package))) {
-    as.character(utils::packageVersion(package))
+    return(as.character(utils::packageVersion(package)))
   }
+  checked <- .vx_python_seen[[reference]]
+  if (!is.null(checked) && nzchar(checked$version)) checked$version
 }
 
 #' The name of the test_that() block a verb was called in
@@ -301,7 +418,7 @@ verify_helper_version <- function() "1.2.0"
   name <- if (inherits(reference, "verify_fixture")) fixture$program else reference
   stopifnot(
     "`reference` must be one name, or the fixture read by reference_fixture()" = is.character(name) && length(name) == 1L && nzchar(name),
-    "`covers` must name exported functions as `name()`" = is.character(covers) && length(covers) >= 1L && all(grepl("\\(\\)$", covers)),
+    "`covers` must name exported functions as `name()`, or an entry of one as `name(argument = value)`" = is.character(covers) && length(covers) >= 1L && all(.vx_is_entry(covers)),
     "`quantity` must be one non-empty string" = is.character(quantity) && length(quantity) == 1L && nzchar(quantity),
     "`tolerance` must be one non-negative number" = is.numeric(tolerance) && length(tolerance) == 1L && is.finite(tolerance) && tolerance >= 0,
     "`reason` must be one non-empty string" = !kind %in% c("known_difference", "not_comparable") || (is.character(reason) && length(reason) == 1L && nzchar(reason)),
@@ -312,7 +429,7 @@ verify_helper_version <- function() "1.2.0"
   measure <- match.arg(measure, .vx_measures)
   config <- .vx_config()
   authority <- .vx_authority(name, config, authority)
-  unlisted <- setdiff(covers, unlist(config$exports$covered))
+  unlisted <- .vx_unlisted(covers, config)
   if (length(unlisted)) {
     .vx_stop(sprintf("`covers` names %s, which `exports.covered` of %s does not list.", toString(unlisted), config$path),
                  "verify_uncovered")
@@ -444,20 +561,92 @@ expect_differs <- function(actual, expected, reference, covers, quantity, tolera
   .vx_expect(actual, expected, reference, covers, quantity, tolerance, measure, key, note, authority, kind = "differs")
 }
 
-#' Skip a test whose reference package is not installed, and record it
+#' Expect a call to raise an error that is a declared defect
 #'
-#' @param package The reference package(s) the test needs.
-#' @return `TRUE` invisibly when every package is installed; else the test is
-#'   skipped (a testthat skip naming the package).
-skip_without_reference <- function(package) {
-  stopifnot("`package` must be package names" = is.character(package) && length(package) >= 1L)
-  absent <- package[!vapply(package, requireNamespace, logical(1), quietly = TRUE)]
-  if (!length(absent)) return(invisible(TRUE))
+#' For a known defect of the package that shows as an error (the function
+#' stops where it should return a result). While the call raises an error, one
+#' row is recorded as a disagreement (kind `reference`, the error's message as
+#' the package's value, the text of `defect`) and the test does not fail. When
+#' the call returns without an error the test FAILS: the declared defect no
+#' longer shows, and the call is to be compared with expect_reference().
+#'
+#' @param expr The call that raises the error.
+#' @param defect A short description of the defect (`"lsa() stops on a sequence
+#'   of length one; FINDINGS.md"`).
+#' @param covers The exported function(s) the call checks, as `"name()"`.
+#' @param quantity What the call should have returned, in the reader's words.
+#' @param reference What the result should agree with: a reference of
+#'   `verify.json`, `"published: ..."` or `"independent: ..."`.
+#' @param note A sentence for the reader, or `NULL`.
+#' @param authority The reference's authority, when `verify.json` does not give it.
+#' @return The condition raised, invisibly (`NULL` when there was none).
+expect_defect_error <- function(expr, defect, covers, quantity, reference = "independent: the call returns a result",
+                                note = NULL, authority = NULL) {
+  stopifnot(
+    "`defect` must be one non-empty string describing the known defect" = is.character(defect) && length(defect) == 1L && nzchar(defect),
+    "`covers` must name exported functions as `name()`, or an entry of one as `name(argument = value)`" = is.character(covers) && length(covers) >= 1L && all(.vx_is_entry(covers)),
+    "`quantity` must be one non-empty string" = is.character(quantity) && length(quantity) == 1L && nzchar(quantity),
+    "`reference` must be one name" = is.character(reference) && length(reference) == 1L && nzchar(reference),
+    "`note` must be one string" = is.null(note) || (is.character(note) && length(note) == 1L)
+  )
+  config <- .vx_config()
+  authority <- .vx_authority(reference, config, authority)
+  unlisted <- .vx_unlisted(covers, config)
+  if (length(unlisted)) {
+    .vx_stop(sprintf("`covers` names %s, which `exports.covered` of %s does not list.", toString(unlisted), config$path),
+             "verify_uncovered")
+  }
+  test <- .vx_test_name()
+  # the call is evaluated here, once: an error is the defect showing, anything else is a result
+  raised <- tryCatch({
+    expr
+    NULL
+  }, error = \(condition) condition)
+  if (is.null(raised)) {
+    testthat::expect(FALSE, sprintf("%s: the declared defect no longer shows (the call returned without an error): remove expect_defect_error() and compare the result with expect_reference(). Declared: %s",
+                                    quantity, defect))
+    return(invisible(NULL))
+  }
+  said <- gsub("\\s+", " ", trimws(conditionMessage(raised)))
+  text <- paste0("error: ", if (nchar(said) > 300L) paste0(substr(said, 1L, 299L), "\u2026") else said)
   state <- .vx_state()
   if (!is.null(state)) {
-    state$skips[[length(state$skips) + 1L]] <- list(file = state$file, test = .vx_test_name(), reference = absent)
+    judged <- data.frame(key = "", actual = NA_real_, expected = NA_real_, actual_text = text, expected_text = NA_character_,
+                         difference = NA_real_, status = "disagree", stringsAsFactors = FALSE)
+    state$blocks[[length(state$blocks) + 1L]] <- list(
+      file = state$file, test = test, judged = judged, passed = TRUE, matcher = "expect_defect_error",
+      declared = list(covers = covers, reference = reference, authority = authority, quantity = quantity,
+                      tolerance = 0, measure = "absolute", kind = "reference", source = "live", defect = defect,
+                      note = paste(c(sprintf("The call raised an error: %s", said), note), collapse = " "),
+                      reference_version = .vx_version(reference, config)))
   }
-  testthat::skip(sprintf("reference package %s is not installed", toString(absent)))
+  testthat::expect(TRUE, "")
+  invisible(raised)
+}
+
+#' Skip a test whose reference is not installed, and record it
+#'
+#' @param package The reference R package(s) the test needs.
+#' @param python The Python module(s) the test needs (imported through
+#'   reticulate when it is installed, else by the interpreter in
+#'   `RETICULATE_PYTHON` or `python3` / `python` on the PATH). A module found
+#'   has its version recorded for a reference of that name.
+#' @return `TRUE` invisibly when everything is there; else the test is skipped
+#'   (a testthat skip naming what is missing).
+skip_without_reference <- function(package = character(), python = character()) {
+  stopifnot("`package` must be package names" = is.character(package),
+            "`python` must be Python module names" = is.character(python) && all(grepl("^[A-Za-z_][A-Za-z0-9_.]*$", python)),
+            "name at least one reference: `package` or `python`" = length(package) + length(python) >= 1L)
+  absent <- package[!vapply(package, requireNamespace, logical(1), quietly = TRUE)]
+  modules <- python[!vapply(python, \(module) .vx_python_module(module)$available, logical(1))]
+  if (!length(absent) && !length(modules)) return(invisible(TRUE))
+  state <- .vx_state()
+  if (!is.null(state)) {
+    state$skips[[length(state$skips) + 1L]] <- list(file = state$file, test = .vx_test_name(),
+                                                    reference = c(absent, if (length(modules)) paste(modules, "(Python)")))
+  }
+  testthat::skip(paste(c(if (length(absent)) sprintf("reference package %s is not installed", toString(absent)),
+                         if (length(modules)) sprintf("Python module %s is not available", toString(modules))), collapse = "; "))
 }
 
 #' Read a stored reference, refusing one without provenance
@@ -470,12 +659,15 @@ skip_without_reference <- function(package) {
 #' stores it in the fixture). The generator writes them; they are not typed.
 #'
 #' @param path The fixture: `.json`, `.csv` or `.rds`, relative to the test file.
+#' @param redistributable `FALSE` for a fixture that may not be passed on (it is
+#'   shown to the members of the product only, as are its input data files).
 #' @return The fixture's content with class `verify_fixture`; pass it (or a part
 #'   of it) as `expected` and the object itself as `reference`. Raises
 #'   `verify_fixture_missing`, `verify_fixture_no_provenance` or
 #'   `verify_fixture_stale` (its input data changed since it was generated).
-reference_fixture <- function(path) {
-  stopifnot("`path` must be one file path" = is.character(path) && length(path) == 1L)
+reference_fixture <- function(path, redistributable = TRUE) {
+  stopifnot("`path` must be one file path" = is.character(path) && length(path) == 1L,
+            "`redistributable` must be TRUE or FALSE" = isTRUE(redistributable) || isFALSE(redistributable))
   if (!file.exists(path)) .vx_stop(sprintf("Fixture %s does not exist.", path), "verify_fixture_missing")
   type <- tolower(tools::file_ext(path))
   content <- switch(type,
@@ -516,6 +708,7 @@ reference_fixture <- function(path) {
   if (!is.null(state)) {
     provenance$sidecar <- if (file.exists(sidecar)) .vx_relative(sidecar)
     provenance$inputs <- lapply(inputs, \(input) input$path)
+    if (!redistributable) provenance$redistributable <- FALSE
     state$fixtures[[length(state$fixtures) + 1L]] <- c(list(file = state$file), provenance)
   }
   structure(content, provenance = provenance, class = c("verify_fixture", class(content)))
@@ -528,12 +721,18 @@ reference_fixture <- function(path) {
 #'
 #' @param path A data file, relative to the test file (keep it under
 #'   `tests/equivalence/`).
+#' @param redistributable `FALSE` for data that may not be passed on (a
+#'   licence, participants' records): the file is attached to the case and
+#'   shown to the members of the product only.
 #' @return `path`, so the call can sit inside the call that reads the file.
-reference_data <- function(path) {
-  stopifnot("`path` must be one file path" = is.character(path) && length(path) == 1L)
+reference_data <- function(path, redistributable = TRUE) {
+  stopifnot("`path` must be one file path" = is.character(path) && length(path) == 1L,
+            "`redistributable` must be TRUE or FALSE" = isTRUE(redistributable) || isFALSE(redistributable))
   if (!file.exists(path)) .vx_stop(sprintf("Data file %s does not exist.", path), "verify_data_missing")
   state <- .vx_state()
-  if (!is.null(state)) state$data[[length(state$data) + 1L]] <- list(file = state$file, path = .vx_relative(path))
+  if (!is.null(state)) {
+    state$data[[length(state$data) + 1L]] <- list(file = state$file, path = .vx_relative(path), redistributable = redistributable)
+  }
   path
 }
 
@@ -559,7 +758,9 @@ reference_data <- function(path) {
 #' Check `verify.json` against NAMESPACE
 #'
 #' Every export is in exactly one of `covered`, `not_numeric`, `not_yet`, and
-#' nothing is listed that is not exported.
+#' nothing is listed that is not exported. An entry of a verb with a catalogue
+#' argument, `name(argument = value)`, may be listed in any of them; it is
+#' exported when its verb `name()` is, and it accounts for its verb.
 #'
 #' @param path The `verify.json` file.
 #' @param root The package root (the folder of NAMESPACE).
@@ -579,9 +780,9 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
   }, character(1))
   namespace <- .vx_namespace(root)
   problems <- c(
-    sprintf("%s is exported and in none of the three lists", setdiff(namespace$required, listed$export)),
+    sprintf("%s is exported and in none of the three lists", setdiff(namespace$required, c(listed$export, .vx_verb(listed$export)))),
     sprintf("%s is in two lists", unique(listed$export[duplicated(listed$export)])),
-    sprintf("%s is listed but not exported", setdiff(listed$export, c(namespace$required, namespace$optional))),
+    sprintf("%s is listed but not exported", listed$export[!.vx_verb(listed$export) %in% c(namespace$required, namespace$optional)]),
     sprintf("%s is in a list with no reason", listed$export[listed$list != "covered" & !nzchar(listed$reason)]))
   if (length(problems)) {
     .vx_stop(paste(c(sprintf("%s does not match NAMESPACE:", path), paste0("  ", problems)), collapse = "\n"),
@@ -617,8 +818,10 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
   judged <- block$judged
   declared <- Filter(Negate(is.null), block$declared)
   base <- ifelse(nzchar(judged$key), paste0(declared$quantity, ": ", judged$key), declared$quantity)
+  # every `independent: ...` reference is one source and one side in Prova: its quantities are numbered together
+  counted_as <- if (startsWith(declared$reference, "independent:")) "independent:" else declared$reference
   quantity <- vapply(base, \(label) {
-    id <- paste0(declared$reference, "\r", label)
+    id <- paste0(counted_as, "\r", label)
     count <- (seen[[id]] %||% 0L) + 1L
     seen[[id]] <- count
     if (count > 1L) sprintf("%s #%d", label, count) else label
@@ -626,7 +829,7 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
   actual <- .vx_encode(judged$actual, judged$actual_text)
   expected <- .vx_encode(judged$expected, judged$expected_text)
   lapply(seq_len(nrow(judged)), \(i) {
-    list(matcher = paste0("expect_", declared$kind),
+    list(matcher = block$matcher %||% paste0("expect_", declared$kind),
          actual = actual[[i]], expected = expected[[i]], tolerance = declared$tolerance,
          label = quantity[[i]], passed = !judged$status[[i]] %in% c("disagree", "missing"),
          declared = c(list(covers = as.list(declared$covers)), declared[c("reference", "authority")], list(quantity = quantity[[i]]),
@@ -753,6 +956,7 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
   state <- .vx_new_state(root)
   old <- options(prova.verify.state = state)
   on.exit(options(old), add = TRUE, after = FALSE)
+  .vx_python_hash_seed()
   ran <- lapply(files, \(file) {
     state$file <- .vx_relative(file)
     state$blocks <- list()
@@ -775,11 +979,16 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
                       vapply(list.files(path, "^helper.*\\.[Rr]$", full.names = TRUE), .vx_relative, character(1), USE.NAMES = FALSE),
                       unlist(lapply(fixtures, \(fixture) c(fixture$path, fixture$sidecar, fixture$generated_by, unlist(fixture$inputs)))),
                       vapply(state$data, \(entry) entry$path, character(1))))
+    # files that may not be passed on: data declared so, and a fixture declared so with its input data
+    withheld <- unique(c(vapply(Filter(\(entry) isFALSE(entry$redistributable), state$data), \(entry) entry$path, character(1)),
+                         unlist(lapply(Filter(\(fixture) isFALSE(fixture$redistributable), fixtures), \(fixture) c(fixture$path, unlist(fixture$inputs))))))
     c(list(file = state$file, kind = "declared",
            state = if (broken || any(states == "fail")) "fail" else if (length(states) && all(states == "skip")) "skip" else "pass"),
       if (broken) list(error = results),
       list(reads = as.list(reads), packages = versions, fixtures = fixtures,
-           data = as.list(unique(vapply(state$data, \(entry) entry$path, character(1)))), tests = tests))
+           data = as.list(unique(vapply(state$data, \(entry) entry$path, character(1))))),
+      if (length(withheld)) list(not_redistributable = as.list(withheld)),
+      list(tests = tests))
   })
   dir.create(capture, recursive = TRUE, showWarnings = FALSE)
   written <- list(format = "prova.verify-capture/1", library = library_info,
@@ -822,6 +1031,8 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
   if (is.null(filter) && is.data.frame(checked)) {
     counted <- Filter(\(entry) entry$declared$authority %in% .vx_counted && entry$declared$kind == "reference", comparisons)
     evidenced <- unique(unlist(lapply(counted, \(entry) entry$declared$covers)))
+    # evidence for an entry `name(argument = value)` is evidence for its verb `name()` too
+    evidenced <- unique(c(evidenced, .vx_verb(evidenced)))
     skipped_tests <- sum(summary$skipped)
     bare <- setdiff(checked$export[checked$list == "covered"], evidenced)
     if (length(bare)) {
@@ -845,19 +1056,25 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
 #' @param file The test file.
 #' @param reference A reference's name as the test declares it, or `NULL` for
 #'   the package's own values.
+#' @param independent `TRUE` for the values of every `independent: ...`
+#'   reference of the file (one side in Prova); `reference` is then left out.
 #' @return A data frame, one row per compared value: `quantity`, `value`.
-verify_rerun <- function(file, reference = NULL) {
+verify_rerun <- function(file, reference = NULL, independent = FALSE) {
   stopifnot("`file` must be one existing test file" = is.character(file) && length(file) == 1L && file.exists(file),
-            "`reference` must be one name or NULL" = is.null(reference) || (is.character(reference) && length(reference) == 1L))
+            "`reference` must be one name or NULL" = is.null(reference) || (is.character(reference) && length(reference) == 1L),
+            "`independent` must be TRUE or FALSE, and TRUE only without `reference`" = (isTRUE(independent) && is.null(reference)) || isFALSE(independent))
   state <- .vx_new_state(NULL)
   state$file <- basename(file)
   old <- options(prova.verify.state = state)
   on.exit(options(old), add = TRUE, after = FALSE)
+  .vx_python_hash_seed()
   testthat::test_file(file, reporter = "silent", load_package = "none", stop_on_failure = FALSE, stop_on_warning = FALSE)
   seen <- new.env(parent = emptyenv())
   entries <- unlist(lapply(state$blocks, .vx_entries, seen = seen), recursive = FALSE)
-  mine <- if (is.null(reference)) entries else Filter(\(entry) identical(entry$declared$reference, reference), entries)
-  values <- lapply(mine, \(entry) if (is.null(reference)) entry$actual else entry$expected)
+  ours <- is.null(reference) && !independent
+  mine <- if (ours) entries else if (independent) Filter(\(entry) startsWith(entry$declared$reference, "independent:"), entries)
+    else Filter(\(entry) identical(entry$declared$reference, reference), entries)
+  values <- lapply(mine, \(entry) if (ours) entry$actual else entry$expected)
   numbers <- vapply(values, is.numeric, logical(1))
   data.frame(quantity = vapply(mine, \(entry) entry$declared$quantity, character(1)),
              value = if (all(numbers)) as.numeric(unlist(values)) else vapply(values, as.character, character(1)),

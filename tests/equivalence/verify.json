@@ -139,7 +139,20 @@
       "update_vertex_spells()",
       "remove_vertex_spells()",
       "summary.dynet_communities()",
-      "as.data.frame.dynet_trajectory()"
+      "as.data.frame.dynet_trajectory()",
+      "motifs()",
+      "as.data.frame.dynet_motifs()",
+      "summary.dynet_motifs()",
+      "randomise()",
+      "as.data.frame.dynet_null()",
+      "summary.dynet_null()",
+      "significance()",
+      "as.data.frame.dynet_significance()",
+      "summary.dynet_significance()",
+      "random_dynet()",
+      "temporal_communities()",
+      "as.data.frame.dynet_collapsed_list()",
+      "summary.dynet_collapsed_list()"
     ],
     "not_numeric": {
       "animate()": "draws an animation of the network over time",
@@ -153,20 +166,6 @@
       "set_tie_sessions()": "assigns session labels to spells",
       "rename_sessions()": "renames session labels"
     },
-    "not_yet": {
-      "motifs()": "no reference runs on the ci machine: raphtory (whose three-node motif census the package's taxonomy follows) and SNAP are not installed; the retained raphtory 0.17.0 censuses (local testthat-equivalence/fixtures/raphtory-motifs.R) are typed values without a generator-written provenance. Needs raphtory on the ci machine or an enumerator of 3-edge delta-temporal motifs mapped to Paranjape et al.'s classes.",
-      "random_dynet()": "a random generator whose draws come from the package's own stream; needs a distributional test of the generated networks against each model (binomial, Poisson, block, activation)",
-      "randomise()": "null models drawn from the package's own random stream (seed = replays it); there is no argument to supply the permutations, so no reference can share them",
-      "significance()": "its p-values come from randomise() draws on the package's own stream; needs an argument that supplies the null replicates",
-      "temporal_communities()": "a Louvain search whose moves are drawn from the package's own stream (seeds = replays it); GenLouvain and multinet's glouvain find their own optima, so only the quality of the result (checked through multislice_modularity()) can be compared",
-      "as.data.frame.dynet_collapsed_list()": "returned only by collapse_network(sessions = 'separate'); a sessioned test dataset with a per-session ledger is still to be written",
-      "as.data.frame.dynet_motifs()": "see motifs()",
-      "as.data.frame.dynet_null()": "see randomise()",
-      "as.data.frame.dynet_significance()": "see significance()",
-      "summary.dynet_collapsed_list()": "see as.data.frame.dynet_collapsed_list()",
-      "summary.dynet_motifs()": "see motifs()",
-      "summary.dynet_null()": "see randomise()",
-      "summary.dynet_significance()": "see significance()"
-    }
+    "not_yet": {}
   }
 }
