@@ -1,4 +1,4 @@
-# prova-verify-helper 1.3.0 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
+# prova-verify-helper 1.4.2 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
 #
 # Declared equivalence tests for Prova Verify (the standard: equivalence/STANDARD.md).
 # Every comparison of a package with a reference goes through one verb that ASSERTS
@@ -13,9 +13,11 @@
 #   skip_without_reference(package, python)  a recorded skip (an R package or a Python module)
 #   reference_fixture(path, redistributable) a stored reference, with provenance
 #   reference_data(path, redistributable)    an input data file of the test
+#   verify_python()                          the Python interpreter a reference runs in (VERIFY_PYTHON, RETICULATE_PYTHON, ~/equiv-py)
 #   verify_exports_check()                   verify.json against NAMESPACE
 #   verify_tests()                             runs tests/equivalence, writes the capture
-#   verify_rerun(file, reference)           one side's values (the re-run in Prova)
+#   verify_rerun(file, reference)           one side's values (the re-run in Prova), with why any are missing
+#   verify_rerun_report(result)             says in plain words what a re-run skipped or failed, and which versions ran
 #
 # Run by testthat alone the verbs only assert. Run by verify_tests() they also record
 # every compared number in a capture (format `prova.verify-capture/1`, documented in
@@ -26,7 +28,7 @@
 #' Version of this helper
 #'
 #' @return A length-one character vector, the version on the file's first line.
-verify_helper_version <- function() "1.3.0"
+verify_helper_version <- function() "1.4.2"
 
 .vx_kinds <- c("reference", "known_difference", "differs", "not_comparable")
 .vx_measures <- c("absolute", "relative", "scaled")
@@ -160,18 +162,34 @@ verify_helper_version <- function() "1.3.0"
 # What has been learnt of Python modules in this session: module -> list(available, version).
 .vx_python_seen <- new.env(parent = emptyenv())
 
+#' The Python interpreter the reference modules were set up in, when one was
+#'
+#' `VERIFY_PYTHON`, else `~/equiv-py/bin/python` (the virtualenv
+#' ci-reference-software.sh builds, on ci and on a machine set up the same way),
+#' when it names an existing interpreter.
+#' @return A path, or `""` when there is none.
+.vx_reference_python <- function() {
+  given <- path.expand(c(Sys.getenv("VERIFY_PYTHON"), "~/equiv-py/bin/python"))
+  given <- given[nzchar(given) & file.exists(given)]
+  if (length(given)) given[[1L]] else ""
+}
+
 #' The Python interpreter a reference is run with
 #'
-#' `RETICULATE_PYTHON` when it names an interpreter, else `python3` or `python`
-#' on the PATH.
+#' `VERIFY_PYTHON`, else `RETICULATE_PYTHON`, else `~/equiv-py/bin/python`,
+#' each when it names an existing interpreter; else `python3` or `python` on the
+#' PATH. A package's own helpers that start a Python reference use this order
+#' too, so a test and a re-run of it find the same interpreter.
 #' @return A path, or `""` when there is none.
-.vx_python <- function() {
-  given <- Sys.getenv("RETICULATE_PYTHON")
-  if (nzchar(given) && file.exists(given)) return(given)
+verify_python <- function() {
+  given <- path.expand(c(Sys.getenv("VERIFY_PYTHON"), Sys.getenv("RETICULATE_PYTHON"), "~/equiv-py/bin/python"))
+  given <- given[nzchar(given) & file.exists(given)]
+  if (length(given)) return(given[[1L]])
   found <- Sys.which(c("python3", "python"))
   found <- found[nzchar(found)]
   if (length(found)) unname(found[[1L]]) else ""
 }
+.vx_python <- verify_python
 
 #' Whether a Python module can be imported, and its version
 #'
@@ -639,11 +657,14 @@ skip_without_reference <- function(package = character(), python = character()) 
             "name at least one reference: `package` or `python`" = length(package) + length(python) >= 1L)
   absent <- package[!vapply(package, requireNamespace, logical(1), quietly = TRUE)]
   modules <- python[!vapply(python, \(module) .vx_python_module(module)$available, logical(1))]
-  if (!length(absent) && !length(modules)) return(invisible(TRUE))
   state <- .vx_state()
+  # every reference package a test asks for, installed or not: verify_rerun() reports their versions
+  if (!is.null(state)) state$asked <- unique(c(state$asked, package))
+  if (!length(absent) && !length(modules)) return(invisible(TRUE))
   if (!is.null(state)) {
     state$skips[[length(state$skips) + 1L]] <- list(file = state$file, test = .vx_test_name(),
-                                                    reference = c(absent, if (length(modules)) paste(modules, "(Python)")))
+                                                    reference = c(absent, if (length(modules)) paste(modules, "(Python)")),
+                                                    packages = absent, python = modules)
   }
   testthat::skip(paste(c(if (length(absent)) sprintf("reference package %s is not installed", toString(absent)),
                          if (length(modules)) sprintf("Python module %s is not available", toString(modules))), collapse = "; "))
@@ -849,6 +870,7 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
   state$file <- NA_character_
   state$blocks <- list()
   state$skips <- list()
+  state$asked <- character()
   state$fixtures <- list()
   state$data <- list()
   state
@@ -877,22 +899,31 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
 #' @param seen The quantity counter of the file.
 #' @return A list of capture tests.
 .vx_tests <- function(results, blocks, skips, seen) {
+  outside <- "(code outside test_that())"
+  # a test's name as one string: testthat reports code outside any test_that() with no name, an empty one or NA
+  named <- \(name) if (is.character(name) && length(name) == 1L && !is.na(name) && nzchar(name)) name else outside
   ran <- lapply(results, \(test) {
-    classes <- vapply(test$results, \(outcome) class(outcome)[[1L]], character(1))
-    failed <- classes %in% c("expectation_failure", "expectation_error")
-    skipped <- classes == "expectation_skip"
+    outcomes <- if (is.list(test$results)) test$results else list()
+    # by inheritance: an error that is not an expectation (a bare condition testthat kept) is a failure too
+    skipped <- vapply(outcomes, \(outcome) inherits(outcome, "expectation_skip"), logical(1))
+    failed <- !skipped & vapply(outcomes, \(outcome) inherits(outcome, c("expectation_failure", "expectation_error", "error")), logical(1))
     state <- if (any(failed)) "fail" else if (any(skipped)) "skip" else "pass"
-    # code of a test file outside any test_that() is reported by testthat without a test name
-    list(name = if (length(test$test) == 1L && nzchar(test$test)) test$test else "(code outside test_that())", state = state,
-         message = if (any(failed | skipped)) conditionMessage(test$results[[which(failed | skipped)[[1L]]]]),
+    first <- which(failed | skipped)
+    list(name = named(test$test), state = state,
+         message = if (length(first)) {
+           outcome <- outcomes[[first[[1L]]]]
+           if (inherits(outcome, "condition")) conditionMessage(outcome) else paste(format(outcome), collapse = " ")
+         },
          assertions = sum(!skipped))
   })
   names_ran <- vapply(ran, \(test) test$name, character(1))
-  block_test <- vapply(blocks, \(block) block$test, character(1))
+  block_test <- vapply(blocks, \(block) named(block$test), character(1))
   tests <- unique(c(names_ran, block_test))
   lapply(tests, \(name) {
-    mine <- ran[names_ran == name]
-    state <- if (!length(mine)) "fail" else if (any(vapply(mine, \(test) test$state == "fail", logical(1)))) "fail" else mine[[1L]]$state
+    # a test may come back as several results (one per run of its name): it failed when any of them did
+    mine <- ran[which(names_ran == name)]
+    states <- vapply(mine, \(test) test$state, character(1))
+    state <- if (!length(mine) || "fail" %in% states) "fail" else if ("skip" %in% states) "skip" else "pass"
     message <- unlist(lapply(mine, \(test) test$message))
     comparisons <- unlist(lapply(blocks[block_test == name], .vx_entries, seen = seen), recursive = FALSE)
     absent <- unique(unlist(lapply(Filter(\(skip) skip$test == name, skips), \(skip) skip$reference)))
@@ -996,7 +1027,9 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
                                 helper = paste("prova-verify-helper", verify_helper_version())),
                   platform = sprintf("%s, %s", R.version.string, R.version$platform),
                   run_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"), files = ran)
-  jsonlite::write_json(written, file.path(capture, "capture.json"), auto_unbox = TRUE, digits = NA, null = "null", pretty = FALSE)
+  # digits = I(17): every double round-trips (digits = NA keeps 15 significant digits, which can move a value by more
+  # than a tight tolerance, e.g. 5e-14 at a magnitude of 16 against a declared 2e-14)
+  jsonlite::write_json(written, file.path(capture, "capture.json"), auto_unbox = TRUE, digits = I(17), null = "null", pretty = FALSE)
 
   comparisons <- unlist(lapply(ran, \(file) unlist(lapply(file$tests, \(test) test$comparisons), recursive = FALSE)), recursive = FALSE)
   count <- function(file, status) {
@@ -1046,37 +1079,268 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
   invisible(summary)
 }
 
+#' The installed version of an R package
+#'
+#' @param package A package name.
+#' @return A version string, or `NA` when the package is not installed.
+.vx_installed <- function(package) {
+  if (grepl("^[A-Za-z][A-Za-z0-9.]*$", package) && nzchar(system.file(package = package))) {
+    as.character(utils::packageVersion(package))
+  } else NA_character_
+}
+
+#' Names joined as a reader says them: "a", "a and b", "a, b and c"
+#'
+#' @param x A character vector of at least one name.
+#' @return A length-one character vector.
+.vx_and <- function(x) {
+  if (length(x) < 2L) return(paste(x, collapse = ""))
+  paste(paste(x[-length(x)], collapse = ", "), "and", x[[length(x)]])
+}
+
+#' The one line that installs R packages
+#'
+#' @param packages Package names.
+#' @return `install.packages("a")` or `install.packages(c("a", "b"))`.
+.vx_install_line <- function(packages) {
+  quoted <- paste0('"', packages, '"', collapse = ", ")
+  sprintf("install.packages(%s)", if (length(packages) == 1L) quoted else sprintf("c(%s)", quoted))
+}
+
+#' What a re-run did, besides its values
+#'
+#' @param tests The capture tests of the run (`.vx_tests()`), or `NULL` for a file that broke.
+#' @param broken The error message of a file that stopped outside its tests, or `NULL`.
+#' @param state The recording state of the run.
+#' @param side What side the values are: `"package"`, `"independent"` or a reference's name.
+#' @param package The package under test, or `NULL`.
+#' @param case_version The version of the package the case was made with, or `NULL`.
+#' @return The list documented under verify_rerun().
+.vx_rerun_account <- function(tests, broken, state, side, package, case_version) {
+  test_rows <- data.frame(
+    test = vapply(tests, \(test) test$name, character(1)),
+    state = vapply(tests, \(test) test$state, character(1)),
+    message = vapply(tests, \(test) test$error %||% test$skip_reason %||% "", character(1)),
+    missing = vapply(tests, \(test) paste(unlist(test$missing_reference), collapse = ", "), character(1)),
+    stringsAsFactors = FALSE)
+  if (!is.null(broken)) {
+    test_rows <- rbind(test_rows, data.frame(test = "(the file)", state = "fail", message = broken, missing = "", stringsAsFactors = FALSE))
+  }
+  missing <- unique(unlist(lapply(state$skips, \(skip) skip$packages)))
+  missing_python <- unique(unlist(lapply(state$skips, \(skip) skip$python)))
+  package <- package %||% .vx_package_of()
+  # the reference packages the file names: those its tests asked for, then those its comparisons were computed with
+  live <- Filter(\(block) block$declared$source == "live" && !is.null(block$declared$reference_version) &&
+                   !grepl("^(independent|published):", block$declared$reference), state$blocks)
+  computed <- unique(vapply(live, \(block) block$declared$reference, character(1)))
+  computed_versions <- vapply(computed, \(name) {
+    as.character(Filter(\(block) identical(block$declared$reference, name), live)[[1L]]$declared$reference_version)
+  }, character(1))
+  asked <- setdiff(unique(state$asked), package %||% character())
+  references <- c(asked, setdiff(computed, asked))
+  reference_versions <- c(vapply(asked, .vx_installed, character(1)), computed_versions[setdiff(computed, asked)])
+  packages <- data.frame(
+    package = c(package, "testthat", references),
+    role = c(if (!is.null(package)) "under test", "test runner", rep("reference", length(references))),
+    version = unname(c(if (!is.null(package)) .vx_installed(package), .vx_installed("testthat"), reference_versions)),
+    stringsAsFactors = FALSE)
+  list(file = state$file, side = side, tests = test_rows, missing = missing, missing_python = missing_python,
+       packages = packages, package = package %||% NA_character_, case_version = case_version %||% NA_character_)
+}
+
+#' The package the equivalence tests here belong to
+#'
+#' @return The `Package` of the DESCRIPTION of the package the working
+#'   directory is in, or `NULL` outside a package.
+.vx_package_of <- function() {
+  root <- .vx_root()
+  if (!is.null(root)) unname(read.dcf(file.path(root, "DESCRIPTION"), fields = "Package")[1L, 1L])
+}
+
+#' The environment a re-run runs its test file in
+#'
+#' testthat attaches itself when it runs a file, in front of a package the
+#' re-run script attached before, so a function both export (`compare()`)
+#' would be testthat's. verify_tests() does not meet this: pkgload attaches
+#' testthat before the package. Here the package's exports (and data) are put
+#' in front of the search path instead: the test file sees the package first,
+#' then the global environment and everything attached, testthat included.
+#'
+#' @param package The package under test, or `NULL`.
+#' @return An environment whose parent holds the bindings of `package:<package>`
+#'   when it is attached (none otherwise), and whose grandparent is the global
+#'   environment.
+.vx_rerun_env <- function(package) {
+  front <- new.env(parent = globalenv())
+  where <- if (!is.null(package)) paste0("package:", package)
+  if (!is.null(where) && where %in% search()) {
+    attached <- as.environment(where)
+    exported <- ls(attached, all.names = TRUE, sorted = TRUE)
+    # each read when a test first asks for it: a dataset of the package is not loaded before
+    invisible(lapply(exported, \(name) delayedAssign(name, get(name, envir = attached, inherits = FALSE), assign.env = front)))
+  }
+  new.env(parent = front)
+}
+
 #' The values one side of a test file computes
 #'
 #' Runs one test file of the equivalence tests in this R session and returns
 #' the values it compared: the package's (`reference = NULL`) or those of one
 #' reference. This is what Prova Verify's re-run reads; the package and
-#' testthat must be installed.
+#' testthat must be installed. A test that is skipped or fails computes none of
+#' its values; the result says which and why (see Value), and
+#' verify_rerun_report() says it in plain words.
 #'
 #' @param file The test file.
 #' @param reference A reference's name as the test declares it, or `NULL` for
 #'   the package's own values.
 #' @param independent `TRUE` for the values of every `independent: ...`
 #'   reference of the file (one side in Prova); `reference` is then left out.
-#' @return A data frame, one row per compared value: `quantity`, `value`.
-verify_rerun <- function(file, reference = NULL, independent = FALSE) {
+#' @param package The package under test, or `NULL` to read it from the
+#'   DESCRIPTION of the package the file is in (when it is in one).
+#' @param case_version The version of `package` the stored values were made
+#'   with, or `NULL`; the report says when this R has another.
+#' @return A data frame, one row per compared value: `quantity`; `value`, the
+#'   number (`NA` when the value is not one); `text`, the value when it is not
+#'   a number (`NA` when it is): a word the capture writes (`"NA"`, `"NaN"`,
+#'   `"Infinity"`, `"-Infinity"`) or the compared text. Each row keeps its own
+#'   type, so a number is never turned into text because another value of the
+#'   side is text. It carries the attribute `verify_rerun`, a list: `file`; `side`
+#'   (`"package"`, `"independent"` or the reference's name); `tests`, a data
+#'   frame with one row per test of the file (`test`, `state` = `"pass"`,
+#'   `"skip"` or `"fail"`, `message` = the skip's reason or the failure, `missing`
+#'   = the references a skip_without_reference() found missing, joined by
+#'   ", "), with a row `"(the file)"` when the file stopped outside its tests;
+#'   `missing`, the R packages not installed; `missing_python`, the Python
+#'   modules not available; `packages`, a data frame (`package`, `role` =
+#'   `"under test"`, `"test runner"` or `"reference"`, `version`, `NA` when not
+#'   installed); `package` and `case_version` as given (`NA` when unknown);
+#'   `duplicated`, the quantity names that occur more than once in this side
+#'   with different values (they cannot be told apart by name; Prova does not
+#'   judge them; a name repeated with one value is matched as one). An
+#'   error of the file outside its tests is reported there, not raised. The
+#'   file runs with the package's exports ahead of testthat's (a `compare()` of
+#'   the package is the package's), as in verify_tests().
+verify_rerun <- function(file, reference = NULL, independent = FALSE, package = NULL, case_version = NULL) {
   stopifnot("`file` must be one existing test file" = is.character(file) && length(file) == 1L && file.exists(file),
             "`reference` must be one name or NULL" = is.null(reference) || (is.character(reference) && length(reference) == 1L),
-            "`independent` must be TRUE or FALSE, and TRUE only without `reference`" = (isTRUE(independent) && is.null(reference)) || isFALSE(independent))
+            "`independent` must be TRUE or FALSE, and TRUE only without `reference`" = (isTRUE(independent) && is.null(reference)) || isFALSE(independent),
+            "`package` must be one package name or NULL" = is.null(package) || (is.character(package) && length(package) == 1L && grepl("^[A-Za-z][A-Za-z0-9.]*$", package)),
+            "`case_version` must be one version or NULL" = is.null(case_version) || (is.character(case_version) && length(case_version) == 1L))
   state <- .vx_new_state(NULL)
   state$file <- basename(file)
   old <- options(prova.verify.state = state)
   on.exit(options(old), add = TRUE, after = FALSE)
   .vx_python_hash_seed()
-  testthat::test_file(file, reporter = "silent", load_package = "none", stop_on_failure = FALSE, stop_on_warning = FALSE)
+  under_test <- package %||% .vx_package_of()
+  # A re-run has no DESCRIPTION beside the test file, so testthat would fall back to edition 2 (ignore_attr is then
+  # ignored, expect_warning() nests differently). Run it under the edition the package declares, as its suite runs.
+  edition <- if (!is.null(under_test) && nzchar(under_test))
+    suppressWarnings(utils::packageDescription(under_test, fields = "Config/testthat/edition"))
+  if (length(edition) == 1L && !is.na(edition) && nzchar(edition) && !nzchar(Sys.getenv("TESTTHAT_EDITION"))) {
+    Sys.setenv(TESTTHAT_EDITION = edition)
+    on.exit(Sys.unsetenv("TESTTHAT_EDITION"), add = TRUE, after = FALSE)
+  }
+  # The stored values were made with NOT_CRAN=true (mini-ci and devtools::test() set it); without it skip_on_cran()
+  # skips the tests that made them, and one outside test_that() skips the whole file with no record in testthat.
+  if (!nzchar(Sys.getenv("NOT_CRAN"))) {
+    Sys.setenv(NOT_CRAN = "true")
+    on.exit(Sys.unsetenv("NOT_CRAN"), add = TRUE, after = FALSE)
+  }
+  # reticulate left to itself (no RETICULATE_PYTHON) makes a fresh environment without the reference modules; the
+  # stored values were made with the Python they were set up in. Once reticulate has started Python it keeps it for
+  # the session, so this only acts before that, and the variable is unset again after the run.
+  reference_python <- .vx_reference_python()
+  if (nzchar(reference_python) && !nzchar(Sys.getenv("RETICULATE_PYTHON")) &&
+      requireNamespace("reticulate", quietly = TRUE) && !reticulate::py_available(initialize = FALSE)) {
+    Sys.setenv(RETICULATE_PYTHON = reference_python)
+    on.exit(Sys.unsetenv("RETICULATE_PYTHON"), add = TRUE, after = FALSE)
+  }
+  # a file that cannot be read or stops outside its tests is reported in the result, as verify_tests() records it
+  results <- tryCatch(
+    testthat::test_file(file, reporter = "silent", load_package = "none", stop_on_failure = FALSE, stop_on_warning = FALSE,
+                        env = .vx_rerun_env(under_test)),
+    error = \(condition) conditionMessage(condition))
+  broken <- if (is.character(results)) results
+  tests <- .vx_tests(if (is.null(broken)) results else list(), state$blocks, state$skips, new.env(parent = emptyenv()))
   seen <- new.env(parent = emptyenv())
   entries <- unlist(lapply(state$blocks, .vx_entries, seen = seen), recursive = FALSE)
   ours <- is.null(reference) && !independent
   mine <- if (ours) entries else if (independent) Filter(\(entry) startsWith(entry$declared$reference, "independent:"), entries)
     else Filter(\(entry) identical(entry$declared$reference, reference), entries)
   values <- lapply(mine, \(entry) if (ours) entry$actual else entry$expected)
-  numbers <- vapply(values, is.numeric, logical(1))
-  data.frame(quantity = vapply(mine, \(entry) entry$declared$quantity, character(1)),
-             value = if (all(numbers)) as.numeric(unlist(values)) else vapply(values, as.character, character(1)),
-             stringsAsFactors = FALSE)
+  # each value keeps its own type: a number in `value`, anything else (as the capture writes it) in `text`
+  out <- data.frame(quantity = vapply(mine, \(entry) entry$declared$quantity, character(1)),
+                    value = vapply(values, \(value) if (is.numeric(value)) as.numeric(value) else NA_real_, numeric(1)),
+                    text = vapply(values, \(value) if (is.numeric(value)) NA_character_ else as.character(value), character(1)),
+                    stringsAsFactors = FALSE)
+  account <- .vx_rerun_account(tests, broken, state, if (ours) "package" else if (independent) "independent" else reference,
+                               under_test, case_version)
+  # a name may repeat with one value (the package's value compared with two references): it is matched as one;
+  # a name whose rows hold different values cannot be told apart and is named
+  cells <- paste(out$value, out$text, sep = "\r")
+  account$duplicated <- unique(out$quantity[duplicated(out$quantity)]) |>
+    Filter(f = \(name) length(unique(cells[out$quantity == name])) > 1L)
+  attr(out, "verify_rerun") <- account
+  out
+}
+
+#' Say what a re-run did, in plain words
+#'
+#' Prints, for a result of verify_rerun(), how many tests ran, passed, were
+#' skipped and failed; each skipped or failed test with its reason; the line
+#' that installs the missing reference packages; the quantity names that
+#' repeat in the side (not judged); whether this R has another version of the
+#' package than the case was made with; and the versions that ran.
+#'
+#' @param result What verify_rerun() returned.
+#' @return The printed lines, invisibly (a character vector).
+verify_rerun_report <- function(result) {
+  stopifnot("`result` must be what verify_rerun() returned" = is.data.frame(result))
+  account <- attr(result, "verify_rerun", exact = TRUE)
+  if (is.null(account)) {
+    lines <- "This result says nothing of how its tests ran (it was not made by verify_rerun() of helper 1.4.0 or later)."
+    writeLines(lines)
+    return(invisible(lines))
+  }
+  tests <- account$tests
+  plural <- \(n, word) sprintf("%d %s%s", n, word, if (n == 1L) "" else "s")
+  # one line per test: a message over several lines is joined
+  one_line <- \(text, empty) ifelse(nzchar(text), gsub("\\s*\n\\s*", " ", text), empty)
+  skipped <- subset(tests, state == "skip")
+  failed <- subset(tests, state == "fail")
+  lines <- sprintf("Ran %s: %s; %d passed, %d skipped, %d failed. %s of this side recomputed.",
+                   account$file, plural(nrow(tests), "test"), sum(tests$state == "pass"), nrow(skipped), nrow(failed),
+                   plural(nrow(result), "value"))
+  if (!nrow(tests)) {
+    lines <- c(lines, "The file ran no tests: a skip outside test_that() (skip_on_cran(), skip_if_not_installed(), skip_if()) skips the whole file, and testthat keeps no record of it.")
+  }
+  if (nrow(skipped)) {
+    because <- c(
+      if (length(account$missing)) sprintf("%s %s not installed in this R. %s", .vx_and(account$missing),
+                                           if (length(account$missing) == 1L) "is" else "are", .vx_install_line(account$missing)),
+      if (length(account$missing_python)) sprintf("Python module %s %s not available to this R.", .vx_and(account$missing_python),
+                                                  if (length(account$missing_python) == 1L) "is" else "are"))
+    lines <- c(lines, sprintf("Skipped (%s)%s", plural(nrow(skipped), "test"), if (length(because)) paste0(": ", paste(because, collapse = " ")) else ":"),
+               sprintf("  - \"%s\": %s", skipped$test, one_line(skipped$message, "no reason given")))
+  }
+  if (nrow(failed)) {
+    lines <- c(lines, sprintf("Failed (%s):", plural(nrow(failed), "test")),
+               sprintf("  - \"%s\": %s", failed$test, one_line(failed$message, "no message")))
+  }
+  repeated <- account$duplicated %||% character()
+  if (length(repeated)) {
+    lines <- c(lines, sprintf("Duplicate quantity names with different values in this side (%d): %s. Their values cannot be told apart by name and are not judged.",
+                              length(repeated), paste(utils::head(repeated, 5L), collapse = "; ")))
+  }
+  under_test <- subset(account$packages, role == "under test")
+  if (nrow(under_test) && !is.na(account$case_version) && !identical(under_test$version, account$case_version)) {
+    lines <- c(lines, sprintf("This case was made with %s %s; your R %s. Results may differ.", under_test$package,
+                              account$case_version, if (is.na(under_test$version)) "does not have it" else paste("has", under_test$version)))
+  }
+  lines <- c(lines, sprintf("Versions in this R: %s.", paste(account$packages$package,
+                                                            ifelse(is.na(account$packages$version), "not installed", account$packages$version),
+                                                            collapse = ", ")))
+  writeLines(lines)
+  invisible(lines)
 }

@@ -119,17 +119,19 @@ ref_earliest_arrival <- function(edges, source, origin, vertices = sort(unique(c
   relax(arrival)
 }
 
-#' Skip, recorded, when python3 cannot import a module
+#' Skip, recorded, when the reference Python cannot import a module
 #'
 #' The skip goes through `skip_without_reference()` with the module's name, so that Prova lists it with the
-#' reference that is missing. The interpreter is `python3` from the PATH (the job puts `~/equiv-py/bin` first).
+#' reference that is missing. The interpreter is the helper's verify_python() (VERIFY_PYTHON, RETICULATE_PYTHON,
+#' ~/equiv-py, then `python3` on the PATH), so a re-run in Prova finds the virtualenv on a machine set up like ci.
 #'
 #' @param module The Python module, e.g. `"networkx"`.
 #' @param reference The reference's name in `verify.json`.
 #' @return `TRUE`, invisibly, when the module imports.
 ref_skip_without_python <- function(module, reference = module) {
-  found <- nzchar(Sys.which("python3")) &&
-    identical(system2("python3", c("-c", shQuote(sprintf("import %s", module))), stdout = FALSE, stderr = FALSE), 0L)
+  python <- verify_python()
+  found <- nzchar(python) &&
+    identical(system2(python, c("-c", shQuote(sprintf("import %s", module))), stdout = FALSE, stderr = FALSE), 0L)
   if (!found) skip_without_reference(reference)
   invisible(TRUE)
 }
@@ -147,7 +149,7 @@ ref_python <- function(code, input) {
   on.exit(unlink(c(script, given, result)), add = TRUE)
   writeLines(code, script)
   jsonlite::write_json(input, given, auto_unbox = TRUE, digits = NA)
-  status <- system2("python3", c("-I", script, given, result))
+  status <- system2(verify_python(), c("-I", script, given, result))
   stopifnot("the Python script must succeed" = identical(status, 0L))
   jsonlite::fromJSON(result, simplifyVector = TRUE)
 }
@@ -157,7 +159,7 @@ ref_python <- function(code, input) {
 #' @param module The module.
 #' @return A string.
 ref_python_version <- function(module) {
-  system2("python3", c("-c", shQuote(sprintf("import %s; print(%s.__version__)", module, module))), stdout = TRUE)
+  system2(verify_python(), c("-c", shQuote(sprintf("import %s; print(%s.__version__)", module, module))), stdout = TRUE)
 }
 
 #' A seeded random spell table
