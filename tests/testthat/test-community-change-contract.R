@@ -131,6 +131,34 @@ test_that("adjustment moves unrelated partitions to zero and leaves agreement at
   expect_equal(Dynet:::.compare_partitions(same, same, "ami"), 1)
 })
 
+test_that("ami is normalised by the larger entropy (Vinh, Epps & Bailey 2010, AMI_max)", {
+  # Worked by hand on six vertices: a = 111222, b = 112233. MI = H(b) -
+  # H(b | a) = (2/3) log 2 = 0.4620981; H(a) = log 2, H(b) = log 3; the expected MI under
+  # the permutation null, the mean over all 720 relabellings of b, is
+  # 0.2772589. AMI_max = (0.4620981 - 0.2772589) / (log 3 - 0.2772589)
+  # = 0.2250423 (aricode::AMI gives the same). The arithmetic-mean form
+  # Dynet <= 0.8.4 used gives 0.2987925.
+  a <- c(1, 1, 1, 2, 2, 2)
+  b <- c(1, 1, 2, 2, 3, 3)
+  mi <- 2 / 3 * log(2)
+  relabel <- function(v) if (length(v) <= 1L) list(v) else
+    do.call(c, lapply(seq_along(v), \(i) lapply(relabel(v[-i]), \(r) c(v[i], r))))
+  info <- function(x, y) {
+    p <- table(x, y) / length(x)
+    e <- outer(rowSums(p), colSums(p))
+    sum(p[p > 0] * log(p[p > 0] / e[p > 0]))
+  }
+  chance <- mean(vapply(relabel(b), \(perm) info(a, perm), numeric(1L)))
+  expect_equal(chance, 0.277258872223978, tolerance = 1e-12)
+  expect_equal(Dynet:::.compare_partitions(a, b, "ami"),
+               (mi - chance) / (log(3) - chance), tolerance = 1e-12)
+  expect_equal(Dynet:::.compare_partitions(a, b, "ami"), 0.225042283198309,
+               tolerance = 1e-12)
+  # Symmetric in its arguments, as the larger entropy is.
+  expect_equal(Dynet:::.compare_partitions(b, a, "ami"), 0.225042283198309,
+               tolerance = 1e-12)
+})
+
 test_that("iami is ami, because every comparison here is already an intersection", {
   set.seed(31)
   for (trial in seq_len(10L)) {

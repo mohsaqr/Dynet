@@ -59,7 +59,7 @@ test_that("NMI and ARI between consecutive bins equal aricode", {
                    quantity = "consecutive bins, 30 vertices", tolerance = 1e-12, key = c("time", "measure"))
 })
 
-test_that("AMI between consecutive bins equals scikit-learn's adjusted_mutual_info_score (arithmetic mean)", {
+test_that("AMI between consecutive bins equals scikit-learn's adjusted_mutual_info_score (maximum entropy)", {
   ref_skip_without_python("sklearn", reference = "scikit-learn")
   table <- random_membership(21L)
   pairs <- consecutive(table)
@@ -67,7 +67,7 @@ test_that("AMI between consecutive bins equals scikit-learn's adjusted_mutual_in
     "import json, sys",
     "from sklearn.metrics import adjusted_mutual_info_score",
     "given = json.load(open(sys.argv[1]))",
-    "json.dump([adjusted_mutual_info_score(p['before'], p['after'], average_method='arithmetic') for p in given],",
+    "json.dump([adjusted_mutual_info_score(p['before'], p['after'], average_method='max') for p in given],",
     "          open(sys.argv[2], 'w'))"),
     unname(lapply(pairs, \(pair) list(before = pair$before, after = pair$after))))
   theirs <- data.frame(time = vapply(pairs, `[[`, numeric(1), "time"), measure = "ami", value = as.numeric(ami))
@@ -78,16 +78,16 @@ test_that("AMI between consecutive bins equals scikit-learn's adjusted_mutual_in
                    note = sprintf("scikit-learn %s", ref_python_version("sklearn")))
 })
 
-test_that("AMI with aricode's maximum-entropy normaliser is a known difference", {
+test_that("AMI between consecutive bins equals aricode::AMI() (maximum-entropy normaliser)", {
   skip_without_reference("aricode")
   table <- random_membership(21L)
   theirs <- do.call(rbind, lapply(consecutive(table), \(pair) {
     data.frame(time = pair$time, measure = "ami", value = aricode::AMI(pair$before, pair$after))
   }))
   ours <- subset(as.data.frame(community_change(match_communities(table), measure = "ami")), !is.na(value))
-  expect_known_difference(ours, theirs, reference = "aricode", covers = "community_change()",
-                          quantity = "AMI, consecutive bins", tolerance = 1e-10, key = c("time", "measure"),
-                          reason = "Dynet normalises adjusted mutual information by the arithmetic mean of the two entropies (scikit-learn's default); aricode::AMI() by their maximum.")
+  # The expected mutual information is a hypergeometric sum taken in a different order on each side.
+  expect_reference(ours, theirs, reference = "aricode", covers = "community_change()",
+                   quantity = "AMI, consecutive bins", tolerance = 1e-10, key = c("time", "measure"))
 })
 
 test_that("the label matching between two bins reaches the total Jaccard overlap clue::solve_LSAP() reaches", {

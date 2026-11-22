@@ -1,3 +1,16 @@
+# Dynet 0.8.5
+
+* `community_change(measure = "ami")` (and `"iami"`, `"uami"`) now normalises
+  adjusted mutual information by the **larger** of the two entropies, AMI_max,
+  the form Vinh, Epps & Bailey (2010) advocate, whose unadjusted counterpart is
+  the normalised information distance, a true metric. It equals
+  `aricode::AMI()` and scikit-learn's
+  `adjusted_mutual_info_score(average_method = "max")`. Up to 0.8.4 the
+  arithmetic mean of the entropies was used, which gives a larger value
+  whenever the two entropies differ (a = 111222 against b = 112233: 0.2988,
+  now 0.2250). Identical partitions still score 1 and unrelated ones about 0.
+  `"nmi"` is unchanged.
+
 # Dynet 0.8.4
 
 * `match_communities()` with a `threshold`: a later community whose assigned

@@ -54,8 +54,8 @@ is \code{NA} by construction.
 What each measures, briefly. \code{"nmi"} is shared information normalised by
 the mean entropy, in \eqn{[0, 1]}, high for agreement; it is \strong{not}
 chance-corrected, so two unrelated partitions score above zero. \code{"ami"} is
-the same quantity with the chance level subtracted, and is the one to reach
-for. \code{"ari"} is chance-corrected pair agreement, centred on zero for
+shared information with the chance level subtracted, normalised by the
+larger entropy (see below), and is the one to reach for. \code{"ari"} is chance-corrected pair agreement, centred on zero for
 unrelated partitions. \code{"vi"} is a true metric in nats, zero for agreement
 and unbounded above. \code{"split_join"} counts the vertices that would have to
 move, so it is an integer in \eqn{[0, 2N]}. \code{"jaccard"} scores agreement
@@ -78,11 +78,16 @@ every other measure here is already restricted to the shared vertices,
 offered under both names because the literature uses both.
 
 Two notes on the sources, because both cost time to discover. Adjusted
-mutual information admits more than one normaliser: this package divides by
-the \strong{arithmetic mean} of the two entropies, matching \code{"nmi"} above,
-\code{sklearn}'s default, and the stated intent of Zhong et al.; \code{aricode::AMI}
-divides by the \strong{maximum} instead, so the two disagree by convention and
-not by error. And the expression printed for the adjusted measures in Zhong
+mutual information admits more than one normaliser (Vinh, Epps & Bailey
+2010 define four). This package divides by the \strong{maximum} of the two
+entropies, \eqn{AMI = (MI - E[MI]) / (\max(H_1, H_2) - E[MI])}, the form
+Vinh et al. advocate because its unadjusted counterpart is the normalised
+information distance, a true metric; it equals \code{aricode::AMI()} and
+\code{sklearn}'s \code{adjusted_mutual_info_score(average_method = "max")}.
+(\code{sklearn}'s default, the arithmetic mean, gives a larger value whenever the
+two entropies differ; Dynet up to 0.8.4 used it.) \code{"uami"} and \code{"iami"} use
+the same normaliser. \code{"nmi"} keeps the arithmetic mean (Danon et al. 2005).
+And the expression printed for the adjusted measures in Zhong
 et al. subtracts the chance term once in a denominator that needs it twice,
 which scores two identical partitions at 0.949 rather than 1; the corrected
 form is used here.

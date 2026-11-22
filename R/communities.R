@@ -746,9 +746,12 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
       # information over the vertices both partitions have, which is the set
       # this function is always handed. The two names are therefore the same
       # number here, and both are offered because the literature uses both.
+      # Normalised by the larger entropy, AMI_max, the form Vinh, Epps &
+      # Bailey (2010) advocate: its unadjusted counterpart is the normalised
+      # information distance, a true metric, and it is aricode::AMI().
       info <- .mutual_information(ct)
       expected <- .expected_mutual_information(ct$row, ct$col, ct$total)
-      denominator <- (info$h1 + info$h2) / 2 - expected
+      denominator <- max(info$h1, info$h2) - expected
       # Two identical trivial partitions carry no information and agree
       # perfectly, so the ratio is 0/0. Defined as 1, the agreement.
       if (abs(denominator) < .Machine$double.eps) 1 else
@@ -1713,8 +1716,8 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
 #' What each measures, briefly. `"nmi"` is shared information normalised by
 #' the mean entropy, in \eqn{[0, 1]}, high for agreement; it is **not**
 #' chance-corrected, so two unrelated partitions score above zero. `"ami"` is
-#' the same quantity with the chance level subtracted, and is the one to reach
-#' for. `"ari"` is chance-corrected pair agreement, centred on zero for
+#' shared information with the chance level subtracted, normalised by the
+#' larger entropy (see below), and is the one to reach for. `"ari"` is chance-corrected pair agreement, centred on zero for
 #' unrelated partitions. `"vi"` is a true metric in nats, zero for agreement
 #' and unbounded above. `"split_join"` counts the vertices that would have to
 #' move, so it is an integer in \eqn{[0, 2N]}. `"jaccard"` scores agreement
@@ -1737,11 +1740,16 @@ as.data.frame.dynet_communities <- function(x, row.names = NULL,
 #' offered under both names because the literature uses both.
 #'
 #' Two notes on the sources, because both cost time to discover. Adjusted
-#' mutual information admits more than one normaliser: this package divides by
-#' the **arithmetic mean** of the two entropies, matching `"nmi"` above,
-#' `sklearn`'s default, and the stated intent of Zhong et al.; `aricode::AMI`
-#' divides by the **maximum** instead, so the two disagree by convention and
-#' not by error. And the expression printed for the adjusted measures in Zhong
+#' mutual information admits more than one normaliser (Vinh, Epps & Bailey
+#' 2010 define four). This package divides by the **maximum** of the two
+#' entropies, \eqn{AMI = (MI - E[MI]) / (\max(H_1, H_2) - E[MI])}, the form
+#' Vinh et al. advocate because its unadjusted counterpart is the normalised
+#' information distance, a true metric; it equals `aricode::AMI()` and
+#' `sklearn`'s `adjusted_mutual_info_score(average_method = "max")`.
+#' (`sklearn`'s default, the arithmetic mean, gives a larger value whenever the
+#' two entropies differ; Dynet up to 0.8.4 used it.) `"uami"` and `"iami"` use
+#' the same normaliser. `"nmi"` keeps the arithmetic mean (Danon et al. 2005).
+#' And the expression printed for the adjusted measures in Zhong
 #' et al. subtracts the chance term once in a denominator that needs it twice,
 #' which scores two identical partitions at 0.949 rather than 1; the corrected
 #' form is used here.
