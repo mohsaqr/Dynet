@@ -37,7 +37,8 @@ test_that("each window's ties equal networkDynamic::network.extract(rule = 'any'
     data.frame(time = lo, from = names_in[arcs[, 1L]], to = names_in[arcs[, 2L]], present = TRUE)
   }))
   ours <- transform(as.data.frame(snapshots(network, step = 7, window = 7)), present = TRUE)
-  expect_reference(ours, theirs, reference = "networkDynamic", covers = "snapshots()", quantity = "tie per window",
+  expect_reference(ours, theirs, reference = "networkDynamic", covers = c("snapshots()", "as.data.frame.dynet_snapshot()"),
+                   quantity = "tie per window",
                    tolerance = 0, key = c("time", "from", "to"))
 })
 

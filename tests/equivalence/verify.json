@@ -57,6 +57,19 @@
     "scikit-learn": {
       "authority": "open-source",
       "url": "https://scikit-learn.org"
+    },
+    "teneto": {
+      "authority": "open-source",
+      "url": "https://github.com/wiheto/teneto",
+      "python": "teneto"
+    },
+    "raphtory": {
+      "authority": "open-source",
+      "url": "https://www.raphtory.com",
+      "python": "raphtory"
+    },
+    "multinet": {
+      "authority": "open-source"
     }
   },
   "exports": {

@@ -63,6 +63,7 @@ test_that("multislice modularity without coupling is the weighted mean of igraph
   theirs <- data.frame(measure = "q", value = sum(per_slice["q", ] * per_slice["total", ]) / sum(per_slice["total", ]))
   ours <- subset(as.data.frame(multislice_modularity(network, membership = membership, omega = 0, step = 7,
                                                      window = 7)), measure == "q")
-  expect_reference(ours, theirs, reference = "igraph", covers = "multislice_modularity()",
+  expect_reference(ours, theirs, reference = "igraph",
+                   covers = c("multislice_modularity()", "as.data.frame.dynet_modularity()"),
                    quantity = "omega = 0", tolerance = 1e-12, key = "measure")
 })

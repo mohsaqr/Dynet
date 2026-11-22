@@ -67,3 +67,34 @@ test_that("AB-BA counted whenever the target speaks next, whoever is addressed, 
                  reference = by_definition, covers = "pshifts()", quantity = "AB-BA, the target's every reply",
                  tolerance = 0.5, key = "shift")
 })
+
+test_that("the counts of each participation shift equal relevent::accum.ps()", {
+  skip_without_reference("relevent")
+  rows <- lapply(c(3L, 4L, 5L, 6L), \(seed) {
+    turns <- random_turns(seed, 80L)
+    people <- sort(unique(c(turns$from, turns$to)))
+    # accum.ps() takes an event list (time, sender, receiver) and returns the cumulative counts after each event;
+    # its last row is the whole sequence.
+    accumulated <- relevent::accum.ps(cbind(turns$start, match(turns$from, people), match(turns$to, people)))
+    totals <- accumulated[nrow(accumulated), ]
+    list(ours = cbind(seed = seed, as.data.frame(pshifts(dynet(turns, directed = TRUE)))),
+         theirs = data.frame(seed = seed, shift = colnames(accumulated), value = as.numeric(totals)))
+  })
+  expect_reference(do.call(rbind, lapply(rows, `[[`, "ours")), do.call(rbind, lapply(rows, `[[`, "theirs")),
+                   reference = "relevent", covers = c("pshifts()", "as.data.frame.dynet_pshifts()"),
+                   quantity = "80 turns", tolerance = 0, key = c("seed", "shift"))
+  family <- c(`AB-BA` = "turn_receiving", `AB-B0` = "turn_receiving", `AB-BY` = "turn_receiving",
+              `A0-X0` = "turn_claiming", `A0-XA` = "turn_claiming", `A0-XY` = "turn_claiming",
+              `AB-X0` = "turn_usurping", `AB-XA` = "turn_usurping", `AB-XB` = "turn_usurping",
+              `AB-XY` = "turn_usurping", `A0-AY` = "turn_continuing", `AB-A0` = "turn_continuing",
+              `AB-AY` = "turn_continuing")
+  summed <- lapply(rows, \(side) {
+    totals <- tapply(side$theirs$value, family[side$theirs$shift], sum)
+    list(ours = cbind(seed = side$ours$seed[[1L]],
+                      as.data.frame(summary(pshifts(dynet(random_turns(side$ours$seed[[1L]], 80L), directed = TRUE))))),
+         theirs = data.frame(seed = side$theirs$seed[[1L]], family = names(totals), count = as.numeric(totals)))
+  })
+  expect_reference(do.call(rbind, lapply(summed, `[[`, "ours")), do.call(rbind, lapply(summed, `[[`, "theirs")),
+                   reference = "relevent", covers = "summary.dynet_pshifts()",
+                   quantity = "80 turns, per family", tolerance = 0, key = c("seed", "family"))
+})

@@ -164,3 +164,61 @@ test_that("activation model: the static density is p and each active link's rate
                    reference = mc_reference, covers = "random_dynet()",
                    quantity = "Monte Carlo summary: activation event rate", tolerance = tolerance_rate, key = "seed")
 })
+
+test_that("binomial and block models: active shares agree with sna::rgraph() draws of the same model (Monte Carlo)", {
+  skip_without_reference("sna")
+  nodes <- 12L
+  times <- 25L
+  p <- 0.15
+  cells <- nodes * (nodes - 1L) * times
+  # Two independent estimates of one share: the standard error of their difference is sqrt(2) times one's,
+  # sqrt(2 * 0.15 * 0.85 / 3300) = 0.0088; four of it, fixed before any run.
+  tolerance <- 4 * sqrt(2 * p * (1 - p) / cells)
+  sna_share <- \(seed, tprob) {
+    old <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv())
+    on.exit(if (is.null(old)) rm(".Random.seed", envir = globalenv()) else assign(".Random.seed", old, envir = globalenv()),
+            add = TRUE)
+    set.seed(1000L + seed)
+    # rgraph() draws `times` independent digraphs; m x n x n.
+    sna::rgraph(nodes, m = times, tprob = tprob, mode = "digraph", diag = FALSE)
+  }
+  binomial <- lapply(seeds, \(s) {
+    drawn <- as.data.frame(random_dynet(nodes = nodes, times = times, model = "binomial", p = p, seed = s))
+    list(ours = data.frame(seed = s, active_share = sum(drawn$end - drawn$start) / cells),
+         theirs = data.frame(seed = s, active_share = sum(sna_share(s, p)) / cells))
+  })
+  expect_reference(do.call(rbind, lapply(binomial, `[[`, "ours")), do.call(rbind, lapply(binomial, `[[`, "theirs")),
+                   reference = "sna", covers = "random_dynet()",
+                   quantity = "Monte Carlo: binomial active share against sna::rgraph()", tolerance = tolerance,
+                   key = "seed")
+  p_within <- 0.3
+  p_between <- 0.05
+  block <- rep(1:2, each = nodes / 2)
+  same <- outer(block, block, `==`)
+  tprob <- ifelse(same, p_within, p_between)
+  # Within: 60 ordered dyads x 25 slices on each side; between: 72 x 25. Standard errors of the difference
+  # sqrt(2 * 0.21 / 1500) = 0.0167 and sqrt(2 * 0.0475 / 1800) = 0.0073.
+  tolerance_within <- 4 * sqrt(2 * p_within * (1 - p_within) / (60 * times))
+  tolerance_between <- 4 * sqrt(2 * p_between * (1 - p_between) / (72 * times))
+  blocks <- lapply(seeds, \(s) {
+    network <- random_dynet(nodes = nodes, times = times, model = "block", blocks = 2, p_within = p_within,
+                            p_between = p_between, seed = s)
+    drawn <- as.data.frame(network)
+    label <- with(as.data.frame(network, what = "nodes"), stats::setNames(block, name))
+    within <- label[drawn$from] == label[drawn$to]
+    duration <- drawn$end - drawn$start
+    theirs <- sna_share(s, tprob)
+    within_sna <- sum(vapply(seq_len(times), \(slice) sum(theirs[slice, , ][same & !diag(nodes)]), numeric(1)))
+    between_sna <- sum(vapply(seq_len(times), \(slice) sum(theirs[slice, , ][!same]), numeric(1)))
+    list(ours = data.frame(seed = s, within = sum(duration[within]) / (60 * times),
+                           between = sum(duration[!within]) / (72 * times)),
+         theirs = data.frame(seed = s, within = within_sna / (60 * times), between = between_sna / (72 * times)))
+  })
+  stack <- \(part, column) do.call(rbind, lapply(blocks, \(b) b[[part]][c("seed", column)]))
+  expect_reference(stack("ours", "within"), stack("theirs", "within"), reference = "sna", covers = "random_dynet()",
+                   quantity = "Monte Carlo: block within share against sna::rgraph()", tolerance = tolerance_within,
+                   key = "seed")
+  expect_reference(stack("ours", "between"), stack("theirs", "between"), reference = "sna", covers = "random_dynet()",
+                   quantity = "Monte Carlo: block between share against sna::rgraph()", tolerance = tolerance_between,
+                   key = "seed")
+})
