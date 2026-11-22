@@ -1,4 +1,4 @@
-# prova-verify-helper 1.4.2 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
+# prova-verify-helper 1.4.3 (R). Source: prova reporters/verify-expect.R. A package keeps a copy as tests/equivalence/helper-verify.R; do not edit the copy (reporters/verify-vendor.sh refreshes it).
 #
 # Declared equivalence tests for Prova Verify (the standard: equivalence/STANDARD.md).
 # Every comparison of a package with a reference goes through one verb that ASSERTS
@@ -28,7 +28,7 @@
 #' Version of this helper
 #'
 #' @return A length-one character vector, the version on the file's first line.
-verify_helper_version <- function() "1.4.2"
+verify_helper_version <- function() "1.4.3"
 
 .vx_kinds <- c("reference", "known_difference", "differs", "not_comparable")
 .vx_measures <- c("absolute", "relative", "scaled")
@@ -942,9 +942,11 @@ verify_exports_check <- function(path = file.path("tests", "equivalence", "verif
 #' Runs every `test*.R` of `path` with testthat, recording each declared
 #' comparison, writes `<capture>/capture.json` (format `prova.verify-capture/1`),
 #' checks `verify.json` against NAMESPACE, and checks that every `covered`
-#' function has, in this run, a comparison of kind `reference` on an authority
-#' that counts (not `internal`). A function whose only reference is not
-#' installed where the job runs therefore belongs in `not_yet`.
+#' function has, in this run, a comparison of kind `reference`. Any authority
+#' will do, `internal` included: how strong the evidence is (Verified, Indirect,
+#' Internal) is Prova's to say, from the authorities and `exports.via`. A
+#' function whose only reference is not installed where the job runs therefore
+#' belongs in `not_yet`.
 #'
 #' @param path The folder of the equivalence tests.
 #' @param capture The folder the capture is written to (default: the
@@ -1062,7 +1064,9 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
                       verify_error = \(condition) conditionMessage(condition))
   if (is.character(checked)) problems <- c(problems, checked)
   if (is.null(filter) && is.data.frame(checked)) {
-    counted <- Filter(\(entry) entry$declared$authority %in% .vx_counted && entry$declared$kind == "reference", comparisons)
+    # since 1.4.3 an internal reference covers too (owner's decision, 2026-11-21): Prova labels it Internal, or
+    # Indirect through exports.via
+    counted <- Filter(\(entry) entry$declared$authority %in% .vx_authorities && entry$declared$kind == "reference", comparisons)
     evidenced <- unique(unlist(lapply(counted, \(entry) entry$declared$covers)))
     # evidence for an entry `name(argument = value)` is evidence for its verb `name()` too
     evidenced <- unique(c(evidenced, .vx_verb(evidenced)))
@@ -1070,7 +1074,7 @@ verify_tests <- function(path = file.path("tests", "equivalence"),
     bare <- setdiff(checked$export[checked$list == "covered"], evidenced)
     if (length(bare)) {
       problems <- c(problems, sprintf(
-        "covered in verify.json but with no comparison on a counted authority in this run%s: %s",
+        "covered in verify.json but with no reference comparison in this run%s: %s",
         if (skipped_tests) sprintf(" (%d tests were skipped)", skipped_tests) else "", toString(bare)))
     }
   }
