@@ -897,7 +897,10 @@ as.data.frame.dynet_modularity <- function(x, row.names = NULL,
 #'   shared members.
 #' @param threshold Minimum overlap for a community to inherit an earlier
 #'   label rather than start a new one. In \eqn{[0, 1]} for `"jaccard"`, a
-#'   non-negative count for `"intersection"`.
+#'   non-negative count for `"intersection"`. A community whose assigned
+#'   overlap is at or below it is born. Only a community with no member
+#'   active in both bins, which the overlap cannot judge, keeps the label most
+#'   of its members carried.
 #'
 #' @return A `dynet_communities` frame with the same rows as `x` and three
 #'   guarantees: `community` now carries the matched, time-consistent label;
@@ -1052,8 +1055,12 @@ match_communities <- function(x, method = c("hungarian", "greedy"),
         # Anything the overlap could not speak for -- a community whose
         # members were all inactive in one of the two bins -- keeps the label
         # most of its members were carrying, provided nothing else claimed it.
+        # A community with members active in both bins was judged by the
+        # overlap: below `threshold` it is born, and the fallback must not
+        # hand it a label the threshold refused.
         for (target in key[is.na(inherit)]) {
           members <- which(!is.na(label) & label == as.integer(target))
+          if (any(shared[members])) next
           carried <- previous$assigned[members]
           carried <- carried[!is.na(carried)]
           if (!length(carried)) next

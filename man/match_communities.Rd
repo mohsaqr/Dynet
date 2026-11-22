@@ -28,7 +28,10 @@ shared members.}
 
 \item{threshold}{Minimum overlap for a community to inherit an earlier
 label rather than start a new one. In \eqn{[0, 1]} for \code{"jaccard"}, a
-non-negative count for \code{"intersection"}.}
+non-negative count for \code{"intersection"}. A community whose assigned
+overlap is at or below it is born. Only a community with no member
+active in both bins, which the overlap cannot judge, keeps the label most
+of its members carried.}
 }
 \value{
 A \code{dynet_communities} frame with the same rows as \code{x} and three

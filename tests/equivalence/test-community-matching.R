@@ -371,8 +371,7 @@ test_that("a pairing below the threshold passes on no label", {
   matched <- match_communities(two_bins(before, after), threshold = 0.5)
   expect_reference(dynet_pairing(matched, 0, 1), ref_pairing(weight, ref_lsap(weight)$row_of, threshold = 0.5),
                    reference = "clue", covers = "match_communities()", quantity = "pairing, threshold 0.5",
-                   tolerance = 1e-12, key = "after",
-                   defect = "match_communities() gives a later community whose assigned overlap is at or below `threshold` the earlier label anyway (event 'persist', overlap 0), through the fallback meant for communities whose members are all inactive; FINDINGS.md")
+                   tolerance = 1e-12, key = "after")
 })
 
 test_that("the matched table keeps every vertex's raw label", {

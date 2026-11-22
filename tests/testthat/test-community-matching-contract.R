@@ -126,6 +126,32 @@ test_that("a community that goes quiet is not read as dissolving", {
   expect_identical(length(unique(matched$community)), 2L)
 })
 
+test_that("a pairing below the threshold is born, not handed the label by the fallback", {
+  # A = v01-v10, B = v11-v30 in bin 0; X = v01-v03, Y = v04-v30 in bin 1.
+  # Jaccard: A-X 3/10 = 0.3, B-Y 20/27, A-Y 7/30, B-X 0. The optimal
+  # assignment is (A, X) + (B, Y). At threshold 0.5 only (B, Y) passes: Y
+  # keeps B's label 2, X is born with the next label 3, and A dissolves.
+  # Every member of X is active in both bins, so the inactive-member fallback
+  # must not apply (it used to give X label 1, "persist", overlap 0).
+  nodes <- sprintf("v%02d", 1:30)
+  labels <- cbind(c(rep(1L, 10L), rep(2L, 20L)), c(rep(1L, 3L), rep(2L, 27L)))
+  dimnames(labels) <- list(nodes, NULL)
+  matched <- match_communities(hand_partition(labels), threshold = 0.5)
+  events <- as.data.frame(matched, what = "events")
+  later <- subset(events, time == 1 & event != "dissolve")
+  expect_identical(later$community, c(3L, 2L))
+  expect_identical(later$event, c("born", "persist"))
+  expect_equal(later$overlap, c(0, 20 / 27), tolerance = 1e-12)
+  expect_identical(later$matched_from, c(NA_integer_, 2L))
+  expect_identical(subset(events, event == "dissolve")$community, 1L)
+  # At threshold 0 the same pairing passes: X inherits A's label as a split.
+  loose <- as.data.frame(match_communities(hand_partition(labels), threshold = 0),
+                         what = "events")
+  x_row <- subset(loose, time == 1 & community == 1L)
+  expect_identical(x_row$event, "split")
+  expect_equal(x_row$overlap, 0.3, tolerance = 1e-12)
+})
+
 test_that("the optimal assignment beats greedy where they can differ", {
   # Ten vertices. Bin 0 splits 6 / 4; bin 1 splits 9 / 1, with one vertex of
   # the first group left alone. Greedy takes the single largest overlap

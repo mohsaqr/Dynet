@@ -1,3 +1,13 @@
+# Dynet 0.8.4
+
+* `match_communities()` with a `threshold`: a later community whose assigned
+  overlap is at or below the threshold is now born, as documented. The
+  fallback for communities whose members were all inactive ran for every
+  unlabelled community and handed such a community the earlier label anyway
+  (overlap 3/10 with `threshold = 0.5`: event "persist", overlap 0; now
+  "born", as `clue::solve_LSAP()` with the threshold gives). The fallback now
+  applies only to communities with no member active in both bins.
+
 # Dynet 0.8.2
 
 * No change to the package. Every comparison with a reference package or an
