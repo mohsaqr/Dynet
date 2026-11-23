@@ -21,7 +21,7 @@ follow a community, not to measure change."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -117,8 +117,8 @@ is <code>NA</code> by construction.</p>
 <p>What each measures, briefly. <code>"nmi"</code> is shared information normalised by
 the mean entropy, in \([0, 1]\), high for agreement; it is <strong>not</strong>
 chance-corrected, so two unrelated partitions score above zero. <code>"ami"</code> is
-the same quantity with the chance level subtracted, and is the one to reach
-for. <code>"ari"</code> is chance-corrected pair agreement, centred on zero for
+shared information with the chance level subtracted, normalised by the
+larger entropy (see below), and is the one to reach for. <code>"ari"</code> is chance-corrected pair agreement, centred on zero for
 unrelated partitions. <code>"vi"</code> is a true metric in nats, zero for agreement
 and unbounded above. <code>"split_join"</code> counts the vertices that would have to
 move, so it is an integer in \([0, 2N]\). <code>"jaccard"</code> scores agreement
@@ -139,11 +139,16 @@ every other measure here is already restricted to the shared vertices,
 <code>"iami"</code> is numerically identical to <code>"ami"</code> in this package, and is
 offered under both names because the literature uses both.</p>
 <p>Two notes on the sources, because both cost time to discover. Adjusted
-mutual information admits more than one normaliser: this package divides by
-the <strong>arithmetic mean</strong> of the two entropies, matching <code>"nmi"</code> above,
-<code>sklearn</code>'s default, and the stated intent of Zhong et al.; <code>aricode::AMI</code>
-divides by the <strong>maximum</strong> instead, so the two disagree by convention and
-not by error. And the expression printed for the adjusted measures in Zhong
+mutual information admits more than one normaliser (Vinh, Epps &amp; Bailey
+2010 define four). This package divides by the <strong>maximum</strong> of the two
+entropies, \(AMI = (MI - E[MI]) / (\max(H_1, H_2) - E[MI])\), the form
+Vinh et al. advocate because its unadjusted counterpart is the normalised
+information distance, a true metric; it equals <code>aricode::AMI()</code> and
+<code>sklearn</code>'s <code>adjusted_mutual_info_score(average_method = "max")</code>.
+(<code>sklearn</code>'s default, the arithmetic mean, gives a larger value whenever the
+two entropies differ; Dynet up to 0.8.4 used it.) <code>"uami"</code> and <code>"iami"</code> use
+the same normaliser. <code>"nmi"</code> keeps the arithmetic mean (Danon et al. 2005).
+And the expression printed for the adjusted measures in Zhong
 et al. subtracts the chance term once in a denominator that needs it twice,
 which scores two identical partitions at 0.949 rather than 1; the corrected
 form is used here.</p>

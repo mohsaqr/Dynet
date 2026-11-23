@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Dynet</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,24 @@
       <small>Source: <a href="https://github.com/mohsaqr/Dynet/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.6" id="dynet-086">Dynet 0.8.6<a class="anchor" aria-label="anchor" href="#dynet-086"></a></h2>
+<ul><li>No change to the package’s code or numbers. The equivalence evidence (<code>tests/equivalence/</code>, not part of the built package) gained outside references: <code><a href="../reference/multislice_modularity.html">multislice_modularity()</a></code> with coupled slices (<code>omega</code> 0.5, 1, 2, categorical coupling) against <code>multinet::modularity_ml()</code>, whose coupling term agrees to 3.3e-16 and whose total leaves out the i = j terms of the null model that Mucha et al. (2010) and Dynet keep (declared as a known difference); <code><a href="../reference/add_nodes.html">add_nodes()</a></code> against <code><a href="https://rdrr.io/pkg/network/man/add.vertices.html" class="external-link">network::add.vertices()</a></code> (vertex count, temporal density through <code><a href="https://rdrr.io/pkg/tsna/man/density.html" class="external-link">tsna::tEdgeDensity()</a></code>); <code><a href="../reference/update_nodes.html">update_nodes()</a></code> through <code><a href="../reference/mixing.html">mixing()</a></code> against ergm’s <code>nodemix</code>; <code>set_tie_sessions(breaks = )</code> through <code>collapse_network(sessions = "separate")</code>. Out-closeness of a vertex that reaches no one (Dynet 0, igraph NaN) is now declared a known difference.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.5" id="dynet-085">Dynet 0.8.5<a class="anchor" aria-label="anchor" href="#dynet-085"></a></h2>
+<ul><li>
+<code>community_change(measure = "ami")</code> (and <code>"iami"</code>, <code>"uami"</code>) now normalises adjusted mutual information by the <strong>larger</strong> of the two entropies, AMI_max, the form Vinh, Epps &amp; Bailey (2010) advocate, whose unadjusted counterpart is the normalised information distance, a true metric. It equals <code>aricode::AMI()</code> and scikit-learn’s <code>adjusted_mutual_info_score(average_method = "max")</code>. Up to 0.8.4 the arithmetic mean of the entropies was used, which gives a larger value whenever the two entropies differ (a = 111222 against b = 112233: 0.2988, now 0.2250). Identical partitions still score 1 and unrelated ones about 0. <code>"nmi"</code> is unchanged.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.4" id="dynet-084">Dynet 0.8.4<a class="anchor" aria-label="anchor" href="#dynet-084"></a></h2>
+<ul><li>
+<code><a href="../reference/match_communities.html">match_communities()</a></code> with a <code>threshold</code>: a later community whose assigned overlap is at or below the threshold is now born, as documented. The fallback for communities whose members were all inactive ran for every unlabelled community and handed such a community the earlier label anyway (overlap 3/10 with <code>threshold = 0.5</code>: event “persist”, overlap 0; now “born”, as <code>clue::solve_LSAP()</code> with the threshold gives). The fallback now applies only to communities with no member active in both bins.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.2" id="dynet-082">Dynet 0.8.2<a class="anchor" aria-label="anchor" href="#dynet-082"></a></h2>
+<ul><li>No change to the package. Every comparison with a reference package or an independent computation is now a declared equivalence test in <code>tests/equivalence/</code> (excluded from the build): 17 files, 10,246 compared numbers against igraph, tsna, sna, networkDynamic, networkx, ergm, aricode, scikit-learn, clue, cluster and computations written from the definitions, each covering named exported functions. The comparisons that lived in <code>tests/testthat</code> moved there; the contract tests stay.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.8.1" id="dynet-081">Dynet 0.8.1<a class="anchor" aria-label="anchor" href="#dynet-081"></a></h2>
 <p>A whole-package audit: every exported verb and every S3 method was run against synthetic data, an oracle (tsna, networkDynamic, igraph, sna, teneto, raphtory, Reticula, or a brute-force enumeration) and a set of invariants. The fixes below change numbers in the cases they describe; everything else is unchanged to within floating-point tolerance.</p>

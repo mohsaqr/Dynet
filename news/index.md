@@ -1,5 +1,64 @@
 # Changelog
 
+## Dynet 0.8.6
+
+- No change to the package’s code or numbers. The equivalence evidence
+  (`tests/equivalence/`, not part of the built package) gained outside
+  references:
+  [`multislice_modularity()`](https://pak.dynasite.org/Dynet/reference/multislice_modularity.md)
+  with coupled slices (`omega` 0.5, 1, 2, categorical coupling) against
+  `multinet::modularity_ml()`, whose coupling term agrees to 3.3e-16 and
+  whose total leaves out the i = j terms of the null model that Mucha et
+  al. (2010) and Dynet keep (declared as a known difference);
+  [`add_nodes()`](https://pak.dynasite.org/Dynet/reference/add_nodes.md)
+  against
+  [`network::add.vertices()`](https://rdrr.io/pkg/network/man/add.vertices.html)
+  (vertex count, temporal density through
+  [`tsna::tEdgeDensity()`](https://rdrr.io/pkg/tsna/man/density.html));
+  [`update_nodes()`](https://pak.dynasite.org/Dynet/reference/update_nodes.md)
+  through
+  [`mixing()`](https://pak.dynasite.org/Dynet/reference/mixing.md)
+  against ergm’s `nodemix`; `set_tie_sessions(breaks = )` through
+  `collapse_network(sessions = "separate")`. Out-closeness of a vertex
+  that reaches no one (Dynet 0, igraph NaN) is now declared a known
+  difference.
+
+## Dynet 0.8.5
+
+- `community_change(measure = "ami")` (and `"iami"`, `"uami"`) now
+  normalises adjusted mutual information by the **larger** of the two
+  entropies, AMI_max, the form Vinh, Epps & Bailey (2010) advocate,
+  whose unadjusted counterpart is the normalised information distance, a
+  true metric. It equals `aricode::AMI()` and scikit-learn’s
+  `adjusted_mutual_info_score(average_method = "max")`. Up to 0.8.4 the
+  arithmetic mean of the entropies was used, which gives a larger value
+  whenever the two entropies differ (a = 111222 against b = 112233:
+  0.2988, now 0.2250). Identical partitions still score 1 and unrelated
+  ones about 0. `"nmi"` is unchanged.
+
+## Dynet 0.8.4
+
+- [`match_communities()`](https://pak.dynasite.org/Dynet/reference/match_communities.md)
+  with a `threshold`: a later community whose assigned overlap is at or
+  below the threshold is now born, as documented. The fallback for
+  communities whose members were all inactive ran for every unlabelled
+  community and handed such a community the earlier label anyway
+  (overlap 3/10 with `threshold = 0.5`: event “persist”, overlap 0; now
+  “born”, as `clue::solve_LSAP()` with the threshold gives). The
+  fallback now applies only to communities with no member active in both
+  bins.
+
+## Dynet 0.8.2
+
+- No change to the package. Every comparison with a reference package or
+  an independent computation is now a declared equivalence test in
+  `tests/equivalence/` (excluded from the build): 17 files, 10,246
+  compared numbers against igraph, tsna, sna, networkDynamic, networkx,
+  ergm, aricode, scikit-learn, clue, cluster and computations written
+  from the definitions, each covering named exported functions. The
+  comparisons that lived in `tests/testthat` moved there; the contract
+  tests stay.
+
 ## Dynet 0.8.1
 
 A whole-package audit: every exported verb and every S3 method was run

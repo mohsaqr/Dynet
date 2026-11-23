@@ -65,16 +65,17 @@ value is `NA` by construction.
 What each measures, briefly. `"nmi"` is shared information normalised by
 the mean entropy, in \\\[0, 1\]\\, high for agreement; it is **not**
 chance-corrected, so two unrelated partitions score above zero. `"ami"`
-is the same quantity with the chance level subtracted, and is the one to
-reach for. `"ari"` is chance-corrected pair agreement, centred on zero
-for unrelated partitions. `"vi"` is a true metric in nats, zero for
-agreement and unbounded above. `"split_join"` counts the vertices that
-would have to move, so it is an integer in \\\[0, 2N\]\\. `"jaccard"`
-scores agreement over co-classified pairs. `"omega_index"` is
-chance-corrected pair agreement; for the disjoint partitions this
-package produces it coincides exactly with `"ari"`, and it is offered
-because it is what `multinet` reports and because it generalises to
-overlapping communities.
+is shared information with the chance level subtracted, normalised by
+the larger entropy (see below), and is the one to reach for. `"ari"` is
+chance-corrected pair agreement, centred on zero for unrelated
+partitions. `"vi"` is a true metric in nats, zero for agreement and
+unbounded above. `"split_join"` counts the vertices that would have to
+move, so it is an integer in \\\[0, 2N\]\\. `"jaccard"` scores agreement
+over co-classified pairs. `"omega_index"` is chance-corrected pair
+agreement; for the disjoint partitions this package produces it
+coincides exactly with `"ari"`, and it is offered because it is what
+`multinet` reports and because it generalises to overlapping
+communities.
 
 `"uami"` and `"iami"` are Zhong et al.'s (2025) answer to a problem
 every temporal network has: the vertex set moves between bins, and
@@ -91,14 +92,20 @@ this package, and is offered under both names because the literature
 uses both.
 
 Two notes on the sources, because both cost time to discover. Adjusted
-mutual information admits more than one normaliser: this package divides
-by the **arithmetic mean** of the two entropies, matching `"nmi"` above,
-`sklearn`'s default, and the stated intent of Zhong et al.;
-`aricode::AMI` divides by the **maximum** instead, so the two disagree
-by convention and not by error. And the expression printed for the
-adjusted measures in Zhong et al. subtracts the chance term once in a
-denominator that needs it twice, which scores two identical partitions
-at 0.949 rather than 1; the corrected form is used here.
+mutual information admits more than one normaliser (Vinh, Epps & Bailey
+2010 define four). This package divides by the **maximum** of the two
+entropies, \\AMI = (MI - E\[MI\]) / (\max(H_1, H_2) - E\[MI\])\\, the
+form Vinh et al. advocate because its unadjusted counterpart is the
+normalised information distance, a true metric; it equals
+`aricode::AMI()` and `sklearn`'s
+`adjusted_mutual_info_score(average_method = "max")`. (`sklearn`'s
+default, the arithmetic mean, gives a larger value whenever the two
+entropies differ; Dynet up to 0.8.4 used it.) `"uami"` and `"iami"` use
+the same normaliser. `"nmi"` keeps the arithmetic mean (Danon et al.
+2005). And the expression printed for the adjusted measures in Zhong et
+al. subtracts the chance term once in a denominator that needs it twice,
+which scores two identical partitions at 0.949 rather than 1; the
+corrected form is used here.
 
 ## References
 
