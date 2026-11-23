@@ -165,7 +165,10 @@
       "random_dynet()",
       "temporal_communities()",
       "as.data.frame.dynet_collapsed_list()",
-      "summary.dynet_collapsed_list()"
+      "summary.dynet_collapsed_list()",
+      "add_nodes()",
+      "update_nodes()",
+      "set_tie_sessions()"
     ],
     "not_numeric": {
       "animate()": "draws an animation of the network over time",
@@ -174,9 +177,6 @@
       "summary.dynet_animation()": "describes the frames of an animation",
       "as_dynet.default()": "raises dynet_unsupported_class for any class without a method",
       "as_dynet.dynet()": "returns its argument unchanged",
-      "add_nodes()": "adds vertices and their attributes; the spell table is unchanged",
-      "update_nodes()": "edits vertex attributes; the spell table is unchanged",
-      "set_tie_sessions()": "assigns session labels to spells",
       "rename_sessions()": "renames session labels"
     },
     "not_yet": {}

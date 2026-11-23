@@ -245,3 +245,20 @@ test_that("set_observations() and clear_observations() change the temporal densi
                    quantity = "temporal density after clearing the declared period", tolerance = 1e-12,
                    key = c("seed", "measure"))
 })
+
+test_that("add_nodes() changes the vertex count and the temporal density as network::add.vertices() does", {
+  skip_without_reference(c("tsna", nd_refs))
+  # Two isolates: the vertex count rises by two and the temporal density's dyad count with it.
+  sides <- by_seed(\(net, spells) {
+    grown <- add_nodes(net, c("New 1", "New 2"))
+    rbind(data.frame(measure = "vertices", value = as.numeric(subset(summary(grown), property == "vertices")$value)),
+          subset(as.data.frame(metrics(grown, measure = "temporal_density", window = "all")), select = c(measure, value)))
+  }, \(history, spells) {
+    history <- network::add.vertices(history, 2L)
+    data.frame(measure = c("vertices", "temporal_density"),
+               value = c(network::network.size(history), tsna::tEdgeDensity(history, mode = "duration", agg.unit = "dyad")))
+  })
+  expect_reference(sides$ours, sides$theirs, reference = "networkDynamic", covers = "add_nodes()",
+                   quantity = "vertex count and temporal density after adding two vertices", tolerance = 1e-12,
+                   key = c("seed", "measure"))
+})

@@ -47,9 +47,10 @@ test_that("out-closeness in windows of 7 equals igraph's normalised closeness wh
   keys <- c("time", "node", "measure")
   expect_reference(merge(ours, defined[keys]), defined, reference = "igraph", covers = series_covers,
                    quantity = "out-closeness, windows of 7", tolerance = 1e-10, key = keys)
-  expect_not_comparable(merge(ours, undefined[keys]), undefined, reference = "igraph", covers = "centrality_series()",
-                        quantity = "out-closeness of a vertex that reaches no one", key = keys,
-                        reason = "Closeness is not defined for a vertex with no outgoing path: igraph returns NaN, Dynet 0.")
+  # Not "not comparable" (STANDARD decision 8): the quantity is undefined for igraph only; Dynet gives a number.
+  expect_known_difference(merge(ours, undefined[keys]), undefined, reference = "igraph", covers = "centrality_series()",
+                          quantity = "out-closeness of a vertex that reaches no one", tolerance = 1e-10, key = keys,
+                          reason = "Dynet defines closeness of a vertex with no outgoing path as 0; igraph leaves it undefined (NaN).")
 })
 
 test_that("PageRank in windows of 7 equals igraph::page_rank()", {

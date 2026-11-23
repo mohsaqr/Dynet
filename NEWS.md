@@ -1,3 +1,17 @@
+# Dynet 0.8.6
+
+* No change to the package's code or numbers. The equivalence evidence
+  (`tests/equivalence/`, not part of the built package) gained outside
+  references: `multislice_modularity()` with coupled slices (`omega` 0.5, 1,
+  2, categorical coupling) against `multinet::modularity_ml()`, whose coupling
+  term agrees to 3.3e-16 and whose total leaves out the i = j terms of the
+  null model that Mucha et al. (2010) and Dynet keep (declared as a known
+  difference); `add_nodes()` against `network::add.vertices()` (vertex count,
+  temporal density through `tsna::tEdgeDensity()`); `update_nodes()` through
+  `mixing()` against ergm's `nodemix`; `set_tie_sessions(breaks = )` through
+  `collapse_network(sessions = "separate")`. Out-closeness of a vertex that
+  reaches no one (Dynet 0, igraph NaN) is now declared a known difference.
+
 # Dynet 0.8.5
 
 * `community_change(measure = "ami")` (and `"iami"`, `"uami"`) now normalises

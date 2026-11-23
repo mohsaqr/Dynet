@@ -25,6 +25,23 @@ test_that("tie counts between every ordered pair of groups equal ergm's nodemix 
                    tolerance = 0, key = c("time", "from_group", "to_group"))
 })
 
+test_that("groups set by update_nodes() give ergm's nodemix counts on each window", {
+  skip_without_reference(c("ergm", "network"))
+  theirs <- do.call(rbind, lapply(onsets, \(lo) {
+    snapshot <- network::network(ref_adjacency(spells, lo, lo + 7, people), directed = TRUE, matrix.type = "adjacency")
+    network::set.vertex.attribute(snapshot, "group", groups$group)
+    mixed <- summary(snapshot ~ nodemix("group", levels2 = TRUE))
+    pair <- strsplit(sub("^mix\\.group\\.", "", names(mixed)), ".", fixed = TRUE)
+    data.frame(time = lo, from_group = vapply(pair, `[[`, character(1), 1L),
+               to_group = vapply(pair, `[[`, character(1), 2L), value = as.numeric(mixed))
+  }))
+  # The network is built without groups; update_nodes() adds them, and mixing() reads them.
+  ours <- as.data.frame(mixing(update_nodes(dynet(school_contacts), groups), "group", step = 7, window = 7))
+  expect_reference(ours, theirs, reference = "ergm", covers = c("update_nodes()", "mixing()"),
+                   quantity = "ties between groups set by update_nodes(), windows of 7", tolerance = 0,
+                   key = c("time", "from_group", "to_group"))
+})
+
 test_that("tie counts between groups equal the snapshot's adjacency summed by group", {
   theirs <- do.call(rbind, lapply(onsets, \(lo) {
     adjacency <- ref_adjacency(spells, lo, lo + 7, people)

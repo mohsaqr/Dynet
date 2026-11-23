@@ -21,5 +21,7 @@ fetch .ci/verify-capture
 # The declared equivalence tests (tests/equivalence, the standard: ../equivalence/STANDARD.md): every
 # comparison with a reference, recorded in .ci/verify-capture/capture.json. Then, on the Mac:
 #   sh ../equivalence/push.sh dynet
-# ~/equiv-py/bin is put on the PATH for the tests that run python3 (networkx).
-job verify PATH="$HOME/equiv-py/bin:$PATH" Rscript -e 'source("tests/equivalence/helper-verify.R"); verify_tests(lib = "~/equiv-lib")'
+# ~/equiv-py/bin is put on the PATH for the tests that run python3 (networkx). RETICULATE_PYTHON names the same
+# interpreter: reticulate in ~/equiv-lib otherwise picks its own uv Python, where teneto and raphtory are absent,
+# and the helper then records no version for them (capture `packages` empty for test-teneto.R / test-motifs-raphtory.R).
+job verify PATH="$HOME/equiv-py/bin:$PATH" RETICULATE_PYTHON="$HOME/equiv-py/bin/python" Rscript -e 'source("tests/equivalence/helper-verify.R"); verify_tests(lib = "~/equiv-lib")'

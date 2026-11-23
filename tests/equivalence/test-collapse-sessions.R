@@ -31,6 +31,19 @@ test_that("the stacked per-session edge tables equal a per-session ledger of the
                    quantity = "session and pair", tolerance = 1e-10, key = c("session", "from", "to"))
 })
 
+test_that("sessions cut by set_tie_sessions(breaks = ) give the same per-session tables as the ledger", {
+  # The same weeks, set on a network built without sessions: a spell starting at a break opens the later week.
+  weeks <- seq_len(max(floor(spells$start / 7)))
+  relabelled <- set_tie_sessions(dynet(school_contacts), breaks = 7 * weeks,
+                                 labels = sprintf("week %d", c(weeks, max(weeks) + 1L)))
+  # Sums of at most a dozen two-decimal numbers.
+  expect_reference(as.data.frame(collapse_network(relabelled, sessions = "separate")), ledger(),
+                   reference = "independent: per-session ledger of the spells",
+                   covers = c("set_tie_sessions()", "collapse_network()"),
+                   quantity = "session and pair, sessions set by breaks", tolerance = 1e-10,
+                   key = c("session", "from", "to"))
+})
+
 test_that("one session's table alone equals that session's ledger", {
   theirs <- subset(ledger(), session == "week 2", select = -session)
   expect_reference(as.data.frame(by_session, session = "week 2"), theirs,
